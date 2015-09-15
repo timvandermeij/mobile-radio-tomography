@@ -42,6 +42,7 @@ class Sensor(object):
             packet = {
                 "from": self.id,
                 "to": i,
+                "timestamp": time.time(),
                 "rssi": -randint(1,60)
             }
             self.socket.sendto(json.dumps(packet), (UDP_NETWORK_IP, UDP_NETWORK_PORT + i))
