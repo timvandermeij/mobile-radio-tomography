@@ -10,7 +10,14 @@ NETWORK_PORT = 3233
 NETWORK_KEY = "855aa35dc939fa09c1dd8d7e6b95a3"
 NETWORK_SEND_LIMIT = 10
 
-class Receiver(object):
+class Sensor(object):
+    def run(self):
+        raise NotImplementedError("Subclasses must override run()")
+
+    def quit(self):
+        raise NotImplementedError("Subclasses must override quit()")
+
+class Receiver(Sensor):
     def __init__(self):
         # Initialize the receiver with a connection to the socket.
         self.listener = Listener((NETWORK_IP, NETWORK_PORT), authkey=NETWORK_KEY)
@@ -37,7 +44,7 @@ class Receiver(object):
         self.listener.close()
         sys.exit()
 
-class Sender(object):
+class Sender(Sensor):
     def __init__(self, id):
         self.id = id
         try:
