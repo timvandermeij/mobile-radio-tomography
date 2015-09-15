@@ -3,55 +3,34 @@ import time
 import json
 import argparse
 from random import randint
-from multiprocessing.connection import Listener, Client, AuthenticationError
+import socket
 
-NETWORK_IP = "127.0.0.1"
-NETWORK_PORT = 3233
-NETWORK_KEY = "855aa35dc939fa09c1dd8d7e6b95a3"
-NETWORK_SEND_LIMIT = 10
+UDP_NETWORK_IP = "127.0.0.1"
+UDP_NETWORK_PORT = 3233
+UDP_NETWORK_BUFFER_SIZE = 1024
+UDP_NETWORK_SEND_LIMIT = 50
 
 class Sensor(object):
     def run(self):
         raise NotImplementedError("Subclasses must override run()")
 
-    def quit(self):
-        raise NotImplementedError("Subclasses must override quit()")
-
 class Receiver(Sensor):
     def __init__(self):
-        # Initialize the receiver with a connection to the socket.
-        self.listener = Listener((NETWORK_IP, NETWORK_PORT), authkey=NETWORK_KEY)
-        try:
-            self.connection = self.listener.accept()
-        except AuthenticationError:
-            print("Network authentication failed.")
-            self.listener.close()
-            sys.exit()
+        # Initialize the receiver with a connection to a UDP socket.
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket.bind((UDP_NETWORK_IP, UDP_NETWORK_PORT))
 
     def run(self):
         # Listen for incoming packets on the socket.
         while True:
-            try:
-                packet = self.connection.recv()
-                print(json.loads(packet))
-            except EOFError:
-                print("No processes are sending packets anymore.")
-                break
-
-    def quit(self):
-        # Stop receiving packets and exit.
-        self.connection.close()
-        self.listener.close()
-        sys.exit()
+            packet, address = self.socket.recvfrom(UDP_NETWORK_BUFFER_SIZE)
+            print(json.loads(packet))
 
 class Sender(Sensor):
     def __init__(self, id):
+        # Initialize the sender with a connection to a UDP socket and an ID.
         self.id = id
-        try:
-            self.connection = Client((NETWORK_IP, NETWORK_PORT), authkey=NETWORK_KEY)
-        except AuthenticationError:
-            print("Network authentication failed.")
-            sys.exit()
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     def run(self):
         # Send a packet over the socket every second.
@@ -62,15 +41,10 @@ class Sender(Sensor):
                 "from": self.id,
                 "rssi": -randint(1,60)
             }
-            self.connection.send(json.dumps(packet))
+            self.socket.sendto(json.dumps(packet), (UDP_NETWORK_IP, UDP_NETWORK_PORT))
             count += 1
-            if count == NETWORK_SEND_LIMIT:
+            if count == UDP_NETWORK_SEND_LIMIT:
                 break
-
-    def quit(self):
-        # Stop receiving packets and exit.
-        self.connection.close()
-        sys.exit()
 
 def main(argv):
     parser = argparse.ArgumentParser(description="Simulate packet communication in a WiFi sensor network.")
@@ -95,7 +69,6 @@ def main(argv):
         sensor = Receiver()
 
     sensor.run()
-    sensor.quit()
 
 if __name__ == "__main__":
     main(sys.argv[1:])
