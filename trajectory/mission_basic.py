@@ -4,6 +4,7 @@ mission_basic.py: Example demonstrating basic mission operations including creat
 Full documentation is provided at http://python.dronekit.io/examples/mission_basic.html
 """
 
+import sys
 import time
 import math
 from droneapi.lib import VehicleMode, Location, Command
@@ -50,23 +51,104 @@ def get_distance_meters(location1, location2):
     return math.sqrt((dlat*dlat) + (dlong*dlong)) * 1.113195e5
 
 
+def ray_intersects_segment(P, start, end):
+    '''
+    Given a location point `P` and an edge of two endpoints `start` and `end` of a line segment, returns boolean whether the ray starting from the point eastward intersects the edge.
+    '''
+    # TODO: Use this to detect objectively whether the vehicle has flown into 
+    # an object.
+    #(y,x) = (lat,lon) = (N,E)
+    # Based on http://rosettacode.org/wiki/Ray-casting_algorithm#Python but
+    # removed some edge cases and clarified somewhat
+    if start.lat > end.lat:
+        # Swap start and end of segment
+        start,end = end,start
+
+    if P.lon < min(start.lon, end.lon):
+        return True
+
+    #dist = get_distance_meters(end, start)
+    if abs(start.lon - end.lon) < sys.float_info.min:
+        ang_out = (end.lat - start.lat) / (end.lon - start.lon)
+    else:
+        ang_out = sys.float_info.max
+
+    if abs(start.lon - P.lon) < sys.float_info.min:
+        ang_in = (P.lat - start.lat) / (P.lon - start.lon)
+    else:
+        ang_in = sys.float_info.max
+
+    return ang_in >= ang_out
+
+def point_inside_polygon(P, points):
+    edges = zip(points, points[1:] + [points[0]])
+    return sum(ray_intersects_segment(P, e[0], e[1]) for e in edges) % 2 == 1
+
+def get_angle(locA, locB):
+    """
+    Get the angle in radians for the segment between locations `locA` and `locB` compared to the cardinal directions.
+
+    Does not yet take curvature of earth in account, and should thus be used only for close locations.
+    """
+
+    if locA.lon == locB.lon:
+        angle = math.pi/2.0
+    else:
+        angle = math.atan(abs(locA.lat - locB.lat) / abs(locA.lon - locB.lon))
+
+    # Flip the angle into the correct quadrant based on non-absolute difference
+    # We use radians so pi rad = 180 degrees and 2*pi rad = 360 degrees
+    if locB.lon < locA.lon:
+        angle = math.pi - angle
+    if locB.lat < locA.lat:
+        angle = 2.0*math.pi - angle
+
+    return angle
+
+def diff_angle(a1, a2):
+    # Based on http://stackoverflow.com/a/7869457 but for radial angles
+    return (a1 - a2 + math.pi) % (2*math.pi) - math.pi
+
 # Sensor class that has a collision object somewhere
-# TODO: Directional sensor
 class Sensor(object):
     def __init__(self, vehicle):
         self.vehicle = vehicle
-        self.OBJECT = get_location_meters(self.vehicle.location, 50, 50)
-        self.OBJECT_RADIUS = 2.5
+        self.objects = [
+            {
+                'center': get_location_meters(self.vehicle.location, 50, 10),
+                'radius': 2.5,
+            }
+        ]
 
-    def get_distance(self, location=None):
+    def get_distance(self, location=None, angle=None):
         """
         Get the distance in meters to the collision object from the current `location` (a Location object).
         """
 
         if location is None:
             location = self.vehicle.location
+        if angle is None:
+            # Offset for the yaw being increasing counterclockwise and starting 
+            # at 0 degrees when facing north rather than facing east.
+            angle = -(self.vehicle.attitude.yaw - math.pi/2.0)
 
-        return get_distance_meters(location, self.OBJECT) - self.OBJECT_RADIUS
+        for obj in self.objects:
+            if 'center' in obj:
+                # Directional
+                # The "object angle" should point "away" from the vehicle 
+                # location, so that it matches up with the yaw if the vehicle 
+                # is pointing toward the point.
+                a2 = get_angle(location, obj['center'])
+                diff = diff_angle(a2, angle)
+                print "Comparing angle of vehicle %f to object %f: %f" % (angle, a2, diff)
+                if abs(diff) < 5.0 * math.pi/180:
+                    return get_distance_meters(location, obj['center']) - obj['radius']
+            else:
+                # TODO: Add polygon object shapes
+                pass
+
+        # TODO: Replace with a parameter of sensor limit?
+        return sys.float_info.max
 
 
 def distance_to_current_waypoint():
@@ -100,7 +182,7 @@ def clear_mission():
     cmds = vehicle.commands
     cmds.download()
     cmds.wait_valid()
-    
+
 
 def download_mission():
     """
@@ -172,8 +254,9 @@ def arm_and_takeoff(targetAltitude):
     # (otherwise the command after Vehicle.commands.takeoff will execute 
     # immediately).
     while not api.exit:
+        # TODO: Check sensors here already?
         print " Altitude: ", vehicle.location.alt
-        #Just below target, in case of undershoot.
+        # Just below target, in case of undershoot.
         if vehicle.location.alt >= targetAltitude * 0.95:
             print "Reached target altitude"
             break
@@ -187,7 +270,7 @@ print "Create a new mission"
 size = 50
 num_commands = add_square_mission(vehicle.location, size)
 print "%d commands in the mission!" % num_commands
-time.sleep(2)  # This is here so that mission being sent is displayed on console
+time.sleep(2) # This is here so that mission being sent is displayed on console
 
 
 # From Copter 3.3 you will be able to take off using a mission item. Plane must take off using a mission item (currently).
@@ -204,27 +287,32 @@ vehicle.flush()
 #   distance to the next waypoint.
 
 sensor = Sensor(vehicle)
+closeness = 2.0
+farness = 100.0
 while True:
     sensor_distance = sensor.get_distance(vehicle.location)
-    print "Distance to object: %s m" % sensor_distance
-    if sensor_distance < 0.5:
-        # TODO: Do something different here.
-        print "Too close to the object, abort mission."
-        break
+    if sensor_distance < farness:
+        print "Distance to object: %s m" % sensor_distance
+        if sensor_distance < closeness:
+            # TODO: Do something different here.
+            print "Too close to the object, abort mission."
+            break
 
     nextwaypoint = vehicle.commands.next
     distance = distance_to_current_waypoint()
     if nextwaypoint > 1:
-        print "Distance to waypoint (%s): %s" % (nextwaypoint, distance)
-        #if distance < size / 2:
-        #    print "Somewhat rounded: skip to next waypoint"
-        #    vehicle.commands.next = nextwaypoint + 1
-        #    nextwaypoint = nextwaypoint + 1
+        if distance < farness:
+            print "Distance to waypoint (%s): %s m" % (nextwaypoint, distance)
+            if distance < closeness:
+                print "Close enough: skip to next waypoint"
+                vehicle.commands.next = nextwaypoint + 1
+                nextwaypoint = nextwaypoint + 1
+
     if nextwaypoint >= num_commands:
         print "Exit 'standard' mission when heading for final waypoint (%d)" % num_commands
         break
 
-    time.sleep(1)
+    time.sleep(0.5)
 
 print "Return to launch"
 vehicle.mode = VehicleMode("RTL")
