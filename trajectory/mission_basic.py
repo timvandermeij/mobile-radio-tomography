@@ -14,9 +14,9 @@ api = local_connect()
 vehicle = api.get_vehicles()[0]
 
 
-def get_location_metres(original_location, north, east):
+def get_location_meters(original_location, north, east):
     """
-    Returns a Location object containing the latitude/longitude `north` and `east` (floating point) metres from the 
+    Returns a Location object containing the latitude/longitude `north` and `east` (floating point) meters from the 
     specified `original_location`. The returned Location has the same `alt and `is_relative` values 
     as `original_location`.
 
@@ -37,9 +37,9 @@ def get_location_metres(original_location, north, east):
     return Location(newlat, newlon,original_location.alt,original_location.is_relative)
 
 
-def get_distance_metres(location1, location2):
+def get_distance_meters(location1, location2):
     """
-    Returns the ground distance in metres between two Location objects.
+    Returns the ground distance in meters between two Location objects.
 
     This method is an approximation, and will not be accurate over large distances and close to the 
     earth's poles. It comes from the ArduPilot test code: 
@@ -50,10 +50,28 @@ def get_distance_metres(location1, location2):
     return math.sqrt((dlat*dlat) + (dlong*dlong)) * 1.113195e5
 
 
+# Sensor class that has a collision object somewhere
+# TODO: Directional sensor
+class Sensor(object):
+    def __init__(self, vehicle):
+        self.vehicle = vehicle
+        self.OBJECT = get_location_meters(self.vehicle.location, 50, 50)
+        self.OBJECT_RADIUS = 2.5
+
+    def get_distance(self, location=None):
+        """
+        Get the distance in meters to the collision object from the current `location` (a Location object).
+        """
+
+        if location is None:
+            location = self.vehicle.location
+
+        return get_distance_meters(location, self.OBJECT) - self.OBJECT_RADIUS
+
 
 def distance_to_current_waypoint():
     """
-    Gets distance in metres to the current waypoint. 
+    Gets distance in meters to the current waypoint. 
     It returns None for the first waypoint (Home location).
     """
     nextwaypoint = vehicle.commands.next
@@ -64,7 +82,7 @@ def distance_to_current_waypoint():
     lon = missionitem.y
     alt = missionitem.z
     targetWaypointLocation = Location(lat, lon, alt, is_relative=True)
-    distancetopoint = get_distance_metres(vehicle.location,  targetWaypointLocation)
+    distancetopoint = get_distance_meters(vehicle.location,  targetWaypointLocation)
     return distancetopoint
 
 
@@ -107,10 +125,10 @@ def add_square_mission(location, size):
     cmds.add(Command( 0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, 0, 10))
 
     #Define the four MAV_CMD_NAV_WAYPOINT locations and add the commands
-    point1 = get_location_metres(location, size, -size)
-    point2 = get_location_metres(location, size, size)
-    point3 = get_location_metres(location, -size, size)
-    point4 = get_location_metres(location, -size, -size)
+    point1 = get_location_meters(location, size, -size)
+    point2 = get_location_meters(location, size, size)
+    point3 = get_location_meters(location, -size, size)
+    point4 = get_location_meters(location, -size, -size)
     cmds.add(Command( 0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point1.lat, point1.lon, 11))
     cmds.add(Command( 0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point2.lat, point2.lon, 12))
     cmds.add(Command( 0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point3.lat, point3.lon, 13))
@@ -185,15 +203,23 @@ vehicle.flush()
 # Uses distance_to_current_waypoint(), a convenience function for finding the 
 #   distance to the next waypoint.
 
+sensor = Sensor(vehicle)
 while True:
+    sensor_distance = sensor.get_distance(vehicle.location)
+    print "Distance to object: %s m" % sensor_distance
+    if sensor_distance < 0.5:
+        # TODO: Do something different here.
+        print "Too close to the object, abort mission."
+        break
+
     nextwaypoint = vehicle.commands.next
     distance = distance_to_current_waypoint()
     if nextwaypoint > 1:
         print "Distance to waypoint (%s): %s" % (nextwaypoint, distance)
-        if distance < size / 2:
-            print "Somewhat rounded: skip to next waypoint"
-            vehicle.commands.next = nextwaypoint + 1
-            nextwaypoint = nextwaypoint + 1
+        #if distance < size / 2:
+        #    print "Somewhat rounded: skip to next waypoint"
+        #    vehicle.commands.next = nextwaypoint + 1
+        #    nextwaypoint = nextwaypoint + 1
     if nextwaypoint >= num_commands:
         print "Exit 'standard' mission when heading for final waypoint (%d)" % num_commands
         break
