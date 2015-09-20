@@ -15,11 +15,10 @@ api = local_connect()
 vehicle = api.get_vehicles()[0]
 
 
-def get_location_meters(original_location, north, east):
+def get_location_meters(original_location, north, east, alt=0):
     """
     Returns a Location object containing the latitude/longitude `north` and `east` (floating point) meters from the 
-    specified `original_location`. The returned Location has the same `alt and `is_relative` values 
-    as `original_location`.
+    specified `original_location`, and optionally `alt` meters above the `original_location`. The returned Location has the same and `is_relative` value as `original_location`.
 
     The function is useful when you want to move the vehicle around specifying locations relative to 
     the current vehicle position.
@@ -35,7 +34,7 @@ def get_location_meters(original_location, north, east):
     #New position in decimal degrees
     newlat = original_location.lat + (lat * 180/math.pi)
     newlon = original_location.lon + (lon * 180/math.pi)
-    return Location(newlat, newlon,original_location.alt,original_location.is_relative)
+    return Location(newlat, newlon, original_location.alt + alt, original_location.is_relative)
 
 
 def get_distance_meters(location1, location2):
@@ -64,6 +63,8 @@ def ray_intersects_segment(P, start, end):
         # Swap start and end of segment
         start,end = end,start
 
+    if P.lat < start.lat or P.lat > end.lat or P.lon > max(start.lon, end.lon):
+        return False
     if P.lon < min(start.lon, end.lon):
         return True
 
@@ -80,8 +81,14 @@ def ray_intersects_segment(P, start, end):
 
     return ang_in >= ang_out
 
+def get_point_edges(points):
+    """
+    From a given list of `points` in a polygon (sorted on edge positions), generate a list of edges, which are tuples of two points of the line segment.
+    """
+    return zip(points, list(points[1:]) + [points[0]])
+
 def point_inside_polygon(P, points):
-    edges = zip(points, points[1:] + [points[0]])
+    edges = get_point_edges(points)
     return sum(ray_intersects_segment(P, e[0], e[1]) for e in edges) % 2 == 1
 
 def get_angle(locA, locB):
@@ -101,9 +108,9 @@ def get_angle(locA, locB):
     if locB.lon < locA.lon:
         angle = math.pi - angle
     if locB.lat < locA.lat:
-        angle = 2.0*math.pi - angle
+        angle = 2*math.pi - angle
 
-    return angle
+    return angle % (2*math.pi)
 
 def diff_angle(a1, a2):
     # Based on http://stackoverflow.com/a/7869457 but for radial angles
@@ -113,12 +120,105 @@ def diff_angle(a1, a2):
 class Sensor(object):
     def __init__(self, vehicle):
         self.vehicle = vehicle
+        self.altitude_margin = 2.5
+        l2 = get_location_meters(self.vehicle.location, 50, -50, 10)
+        l3 = get_location_meters(self.vehicle.location, 52.5, 22.5, 10)
         self.objects = [
             {
-                'center': get_location_meters(self.vehicle.location, 50, 10),
+                'center': get_location_meters(self.vehicle.location, 40, -10),
                 'radius': 2.5,
-            }
+            },
+            (get_location_meters(l2, 5, -5), get_location_meters(l2, 5, 5),
+             get_location_meters(l2, -5, 5), get_location_meters(l2, -5, -5)),
+            (get_location_meters(l3, 5, 0), get_location_meters(l3, 0, 5),
+             get_location_meters(l3, -5, 0), get_location_meters(l3, 0, -5))
         ]
+
+    def get_edge_distance(self, edge, location, angle):
+        # Based on ray casting calculations from 
+        # http://archive.gamedev.net/archive/reference/articles/article872.html 
+        # except that the coordinate system there is assumed tp revolve around 
+        # the vehicle, which is strange. Instead, use a fixed origin and thus 
+        # the edge's b1 is fixed, and calculate b2 instead.
+
+        m2 = math.tan(angle)
+        b2 = location.lat - m2 * location.lon
+
+        if edge[1].lon == edge[0].lon:
+            # Prevent division by zero
+            # This should usually become inf, but since m2 is calculated with 
+            # math.tan as well we should use the maximal value that this 
+            # function reaches.
+            m1 = math.tan(math.pi/2)
+            b1 = 0.0
+            x = edge[0].lon
+        else:
+            m1 = (edge[1].lat - edge[0].lat) / (edge[1].lon - edge[0].lon)
+            if edge[1].lat < edge[0].lat:
+                b1 = edge[1].lat - m1 * edge[1].lon
+            else:
+                b1 = edge[0].lat - m1 * edge[0].lon
+
+            x = (b1 - b2) / (m2 - m1)
+
+        y = m2 * x + b2
+
+        loc_point = Location(y, x, location.alt, location.is_relative)
+
+        # get altitude from edge
+        edge_dist = get_distance_meters(edge[0], edge[1])
+        point_dist = get_distance_meters(edge[1], loc_point)
+        alt = edge[1].alt + ((edge[0].alt - edge[1].alt) / edge_dist) * point_dist
+
+        if alt < location.alt - self.altitude_margin:
+            print('Not visible due to altitude alt={} v={}'.format(alt, location.alt))
+            return sys.float_info.max
+
+        d = get_distance_meters(location, loc_point)
+
+        return d
+
+    def get_obj_distance(self, obj, location, angle):
+        if isinstance(obj, tuple):
+            # Check if angle is within object bounds
+            angles = []
+            quadrants = []
+            q2 = int(angle / (0.5*math.pi)) # Quadrant
+            for point in obj:
+                ang = get_angle(location, point)
+
+                # Try to put the angles "around" the object in case we are 
+                # around 0 = 360 degrees.
+                q1 = int(ang / (0.5*math.pi))
+                if q1 == 0 and q2 == 3:
+                    ang = ang + 2*math.pi
+                elif q1 == 3 and q2 == 0:
+                    ang = ang - 2*math.pi
+
+                angles.append(ang)
+                quadrants.append(q1)
+
+            if q2 in quadrants and min(angles) < angle < max(angles):
+                dists = []
+                edges = get_point_edges(obj)
+                for edge in edges:
+                    dists.append(self.get_edge_distance(edge, location, angle))
+
+                return min(dists)
+        elif 'center' in obj:
+            if obj['center'].alt >= location.alt - self.altitude_margin:
+                # Directional
+                # The "object angle" should point "away" from the vehicle 
+                # location, so that it matches up with the yaw if the vehicle 
+                # is pointing toward the point.
+                a2 = get_angle(location, obj['center'])
+                diff = diff_angle(a2, angle)
+                if abs(diff) < 5.0 * math.pi/180:
+                    return get_distance_meters(location, obj['center']) - obj['radius']
+            else:
+                print('Not visible due to altitude, vehicle={}'.format(location.alt))
+
+        return sys.float_info.max
 
     def get_distance(self, location=None, angle=None):
         """
@@ -132,23 +232,15 @@ class Sensor(object):
             # at 0 degrees when facing north rather than facing east.
             angle = -(self.vehicle.attitude.yaw - math.pi/2.0)
 
+        # Ensure angle is always in the range [0, 2pi).
+        angle = angle % (2*math.pi)
+
+        distance = sys.float_info.max
         for obj in self.objects:
-            if 'center' in obj:
-                # Directional
-                # The "object angle" should point "away" from the vehicle 
-                # location, so that it matches up with the yaw if the vehicle 
-                # is pointing toward the point.
-                a2 = get_angle(location, obj['center'])
-                diff = diff_angle(a2, angle)
-                print "Comparing angle of vehicle %f to object %f: %f" % (angle, a2, diff)
-                if abs(diff) < 5.0 * math.pi/180:
-                    return get_distance_meters(location, obj['center']) - obj['radius']
-            else:
-                # TODO: Add polygon object shapes
-                pass
+            distance = min(distance, self.get_obj_distance(obj, location, angle))
 
         # TODO: Replace with a parameter of sensor limit?
-        return sys.float_info.max
+        return distance
 
 
 def distance_to_current_waypoint():
