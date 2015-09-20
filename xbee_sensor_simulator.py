@@ -12,7 +12,7 @@ UDP_NETWORK_TOTAL_NODES = 2
 UDP_NETWORK_SEND_INTERVAL = 2
 UDP_NETWORK_INTERVAL_DELAY = 0.05
 
-class Sensor(object):
+class Xbee_Sensor_Simulator(object):
     def __init__(self, id):
         # Initialize the sensor with its ID and a unique, non-blocking UDP socket.
         self.id = id
@@ -63,7 +63,7 @@ def main(argv):
     if args.id < 1 or args.id > UDP_NETWORK_TOTAL_NODES:
         print("Provide a non-negative and non-zero ID that is smaller or equal to the total number of sensors")
     else:
-        sensor = Sensor(args.id)
+        sensor = Xbee_Sensor_Simulator(args.id)
         sensor.run()
 
 if __name__ == "__main__":
