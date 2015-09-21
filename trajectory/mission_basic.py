@@ -10,10 +10,16 @@ import math
 from droneapi.lib import VehicleMode, Location, Command
 from pymavlink import mavutil
 
-# Connect to API provider and get vehicle
+# Connect to API provider and get vehicle object
 api = local_connect()
 vehicle = api.get_vehicles()[0]
 
+# Geometry utility functions
+# These calculate distances, locations or angles based on specific input.
+# Note that some functions assume certain properties of the earth's surface, 
+# such as it being spherical or being flat. Depending on these assumptions, 
+# these functions may have different accuracies across distances.
+# Note that (y,x) = (lat,lon) = (N,E).
 
 def get_location_meters(original_location, north, east, alt=0):
     """
@@ -26,12 +32,13 @@ def get_location_meters(original_location, north, east, alt=0):
     For more information see:
     http://gis.stackexchange.com/questions/2951/algorithm-for-offsetting-a-latitude-longitude-by-some-amount-of-meters
     """
-    earth_radius=6378137.0 #Radius of "spherical" earth
-    #Coordinate offsets in radians
+    # Radius of "spherical" earth
+    earth_radius = 6378137.0
+    # Coordinate offsets in radians
     lat = north / earth_radius
-    lon = east / (earth_radius*math.cos(math.pi*original_location.lat/180))
+    lon = east / (earth_radius * math.cos(original_location.lat * math.pi/180))
 
-    #New position in decimal degrees
+    # New position in decimal degrees
     newlat = original_location.lat + (lat * 180/math.pi)
     newlon = original_location.lon + (lon * 180/math.pi)
     return Location(newlat, newlon, original_location.alt + alt, original_location.is_relative)
@@ -54,7 +61,6 @@ def ray_intersects_segment(P, start, end):
     '''
     Given a location point `P` and an edge of two endpoints `start` and `end` of a line segment, returns boolean whether the ray starting from the point eastward intersects the edge.
     '''
-    #(y,x) = (lat,lon) = (N,E)
     # Based on http://rosettacode.org/wiki/Ray-casting_algorithm#Python but
     # removed some edge cases and clarified somewhat
     if start.lat > end.lat:
@@ -66,7 +72,6 @@ def ray_intersects_segment(P, start, end):
     if P.lon < min(start.lon, end.lon):
         return True
 
-    #dist = get_distance_meters(end, start)
     if abs(start.lon - end.lon) < sys.float_info.min:
         ang_out = (end.lat - start.lat) / (end.lon - start.lon)
     else:
@@ -110,7 +115,7 @@ def diff_angle(a1, a2):
     # Based on http://stackoverflow.com/a/7869457 but for radial angles
     return (a1 - a2 + math.pi) % (2*math.pi) - math.pi
 
-# Sensor class that has a collision object somewhere
+# Virtual sensor class that detects collision distances to simulated objects
 class Sensor(object):
     def __init__(self, vehicle):
         self.vehicle = vehicle
@@ -175,7 +180,7 @@ class Sensor(object):
 
         loc_point = Location(y, x, location.alt, location.is_relative)
 
-        # get altitude from edge
+        # Get altitude from edge
         edge_dist = get_distance_meters(edge[0], edge[1])
         point_dist = get_distance_meters(edge[1], loc_point)
         alt = edge[1].alt + ((edge[0].alt - edge[1].alt) / edge_dist) * point_dist
@@ -193,10 +198,13 @@ class Sensor(object):
             if self.point_inside_polygon(location, obj):
                 return 0
 
-            # Check if angle is within object bounds
+            # Check if angle is within at least one quadrant of the angles to 
+            # the object bounds, and also within the object bounds themselves. 
+            # Both requirements have to be met, otherwise angles that are 
+            # around the 0 degree mark can confuse the latter check.
             angles = []
             quadrants = []
-            q2 = int(angle / (0.5*math.pi)) # Quadrant
+            q2 = int(angle / (0.5*math.pi))
             for point in obj:
                 ang = get_angle(location, point)
 
@@ -220,7 +228,7 @@ class Sensor(object):
                 return min(dists)
         elif 'center' in obj:
             if obj['center'].alt >= location.alt - self.altitude_margin:
-                # Directional
+                # Find directional angle to the object's center.
                 # The "object angle" should point "away" from the vehicle 
                 # location, so that it matches up with the yaw if the vehicle 
                 # is pointing toward the point.
@@ -252,25 +260,27 @@ class Sensor(object):
         for obj in self.objects:
             distance = min(distance, self.get_obj_distance(obj, location, angle))
 
-        # TODO: Replace with a parameter of sensor limit?
+        # TODO: Replace with a parameter that has a limit on the measured 
+        # sensor distance, similar to what the ArduPilot simulator does?
         return distance
 
+# Mission utility functions
 
 def distance_to_current_waypoint():
     """
     Gets distance in meters to the current waypoint. 
     It returns None for the first waypoint (Home location).
     """
-    nextwaypoint = vehicle.commands.next
-    if nextwaypoint == 1:
+    next_waypoint = vehicle.commands.next
+    if next_waypoint == 1:
         return None
-    missionitem = vehicle.commands[nextwaypoint]
-    lat = missionitem.x
-    lon = missionitem.y
-    alt = missionitem.z
-    targetWaypointLocation = Location(lat, lon, alt, is_relative=True)
-    distancetopoint = get_distance_meters(vehicle.location,  targetWaypointLocation)
-    return distancetopoint
+    mission_item = vehicle.commands[next_waypoint]
+    lat = mission_item.x
+    lon = mission_item.y
+    alt = mission_item.z
+    target_waypoint_location = Location(lat, lon, alt, is_relative=True)
+    distance = get_distance_meters(vehicle.location, target_waypoint_location)
+    return distance
 
 
 def clear_mission():
@@ -281,9 +291,9 @@ def clear_mission():
     vehicle.commands.clear()
     vehicle.flush()
 
-    # After clearing the mission you MUST re-download the mission from the vehicle 
-    # before vehicle.commands can be used again
-    # (see https://github.com/dronekit/dronekit-python/issues/230)
+    # After clearing the mission, we MUST re-download the mission from the 
+    # vehicle before vehicle.commands can be used again.
+    # See https://github.com/dronekit/dronekit-python/issues/230 for reasoning.
     cmds = vehicle.commands
     cmds.download()
     cmds.wait_valid()
@@ -295,7 +305,8 @@ def download_mission():
     """
     cmds = vehicle.commands
     cmds.download()
-    cmds.wait_valid() # wait until download is complete.
+    # Wait until download is complete.
+    cmds.wait_valid()
 
 
 def add_square_mission(location, size):
@@ -306,21 +317,23 @@ def add_square_mission(location, size):
     The function assumes vehicle.commands matches the vehicle mission state 
     (you must have called download at least once in the session and after clearing the mission)
     """
-    # Add the commands. The meaning/order of the parameters is documented in the Command class.
+    # Add the commands. The meaning/order of the parameters is documented in 
+    # the Command class.
     cmds = vehicle.commands
-    #Add MAV_CMD_NAV_TAKEOFF command. This is ignored if the vehicle is already in the air.
+    # Add MAV_CMD_NAV_TAKEOFF command. This is ignored if the vehicle is 
+    # already in the air.
     cmds.add(Command( 0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, 0, 10))
 
-    #Define the four MAV_CMD_NAV_WAYPOINT locations and add the commands
+    # Define the four MAV_CMD_NAV_WAYPOINT locations and add the commands
     point1 = get_location_meters(location, size, -size)
     point2 = get_location_meters(location, size, size)
     point3 = get_location_meters(location, -size, size)
     point4 = get_location_meters(location, -size, -size)
-    cmds.add(Command( 0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point1.lat, point1.lon, 11))
-    cmds.add(Command( 0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point2.lat, point2.lon, 12))
-    cmds.add(Command( 0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point3.lat, point3.lon, 13))
-    cmds.add(Command( 0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point4.lat, point4.lon, 14))
-    cmds.add(Command( 0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point1.lat, point1.lon, 15))
+    cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point1.lat, point1.lon, 11))
+    cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point2.lat, point2.lon, 12))
+    cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point3.lat, point3.lon, 13))
+    cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point4.lat, point4.lon, 14))
+    cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point1.lat, point1.lon, 15))
 
     # Send commands to vehicle.
     vehicle.flush()
@@ -343,16 +356,17 @@ def arm_and_takeoff(targetAltitude):
 
     print "Arming motors"
     # Copter should arm in GUIDED mode
-    vehicle.mode    = VehicleMode("GUIDED")
-    vehicle.armed   = True
+    vehicle.mode = VehicleMode("GUIDED")
+    vehicle.armed = True
     vehicle.flush()
 
     while not vehicle.armed and not api.exit:
         print " Waiting for arming..."
         time.sleep(1)
 
+    # Take off to target altitude
     print "Taking off!"
-    vehicle.commands.takeoff(targetAltitude) # Take off to target altitude
+    vehicle.commands.takeoff(targetAltitude)
     vehicle.flush()
 
     # Wait until the vehicle reaches a safe height before processing the goto 
@@ -370,16 +384,18 @@ def arm_and_takeoff(targetAltitude):
 def set_speed(speed):
     msg = vehicle.message_factory.command_long_encode(
         0, 0,    # target system, target component
-        mavutil.mavlink.MAV_CMD_DO_CHANGE_SPEED, #command
-        0, #confirmation
-        0, #param 1
-        speed, # speed in metres/second
-        0, 0, 0, 0, 0 #param 3 - 7
+        mavutil.mavlink.MAV_CMD_DO_CHANGE_SPEED, # command
+        0, # confirmation
+        0, # param 1
+        speed, # speed in meters/second
+        0, 0, 0, 0, 0 # param 3 - 7
         )
 
-    # send command to vehicle
+    # Send command to vehicle
     vehicle.send_mavlink(msg)
     vehicle.flush()
+
+# Main mission program
 
 print "Clear the current mission"
 clear_mission()
@@ -388,10 +404,10 @@ print "Create a new mission"
 size = 50
 num_commands = add_square_mission(vehicle.location, size)
 print "%d commands in the mission!" % num_commands
-time.sleep(2) # This is here so that mission being sent is displayed on console
+# Make sure that mission being sent is displayed on console cleanly
+time.sleep(2)
 
-
-# From Copter 3.3 you will be able to take off using a mission item. Plane must take off using a mission item (currently).
+# As of ArduCopter 3.3 it is possible to take off using a mission item.
 arm_and_takeoff(10)
 
 print "Starting mission"
@@ -399,10 +415,9 @@ print "Starting mission"
 vehicle.mode = VehicleMode("AUTO")
 vehicle.flush()
 
-# Monitor mission. 
-# Demonstrates getting and setting the command number 
-# Uses distance_to_current_waypoint(), a convenience function for finding the 
-#   distance to the next waypoint.
+# Monitor mission
+# We can get and set the command number and use convenience function for 
+# finding distance to an object or the next waypoint.
 
 sensor = Sensor(vehicle)
 closeness = 2.0
@@ -439,6 +454,5 @@ while True:
 
 print "Return to launch"
 vehicle.mode = VehicleMode("RTL")
-vehicle.flush()  # Flush to ensure changes are sent to autopilot
-
-
+# Flush to ensure changes are sent to autopilot
+vehicle.flush()
