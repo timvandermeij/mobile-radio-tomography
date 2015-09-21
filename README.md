@@ -19,11 +19,9 @@ to work.
 * Python 2.7.10
 * pip 7.1.2 with the following packages:
     * RPi.GPIO
-* Vim 7.4
 
 For all commands in this file, replace `python2` with `python` if your
 operating system does not need to distinguish between Python 2 and Python 3.
-Replace `vim` with any other code editor you might be using.
 
 Cloning the repository
 ======================
