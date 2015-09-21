@@ -54,8 +54,6 @@ def ray_intersects_segment(P, start, end):
     '''
     Given a location point `P` and an edge of two endpoints `start` and `end` of a line segment, returns boolean whether the ray starting from the point eastward intersects the edge.
     '''
-    # TODO: Use this to detect objectively whether the vehicle has flown into 
-    # an object.
     #(y,x) = (lat,lon) = (N,E)
     # Based on http://rosettacode.org/wiki/Ray-casting_algorithm#Python but
     # removed some edge cases and clarified somewhat
@@ -86,10 +84,6 @@ def get_point_edges(points):
     From a given list of `points` in a polygon (sorted on edge positions), generate a list of edges, which are tuples of two points of the line segment.
     """
     return zip(points, list(points[1:]) + [points[0]])
-
-def point_inside_polygon(P, points):
-    edges = get_point_edges(points)
-    return sum(ray_intersects_segment(P, e[0], e[1]) for e in edges) % 2 == 1
 
 def get_angle(locA, locB):
     """
@@ -133,6 +127,22 @@ class Sensor(object):
             (get_location_meters(l3, 5, 0), get_location_meters(l3, 0, 5),
              get_location_meters(l3, -5, 0), get_location_meters(l3, 0, -5))
         ]
+
+    def point_inside_polygon(self, location, points):
+        """
+        Detect objectively whether the vehicle has flown into an object.
+        """
+        # Simplification: if the point is above the mean altitude of all the 
+        # points, then do not consider it to be inside the polygon. We could 
+        # also perform interesting calculations here, but we won't have that 
+        # many objects of differing altitude anyway.
+        avg_alt = float(sum([point.alt for point in points]))/len(points)
+        if avg_alt < location.alt - self.altitude_margin:
+            return False
+
+        edges = get_point_edges(points)
+        num = sum(ray_intersects_segment(location, e[0], e[1]) for e in edges)
+        return num % 2 == 1
 
     def get_edge_distance(self, edge, location, angle):
         # Based on ray casting calculations from 
@@ -180,6 +190,9 @@ class Sensor(object):
 
     def get_obj_distance(self, obj, location, angle):
         if isinstance(obj, tuple):
+            if self.point_inside_polygon(location, obj):
+                return 0
+
             # Check if angle is within object bounds
             angles = []
             quadrants = []
@@ -354,6 +367,19 @@ def arm_and_takeoff(targetAltitude):
             break
         time.sleep(1)
 
+def set_speed(speed):
+    msg = vehicle.message_factory.command_long_encode(
+        0, 0,    # target system, target component
+        mavutil.mavlink.MAV_CMD_DO_CHANGE_SPEED, #command
+        0, #confirmation
+        0, #param 1
+        speed, # speed in metres/second
+        0, 0, 0, 0, 0 #param 3 - 7
+        )
+
+    # send command to vehicle
+    vehicle.send_mavlink(msg)
+    vehicle.flush()
 
 print "Clear the current mission"
 clear_mission()
@@ -386,9 +412,14 @@ while True:
     if sensor_distance < farness:
         print "Distance to object: %s m" % sensor_distance
         if sensor_distance < closeness:
-            # TODO: Do something different here.
-            print "Too close to the object, abort mission."
-            break
+            print "Too close to the object, halting."
+            vehicle.mode = VehicleMode("GUIDED")
+            set_speed(0)
+            if sensor_distance == 0:
+                print "Inside the object, abort mission."
+                sys.exit(1)
+            else:
+                break
 
     nextwaypoint = vehicle.commands.next
     distance = distance_to_current_waypoint()
