@@ -7,29 +7,45 @@ import socket
 
 UDP_NETWORK_IP = "127.0.0.1"
 UDP_NETWORK_PORT = 3233
-UDP_NETWORK_BUFFER_SIZE = 1024
-UDP_NETWORK_TOTAL_NODES = 2
-UDP_NETWORK_SEND_INTERVAL = 2
-UDP_NETWORK_INTERVAL_DELAY = 0.05
+UDP_NETWORK_BUFFER_SIZE = 1024 # bytes
+UDP_NETWORK_TOTAL_NODES = 3
+UDP_NETWORK_SWEEP_DELAY = 1 # seconds
+UDP_NETWORK_LOOP_DELAY = 0.05 # seconds
+
+class TDMA_Scheduler(object):
+    def __init__(self, id):
+        self.id = id
+        self.last_timestamp = 0
+
+    def get_next_timestamp(self):
+        # Get the next timestamp for starting transmission of packets.
+        if self.last_timestamp == 0:
+            self.last_timestamp = time.time() + ((self.id / UDP_NETWORK_TOTAL_NODES) *
+                                  UDP_NETWORK_SWEEP_DELAY)
+        else: 
+            self.last_timestamp += UDP_NETWORK_SWEEP_DELAY
+        
+        return self.last_timestamp
 
 class Xbee_Sensor_Simulator(object):
     def __init__(self, id):
         # Initialize the sensor with its ID and a unique, non-blocking UDP socket.
         self.id = id
+        self.scheduler = TDMA_Scheduler(self.id)
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.bind((UDP_NETWORK_IP, UDP_NETWORK_PORT + self.id))
         self.socket.setblocking(0)
 
     def run(self):
         # Execute the sensor's main loop that constantly sends and receives packets.
-        last_send_timestamp = 0
+        next_timestamp = self.scheduler.get_next_timestamp()
         while True:
             # Add a small delay to avoid 100% CPU usage due to the while loop
-            time.sleep(UDP_NETWORK_INTERVAL_DELAY)
+            time.sleep(UDP_NETWORK_LOOP_DELAY)
 
-            if time.time() - last_send_timestamp >= UDP_NETWORK_SEND_INTERVAL:
+            if time.time() >= next_timestamp:
                 self._send()
-                last_send_timestamp = time.time()
+                next_timestamp = self.scheduler.get_next_timestamp()
 
             self._receive()
 
