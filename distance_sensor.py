@@ -1,11 +1,14 @@
 import time
 import RPi.GPIO as gpio
 
-DELAY = 0.5 # seconds
+TRIGGER_PIN = 13
+ECHO_PIN = 11
+TRIGGER_DELAY = 0.00001 # seconds
+INTERVAL_DELAY = 0.5 # seconds
 SPEED_OF_SOUND = 34320 # cm/second
 
 class Distance_Sensor(object):
-    def __init__(self, trigger, echo):
+    def __init__(self):
         # Disable warnings about pins being in use
         gpio.setwarnings(False)
 
@@ -13,33 +16,30 @@ class Distance_Sensor(object):
         # pin numbers on the P1 header of the board.
         gpio.setmode(gpio.BOARD)
 
-        self.trigger = trigger
-        self.echo = echo
-
         # Configure the input and output pins
-        gpio.setup(self.trigger, gpio.OUT)
-        gpio.setup(self.echo, gpio.IN)
+        gpio.setup(TRIGGER_PIN, gpio.OUT)
+        gpio.setup(ECHO_PIN, gpio.IN)
         
         # Set trigger to false
-        gpio.output(self.trigger, False)
-        time.sleep(DELAY)
+        gpio.output(TRIGGER_PIN, False)
+        time.sleep(INTERVAL_DELAY)
 
     def run(self):
         while True:
             # Trigger the sensor to start measuring
-            gpio.output(self.trigger, True)
-            time.sleep(0.00001)
-            gpio.output(self.trigger, False)
+            gpio.output(TRIGGER_PIN, True)
+            time.sleep(TRIGGER_DELAY)
+            gpio.output(TRIGGER_PIN, False)
 
             # Set the start time only when the sensor
             # is starting to send a signal
             start = time.time()
-            while gpio.input(self.echo) == 0:
+            while gpio.input(ECHO_PIN) == 0:
                 start = time.time()
 
             # Move the end time when the signal has
             # not been returned yet.
-            while gpio.input(self.echo) == 1:
+            while gpio.input(ECHO_PIN) == 1:
                 end = time.time()
 
             # Calculate the distance and divide by two
@@ -49,13 +49,10 @@ class Distance_Sensor(object):
             distance = (total * SPEED_OF_SOUND) / 2
             print("Distance to object: {} cm".format(distance))
 
-            time.sleep(DELAY)
+            time.sleep(INTERVAL_DELAY)
 
 def main():
-    trigger = 13
-    echo = 11
-
-    distance_sensor = Distance_Sensor(trigger, echo)
+    distance_sensor = Distance_Sensor()
     distance_sensor.run()
 
 if __name__ == "__main__":

@@ -55,7 +55,10 @@ Distance sensor
 We assume that you have setup a Raspberry Pi with Arch Linux ARM and
 that you have connected the HC-SR04 sensor. This tool must run on the
 Raspberry Pi. Start the tool with `sudo python2 distance_sensor.py` to
-receive continuous measurements from the distance sensor.
+receive continuous measurements from the distance sensor. Change the pin
+numbers for the trigger and echo pins in the code if you have used
+different pin numbers when connecting the HC-SR04 sensor to the Raspberry
+Pi.
 
 License
 =======
