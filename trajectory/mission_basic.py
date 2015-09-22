@@ -10,10 +10,6 @@ import math
 from droneapi.lib import VehicleMode, Location, Command
 from pymavlink import mavutil
 
-# Connect to API provider and get vehicle object
-api = local_connect()
-vehicle = api.get_vehicles()[0]
-
 # Geometry utility functions
 # These calculate distances, locations or angles based on specific input.
 # Note that some functions assume certain properties of the earth's surface, 
@@ -266,193 +262,205 @@ class Sensor(object):
 
 # Mission utility functions
 
-def distance_to_current_waypoint():
-    """
-    Gets distance in meters to the current waypoint. 
-    It returns None for the first waypoint (Home location).
-    """
-    next_waypoint = vehicle.commands.next
-    if next_waypoint == 1:
-        return None
-    mission_item = vehicle.commands[next_waypoint]
-    lat = mission_item.x
-    lon = mission_item.y
-    alt = mission_item.z
-    target_waypoint_location = Location(lat, lon, alt, is_relative=True)
-    distance = get_distance_meters(vehicle.location, target_waypoint_location)
-    return distance
+class Mission(object):
+    def __init__(self, api, vehicle):
+        self.api = api
+        self.vehicle = vehicle
+
+    def distance_to_current_waypoint(self):
+        """
+        Gets distance in meters to the current waypoint. 
+        It returns `None` for the first waypoint (Home location).
+        """
+        next_waypoint = self.vehicle.commands.next
+        if next_waypoint == 1:
+            return None
+        mission_item = self.vehicle.commands[next_waypoint]
+        lat = mission_item.x
+        lon = mission_item.y
+        alt = mission_item.z
+        waypoint_location = Location(lat, lon, alt, is_relative=True)
+        distance = get_distance_meters(self.vehicle.location, waypoint_location)
+        return distance
+
+    def clear_mission(self):
+        """
+        Clear the current mission.
+        """
+        cmds = self.vehicle.commands
+        self.vehicle.commands.clear()
+        self.vehicle.flush()
+
+        # After clearing the mission, we MUST re-download the mission from the 
+        # vehicle before vehicle.commands can be used again.
+        # See https://github.com/dronekit/dronekit-python/issues/230 for 
+        # reasoning.
+        self.download_mission()
+
+    def download_mission(self):
+        """
+        Download the current mission from the vehicle.
+        """
+        cmds = self.vehicle.commands
+        cmds.download()
+        # Wait until download is complete.
+        cmds.wait_valid()
+
+    def add_square_mission(self, center, size):
+        """
+        Adds a takeoff command and four waypoint commands to the current mission. 
+        The waypoints are positioned to form a square of side length `2*size` around the specified `center` Location.
+
+        The function assumes `vehicle.commands` is the vehicle mission state 
+        (you must have called `download_mission` at least once before in the session and after any use of `clear_mission`)
+        """
+        # Add the commands. The meaning/order of the parameters is documented 
+        # in the Command class.
+        cmds = self.vehicle.commands
+        # Add MAV_CMD_NAV_TAKEOFF command. This is ignored if the vehicle is 
+        # already in the air.
+        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, 0, 10))
+
+        # Define the four MAV_CMD_NAV_WAYPOINT locations and add the commands
+        point1 = get_location_meters(center, size, -size)
+        point2 = get_location_meters(center, size, size)
+        point3 = get_location_meters(center, -size, size)
+        point4 = get_location_meters(center, -size, -size)
+        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point1.lat, point1.lon, 11))
+        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point2.lat, point2.lon, 12))
+        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point3.lat, point3.lon, 13))
+        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point4.lat, point4.lon, 14))
+        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point1.lat, point1.lon, 15))
+
+        # Send commands to vehicle.
+        self.vehicle.flush()
+
+        return cmds.count
 
 
-def clear_mission():
-    """
-    Clear the current mission.
-    """
-    cmds = vehicle.commands
-    vehicle.commands.clear()
-    vehicle.flush()
+    def arm_and_takeoff(self, targetAltitude):
+        """
+        Arms vehicle and fly to targetAltitude.
+        """
+        print "Basic pre-arm checks"
+        # Don't let the user try to fly autopilot is booting
+        while self.vehicle.mode.name == "INITIALISING":
+            print "Waiting for vehicle to initialise..."
+            time.sleep(1)
+        while self.vehicle.gps_0.fix_type < 2:
+            print "Waiting for GPS...:", self.vehicle.gps_0.fix_type
+            time.sleep(1)
 
-    # After clearing the mission, we MUST re-download the mission from the 
-    # vehicle before vehicle.commands can be used again.
-    # See https://github.com/dronekit/dronekit-python/issues/230 for reasoning.
-    cmds = vehicle.commands
-    cmds.download()
-    cmds.wait_valid()
+        print "Arming motors"
+        # Copter should arm in GUIDED mode
+        self.vehicle.mode = VehicleMode("GUIDED")
+        self.vehicle.armed = True
+        self.vehicle.flush()
 
+        while not self.vehicle.armed and not self.api.exit:
+            print " Waiting for arming..."
+            time.sleep(1)
 
-def download_mission():
-    """
-    Download the current mission from the vehicle.
-    """
-    cmds = vehicle.commands
-    cmds.download()
-    # Wait until download is complete.
-    cmds.wait_valid()
+        # Take off to target altitude
+        print "Taking off!"
+        self.vehicle.commands.takeoff(targetAltitude)
+        self.vehicle.flush()
 
+        # Wait until the vehicle reaches a safe height before processing the 
+        # goto (otherwise the command after Vehicle.commands.takeoff will 
+        # execute immediately).
+        while not self.api.exit:
+            # TODO: Check sensors here already?
+            print " Altitude: ", self.vehicle.location.alt
+            # Just below target, in case of undershoot.
+            if self.vehicle.location.alt >= targetAltitude * 0.95:
+                print "Reached target altitude"
+                break
+            time.sleep(1)
 
-def add_square_mission(location, size):
-    """
-    Adds a takeoff command and four waypoint commands to the current mission. 
-    The waypoints are positioned to form a square of side length `2*size` around the specified `location`.
-
-    The function assumes vehicle.commands matches the vehicle mission state 
-    (you must have called download at least once in the session and after clearing the mission)
-    """
-    # Add the commands. The meaning/order of the parameters is documented in 
-    # the Command class.
-    cmds = vehicle.commands
-    # Add MAV_CMD_NAV_TAKEOFF command. This is ignored if the vehicle is 
-    # already in the air.
-    cmds.add(Command( 0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, 0, 10))
-
-    # Define the four MAV_CMD_NAV_WAYPOINT locations and add the commands
-    point1 = get_location_meters(location, size, -size)
-    point2 = get_location_meters(location, size, size)
-    point3 = get_location_meters(location, -size, size)
-    point4 = get_location_meters(location, -size, -size)
-    cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point1.lat, point1.lon, 11))
-    cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point2.lat, point2.lon, 12))
-    cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point3.lat, point3.lon, 13))
-    cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point4.lat, point4.lon, 14))
-    cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point1.lat, point1.lon, 15))
-
-    # Send commands to vehicle.
-    vehicle.flush()
-
-    return cmds.count
-
-
-def arm_and_takeoff(targetAltitude):
-    """
-    Arms vehicle and fly to targetAltitude.
-    """
-    print "Basic pre-arm checks"
-    # Don't let the user try to fly autopilot is booting
-    while vehicle.mode.name == "INITIALISING":
-        print "Waiting for vehicle to initialise..."
-        time.sleep(1)
-    while vehicle.gps_0.fix_type < 2:
-        print "Waiting for GPS...:", vehicle.gps_0.fix_type
-        time.sleep(1)
-
-    print "Arming motors"
-    # Copter should arm in GUIDED mode
-    vehicle.mode = VehicleMode("GUIDED")
-    vehicle.armed = True
-    vehicle.flush()
-
-    while not vehicle.armed and not api.exit:
-        print " Waiting for arming..."
-        time.sleep(1)
-
-    # Take off to target altitude
-    print "Taking off!"
-    vehicle.commands.takeoff(targetAltitude)
-    vehicle.flush()
-
-    # Wait until the vehicle reaches a safe height before processing the goto 
-    # (otherwise the command after Vehicle.commands.takeoff will execute 
-    # immediately).
-    while not api.exit:
-        # TODO: Check sensors here already?
-        print " Altitude: ", vehicle.location.alt
-        # Just below target, in case of undershoot.
-        if vehicle.location.alt >= targetAltitude * 0.95:
-            print "Reached target altitude"
-            break
-        time.sleep(1)
-
-def set_speed(speed):
-    msg = vehicle.message_factory.command_long_encode(
-        0, 0,    # target system, target component
-        mavutil.mavlink.MAV_CMD_DO_CHANGE_SPEED, # command
-        0, # confirmation
-        0, # param 1
-        speed, # speed in meters/second
-        0, 0, 0, 0, 0 # param 3 - 7
+    def set_speed(self, speed):
+        msg = self.vehicle.message_factory.command_long_encode(
+            0, 0,    # target system, target component
+            mavutil.mavlink.MAV_CMD_DO_CHANGE_SPEED, # command
+            0, # confirmation
+            0, # param 1
+            speed, # speed in meters/second
+            0, 0, 0, 0, 0 # param 3 - 7
         )
 
-    # Send command to vehicle
-    vehicle.send_mavlink(msg)
-    vehicle.flush()
+        # Send command to vehicle
+        self.vehicle.send_mavlink(msg)
+        self.vehicle.flush()
 
 # Main mission program
+def main():
+    # Connect to API provider and get vehicle object
+    api = local_connect()
+    vehicle = api.get_vehicles()[0]
 
-print "Clear the current mission"
-clear_mission()
+    mission = Mission(api, vehicle)
+    print "Clear the current mission"
+    mission.clear_mission()
 
-print "Create a new mission"
-size = 50
-num_commands = add_square_mission(vehicle.location, size)
-print "%d commands in the mission!" % num_commands
-# Make sure that mission being sent is displayed on console cleanly
-time.sleep(2)
+    print "Create a new mission"
+    size = 50
+    num_commands = mission.add_square_mission(vehicle.location, size)
+    print "%d commands in the mission!" % num_commands
+    # Make sure that mission being sent is displayed on console cleanly
+    time.sleep(2)
 
-# As of ArduCopter 3.3 it is possible to take off using a mission item.
-arm_and_takeoff(10)
+    # As of ArduCopter 3.3 it is possible to take off using a mission item.
+    mission.arm_and_takeoff(10)
 
-print "Starting mission"
-# Set mode to AUTO to start mission
-vehicle.mode = VehicleMode("AUTO")
-vehicle.flush()
+    print "Starting mission"
+    # Set mode to AUTO to start mission
+    vehicle.mode = VehicleMode("AUTO")
+    vehicle.flush()
 
-# Monitor mission
-# We can get and set the command number and use convenience function for 
-# finding distance to an object or the next waypoint.
+    # Monitor mission
+    # We can get and set the command number and use convenience function for 
+    # finding distance to an object or the next waypoint.
 
-sensor = Sensor(vehicle)
-closeness = 2.0
-farness = 100.0
-while True:
-    sensor_distance = sensor.get_distance(vehicle.location)
-    if sensor_distance < farness:
-        print "Distance to object: %s m" % sensor_distance
-        if sensor_distance < closeness:
-            print "Too close to the object, halting."
-            vehicle.mode = VehicleMode("GUIDED")
-            set_speed(0)
-            if sensor_distance == 0:
-                print "Inside the object, abort mission."
-                sys.exit(1)
-            else:
-                break
+    sensor = Sensor(vehicle)
+    closeness = 2.0
+    farness = 100.0
+    while True:
+        sensor_distance = sensor.get_distance(vehicle.location)
+        if sensor_distance < farness:
+            print "Distance to object: %s m" % sensor_distance
+            if sensor_distance < closeness:
+                print "Too close to the object, halting."
+                vehicle.mode = VehicleMode("GUIDED")
+                mission.set_speed(0)
+                if sensor_distance == 0:
+                    print "Inside the object, abort mission."
+                    sys.exit(1)
+                else:
+                    break
 
-    nextwaypoint = vehicle.commands.next
-    distance = distance_to_current_waypoint()
-    if nextwaypoint > 1:
-        if distance < farness:
-            print "Distance to waypoint (%s): %s m" % (nextwaypoint, distance)
-            if distance < closeness:
-                print "Close enough: skip to next waypoint"
-                vehicle.commands.next = nextwaypoint + 1
-                nextwaypoint = nextwaypoint + 1
+        nextwaypoint = vehicle.commands.next
+        distance = mission.distance_to_current_waypoint()
+        if nextwaypoint > 1:
+            if distance < farness:
+                print "Distance to waypoint (%s): %s m" % (nextwaypoint, distance)
+                if distance < closeness:
+                    print "Close enough: skip to next waypoint"
+                    vehicle.commands.next = nextwaypoint + 1
+                    nextwaypoint = nextwaypoint + 1
 
-    if nextwaypoint >= num_commands:
-        print "Exit 'standard' mission when heading for final waypoint (%d)" % num_commands
-        break
+        if nextwaypoint >= num_commands:
+            print "Exit 'standard' mission when heading for final waypoint (%d)" % num_commands
+            break
 
-    time.sleep(0.5)
+        time.sleep(0.5)
 
-print "Return to launch"
-vehicle.mode = VehicleMode("RTL")
-# Flush to ensure changes are sent to autopilot
-vehicle.flush()
+    print "Return to launch"
+    vehicle.mode = VehicleMode("RTL")
+    # Flush to ensure changes are sent to autopilot
+    vehicle.flush()
+
+# The 'api start' command of pymavlink executes the script using the builtin 
+# function `execfile`, which makes the module name __builtin__, so allow this 
+# as well as directly executing the file.
+if __name__ in ["__main__", "__builtin__"]:
+    main()
