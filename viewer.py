@@ -36,7 +36,8 @@ class Viewer:
             "color": "red",
             "linewidth": 2
         }
-        self.arrows.append(plt.annotate("", self.points[point_from - 1], self.points[point_to - 1], arrowprops=options))
+        arrow = plt.annotate("", self.points[point_from - 1], self.points[point_to - 1], arrowprops=options)
+        self.arrows.append(arrow)
 
     def display(self):
         while True:
