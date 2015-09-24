@@ -18,6 +18,8 @@ to work.
 * Git 2.5.3
 * Python 2.7.10
 * pip 7.1.2 with the following packages:
+    * matplotlib
+    * NumPy
     * RPi.GPIO
 
 For all commands in this file, replace `python2` with `python` if your
