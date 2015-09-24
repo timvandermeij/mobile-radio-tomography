@@ -14,7 +14,8 @@
         "settings": {
             "number_of_sensors": 8,
             "size": 10,
-            "circle_radius": 3
+            "circle_radius": 3,
+            "refresh_delay": 0.5
         }
     },
     {
