@@ -43,11 +43,11 @@ XBee sensor simulator
 The XBee sensor simulator is used to simulate the behavior of an XBee
 sensor network. This is especially useful for determining communication
 schemes for the sensors. Start the tool on a laptop or desktop computer
-with `python2 xbee_sensor_simulator.py -i 1` in one terminal and with
-`python2 xbee_sensor_simulator.py -i 2` in another terminal to simulate
-the communication between sensors 1 and 2. You can add more sensors to the
-network by opening more terminals and using unique sensor IDs for the `-i`
-flag.
+with `python2 xbee_sensor_simulator.py` in a terminal to get both output
+in the terminal as well as open a viewer that visualizes the communication
+between the sensors in the network. One can alter settings for the
+simulation, such as the number of sensors in the network, in the
+`settings.json` file.
 
 Distance sensor
 ---------------

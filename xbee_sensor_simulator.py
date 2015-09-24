@@ -41,6 +41,8 @@ class Viewer:
         }
         arrow = plt.annotate("", self.points[point_from - 1], self.points[point_to - 1], arrowprops=options)
         self.arrows.append(arrow)
+
+    def refresh(self):
         plt.draw()
 
     def clear_arrows(self):
@@ -120,6 +122,8 @@ class XBee_Sensor(object):
             self.socket.sendto(json.dumps(packet), (self.settings.get("ip"), self.settings.get("port") + i))
             self.viewer.draw_arrow(self.id, i)
             print("-> {} sending at {}...".format(self.id, packet["timestamp"]))
+        
+        self.viewer.refresh()
 
     def _receive(self):
         # Receive packets from all other sensors.
