@@ -6,5 +6,16 @@
             "size": 10,
             "circle_radius": 3
         }
+    },
+    {
+        "component": "xbee_sensor_simulator",
+        "settings": {
+            "ip": "127.0.0.1",
+            "port": 3233,
+            "buffer_size": 1024,
+            "number_of_sensors": 3,
+            "sweep_delay": 6,
+            "loop_delay": 0.05
+        }
     }
 ]

@@ -2,28 +2,23 @@ import sys
 import time
 import json
 import argparse
-from random import randint
 import socket
-
-UDP_NETWORK_IP = "127.0.0.1"
-UDP_NETWORK_PORT = 3233
-UDP_NETWORK_BUFFER_SIZE = 1024 # bytes
-UDP_NETWORK_TOTAL_NODES = 3
-UDP_NETWORK_SWEEP_DELAY = 6 # seconds
-UDP_NETWORK_LOOP_DELAY = 0.05 # seconds
+from random import randint
+from settings.Settings import Settings
 
 class TDMA_Scheduler(object):
-    def __init__(self, id):
+    def __init__(self, settings, id):
+        self.settings = settings
         self.id = id
         self.timestamp = 0
 
     def get_next_timestamp(self):
         # Get the next timestamp for starting transmission of packets.
         if self.timestamp == 0:
-            self.timestamp = time.time() + ((self.id / UDP_NETWORK_TOTAL_NODES) *
-                             UDP_NETWORK_SWEEP_DELAY)
+            self.timestamp = time.time() + ((self.id / self.settings.get("number_of_sensors")) *
+                             self.settings.get("sweep_delay"))
         else: 
-            self.timestamp += UDP_NETWORK_SWEEP_DELAY
+            self.timestamp += self.settings.get("sweep_delay")
         
         return self.timestamp
 
@@ -32,26 +27,27 @@ class TDMA_Scheduler(object):
         # another sensor in the network. The transmission timestamp of this
         # sensor is the received transmission timestamp plus the number of
         # slots inbetween that sensor and this sensor.
-        slot_time = UDP_NETWORK_SWEEP_DELAY / UDP_NETWORK_TOTAL_NODES
+        slot_time = self.settings.get("sweep_delay") / self.settings.get("number_of_sensors")
         from_sensor = int(packet["from"])
         timestamp = float(packet["timestamp"])
         if from_sensor < self.id:
             self.timestamp = timestamp + ((self.id - from_sensor) * slot_time)
         else:
             # Calculate how much time remains to complete the current round.
-            completed_round = (UDP_NETWORK_TOTAL_NODES - from_sensor + 1) * slot_time
+            completed_round = (self.settings.get("number_of_sensors") - from_sensor + 1) * slot_time
             self.timestamp = timestamp + completed_round + ((self.id - 1) * slot_time)
 
         return self.timestamp
 
 class XBee_Sensor(object):
-    def __init__(self, id):
+    def __init__(self, settings, id):
         # Initialize the sensor with its ID and a unique, non-blocking UDP socket.
+        self.settings = settings
         self.id = id
         self.next_timestamp = 0
-        self.scheduler = TDMA_Scheduler(self.id)
+        self.scheduler = TDMA_Scheduler(self.settings, self.id)
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.bind((UDP_NETWORK_IP, UDP_NETWORK_PORT + self.id))
+        self.socket.bind((self.settings.get("ip"), self.settings.get("port") + self.id))
         self.socket.setblocking(0)
 
     def run(self):
@@ -59,7 +55,7 @@ class XBee_Sensor(object):
         self.next_timestamp = self.scheduler.get_next_timestamp()
         while True:
             # Add a small delay to avoid 100% CPU usage due to the while loop.
-            time.sleep(UDP_NETWORK_LOOP_DELAY)
+            time.sleep(self.settings.get("loop_delay"))
 
             if time.time() >= self.next_timestamp:
                 self._send()
@@ -69,7 +65,7 @@ class XBee_Sensor(object):
 
     def _send(self):
         # Send packets to all other sensors.
-        for i in range(1, UDP_NETWORK_TOTAL_NODES + 1):
+        for i in range(1, self.settings.get("number_of_sensors") + 1):
             if i == self.id:
                 continue
 
@@ -79,27 +75,29 @@ class XBee_Sensor(object):
                 "timestamp": time.time(),
                 "rssi": -randint(1,60)
             }
-            self.socket.sendto(json.dumps(packet), (UDP_NETWORK_IP, UDP_NETWORK_PORT + i))
+            self.socket.sendto(json.dumps(packet), (self.settings.get("ip"), self.settings.get("port") + i))
             print("-> {} sending at {}...".format(self.id, packet["timestamp"]))
 
     def _receive(self):
         # Receive packets from all other sensors.
         try:
-            packet = json.loads(self.socket.recv(UDP_NETWORK_BUFFER_SIZE))
+            packet = json.loads(self.socket.recv(self.settings.get("buffer_size")))
             self.next_timestamp = self.scheduler.synchronize(packet)
             print("{} receiving at {}...".format(self.id, time.time()))
         except socket.error:
             pass
 
 def main(argv):
+    settings = Settings("settings.json", "xbee_sensor_simulator")
+    
     parser = argparse.ArgumentParser(description="Simulate packet communication in a WiFi sensor network.")
     parser.add_argument("-i", "--id", default=0, dest="id", type=int, help="Unique identifier for the sensor.")
 
     args = parser.parse_args()
-    if args.id < 1 or args.id > UDP_NETWORK_TOTAL_NODES:
+    if args.id < 1 or args.id > settings.get("number_of_sensors"):
         print("Provide a non-negative and non-zero ID that is smaller or equal to the total number of sensors")
     else:
-        sensor = XBee_Sensor(args.id)
+        sensor = XBee_Sensor(settings, args.id)
         sensor.run()
 
 if __name__ == "__main__":
