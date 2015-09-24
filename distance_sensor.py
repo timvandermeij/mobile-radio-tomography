@@ -1,14 +1,11 @@
 import time
 import RPi.GPIO as gpio
-
-TRIGGER_PIN = 13
-ECHO_PIN = 11
-TRIGGER_DELAY = 0.00001 # seconds
-INTERVAL_DELAY = 0.5 # seconds
-SPEED_OF_SOUND = 34320 # cm/second
+from settings.Settings import Settings
 
 class Distance_Sensor(object):
-    def __init__(self):
+    def __init__(self, settings):
+        self.settings = settings
+
         # Disable warnings about pins being in use
         gpio.setwarnings(False)
 
@@ -17,42 +14,44 @@ class Distance_Sensor(object):
         gpio.setmode(gpio.BOARD)
 
         # Configure the input and output pins
-        gpio.setup(TRIGGER_PIN, gpio.OUT)
-        gpio.setup(ECHO_PIN, gpio.IN)
+        gpio.setup(self.settings.get("trigger_pin"), gpio.OUT)
+        gpio.setup(self.settings.get("echo_pin"), gpio.IN)
         
         # Set trigger to false
-        gpio.output(TRIGGER_PIN, False)
-        time.sleep(INTERVAL_DELAY)
+        gpio.output(self.settings.get("trigger_pin"), False)
+        time.sleep(self.settings.get("interval_delay"))
 
     def run(self):
         while True:
             # Trigger the sensor to start measuring
-            gpio.output(TRIGGER_PIN, True)
-            time.sleep(TRIGGER_DELAY)
-            gpio.output(TRIGGER_PIN, False)
+            gpio.output(self.settings.get("trigger_pin"), True)
+            time.sleep(self.settings.get("trigger_delay"))
+            gpio.output(self.settings.get("trigger_pin"), False)
 
             # Set the start time only when the sensor
             # is starting to send a signal
             start = time.time()
-            while gpio.input(ECHO_PIN) == 0:
+            while gpio.input(self.settings.get("echo_pin")) == 0:
                 start = time.time()
 
             # Move the end time when the signal has
             # not been returned yet.
-            while gpio.input(ECHO_PIN) == 1:
+            while gpio.input(self.settings.get("echo_pin")) == 1:
                 end = time.time()
 
             # Calculate the distance and divide by two
             # because the signal travels the distance
             # twice (back and forth).
             total = end - start
-            distance = (total * SPEED_OF_SOUND) / 2
+            distance = (total * self.settings.get("speed_of_sound")) / 2
             print("Distance to object: {} cm".format(distance))
 
-            time.sleep(INTERVAL_DELAY)
+            time.sleep(self.settings.get("interval_delay"))
 
 def main():
-    distance_sensor = Distance_Sensor()
+    settings = Settings("settings.json", "distance_sensor")
+
+    distance_sensor = Distance_Sensor(settings)
     distance_sensor.run()
 
 if __name__ == "__main__":
