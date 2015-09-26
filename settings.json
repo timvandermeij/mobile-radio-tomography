@@ -1,6 +1,6 @@
-[
-    {
-        "component": "distance_sensor",
+{
+    "distance_sensor": {
+        "name": "Distance sensor",
         "settings": {
             "trigger_pin": 13,
             "echo_pin": 11,
@@ -9,8 +9,8 @@
             "speed_of_sound": 34320
         }
     },
-    {
-        "component": "xbee_sensor_simulator",
+    "xbee_sensor_simulator": {
+        "name": "XBee radio sensor simulator",
         "settings": {
             "ip": "127.0.0.1",
             "port": 3233,
@@ -23,4 +23,4 @@
             "refresh_delay": 0.1
         }
     }
-]
+}

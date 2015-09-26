@@ -8,9 +8,8 @@ class Settings(object):
             settings = json.load(data)
         
         self.settings = None
-        for settings_object in settings:
-            if settings_object["component"] == self.component_name:
-                self.settings = settings_object["settings"]
+        if self.component_name in settings:
+            self.settings = settings[self.component_name]["settings"]
 
     def get(self, key):
         if self.settings == None or key not in self.settings:
