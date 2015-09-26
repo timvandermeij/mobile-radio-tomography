@@ -18,3 +18,10 @@
 # Python byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+
+# ArduPilot compiled / parameter log files
+*.bin
+*.parm
+*.tlog
+*.raw
+terrain
