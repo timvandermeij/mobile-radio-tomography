@@ -168,10 +168,10 @@ class Sensor(object):
 # Mission utility functions
 
 class Mission(object):
-    def __init__(self, api, vehicle):
+    def __init__(self, api, vehicle, settings):
         self.api = api
         self.vehicle = vehicle
-        self.settings = Settings("settings.json", "mission")
+        self.settings = settings
 
     def distance_to_current_waypoint(self):
         """
@@ -305,8 +305,9 @@ def main():
     # Connect to API provider and get vehicle object
     api = local_connect()
     vehicle = api.get_vehicles()[0]
+    mission_settings = Settings("settings.json", "mission")
 
-    mission = Mission(api, vehicle)
+    mission = Mission(api, vehicle, mission_settings)
     print "Clear the current mission"
     mission.clear_mission()
 
@@ -331,11 +332,11 @@ def main():
 
     sensor = Sensor(vehicle)
     # Margin in meters at which we are too close to an object
-    closeness = mission.settings.get("closeness")
+    closeness = mission_settings.get("closeness")
     # Distance in meters above which we are uninterested in objects
-    farness = mission.settings.get("farness")
+    farness = mission_settings.get("farness")
     # Seconds to wait before checking sensors and waypoints again
-    loop_delay = mission.settings.get("loop_delay")
+    loop_delay = mission_settings.get("loop_delay")
 
     while True:
         sensor_distance = sensor.get_distance(vehicle.location)
