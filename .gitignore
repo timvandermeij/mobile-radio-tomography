@@ -2,6 +2,19 @@
 *.swp
 *~
 
+# LaTeX compiled files
+*.aux
+*.bbl
+*.blg
+*.dvi
+*.ps
+*.pdf
+*.toc
+*.nav
+*.snm
+*.vrb
+*.out 
+
 # Python byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

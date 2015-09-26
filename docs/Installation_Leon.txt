@@ -1,0 +1,105 @@
+How to install DroneKit, MAVProxy and ArduPilot
+-----------------------------------------------
+
+Follow instructions at http://dev.ardupilot.com/wiki/setting-up-sitl-on-linux/ 
+which uses Ubuntu Linux or Fedora as an example. Not all commands are exactly 
+the same on other systems and some commands might not be necessary, but we will 
+go through the bare needs first.
+
+Make sure git is available and is a somewhat recent version first. 1.7 or later 
+should work fine. Also, make sure python is available, or install a recent
+version. Either 2.7.9+ or 3.4+ should be fine, but prefer 2.7 in case there is 
+code depending on that.
+
+$ git clone git://github.com/diydrones/ardupilot.git
+
+This downloads the latest ardupilot code into a subdirectory. In order to update
+the code, run `git pull` within that directory. (Note that every time the code 
+is updated, the simulator needs to be recompiled, and we have not yet assessed 
+how stable the code is every time, so use this with caution.)
+
+The next part explains how to download JSBSim, which we might not need because 
+it is only used for fixed-wing plane simulation. However, it apparently contains
+a sophisticated flight system, which might be reuseable for certain projects. 
+But we can skip it for our needs for now.
+
+ArduPilot requires some Python packages. These might also be available in pip 
+(using `sudo pip install <package>` or `pip install --user <package>` without
+superuser right), but the instructions use distribution packages instead. If 
+the Linux system does not have these, there are the following options:
+- pip itself: often available except for extremely old and bare systems, install
+  from https://pip.pypa.io/en/latest/installing.html with get-pip.py.
+- matplotlib: is in pip, see http://matplotlib.org/faq/installing_faq.html for
+  alternatives
+- serial: available in pip as pyserial
+- wxgtk2.8: not in pip. http://wiki.wxpython.org/How%20to%20install%20wxPython
+  explains how to install wxPython from source, which requires wxGTK as well as 
+  the wxWidgets library itself: these are combined within a download at 
+  http://www.wxwidgets.org/downloads/ (which can be installed without superuser 
+  rights using `./configure --with-gtk --prefix=$HOME/.local`). wxPython is 
+  only required for the simulator map, which is very handy for seeing what is 
+  happening, but not absolutely necessary.
+- lxml: usually available in packages, also in pip.
+- scipy: usually available, also in pip.
+- opencv: sometimes available in packages, can also be installed from 
+  http://opencv.org/downloads.html using documentation from 
+  http://docs.opencv.org/doc/tutorials/introduction/linux_install/linux_install.html#building-opencv-from-source-using-cmake-using-the-command-line
+  (without superuser rights, one must change the install prefix for cmake). 
+  One can speed up the installation by passing -j4 to the cmake command.
+- pexpect: available in pip
+The other dependencies are either already handled earlier, available from the 
+start in the Linux installation, or they are not necessary: ccache speeds up 
+the recompilation as mentioned before, but is not required.
+
+Next, directories need to be added to the PATH in the ~/.bashrc. However, only 
+one of the lines is enough for now, and make sure to replace $HOME with the full path if the ardupilot code is downloaded elsewhere:
+export PATH=$PATH:$HOME/ardupilot/Tools/autotest
+
+Now go to the ArduCopter subdirectory of ardupilot and run:
+sim_vehicle.sh -w
+This initializes the simulator and sets up parameters. It can be safely killed 
+after this has happened.
+
+Now install the DroneKit SDK using `sudo pip install droneapi` or 
+`pip install --user droneapi`, don't forget about pymavlink and MAVProxy.
+
+Finally, add the following line to ~/.mavinit.scr:
+module load droneapi.module.api
+This enables the 'api' command in MAVProxy and the ArduPilot simulator in order 
+to run a Python script from the console.
+
+How to use the simulator with MAVProxy and DroneKit
+---------------------------------------------------
+
+Since the simulator itself is a MAV link in itself, there is no need to create 
+another MAVProxy instance. In fact, if another proxy link is added, the consoles
+will both attempt to match each other which loses the API/MAV mode for some 
+reason.
+
+Download the Simple Goto example code somewhere (in this case the code is
+located in a scripts directory outside of ardupilot). Then run the simulator:
+
+.../ardupilot/ArduCopter$ sim_vehicle.sh --console --map --aircraft simple
+
+Wait until the simulator is set up (which is around the time it mentions saved 
+parameters). Use the following commands to set up and run the script:
+
+STABILIZE> param set ARMING_CHECK 0
+STABILIZE> param load ../Tools/autotest/copter_params.parm
+STABILIZE> api start ../../scripts/simple_goto.py
+
+Now the copter (drone) will take off and move toward certain points (the script 
+is set to move to the next point and return to launch before it actually 
+reaches such a point) with some API output for altitudes as well. Other example 
+scripts should work as well.
+
+One can also create a script file much like the ~/.mavinit.scr file containing 
+commands to be run at any time. For example, place the above commands in a file 
+called simple.scr, then one can run it when the simulator is set up using:
+
+script simple.scr
+
+----
+
+TODO: What is the best way to implement a kill switch? Ctrl-C? Make it return to
+launch on errors? What to do with low battery --> move downward?
