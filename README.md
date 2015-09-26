@@ -18,6 +18,8 @@ to work.
 * Git 2.5.3
 * Python 2.7.10
 * pip 7.1.2 with the following packages:
+    * matplotlib
+    * NumPy
     * RPi.GPIO
 
 For all commands in this file, replace `python2` with `python` if your
@@ -43,11 +45,11 @@ XBee sensor simulator
 The XBee sensor simulator is used to simulate the behavior of an XBee
 sensor network. This is especially useful for determining communication
 schemes for the sensors. Start the tool on a laptop or desktop computer
-with `python2 xbee_sensor_simulator.py -i 1` in one terminal and with
-`python2 xbee_sensor_simulator.py -i 2` in another terminal to simulate
-the communication between sensors 1 and 2. You can add more sensors to the
-network by opening more terminals and using unique sensor IDs for the `-i`
-flag.
+with `python2 xbee_sensor_simulator.py` in a terminal to get both output
+in the terminal as well as open a viewer that visualizes the communication
+between the sensors in the network. One can alter settings for the
+simulation, such as the number of sensors in the network, in the
+`settings.json` file.
 
 Distance sensor
 ---------------
@@ -56,7 +58,7 @@ We assume that you have setup a Raspberry Pi with Arch Linux ARM and
 that you have connected the HC-SR04 sensor. This tool must run on the
 Raspberry Pi. Start the tool with `sudo python2 distance_sensor.py` to
 receive continuous measurements from the distance sensor. Change the pin
-numbers for the trigger and echo pins in the code if you have used
+numbers for the trigger and echo pins in `settings.json` if you have used
 different pin numbers when connecting the HC-SR04 sensor to the Raspberry
 Pi.
 
