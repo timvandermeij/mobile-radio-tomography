@@ -9,6 +9,7 @@ import time
 import math
 from droneapi.lib import VehicleMode, Location, Command
 from pymavlink import mavutil
+from settings import Settings
 
 # Geometry utility functions
 # These calculate distances, locations or angles based on specific input.
@@ -115,7 +116,13 @@ def diff_angle(a1, a2):
 class Sensor(object):
     def __init__(self, vehicle):
         self.vehicle = vehicle
-        self.altitude_margin = 2.5
+        self.settings = Settings("settings.json", "distance_sensor_simulator")
+        # Margin in meters at which an object is still visible
+        self.altitude_margin = self.settings.get("altitude_margin")
+        # Maximum distance in meters that the sensor returns
+        self.maximum_distance = self.settings.get("maximum_distance")
+
+        # TODO: Replace hardcoded objects with some sort of polygon database
         l2 = get_location_meters(self.vehicle.location, 50, -50, 10)
         l3 = get_location_meters(self.vehicle.location, 52.5, 22.5, 10)
         self.objects = [
@@ -235,7 +242,7 @@ class Sensor(object):
             else:
                 print('Not visible due to altitude, vehicle={}'.format(location.alt))
 
-        return sys.float_info.max
+        return self.maximum_distance
 
     def get_distance(self, location=None, angle=None):
         """
@@ -252,12 +259,10 @@ class Sensor(object):
         # Ensure angle is always in the range [0, 2pi).
         angle = angle % (2*math.pi)
 
-        distance = sys.float_info.max
+        distance = self.maximum_distance
         for obj in self.objects:
             distance = min(distance, self.get_obj_distance(obj, location, angle))
 
-        # TODO: Replace with a parameter that has a limit on the measured 
-        # sensor distance, similar to what the ArduPilot simulator does?
         return distance
 
 # Mission utility functions
@@ -266,6 +271,7 @@ class Mission(object):
     def __init__(self, api, vehicle):
         self.api = api
         self.vehicle = vehicle
+        self.settings = Settings("settings.json", "mission")
 
     def distance_to_current_waypoint(self):
         """
@@ -338,9 +344,9 @@ class Mission(object):
         return cmds.count
 
 
-    def arm_and_takeoff(self, targetAltitude):
+    def arm_and_takeoff(self, altitude):
         """
-        Arms vehicle and fly to targetAltitude.
+        Arms vehicle and fly to the target `altitude`.
         """
         print "Basic pre-arm checks"
         # Don't let the user try to fly autopilot is booting
@@ -363,17 +369,18 @@ class Mission(object):
 
         # Take off to target altitude
         print "Taking off!"
-        self.vehicle.commands.takeoff(targetAltitude)
+        self.vehicle.commands.takeoff(altitude)
         self.vehicle.flush()
 
         # Wait until the vehicle reaches a safe height before processing the 
         # goto (otherwise the command after Vehicle.commands.takeoff will 
         # execute immediately).
+        altitude_undershoot = self.settings.get("altitude_undershoot")
         while not self.api.exit:
             # TODO: Check sensors here already?
             print " Altitude: ", self.vehicle.location.alt
             # Just below target, in case of undershoot.
-            if self.vehicle.location.alt >= targetAltitude * 0.95:
+            if self.vehicle.location.alt >= altitude * altitude_undershoot:
                 print "Reached target altitude"
                 break
             time.sleep(1)
@@ -393,6 +400,7 @@ class Mission(object):
         self.vehicle.flush()
 
 # Main mission program
+# TODO: Move more code into modules
 def main():
     # Connect to API provider and get vehicle object
     api = local_connect()
@@ -422,8 +430,13 @@ def main():
     # finding distance to an object or the next waypoint.
 
     sensor = Sensor(vehicle)
-    closeness = 2.0
-    farness = 100.0
+    # Margin in meters at which we are too close to an object
+    closeness = mission.settings.get("closeness")
+    # Distance in meters above which we are uninterested in objects
+    farness = mission.settings.get("farness")
+    # Seconds to wait before checking sensors and waypoints again
+    loop_delay = mission.settings.get("loop_delay")
+
     while True:
         sensor_distance = sensor.get_distance(vehicle.location)
         if sensor_distance < farness:
@@ -452,7 +465,7 @@ def main():
             print "Exit 'standard' mission when heading for final waypoint (%d)" % num_commands
             break
 
-        time.sleep(0.5)
+        time.sleep(loop_delay)
 
     print "Return to launch"
     vehicle.mode = VehicleMode("RTL")
