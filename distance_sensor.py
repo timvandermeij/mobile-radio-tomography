@@ -1,6 +1,6 @@
 import time
 import RPi.GPIO as gpio
-from settings.Settings import Settings
+from settings import Settings
 
 class Distance_Sensor(object):
     def __init__(self, settings):

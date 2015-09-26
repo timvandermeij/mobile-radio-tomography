@@ -1,1 +1,3 @@
-__all__ = ["Settings"] 
+from Settings import Settings
+
+__all__ = ["Settings"]

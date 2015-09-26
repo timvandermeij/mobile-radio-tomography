@@ -5,7 +5,7 @@ import socket
 import matplotlib.pyplot as plt
 import numpy as np
 from random import randint
-from settings.Settings import Settings
+from settings import Settings
 from math import *
 
 class Viewer:
