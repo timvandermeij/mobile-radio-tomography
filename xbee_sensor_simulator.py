@@ -94,6 +94,7 @@ class XBee_Sensor(object):
         self.next_timestamp = 0
         self.scheduler = TDMA_Scheduler(self.settings, self.id)
         self.next_timestamp = self.scheduler.get_next_timestamp()
+        self.rssi_values = [None for _ in range(self.settings.get("number_of_sensors"))]
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.bind((self.settings.get("ip"), self.settings.get("port") + self.id))
         self.socket.setblocking(0)
@@ -121,16 +122,26 @@ class XBee_Sensor(object):
             }
             self.socket.sendto(json.dumps(packet), (self.settings.get("ip"), self.settings.get("port") + i))
             self.viewer.draw_arrow(self.id, i)
-            print("-> {} sending at {}...".format(self.id, packet["timestamp"]))
+            print("--> {} sending at {}...".format(self.id, packet["timestamp"]))
         
+        # Send the RSSI values to the ground sensor
+        packet = {
+            "from": self.id,
+            "to": 0,
+            "rssi_values": self.rssi_values
+        }
+        print(packet)
+        self.rssi_values = [None for _ in range(self.settings.get("number_of_sensors"))]
+
         self.viewer.refresh()
 
     def _receive(self):
         # Receive packets from all other sensors.
         try:
             packet = json.loads(self.socket.recv(self.settings.get("buffer_size")))
+            self.rssi_values[packet["from"] - 1] = packet["rssi"]
             self.next_timestamp = self.scheduler.synchronize(packet)
-            print("{} receiving at {}...".format(self.id, time.time()))
+            print("<-- {} receiving at {}...".format(self.id, time.time()))
         except socket.error:
             pass
 
