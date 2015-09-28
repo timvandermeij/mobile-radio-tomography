@@ -5,12 +5,17 @@ Documentation is provided at http://python.dronekit.io/examples/mission_basic.ht
 """
 
 import sys
+import os
 import time
 import math
 from droneapi.lib import VehicleMode, Location, Command
 from pymavlink import mavutil
 
 # Package imports
+# Ensure that we can import from the current directory as a package since 
+# running this via pymavproxy makes it not have this in the path, and running 
+# scripts in general does not define the correct package
+sys.path.insert(0, os.getcwd())
 from __init__ import __package__
 from settings import Settings
 from distance.Distance_Sensor_Simulator import Distance_Sensor_Simulator
