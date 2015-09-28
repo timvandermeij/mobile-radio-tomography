@@ -9,22 +9,22 @@
             "speed_of_sound": 34320
         }
     },
-	"distance_sensor_simulator": {
-		"name": "Distance sensor simulator",
-		"settings": {
-			"altitude_margin": 2.5,
-			"maximum_distance": 1000.0
-		}
-	},
-	"mission": {
-		"name": "Drone trajectory mission data",
-		"settings": {
-			"altitude_undershoot": 0.95,
-			"closeness": 2.0,
-			"farness": 100.0,
-			"loop_delay": 0.5
-		}
-	},
+    "distance_sensor_simulator": {
+        "name": "Distance sensor simulator",
+        "settings": {
+            "altitude_margin": 2.5,
+            "maximum_distance": 1000.0
+        }
+    },
+    "mission": {
+        "name": "Drone trajectory mission data",
+        "settings": {
+            "altitude_undershoot": 0.95,
+            "closeness": 2.0,
+            "farness": 100.0,
+            "loop_delay": 0.5
+        }
+    },
     "xbee_sensor_simulator": {
         "name": "XBee radio sensor simulator",
         "settings": {
