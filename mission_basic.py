@@ -30,13 +30,15 @@ def main():
 
     print("Create a new mission")
     size = 50
-    num_commands = mission.add_square_mission(vehicle.location, size)
+    altitude = 10
+    speed = 1.0
+    num_commands = mission.add_square_mission(vehicle.location, altitude, size)
     print("{} commands in the mission!".format(num_commands))
     # Make sure that mission being sent is displayed on console cleanly
     time.sleep(2)
 
     # As of ArduCopter 3.3 it is possible to take off using a mission item.
-    mission.arm_and_takeoff(10)
+    mission.arm_and_takeoff(altitude, speed)
 
     print("Starting mission")
     # Set mode to AUTO to start mission

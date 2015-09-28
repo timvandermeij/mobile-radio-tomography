@@ -51,7 +51,7 @@ class Mission(object):
         # Wait until download is complete.
         cmds.wait_valid()
 
-    def add_square_mission(self, center, size):
+    def add_square_mission(self, center, altitude, size):
         """
         Adds a takeoff command and four waypoint commands to the current mission. 
         The waypoints are positioned to form a square of side length `2*size` around the specified `center` Location.
@@ -64,18 +64,18 @@ class Mission(object):
         cmds = self.vehicle.commands
         # Add MAV_CMD_NAV_TAKEOFF command. This is ignored if the vehicle is 
         # already in the air.
-        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, 0, 10))
+        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, 0, altitude))
 
         # Define the four MAV_CMD_NAV_WAYPOINT locations and add the commands
         point1 = get_location_meters(center, size, -size)
         point2 = get_location_meters(center, size, size)
         point3 = get_location_meters(center, -size, size)
         point4 = get_location_meters(center, -size, -size)
-        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point1.lat, point1.lon, 11))
-        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point2.lat, point2.lon, 12))
-        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point3.lat, point3.lon, 13))
-        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point4.lat, point4.lon, 14))
-        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point1.lat, point1.lon, 15))
+        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point1.lat, point1.lon, altitude))
+        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point2.lat, point2.lon, altitude))
+        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point3.lat, point3.lon, altitude))
+        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point4.lat, point4.lon, altitude))
+        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point1.lat, point1.lon, altitude))
 
         # Send commands to vehicle.
         self.vehicle.flush()
@@ -83,7 +83,7 @@ class Mission(object):
         return cmds.count
 
 
-    def arm_and_takeoff(self, altitude):
+    def arm_and_takeoff(self, altitude, speed):
         """
         Arms vehicle and fly to the target `altitude`.
         """
@@ -109,6 +109,7 @@ class Mission(object):
         # Take off to target altitude
         print("Taking off!")
         self.vehicle.commands.takeoff(altitude)
+        self.set_speed(speed)
         self.vehicle.flush()
 
         # Wait until the vehicle reaches a safe height before processing the 
