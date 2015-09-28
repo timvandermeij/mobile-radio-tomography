@@ -25,20 +25,20 @@ def main():
     mission_settings = Settings("settings.json", "mission")
 
     mission = Mission(api, vehicle, mission_settings)
-    print "Clear the current mission"
+    print("Clear the current mission")
     mission.clear_mission()
 
-    print "Create a new mission"
+    print("Create a new mission")
     size = 50
     num_commands = mission.add_square_mission(vehicle.location, size)
-    print "%d commands in the mission!" % num_commands
+    print("{} commands in the mission!".format(num_commands))
     # Make sure that mission being sent is displayed on console cleanly
     time.sleep(2)
 
     # As of ArduCopter 3.3 it is possible to take off using a mission item.
     mission.arm_and_takeoff(10)
 
-    print "Starting mission"
+    print("Starting mission")
     # Set mode to AUTO to start mission
     vehicle.mode = VehicleMode("AUTO")
     vehicle.flush()
@@ -56,15 +56,17 @@ def main():
     loop_delay = mission_settings.get("loop_delay")
 
     while True:
+        print("Velocity: {} m/s".format(vehicle.velocity))
+        print("Altitude: {} m".format(vehicle.location.alt))
         sensor_distance = sensor.get_distance(vehicle.location)
         if sensor_distance < farness:
-            print "Distance to object: %s m" % sensor_distance
+            print("Distance to object: {} m".format(sensor_distance))
             if sensor_distance < closeness:
-                print "Too close to the object, halting."
+                print("Too close to the object, halting.")
                 vehicle.mode = VehicleMode("GUIDED")
                 mission.set_speed(0)
                 if sensor_distance == 0:
-                    print "Inside the object, abort mission."
+                    print("Inside the object, abort mission.")
                     sys.exit(1)
                 else:
                     break
@@ -73,19 +75,19 @@ def main():
         distance = mission.distance_to_current_waypoint()
         if nextwaypoint > 1:
             if distance < farness:
-                print "Distance to waypoint (%s): %s m" % (nextwaypoint, distance)
+                print("Distance to waypoint ({}): {} m".format(nextwaypoint, distance))
                 if distance < closeness:
-                    print "Close enough: skip to next waypoint"
+                    print("Close enough: skip to next waypoint")
                     vehicle.commands.next = nextwaypoint + 1
                     nextwaypoint = nextwaypoint + 1
 
         if nextwaypoint >= num_commands:
-            print "Exit 'standard' mission when heading for final waypoint (%d)" % num_commands
+            print("Exit 'standard' mission when heading for final waypoint ({})".format(num_commands))
             break
 
         time.sleep(loop_delay)
 
-    print "Return to launch"
+    print("Return to launch")
     vehicle.mode = VehicleMode("RTL")
     # Flush to ensure changes are sent to autopilot
     vehicle.flush()

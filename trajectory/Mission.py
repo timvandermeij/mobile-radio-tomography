@@ -87,27 +87,27 @@ class Mission(object):
         """
         Arms vehicle and fly to the target `altitude`.
         """
-        print "Basic pre-arm checks"
+        print("Basic pre-arm checks")
         # Don't let the user try to fly autopilot is booting
         while self.vehicle.mode.name == "INITIALISING":
-            print "Waiting for vehicle to initialise..."
+            print("Waiting for vehicle to initialise...")
             time.sleep(1)
         while self.vehicle.gps_0.fix_type < 2:
-            print "Waiting for GPS...:", self.vehicle.gps_0.fix_type
+            print("Waiting for GPS...: {}".format(self.vehicle.gps_0.fix_type))
             time.sleep(1)
 
-        print "Arming motors"
+        print("Arming motors")
         # Copter should arm in GUIDED mode
         self.vehicle.mode = VehicleMode("GUIDED")
         self.vehicle.armed = True
         self.vehicle.flush()
 
         while not self.vehicle.armed and not self.api.exit:
-            print " Waiting for arming..."
+            print(" Waiting for arming...")
             time.sleep(1)
 
         # Take off to target altitude
-        print "Taking off!"
+        print("Taking off!")
         self.vehicle.commands.takeoff(altitude)
         self.vehicle.flush()
 
@@ -117,10 +117,10 @@ class Mission(object):
         altitude_undershoot = self.settings.get("altitude_undershoot")
         while not self.api.exit:
             # TODO: Check sensors here already?
-            print " Altitude: ", self.vehicle.location.alt
+            print(" Altitude: {} m".format(self.vehicle.location.alt))
             # Just below target, in case of undershoot.
             if self.vehicle.location.alt >= altitude * altitude_undershoot:
-                print "Reached target altitude"
+                print("Reached target altitude")
                 break
             time.sleep(1)
 
