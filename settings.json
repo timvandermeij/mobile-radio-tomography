@@ -6,7 +6,7 @@
             "maximum_distance": 1000.0
         }
     },
-    "distance_sensor_phyiscal": {
+    "distance_sensor_physical": {
         "name": "Distance sensor (physical)",
         "settings": {
             "trigger_pin": 13,
