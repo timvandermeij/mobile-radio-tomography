@@ -1,4 +1,5 @@
 # Initialize as subpackage
-from Sensor_Simulator import Sensor_Simulator
+from Distance_Sensor_Simulator import Distance_Sensor_Simulator
+from Distance_Sensor_Physical import Distance_Sensor_Physical
 
-__all__ = ["Sensor_Simulator"]
+__all__ = ["Distance_Sensor_Simulator", "Distance_Sensor_Physical"]

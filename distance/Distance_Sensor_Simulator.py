@@ -1,13 +1,12 @@
 import sys
 import math
-
 from droneapi.lib import Location
-
+from Distance_Sensor import Distance_Sensor
 from ..settings import Settings
 from ..utils.Geometry import *
 
 # Virtual sensor class that detects collision distances to simulated objects
-class Sensor_Simulator(object):
+class Distance_Sensor_Simulator(Distance_Sensor):
     def __init__(self, vehicle):
         self.vehicle = vehicle
         self.settings = Settings("settings.json", "distance_sensor_simulator")

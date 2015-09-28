@@ -13,7 +13,7 @@ from pymavlink import mavutil
 # Package imports
 from __init__ import __package__
 from settings import Settings
-from distance import Sensor_Simulator
+from distance import Distance_Sensor_Simulator
 from trajectory import Mission
 
 # Main mission program
@@ -49,7 +49,7 @@ def main():
     # We can get and set the command number and use convenience function for 
     # finding distance to an object or the next waypoint.
 
-    sensor = Sensor_Simulator(vehicle)
+    sensor = Distance_Sensor_Simulator(vehicle)
     # Margin in meters at which we are too close to an object
     closeness = mission_settings.get("closeness")
     # Distance in meters above which we are uninterested in objects
