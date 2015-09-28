@@ -26,20 +26,25 @@ class Viewer:
         # spacing between the points is equal. We add an offset to display
         # the circle in the middle of the plot.
         offset = self.settings.get("size") / 2
+        
+        # Add the ground station separately
+        self.points.append((0,0))
+        plt.plot(0, 0, linestyle="None", marker="o", color="black", markersize=10)
+
         for angle in np.arange(0, 2 * pi, (2 * pi) / self.settings.get("number_of_sensors")):
             x = offset + (cos(angle) * self.settings.get("circle_radius"))
             y = offset + (sin(angle) * self.settings.get("circle_radius"))
             self.points.append((x, y))
             plt.plot(x, y, linestyle="None", marker="o", color="black", markersize=10)
 
-    def draw_arrow(self, point_from, point_to):
+    def draw_arrow(self, point_from, point_to, color="red"):
         # Draw an arrow from a given point to another given point.
         options = {
             "arrowstyle": "<-, head_width=1, head_length=1",
-            "color": "red",
+            "color": color,
             "linewidth": 2
         }
-        arrow = plt.annotate("", self.points[point_from - 1], self.points[point_to - 1], arrowprops=options)
+        arrow = plt.annotate("", self.points[point_from], self.points[point_to], arrowprops=options)
         self.arrows.append(arrow)
 
     def refresh(self):
@@ -101,7 +106,8 @@ class XBee_Sensor(object):
 
     def activate(self):
         # Activate the sensor to send and receive packets.
-        if time.time() >= self.next_timestamp:
+        # The ground sensor (with ID 0) can only receive packets.
+        if self.id > 0 and time.time() >= self.next_timestamp:
             self._send()
             self.next_timestamp = self.scheduler.get_next_timestamp()
 
@@ -122,15 +128,15 @@ class XBee_Sensor(object):
             }
             self.socket.sendto(json.dumps(packet), (self.settings.get("ip"), self.settings.get("port") + i))
             self.viewer.draw_arrow(self.id, i)
-            print("--> {} sending at {}...".format(self.id, packet["timestamp"]))
         
-        # Send the RSSI values to the ground sensor
+        # Send the RSSI values to the ground sensor and clear them for the next round
         packet = {
             "from": self.id,
             "to": 0,
             "rssi_values": self.rssi_values
         }
-        print(packet)
+        self.socket.sendto(json.dumps(packet), (self.settings.get("ip"), self.settings.get("port")))
+        self.viewer.draw_arrow(self.id, 0, "blue")
         self.rssi_values = [None for _ in range(self.settings.get("number_of_sensors"))]
 
         self.viewer.refresh()
@@ -139,9 +145,11 @@ class XBee_Sensor(object):
         # Receive packets from all other sensors.
         try:
             packet = json.loads(self.socket.recv(self.settings.get("buffer_size")))
-            self.rssi_values[packet["from"] - 1] = packet["rssi"]
-            self.next_timestamp = self.scheduler.synchronize(packet)
-            print("<-- {} receiving at {}...".format(self.id, time.time()))
+            if self.id > 0:
+                self.rssi_values[packet["from"] - 1] = packet["rssi"]
+                self.next_timestamp = self.scheduler.synchronize(packet)
+            else:
+                print("> Ground station received {}".format(packet["rssi_values"]))
         except socket.error:
             pass
 
@@ -152,7 +160,7 @@ def main(argv):
     viewer.draw_points()
 
     sensors = []
-    for sensor_id in range(1, settings.get("number_of_sensors") + 1):
+    for sensor_id in range(settings.get("number_of_sensors") + 1):
         sensor = XBee_Sensor(sensor_id, settings, viewer)
         sensors.append(sensor)
 
