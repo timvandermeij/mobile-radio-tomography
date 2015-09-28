@@ -13,7 +13,7 @@ from pymavlink import mavutil
 # Package imports
 from __init__ import __package__
 from settings import Settings
-from distance import Distance_Sensor_Simulator
+from distance.Distance_Sensor_Simulator import Distance_Sensor_Simulator
 from trajectory import Mission
 
 # Main mission program

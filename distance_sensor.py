@@ -1,6 +1,6 @@
 import time
 from __init__ import __package__
-from distance import Distance_Sensor_Physical
+from distance.Distance_Sensor_Physical import Distance_Sensor_Physical
 
 def main():
     distance_sensor = Distance_Sensor_Physical()
