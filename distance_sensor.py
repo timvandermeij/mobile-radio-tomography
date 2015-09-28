@@ -7,7 +7,7 @@ def main():
 
     while True:
         print("Measured distance: {} m".format(distance_sensor.get_distance()))
-        time.sleep(settigs.get("interval_delay"))
+        time.sleep(settings.get("interval_delay"))
 
 if __name__ == "__main__":
     main()
