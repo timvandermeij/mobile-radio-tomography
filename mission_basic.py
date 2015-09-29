@@ -50,8 +50,8 @@ def main():
 
     print("Create a new mission")
     size = 50
-    altitude = 4
-    speed = 2.5
+    altitude = mission_settings.get("altitude")
+    speed = mission_settings.get("speed")
     num_commands = mission.add_square_mission(vehicle.location, altitude, size)
     print("{} commands in the mission!".format(num_commands))
     # Make sure that mission being sent is displayed on console cleanly
