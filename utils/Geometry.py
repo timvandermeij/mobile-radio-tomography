@@ -9,6 +9,19 @@ from droneapi.lib import Location
 # these functions may have different accuracies across distances.
 # Note that (y,x) = (lat,lon) = (N,E).
 
+def bearing_to_angle(bearing):
+    """
+    Convert a `bearing` to the usual angle representation, both in radians.
+    Bearings increase clockwise rather than counterclockwise, and they start at 0 degrees when facing north, much like a compass. In order to calculate using normal geometric models, we can convert it to angles easily.
+    """
+    return -(bearing - math.pi/2.0) % (math.pi*2.0)
+
+def angle_to_bearing(angle):
+    """
+    Convert an `angle` into the bearing notation.
+    """
+    return -(angle + math.pi/2.0) % (math.pi*2.0)
+
 def get_location_meters(original_location, north, east, alt=0):
     """
     Returns a Location object containing the latitude/longitude `north` and `east` (floating point) meters from the 
@@ -21,10 +34,11 @@ def get_location_meters(original_location, north, east, alt=0):
     http://gis.stackexchange.com/questions/2951/algorithm-for-offsetting-a-latitude-longitude-by-some-amount-of-meters
     """
     # Radius of "spherical" earth
-    earth_radius = 6378137.0
+    EARTH_RADIUS = 6378137.0
+
     # Coordinate offsets in radians
-    lat = north / earth_radius
-    lon = east / (earth_radius * math.cos(original_location.lat * math.pi/180))
+    lat = north / EARTH_RADIUS
+    lon = east / (EARTH_RADIUS * math.cos(original_location.lat * math.pi/180))
 
     # New position in decimal degrees
     newlat = original_location.lat + (lat * 180/math.pi)
@@ -50,22 +64,26 @@ def ray_intersects_segment(P, start, end):
     Given a location point `P` and an edge of two endpoints `start` and `end` of a line segment, returns boolean whether the ray starting from the point eastward intersects the edge.
     '''
     # Based on http://rosettacode.org/wiki/Ray-casting_algorithm#Python but
-    # removed some edge cases and clarified somewhat
+    # cleaned up logic and clarified somewhat
+    epsilon = 0.0001
     if start.lat > end.lat:
         # Swap start and end of segment
         start,end = end,start
+    if P.lat == start.lat or P.lat == end.lat:
+        # Move point off of the line
+        P = Location(P.lat + epsilon, P.lon, P.alt, P.is_relative)
 
     if P.lat < start.lat or P.lat > end.lat or P.lon > max(start.lon, end.lon):
         return False
     if P.lon < min(start.lon, end.lon):
         return True
 
-    if abs(start.lon - end.lon) < sys.float_info.min:
+    if abs(start.lon - end.lon) < epsilon:
         ang_out = (end.lat - start.lat) / (end.lon - start.lon)
     else:
         ang_out = sys.float_info.max
 
-    if abs(start.lon - P.lon) < sys.float_info.min:
+    if abs(start.lon - P.lon) < epsilon:
         ang_in = (P.lat - start.lat) / (P.lon - start.lon)
     else:
         ang_in = sys.float_info.max

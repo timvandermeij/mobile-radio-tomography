@@ -126,6 +126,9 @@ class Mission(object):
             time.sleep(1)
 
     def set_speed(self, speed):
+        """
+        Set the current speed of the vehicle during AUTO mode.
+        """
         msg = self.vehicle.message_factory.command_long_encode(
             0, 0,    # target system, target component
             mavutil.mavlink.MAV_CMD_DO_CHANGE_SPEED, # command
@@ -133,6 +136,59 @@ class Mission(object):
             0, # param 1
             speed, # speed in meters/second
             0, 0, 0, 0, 0 # param 3 - 7
+        )
+
+        # Send command to vehicle
+        self.vehicle.send_mavlink(msg)
+        self.vehicle.flush()
+
+    def send_global_velocity(self, velocity_x, velocity_y, velocity_z):
+        """
+        Move vehicle in direction based on specified velocity vectors.
+
+        This should be used in GUIDED mode. See `set_speed` for another command that works in AUTO mode.
+        """
+        msg = self.vehicle.message_factory.set_position_target_global_int_encode(
+            0,       # time_boot_ms (not used)
+            0, 0,    # target system, target component
+            mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT_INT, # frame
+            0b0000111111000111, # type_mask (only speeds enabled)
+            0, # lat_int - X Position in WGS84 frame in 1e7 * meters
+            0, # lon_int - Y Position in WGS84 frame in 1e7 * meters
+            0, # alt - Altitude in meters in AMSL altitude(not WGS84 if absolute or relative)
+                        # altitude above terrain if GLOBAL_TERRAIN_ALT_INT
+            velocity_x, # X velocity in NED frame in m/s
+            velocity_y, # Y velocity in NED frame in m/s
+            velocity_z, # Z velocity in NED frame in m/s
+            0, 0, 0,    # afx, afy, afz acceleration (not supported yet, ignored in GCS_Mavlink)
+            0, 0)       # yaw, yaw_rate (not supported yet, ignored in GCS_Mavlink)
+        # send command to vehicle
+        self.vehicle.send_mavlink(msg)
+        self.vehicle.flush()
+
+    def set_yaw(self, heading, relative=False):
+        """
+        Set the bearing `heading` of the vehicle in degrees. This becomes the yaw of the vehicle (the direction in which it is facing).
+
+        This command works in GUIDED mode and only works after a velocity command has been issued.
+        If `relative` is false, `heading` is the number of degrees off from northward direction, clockwise.
+        If `relative` is true, the `heading` is still given as a bearing, but respective to the vehicle's current yaw.
+        """
+        if relative:
+            is_relative = 1 # yaw relative to direction of travel
+        else:
+            is_relative = 0 # yaw is an absolute angle
+
+        # Create the CONDITION_YAW command using command_long_encode()
+        msg = self.vehicle.message_factory.command_long_encode(
+            0, 0,    # target system, target component
+            mavutil.mavlink.MAV_CMD_CONDITION_YAW, # command
+            0, # confirmation
+            heading,     # param 1, yaw in degrees
+            1,           # param 2, yaw speed deg/s (ignored)
+            1,           # param 3, direction -1 ccw, 1 cw
+            is_relative, # param 4, relative offset 1, absolute angle 0
+            0, 0, 0      # param 5 ~ 7 not used
         )
 
         # Send command to vehicle

@@ -16,17 +16,29 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         self.maximum_distance = self.settings.get("maximum_distance")
 
         # TODO: Replace hardcoded objects with some sort of polygon database
-        l2 = get_location_meters(self.vehicle.location, 50, -50, 10)
-        l3 = get_location_meters(self.vehicle.location, 52.5, 22.5, 10)
+        l1 = get_location_meters(self.vehicle.location, 100, 0, 10)
+        l2 = get_location_meters(self.vehicle.location, 0, 100, 10)
+        l3 = get_location_meters(self.vehicle.location, -100, 0, 10)
+        l4 = get_location_meters(self.vehicle.location, 0, -100, 10)
+        #l3 = get_location_meters(self.vehicle.location, 52.5, 22.5, 10)
+        b = self.vehicle.location
+        self.current_edge = None
         self.objects = [
-            {
-                'center': get_location_meters(self.vehicle.location, 40, -10),
-                'radius': 2.5,
-            },
-            (get_location_meters(l2, 5, -5), get_location_meters(l2, 5, 5),
-             get_location_meters(l2, -5, 5), get_location_meters(l2, -5, -5)),
-            (get_location_meters(l3, 5, 0), get_location_meters(l3, 0, 5),
-             get_location_meters(l3, -5, 0), get_location_meters(l3, 0, -5))
+            #{
+            #    'center': get_location_meters(self.vehicle.location, 40, -10),
+            #    'radius': 2.5,
+            #},
+            (get_location_meters(l1, 40, -40), get_location_meters(l1, 40, 40),
+             get_location_meters(l1, -40, 40), get_location_meters(l1, -40, -40)),
+            (get_location_meters(l2, 40, -40), get_location_meters(l2, 40, 40),
+             get_location_meters(l2, -40, 40), get_location_meters(l2, -40, -40)),
+            (get_location_meters(l3, 40, -40), get_location_meters(l3, 40, 40),
+             get_location_meters(l3, -40, 40), get_location_meters(l3, -40, -40)),
+            (get_location_meters(l4, 40, -40), get_location_meters(l4, 40, 40),
+             get_location_meters(l4, -40, 40), get_location_meters(l4, -40, -40))
+            #(get_location_meters(b, 50, -50), get_location_meters(b, 50, 50),
+            # get_location_meters(b, -50, 50), get_location_meters(b, -50, 
+            # -50))
         ]
 
     def point_inside_polygon(self, location, points):
@@ -63,6 +75,7 @@ class Distance_Sensor_Simulator(Distance_Sensor):
             m1 = math.tan(math.pi/2)
             b1 = 0.0
             x = edge[0].lon
+            y = m2 * x + b2
         else:
             m1 = (edge[1].lat - edge[0].lat) / (edge[1].lon - edge[0].lon)
             if edge[1].lat < edge[0].lat:
@@ -71,8 +84,7 @@ class Distance_Sensor_Simulator(Distance_Sensor):
                 b1 = edge[0].lat - m1 * edge[0].lon
 
             x = (b1 - b2) / (m2 - m1)
-
-        y = m2 * x + b2
+            y = m1 * x + b1
 
         loc_point = Location(y, x, location.alt, location.is_relative)
 
@@ -121,6 +133,8 @@ class Distance_Sensor_Simulator(Distance_Sensor):
                 for edge in edges:
                     dists.append(self.get_edge_distance(edge, location, angle))
 
+                e_min = dists.index(min(dists))
+                self.current_edge = edges[e_min]
                 return min(dists)
         elif 'center' in obj:
             if obj['center'].alt >= location.alt - self.altitude_margin:
@@ -142,12 +156,13 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         Get the distance in meters to the collision object from the current `location` (a Location object).
         """
 
+        self.current_edge = None
         if location is None:
             location = self.vehicle.location
         if angle is None:
-            # Offset for the yaw being increasing counterclockwise and starting 
-            # at 0 degrees when facing north rather than facing east.
-            angle = -(self.vehicle.attitude.yaw - math.pi/2.0)
+            # Offset for the yaw being increasing clockwise and starting at 
+            # 0 degrees when facing north rather than facing east.
+            angle = bearing_to_angle(self.vehicle.attitude.yaw)
 
         # Ensure angle is always in the range [0, 2pi).
         angle = angle % (2*math.pi)
