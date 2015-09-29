@@ -26,16 +26,43 @@ from trajectory import Mission
 # TODO: Cleanup code, move more code into modules.
 from utils.Geometry import *
 
-def get_index(bl, tr, memory_size, loc):
-    """
-    Convert location coordinates to indices for a two-dimensional matrix.
-    The `bl` and `tr` are the first and last points that fit in the matrix in both dimensions, respectively. The `memory_size` is the number of entries per dimension.
-    """
-    dlat = tr.lat - bl.lat
-    dlon = tr.lon - bl.lon
-    y = ((loc.lat - bl.lat) / dlat) * memory_size
-    x = ((loc.lon - bl.lon) / dlon) * memory_size
-    return (x,y)
+class Memory_Map(object):
+    def __init__(self, vehicle, memory_size):
+        self.size = memory_size
+        self.map = np.zeros((self.size, self.size))
+        # The `bl` and `tr` are the first and last points that fit in the 
+        # matrix in both dimensions, respectively. The `memory_size` is the 
+        # number of entries per dimension.
+        self.bl = get_location_meters(vehicle.location, -self.size/2, -self.size/2)
+        self.tr = get_location_meters(vehicle.location, self.size/2, self.size/2)
+
+    def get_index(self, loc):
+        """
+        Convert location coordinates to indices for a two-dimensional matrix.
+        """
+        dlat = self.tr.lat - self.bl.lat
+        dlon = self.tr.lon - self.bl.lon
+        y = ((loc.lat - self.bl.lat) / dlat) * self.size
+        x = ((loc.lon - self.bl.lon) / dlon) * self.size
+        return (y,x)
+
+    def get(self, i, j):
+        if 0 < i < self.size and 0 < j < self.size:
+            return self.map[i,j]
+
+        raise KeyError("i={} and/or j={} out of bounds ({}).".format(key, i, j, self.size))
+
+    def set(self, i, j, value):
+        if 0 < i < self.size and 0 < j < self.size:
+            self.map[i,j] = value
+        else:
+            raise KeyError("i={} and/or j={} out of bounds ({}).".format(key, i, j, self.size))
+
+    def get_location(self, i, j):
+        return get_location_meters(self.bl, i, j)
+
+    def get_map(self):
+        return self.map
 
 # Main mission program
 def main():
@@ -75,15 +102,14 @@ def main():
     # This can later be used to find the target object or to fly around 
     # obstacles without colliding.
     memory_size = mission.get_space_size()
-    memory_map = np.zeros((memory_size,memory_size))
-    bl = get_location_meters(vehicle.location, -memory_size/2, -memory_size/2)
-    tr = get_location_meters(vehicle.location, memory_size/2, memory_size/2)
+    memory_map = Memory_Map(vehicle, memory_size)
+
     # Temporary "cheat" to see 2d map of collision data
     for i in xrange(0,memory_size):
         for j in xrange(0,memory_size):
-            loc = get_location_meters(bl, i, j)
-            if sensor.get_distance(loc) == 0:
-                memory_map[i,j] = 0.5
+            loc = memory_map.get_location(i, j)
+            if sensor_north.get_distance(loc) == 0:
+                memory_map.set(i, j, 0.5)
 
     # Set up interactive drawing of the memory map. This makes the 
     # dronekit/mavproxy fairly annoyed since it creates additional 
@@ -99,9 +125,7 @@ def main():
         while not api.exit:
             # Put our current location on the map for visualization. Of course, 
             # this location is also "safe" since we are flying there.
-            x,y = get_index(bl, tr, memory_size, vehicle.location)
-            print(x,y)
-            memory_map[y,x] = -1
+            memory_map.set(*memory_map.get_index(vehicle.location), -1)
 
             # Instead of performing an AUTO mission, we can also stand still 
             # and change the angle to look around. TODO: Make use of this when 
@@ -126,13 +150,11 @@ def main():
 
                 print("Estimated location: {}, {}".format(loc.lat, loc.lon))
 
-                # Convert point location to indices in the memory map.
-                x2,y2 = get_index(bl, tr, memory_size, loc)
-                print("Point in map: {},{}".format(y2,x2))
-                if 0 < y2 < memory_size and 0 < x2 < memory_size:
-                    # Point is within the (closed-space) memory map, so we can 
-                    # track it.
-                    memory_map[y2,x2] = 1
+                # Place point location in the memory map.
+                try:
+                    memory_map.set(*memory_map.get_index(loc), 1)
+                except KeyError:
+                    pass
 
                 # Display the edge of the simulated object that is responsible 
                 # for the measured distance, and consequently the point itself. 
@@ -148,8 +170,8 @@ def main():
                         "color": "red",
                         "linewidth": 2
                     }
-                    e0 = get_index(bl, tr, memory_size, sensor.current_edge[0])
-                    e1 = get_index(bl, tr, memory_size, sensor.current_edge[1])
+                    e0 = memory_map.get_index(sensor.current_edge[0])
+                    e1 = memory_map.get_index(sensor.current_edge[1])
                     print("Relevant edges: {},{}".format(e0, e1))
                     arrow = plt.annotate("", e0, e1, arrowprops=options)
 
@@ -168,7 +190,7 @@ def main():
                         break
 
             # Display the current memory map interactively.
-            plt.imshow(memory_map, origin='lower')
+            plt.imshow(memory_map.get_map(), origin='lower')
             plt.draw()
 
             # Handle waypoint locations in our mission.
