@@ -45,20 +45,14 @@ def main():
     mission_settings = Settings("settings.json", "mission")
 
     mission = Mission(api, vehicle, mission_settings)
-    print("Clear the current mission")
-    mission.clear_mission()
 
-    print("Create a new mission")
-    size = 50
-    altitude = mission_settings.get("altitude")
-    speed = mission_settings.get("speed")
-    num_commands = mission.add_square_mission(vehicle.location, altitude, size)
-    print("{} commands in the mission!".format(num_commands))
     # Make sure that mission being sent is displayed on console cleanly
     time.sleep(2)
+    num_commands = mission.get_commands().count
+    print("{} commands in the mission!".format(num_commands))
 
     # As of ArduCopter 3.3 it is possible to take off using a mission item.
-    mission.arm_and_takeoff(altitude, speed)
+    mission.arm_and_takeoff()
 
     print("Starting mission")
     # Set mode to AUTO to start mission
@@ -80,10 +74,10 @@ def main():
     # Create a memory map for the vehicle to track where it has seen objects. 
     # This can later be used to find the target object or to fly around 
     # obstacles without colliding.
-    memory_size = size*4
+    memory_size = mission.get_space_size()
     memory_map = np.zeros((memory_size,memory_size))
-    bl = get_location_meters(vehicle.location, -size*2, -size*2)
-    tr = get_location_meters(vehicle.location, size*2, size*2)
+    bl = get_location_meters(vehicle.location, -memory_size/2, -memory_size/2)
+    tr = get_location_meters(vehicle.location, memory_size/2, memory_size/2)
     # Temporary "cheat" to see 2d map of collision data
     for i in xrange(0,memory_size):
         for j in xrange(0,memory_size):
