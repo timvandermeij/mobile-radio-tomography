@@ -7,22 +7,27 @@ from ..utils.Geometry import *
 
 # Virtual sensor class that detects collision distances to simulated objects
 class Distance_Sensor_Simulator(Distance_Sensor):
-    def __init__(self, vehicle):
+    def __init__(self, vehicle, angle=0):
         self.vehicle = vehicle
+        self.angle = angle
         self.settings = Settings("settings.json", "distance_sensor_simulator")
         # Margin in meters at which an object is still visible
         self.altitude_margin = self.settings.get("altitude_margin")
         # Maximum distance in meters that the sensor returns
         self.maximum_distance = self.settings.get("maximum_distance")
 
-        # TODO: Replace hardcoded objects with some sort of polygon database
+        # Variables for tracking the relevant edge that the sensor detected
+        self.current_edge = None
+        self.arrow = None
+
+        # TODO: Replace hardcoded objects with some sort of polygon database 
+        # and move them out of the sensor simulator
         l1 = get_location_meters(self.vehicle.location, 100, 0, 10)
         l2 = get_location_meters(self.vehicle.location, 0, 100, 10)
         l3 = get_location_meters(self.vehicle.location, -100, 0, 10)
         l4 = get_location_meters(self.vehicle.location, 0, -100, 10)
         #l3 = get_location_meters(self.vehicle.location, 52.5, 22.5, 10)
-        b = self.vehicle.location
-        self.current_edge = None
+
         self.objects = [
             #{
             #    'center': get_location_meters(self.vehicle.location, 40, -10),
@@ -36,9 +41,6 @@ class Distance_Sensor_Simulator(Distance_Sensor):
              get_location_meters(l3, -40, 40), get_location_meters(l3, -40, -40)),
             (get_location_meters(l4, 40, -40), get_location_meters(l4, 40, 40),
              get_location_meters(l4, -40, 40), get_location_meters(l4, -40, -40))
-            #(get_location_meters(b, 50, -50), get_location_meters(b, 50, 50),
-            # get_location_meters(b, -50, 50), get_location_meters(b, -50, 
-            # -50))
         ]
 
     def point_inside_polygon(self, location, points):
@@ -159,16 +161,43 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         self.current_edge = None
         if location is None:
             location = self.vehicle.location
-        if angle is None:
-            # Offset for the yaw being increasing clockwise and starting at 
-            # 0 degrees when facing north rather than facing east.
-            angle = bearing_to_angle(self.vehicle.attitude.yaw)
-
-        # Ensure angle is always in the range [0, 2pi).
-        angle = angle % (2*math.pi)
+        angle = self.get_angle(angle)
 
         distance = self.maximum_distance
         for obj in self.objects:
             distance = min(distance, self.get_obj_distance(obj, location, angle))
 
         return distance
+
+    def get_angle(self, angle=None):
+        """
+        Convert a bearing angle to an angle that the distance sensor uses.
+        """
+        if angle is None:
+            # Offset for the yaw being increasing clockwise and starting at 
+            # 0 degrees when facing north rather than facing east.
+            angle = bearing_to_angle(self.vehicle.attitude.yaw)
+
+        # Add the the fixed angle of the sensor itself.
+        # Ensure angle is always in the range [0, 2pi).
+        return (angle + self.angle*math.pi/180) % (2*math.pi)
+    
+    def draw_current_edge(self, plt, map, color="red"):
+        """
+        Draw the edge that was detected during the previous distance sensor measurement, if any.
+        The edge is drawn to the matplotlib plot object `plt` using the index offsets from the Memory_Map `map`. Additionally the `color` of the edge can be given.
+        """
+        if self.arrow is not None:
+            self.arrow.remove()
+            self.arrow = None
+
+        if self.current_edge is not None:
+            options = {
+                "arrowstyle": "-",
+                "color": color,
+                "linewidth": 1
+            }
+            e0 = map.get_index(self.current_edge[0])
+            e1 = map.get_index(self.current_edge[1])
+            print("Relevant edges: {},{}".format(e0, e1))
+            self.arrow = plt.annotate("", e0, e1, arrowprops=options)

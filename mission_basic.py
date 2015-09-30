@@ -28,6 +28,7 @@ from utils.Geometry import *
 
 class Memory_Map(object):
     def __init__(self, vehicle, memory_size):
+        self.vehicle = vehicle
         self.size = memory_size
         self.map = np.zeros((self.size, self.size))
         # The `bl` and `tr` are the first and last points that fit in the 
@@ -46,23 +47,40 @@ class Memory_Map(object):
         x = ((loc.lon - self.bl.lon) / dlon) * self.size
         return (y,x)
 
-    def get(self, i, j):
-        if 0 < i < self.size and 0 < j < self.size:
+    def get(self, idx):
+        i,j = idx
+        if 0 <= i < self.size and 0 <= j < self.size:
             return self.map[i,j]
 
-        raise KeyError("i={} and/or j={} out of bounds ({}).".format(key, i, j, self.size))
+        raise KeyError("i={} and/or j={} out of bounds ({}).".format(i, j, self.size))
 
-    def set(self, i, j, value):
-        if 0 < i < self.size and 0 < j < self.size:
+    def set(self, idx, value=0):
+        i,j = idx
+        if 0 <= i < self.size and 0 <= j < self.size:
             self.map[i,j] = value
         else:
-            raise KeyError("i={} and/or j={} out of bounds ({}).".format(key, i, j, self.size))
+            raise KeyError("i={} and/or j={} out of bounds ({}).".format(i, j, self.size))
 
     def get_location(self, i, j):
         return get_location_meters(self.bl, i, j)
 
     def get_map(self):
         return self.map
+
+    def handle_sensor(self, sensor_distance, angle):
+        # Estimate the location of the point based on the distance from the 
+        # distance sensor as well as our own angle.
+        dy = math.sin(angle) * sensor_distance
+        dx = math.cos(angle) * sensor_distance
+        loc = get_location_meters(self.vehicle.location, dy, dx)
+
+        print("Estimated location: {}, {}".format(loc.lat, loc.lon))
+
+        # Place point location in the memory map.
+        try:
+            self.set(self.get_index(loc), 1)
+        except KeyError:
+            pass
 
 # Main mission program
 def main():
@@ -90,7 +108,8 @@ def main():
     # We can get and set the command number and use convenience function for 
     # finding distance to an object or the next waypoint.
 
-    sensor = Distance_Sensor_Simulator(vehicle)
+    sensors = [Distance_Sensor_Simulator(vehicle, angle) for angle in mission_settings.get("sensors")]
+    colors = ["red", "purple", "black"]
     # Margin in meters at which we are too close to an object
     closeness = mission_settings.get("closeness")
     # Distance in meters above which we are uninterested in objects
@@ -108,8 +127,8 @@ def main():
     for i in xrange(0,memory_size):
         for j in xrange(0,memory_size):
             loc = memory_map.get_location(i, j)
-            if sensor_north.get_distance(loc) == 0:
-                memory_map.set(i, j, 0.5)
+            if sensors[0].get_distance(loc) == 0:
+                memory_map.set((i,j), 0.5)
 
     # Set up interactive drawing of the memory map. This makes the 
     # dronekit/mavproxy fairly annoyed since it creates additional 
@@ -125,7 +144,8 @@ def main():
         while not api.exit:
             # Put our current location on the map for visualization. Of course, 
             # this location is also "safe" since we are flying there.
-            memory_map.set(*memory_map.get_index(vehicle.location), -1)
+            vehicle_idx = memory_map.get_index(vehicle.location)
+            memory_map.set(vehicle_idx, -1)
 
             # Instead of performing an AUTO mission, we can also stand still 
             # and change the angle to look around. TODO: Make use of this when 
@@ -136,58 +156,35 @@ def main():
             #mission.set_yaw(yaw % 360, relative=False)
             #print("Velocity: {} m/s".format(vehicle.velocity))
             #print("Altitude: {} m".format(vehicle.location.alt))
+            #print("Yaw: {} Expected: {}".format(vehicle.attitude.yaw*180/math.pi, yaw)
 
-            angle = bearing_to_angle(vehicle.attitude.yaw)
-            #print("Yaw: {} Expected: {} Angle: {}".format(vehicle.attitude.yaw*180/math.pi, yaw, angle*180/math.pi))
+            i = 0
+            for sensor in sensors:
+                sensor_distance = sensor.get_distance()
 
-            sensor_distance = sensor.get_distance(vehicle.location)
-            if sensor_distance < farness:
-                # Estimate the location of the point based on the distance from 
-                # the distance sensor as well as our own angle.
-                dy = math.sin(angle) * sensor_distance
-                dx = math.cos(angle) * sensor_distance
-                loc = get_location_meters(vehicle.location, dy, dx)
-
-                print("Estimated location: {}, {}".format(loc.lat, loc.lon))
-
-                # Place point location in the memory map.
-                try:
-                    memory_map.set(*memory_map.get_index(loc), 1)
-                except KeyError:
-                    pass
-
-                # Display the edge of the simulated object that is responsible 
-                # for the measured distance, and consequently the point itself. 
-                # This should be the closest "wall" in the angle's direction. 
-                # This is again a "cheat" for checking if walls get visualized 
-                # correctly.
-                if arrow is not None:
-                    arrow.remove()
-                    arrow = None
-                if sensor.current_edge is not None:
-                    options = {
-                        "arrowstyle": "<-, head_width=1, head_length=1",
-                        "color": "red",
-                        "linewidth": 2
-                    }
-                    e0 = memory_map.get_index(sensor.current_edge[0])
-                    e1 = memory_map.get_index(sensor.current_edge[1])
-                    print("Relevant edges: {},{}".format(e0, e1))
-                    arrow = plt.annotate("", e0, e1, arrowprops=options)
-
-                # Now actually decide on doing something with the measured 
-                # distance. If we're too close, we should take action by 
-                # stopping and going somewhere else.
-                print("=== [!] Distance to object: {} m ===".format(sensor_distance))
-                if sensor_distance < closeness:
-                    print("Too close to the object, halting.")
+                # Decide on doing something with the measured distance. If 
+                # we're too close, we should take action by stopping and going 
+                # somewhere else.
+                if sensor_distance == 0:
+                    print("Inside the object, abort mission.")
+                    sys.exit(1)
+                elif sensor_distance < closeness:
                     vehicle.mode = VehicleMode("GUIDED")
                     mission.set_speed(0)
-                    if sensor_distance == 0:
-                        print("Inside the object, abort mission.")
-                        sys.exit(1)
-                    else:
-                        break
+                    raise RuntimeError("Too close to the object, halting.")
+                elif sensor_distance < farness:
+                    # Display the edge of the simulated object that is 
+                    # responsible for the measured distance, and consequently 
+                    # the point itself. This should be the closest "wall" in 
+                    # the angle's direction. This is again a "cheat" for 
+                    # checking if walls get visualized correctly.
+                    angle = sensor.get_angle(vehicle.attitude.yaw)
+                    memory_map.handle_sensor(sensor_distance, angle)
+                    sensor.draw_current_edge(plt, memory_map, colors[i])
+
+                    print("=== [!] Distance to object: {} m (angle {}) ===".format(sensor_distance, angle))
+
+                i = i + 1
 
             # Display the current memory map interactively.
             plt.imshow(memory_map.get_map(), origin='lower')
@@ -218,7 +215,7 @@ def main():
 
             # Remove the vehicle from the current location. We set it to "safe" 
             # since there is no object here.
-            memory_map[y,x] = 0
+            memory_map.set(vehicle_idx, 0)
     except Exception, e:
         # Handle exceptions gracefully by attempting to stop the program 
         # ourselves. Unfortunately KeyboardInterrupts are not passed to us when 

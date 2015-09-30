@@ -25,7 +25,8 @@
             "loop_delay": 0.5,
             "altitude": 4,
             "speed": 2.5,
-            "size": 50
+            "size": 50,
+            "sensors": [0, -90, 90]
         }
     },
     "xbee_sensor_simulator": {
