@@ -21,17 +21,17 @@ class Settings(object):
     def __init__(self, file_name, component_name):
         if not os.path.isfile(file_name):
             raise IOError("{} does not exist.".format(file_name))
-        
+
         self.component_name = component_name
-        
+
         settings = self.__class__.get_settings(file_name)
-        
-        self.settings = None
-        if self.component_name in settings:
-            self.settings = settings[self.component_name]["settings"]
+        if not self.component_name in settings:
+            raise KeyError("Component {} not found.".format(self.component_name))
+
+        self.settings = settings[self.component_name]["settings"]
 
     def get(self, key):
-        if self.settings == None or key not in self.settings:
+        if key not in self.settings:
             raise KeyError("Setting '{}' for component '{}' not found.".format(key, self.component_name))
 
         return self.settings[key]
