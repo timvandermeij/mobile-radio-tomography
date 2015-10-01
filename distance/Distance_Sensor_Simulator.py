@@ -7,8 +7,8 @@ from ..utils.Geometry import *
 
 # Virtual sensor class that detects collision distances to simulated objects
 class Distance_Sensor_Simulator(Distance_Sensor):
-    def __init__(self, vehicle, angle=0):
-        self.vehicle = vehicle
+    def __init__(self, environment, angle=0):
+        self.environment = environment
         self.angle = angle
         self.settings = Settings("settings.json", "distance_sensor_simulator")
         # Margin in meters at which an object is still visible
@@ -19,29 +19,6 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         # Variables for tracking the relevant edge that the sensor detected
         self.current_edge = None
         self.arrow = None
-
-        # TODO: Replace hardcoded objects with some sort of polygon database 
-        # and move them out of the sensor simulator
-        l1 = get_location_meters(self.vehicle.location, 100, 0, 10)
-        l2 = get_location_meters(self.vehicle.location, 0, 100, 10)
-        l3 = get_location_meters(self.vehicle.location, -100, 0, 10)
-        l4 = get_location_meters(self.vehicle.location, 0, -100, 10)
-        #l3 = get_location_meters(self.vehicle.location, 52.5, 22.5, 10)
-
-        self.objects = [
-            #{
-            #    'center': get_location_meters(self.vehicle.location, 40, -10),
-            #    'radius': 2.5,
-            #},
-            (get_location_meters(l1, 40, -40), get_location_meters(l1, 40, 40),
-             get_location_meters(l1, -40, 40), get_location_meters(l1, -40, -40)),
-            (get_location_meters(l2, 40, -40), get_location_meters(l2, 40, 40),
-             get_location_meters(l2, -40, 40), get_location_meters(l2, -40, -40)),
-            (get_location_meters(l3, 40, -40), get_location_meters(l3, 40, 40),
-             get_location_meters(l3, -40, 40), get_location_meters(l3, -40, -40)),
-            (get_location_meters(l4, 40, -40), get_location_meters(l4, 40, 40),
-             get_location_meters(l4, -40, 40), get_location_meters(l4, -40, -40))
-        ]
 
     def point_inside_polygon(self, location, points):
         """
@@ -60,9 +37,14 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         return num % 2 == 1
 
     def get_edge_distance(self, edge, location, angle):
+        """
+        Calculate the distance in meters to the `edge` from a given `location` and `angle`.
+        The `edge` is a tuple of Location points defining a (sloped) edge.
+        """
+
         # Based on ray casting calculations from 
         # http://archive.gamedev.net/archive/reference/articles/article872.html 
-        # except that the coordinate system there is assumed tp revolve around 
+        # except that the coordinate system there is assumed to revolve around 
         # the vehicle, which is strange. Instead, use a fixed origin and thus 
         # the edge's b1 is fixed, and calculate b2 instead.
 
@@ -160,11 +142,11 @@ class Distance_Sensor_Simulator(Distance_Sensor):
 
         self.current_edge = None
         if location is None:
-            location = self.vehicle.location
+            location = self.environment.get_location()
         angle = self.get_angle(angle)
 
         distance = self.maximum_distance
-        for obj in self.objects:
+        for obj in self.environment.objects:
             distance = min(distance, self.get_obj_distance(obj, location, angle))
 
         return distance
@@ -176,7 +158,7 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         if angle is None:
             # Offset for the yaw being increasing clockwise and starting at 
             # 0 degrees when facing north rather than facing east.
-            angle = bearing_to_angle(self.vehicle.attitude.yaw)
+            angle = bearing_to_angle(self.environment.get_yaw())
 
         # Add the the fixed angle of the sensor itself.
         # Ensure angle is always in the range [0, 2pi).
