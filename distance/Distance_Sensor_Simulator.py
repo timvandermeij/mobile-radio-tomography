@@ -78,48 +78,60 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         alt = edge[1].alt + ((edge[0].alt - edge[1].alt) / edge_dist) * point_dist
 
         if alt < location.alt - self.altitude_margin:
-            print('Not visible due to altitude alt={} v={}'.format(alt, location.alt))
             return sys.float_info.max
 
         d = get_distance_meters(location, loc_point)
 
         return d
 
+    def get_face_distance(self, face, location, angle):
+        # Check if angle is within at least one quadrant of the angles to the 
+        # object bounds, and also within the object bounds themselves. Both 
+        # requirements have to be met, otherwise angles that are around the 
+        # 0 degree mark can confuse the latter check.
+        angles = []
+        quadrants = []
+        q2 = int(angle / (0.5*math.pi))
+        for point in face:
+            ang = get_angle(location, point)
+
+            # Try to put the angles "around" the object in case we are around 
+            # 0 = 360 degrees.
+            q1 = int(ang / (0.5*math.pi))
+            if q1 == 0 and q2 == 3:
+                ang = ang + 2*math.pi
+            elif q1 == 3 and q2 == 0:
+                ang = ang - 2*math.pi
+
+            angles.append(ang)
+            quadrants.append(q1)
+
+        if q2 in quadrants and min(angles) < angle < max(angles):
+            dists = []
+            edges = get_point_edges(face)
+            for edge in edges:
+                dists.append(self.get_edge_distance(edge, location, angle))
+
+            e_min = dists.index(min(dists))
+            self.current_edge = edges[e_min]
+            return min(dists)
+
+        return sys.float_info.max
+
     def get_obj_distance(self, obj, location, angle):
+        if isinstance(obj, list):
+            # List of faces
+            dists = []
+            for face in obj:
+                dists.append(self.get_face_distance(face, location, angle))
+
+            return min(dists)
         if isinstance(obj, tuple):
+            # Single face
             if self.point_inside_polygon(location, obj):
                 return 0
 
-            # Check if angle is within at least one quadrant of the angles to 
-            # the object bounds, and also within the object bounds themselves. 
-            # Both requirements have to be met, otherwise angles that are 
-            # around the 0 degree mark can confuse the latter check.
-            angles = []
-            quadrants = []
-            q2 = int(angle / (0.5*math.pi))
-            for point in obj:
-                ang = get_angle(location, point)
-
-                # Try to put the angles "around" the object in case we are 
-                # around 0 = 360 degrees.
-                q1 = int(ang / (0.5*math.pi))
-                if q1 == 0 and q2 == 3:
-                    ang = ang + 2*math.pi
-                elif q1 == 3 and q2 == 0:
-                    ang = ang - 2*math.pi
-
-                angles.append(ang)
-                quadrants.append(q1)
-
-            if q2 in quadrants and min(angles) < angle < max(angles):
-                dists = []
-                edges = get_point_edges(obj)
-                for edge in edges:
-                    dists.append(self.get_edge_distance(edge, location, angle))
-
-                e_min = dists.index(min(dists))
-                self.current_edge = edges[e_min]
-                return min(dists)
+            return self.get_face_distance(obj, location, angle)
         elif 'center' in obj:
             if obj['center'].alt >= location.alt - self.altitude_margin:
                 # Find directional angle to the object's center.

@@ -51,8 +51,18 @@ def main():
     # We can get and set the command number and use convenience function for 
     # finding distance to an object or the next waypoint.
 
-    environment = Environment(vehicle)
-    sensors = [Distance_Sensor_Simulator(environment, angle) for angle in mission_settings.get("sensors")]
+    try:
+        scenefile = mission_settings.get("scenefile")
+    except KeyError:
+        scenefile = None
+    environment = Environment(vehicle, scenefile)
+
+    try:
+        angles = list(mission_settings.get("sensors"))
+    except KeyError:
+        angles = [0]
+
+    sensors = [Distance_Sensor_Simulator(environment, angle) for angle in angles]
     colors = ["red", "purple", "black"]
     # Margin in meters at which we are too close to an object
     closeness = mission_settings.get("closeness")
@@ -68,11 +78,12 @@ def main():
     memory_map = Memory_Map(vehicle, memory_size)
 
     # Temporary "cheat" to see 2d map of collision data
-    for i in xrange(0,memory_size):
-        for j in xrange(0,memory_size):
-            loc = memory_map.get_location(i, j)
-            if sensors[0].get_distance(loc) == 0:
-                memory_map.set((i,j), 0.5)
+    if scenefile is not None:
+        for i in xrange(0,memory_size):
+            for j in xrange(0,memory_size):
+                loc = memory_map.get_location(i, j)
+                if sensors[0].get_distance(loc) == 0:
+                    memory_map.set((i,j), 0.5)
 
     # Set up interactive drawing of the memory map. This makes the 
     # dronekit/mavproxy fairly annoyed since it creates additional 
