@@ -21,10 +21,9 @@ from __init__ import __package__
 from settings import Settings
 from distance.Distance_Sensor_Simulator import Distance_Sensor_Simulator
 from trajectory import Mission, Memory_Map, Environment
+from geometry import Geometry
 
 # TODO: Cleanup code, move more code into modules.
-from utils.Geometry import *
-
 # Main mission program
 def main():
     # Connect to API provider and get vehicle object
@@ -32,6 +31,20 @@ def main():
     vehicle = api.get_vehicles()[0]
     mission_settings = Settings("settings.json", "mission")
 
+    try:
+        geometry_class = mission_settings.get("geometry_class")
+        geo = Geometry.__dict__[geometry_class]()
+    except:
+        geo = Geometry.Geometry_Spherical()
+
+    try:
+        scenefile = mission_settings.get("scenefile")
+    except KeyError:
+        scenefile = None
+
+    environment = Environment(vehicle, geo, scenefile)
+
+    # TODO: Pass Environment to Mission and use it there.
     mission = Mission(api, vehicle, mission_settings)
 
     # Make sure that mission being sent is displayed on console cleanly
@@ -52,12 +65,6 @@ def main():
     # finding distance to an object or the next waypoint.
 
     try:
-        scenefile = mission_settings.get("scenefile")
-    except KeyError:
-        scenefile = None
-    environment = Environment(vehicle, scenefile)
-
-    try:
         angles = list(mission_settings.get("sensors"))
     except KeyError:
         angles = [0]
@@ -75,7 +82,7 @@ def main():
     # This can later be used to find the target object or to fly around 
     # obstacles without colliding.
     memory_size = mission.get_space_size()
-    memory_map = Memory_Map(vehicle, memory_size)
+    memory_map = Memory_Map(environment, memory_size)
 
     # Temporary "cheat" to see 2d map of collision data
     if scenefile is not None:
@@ -99,7 +106,7 @@ def main():
         while not api.exit:
             # Put our current location on the map for visualization. Of course, 
             # this location is also "safe" since we are flying there.
-            vehicle_idx = memory_map.get_index(vehicle.location)
+            vehicle_idx = memory_map.get_index(environment.get_location())
             memory_map.set(vehicle_idx, -1)
 
             # Instead of performing an AUTO mission, we can also stand still 
@@ -133,7 +140,7 @@ def main():
                     # the point itself. This should be the closest "wall" in 
                     # the angle's direction. This is again a "cheat" for 
                     # checking if walls get visualized correctly.
-                    angle = sensor.get_angle(vehicle.attitude.yaw)
+                    angle = sensor.get_angle(environment.get_yaw())
                     memory_map.handle_sensor(sensor_distance, angle)
                     sensor.draw_current_edge(plt, memory_map, colors[i])
 

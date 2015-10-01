@@ -1,21 +1,22 @@
 import math
 import numpy as np
-from ..utils.Geometry import *
 
 class Memory_Map(object):
     """
     A memory map of the environment that the drone keeps track of using measurements from the distance sensor.
     """
 
-    def __init__(self, vehicle, memory_size):
-        self.vehicle = vehicle
+    def __init__(self, environment, memory_size):
+        # The `bl` and `tr` are the first and last points that fit in the 
+        # matrix in both dimensions, respectively. The bounds are based off 
+        # from the current vehicle location. The `memory_size` is the number of 
+        # entries per dimension.
+        self.environment = environment
+        self.geometry = self.environment.get_geometry()
         self.size = memory_size
         self.map = np.zeros((self.size, self.size))
-        # The `bl` and `tr` are the first and last points that fit in the 
-        # matrix in both dimensions, respectively. The `memory_size` is the 
-        # number of entries per dimension.
-        self.bl = get_location_meters(vehicle.location, -self.size/2, -self.size/2)
-        self.tr = get_location_meters(vehicle.location, self.size/2, self.size/2)
+        self.bl = self.environment.get_location(-self.size/2, -self.size/2)
+        self.tr = self.environment.get_location(self.size/2, self.size/2)
 
     def get_index(self, loc):
         """
@@ -42,7 +43,7 @@ class Memory_Map(object):
             raise KeyError("i={} and/or j={} out of bounds ({}).".format(i, j, self.size))
 
     def get_location(self, i, j):
-        return get_location_meters(self.bl, i, j)
+        return self.geometry.get_location_meters(self.bl, i, j)
 
     def get_map(self):
         return self.map
@@ -52,7 +53,7 @@ class Memory_Map(object):
         # distance sensor as well as our own angle.
         dy = math.sin(angle) * sensor_distance
         dx = math.cos(angle) * sensor_distance
-        loc = get_location_meters(self.vehicle.location, dy, dx)
+        loc = self.environment.get_location(dy, dx)
         idx = self.get_index(loc)
 
         print("Estimated location: {}, {} idx={}".format(loc.lat, loc.lon, idx))

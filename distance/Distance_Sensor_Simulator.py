@@ -3,12 +3,12 @@ import math
 from droneapi.lib import Location
 from Distance_Sensor import Distance_Sensor
 from ..settings import Settings
-from ..utils.Geometry import *
 
 # Virtual sensor class that detects collision distances to simulated objects
 class Distance_Sensor_Simulator(Distance_Sensor):
     def __init__(self, environment, angle=0):
         self.environment = environment
+        self.geometry = self.environment.get_geometry()
         self.angle = angle
         self.settings = Settings("settings.json", "distance_sensor_simulator")
         # Margin in meters at which an object is still visible
@@ -32,9 +32,13 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         if avg_alt < location.alt - self.altitude_margin:
             return False
 
-        edges = get_point_edges(points)
-        num = sum(ray_intersects_segment(location, e[0], e[1]) for e in edges)
-        return num % 2 == 1
+        edges = self.geometry.get_point_edges(points)
+        inside = False
+        for e in edges:
+            if self.geometry.ray_intersects_segment(location, e[0], e[1]):
+                inside = not inside
+
+        return inside
 
     def get_edge_distance(self, edge, location, angle):
         """
@@ -47,6 +51,9 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         # except that the coordinate system there is assumed to revolve around 
         # the vehicle, which is strange. Instead, use a fixed origin and thus 
         # the edge's b1 is fixed, and calculate b2 instead.
+
+        # TODO: Check whether calculations are correct and make use of more 
+        # Geometry functions
 
         m2 = math.tan(angle)
         b2 = location.lat - m2 * location.lon
@@ -73,14 +80,14 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         loc_point = Location(y, x, location.alt, location.is_relative)
 
         # Get altitude from edge
-        edge_dist = get_distance_meters(edge[0], edge[1])
-        point_dist = get_distance_meters(edge[1], loc_point)
+        edge_dist = self.geometry.get_distance_meters(edge[0], edge[1])
+        point_dist = self.geometry.get_distance_meters(edge[1], loc_point)
         alt = edge[1].alt + ((edge[0].alt - edge[1].alt) / edge_dist) * point_dist
 
         if alt < location.alt - self.altitude_margin:
             return sys.float_info.max
 
-        d = get_distance_meters(location, loc_point)
+        d = self.geometry.get_distance_meters(location, loc_point)
 
         return d
 
@@ -93,7 +100,7 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         quadrants = []
         q2 = int(angle / (0.5*math.pi))
         for point in face:
-            ang = get_angle(location, point)
+            ang = self.geometry.get_angle(location, point)
 
             # Try to put the angles "around" the object in case we are around 
             # 0 = 360 degrees.
@@ -108,13 +115,29 @@ class Distance_Sensor_Simulator(Distance_Sensor):
 
         if q2 in quadrants and min(angles) < angle < max(angles):
             dists = []
-            edges = get_point_edges(face)
+            edges = self.geometry.get_point_edges(face)
             for edge in edges:
                 dists.append(self.get_edge_distance(edge, location, angle))
 
             e_min = dists.index(min(dists))
+            # TODO: With multiple objects, this can take an edge that is not 
+            # a part of the object with minimal distance
             self.current_edge = edges[e_min]
             return min(dists)
+
+        return sys.float_info.max
+
+    def get_circle_distance(self, obj, location, angle):
+        if obj['center'].alt >= location.alt - self.altitude_margin:
+            # Find directional angle to the object's center.
+            # The "object angle" should point "away" from the vehicle location, 
+            # so that it matches up with the yaw if the vehicle is pointing 
+            # toward the point.
+            a2 = self.geometry.get_angle(location, obj['center'])
+            diff = self.geometry.diff_angle(a2, angle)
+            if abs(diff) < 5.0 * math.pi/180:
+                d = self.geometry.get_distance_meters(location, obj['center'])
+                return d - obj['radius']
 
         return sys.float_info.max
 
@@ -133,17 +156,7 @@ class Distance_Sensor_Simulator(Distance_Sensor):
 
             return self.get_face_distance(obj, location, angle)
         elif 'center' in obj:
-            if obj['center'].alt >= location.alt - self.altitude_margin:
-                # Find directional angle to the object's center.
-                # The "object angle" should point "away" from the vehicle 
-                # location, so that it matches up with the yaw if the vehicle 
-                # is pointing toward the point.
-                a2 = get_angle(location, obj['center'])
-                diff = diff_angle(a2, angle)
-                if abs(diff) < 5.0 * math.pi/180:
-                    return get_distance_meters(location, obj['center']) - obj['radius']
-            else:
-                print('Not visible due to altitude, vehicle={}'.format(location.alt))
+            return self.get_circle_distance(obj, location, angle)
 
         return self.maximum_distance
 
@@ -170,7 +183,7 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         if angle is None:
             # Offset for the yaw being increasing clockwise and starting at 
             # 0 degrees when facing north rather than facing east.
-            angle = bearing_to_angle(self.environment.get_yaw())
+            angle = self.geometry.bearing_to_angle(self.environment.get_yaw())
 
         # Add the the fixed angle of the sensor itself.
         # Ensure angle is always in the range [0, 2pi).

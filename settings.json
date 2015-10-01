@@ -26,8 +26,9 @@
             "altitude": 4,
             "speed": 2.5,
             "size": 50,
-            "sensors": 0,
-            "scenefile": null
+            "sensors": [0],
+            "scenefile": null,
+            "geometry_class": "Geometry_Spherical"
         }
     },
     "xbee_sensor_simulator": {

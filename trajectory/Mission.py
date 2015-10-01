@@ -3,13 +3,14 @@ import time
 import math
 from droneapi.lib import VehicleMode, Location, Command
 from pymavlink import mavutil
-from ..utils.Geometry import *
+from ..geometry.Geometry import Geometry_Spherical
 
 # Mission trajactory functions
 class Mission(object):
     def __init__(self, api, vehicle, settings):
         self.api = api
         self.vehicle = vehicle
+        self.geometry = Geometry_Spherical()
         self.settings = settings
         self._setup()
 
@@ -26,7 +27,7 @@ class Mission(object):
         lon = mission_item.y
         alt = mission_item.z
         waypoint_location = Location(lat, lon, alt, is_relative=True)
-        distance = get_distance_meters(self.vehicle.location, waypoint_location)
+        distance = self.geometry.get_distance_meters(self.vehicle.location, waypoint_location)
         return distance
 
     def _setup(self):
@@ -78,10 +79,10 @@ class Mission(object):
         cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, 0, self.altitude))
 
         # Define the four MAV_CMD_NAV_WAYPOINT locations and add the commands
-        point1 = get_location_meters(center, self.size, -self.size)
-        point2 = get_location_meters(center, self.size, self.size)
-        point3 = get_location_meters(center, -self.size, self.size)
-        point4 = get_location_meters(center, -self.size, -self.size)
+        point1 = self.geometry.get_location_meters(center, self.size, -self.size)
+        point2 = self.geometry.get_location_meters(center, self.size, self.size)
+        point3 = self.geometry.get_location_meters(center, -self.size, self.size)
+        point4 = self.geometry.get_location_meters(center, -self.size, -self.size)
         cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point1.lat, point1.lon, self.altitude))
         cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point2.lat, point2.lon, self.altitude))
         cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point3.lat, point3.lon, self.altitude))

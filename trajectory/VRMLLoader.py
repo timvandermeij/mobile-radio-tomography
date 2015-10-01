@@ -2,6 +2,11 @@ from OpenGLContext.loaders.loader import Loader
 from vrml.vrml97 import basenodes, nodetypes
 
 class VRMLLoader(object):
+    """
+    VRML parser.
+    The VRML language is described in its specification at http://www.web3d.org/documents/specifications/14772/V2.0/index.html
+    """
+
     def __init__(self, environment, filename):
         self.environment = environment
         self.filename = filename
@@ -41,8 +46,7 @@ class VRMLLoader(object):
                 # We have to convert it to (x,z,y) since the first two are 
                 # related to distances on the ground (lat/lon) and the y axis 
                 # is related to altitude offset.
-                point[1],point[2] = point[2],point[1]
-                loc = self.environment.get_location(point)
+                loc = self.environment.get_location(point[0], point[2], point[1])
                 face.append(loc)
 
         self.objects.append(faces)
