@@ -1,0 +1,9 @@
+{
+    "foo": {
+        "name": "Foo component",
+        "settings": {
+            "bar": 2,
+            "baz": true
+        }
+    }
+}
