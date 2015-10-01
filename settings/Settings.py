@@ -1,3 +1,4 @@
+import os
 import json
 
 class Settings(object):
@@ -18,6 +19,9 @@ class Settings(object):
         return cls.settings_files[file_name]
 
     def __init__(self, file_name, component_name):
+        if not os.path.isfile(file_name):
+            raise IOError("{} does not exist.".format(file_name))
+        
         self.component_name = component_name
         
         settings = self.__class__.get_settings(file_name)
