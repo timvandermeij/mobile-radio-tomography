@@ -62,6 +62,18 @@ numbers for the trigger and echo pins in `settings.json` if you have used
 different pin numbers when connecting the HC-SR04 sensor to the Raspberry
 Pi.
 
+Running the unit tests
+======================
+
+The drone tomography toolchain contains unit tests to ensure that all
+components behave the way we expect them to behave and therefore to reduce
+the risk of introducing regressions during development. The unit tests
+have to be executed from the root folder using the following command:
+
+    $ python2 -m unittest discover -s tests -p "*.py" -t ..
+
+The result of running all unit tests should be "OK" in the terminal.
+
 License
 =======
 
