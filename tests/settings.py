@@ -2,6 +2,9 @@ import unittest
 from ..settings import Settings
 
 class TestSettings(unittest.TestCase):
+    def tearDown(self):
+        Settings.settings_files = {}
+
     def test_missing_file(self):
         with self.assertRaises(IOError):
             settings = Settings("tests/invalid.json", "foo")

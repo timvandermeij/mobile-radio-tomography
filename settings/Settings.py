@@ -20,13 +20,13 @@ class Settings(object):
 
     def __init__(self, file_name, component_name):
         if not os.path.isfile(file_name):
-            raise IOError("{} does not exist.".format(file_name))
+            raise IOError("File '{}' does not exist.".format(file_name))
 
         self.component_name = component_name
 
         settings = self.__class__.get_settings(file_name)
         if not self.component_name in settings:
-            raise KeyError("Component {} not found.".format(self.component_name))
+            raise KeyError("Component '{}' not found.".format(self.component_name))
 
         self.settings = settings[self.component_name]["settings"]
 
