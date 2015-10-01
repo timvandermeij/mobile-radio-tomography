@@ -8,6 +8,7 @@ import sys
 import os
 import time
 import math
+import traceback
 import matplotlib.pyplot as plt
 from droneapi.lib import VehicleMode, Location, Command
 from pymavlink import mavutil
@@ -182,7 +183,7 @@ def main():
         # Handle exceptions gracefully by attempting to stop the program 
         # ourselves. Unfortunately KeyboardInterrupts are not passed to us when 
         # we run under pymavlink.
-        print("Exception: {}".format(e))
+        traceback.print_exc()
         plt.close()
 
     print("Return to launch")
