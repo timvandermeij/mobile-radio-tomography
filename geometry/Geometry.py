@@ -94,12 +94,12 @@ class Geometry(object):
         if P.lon < min(start.lon, end.lon):
             return True
 
-        if abs(start.lon - end.lon) < epsilon:
+        if abs(start.lon - end.lon) > epsilon:
             ang_out = (end.lat - start.lat) / (end.lon - start.lon)
         else:
             ang_out = sys.float_info.max
 
-        if abs(start.lon - P.lon) < epsilon:
+        if abs(start.lon - P.lon) > epsilon:
             ang_in = (P.lat - start.lat) / (P.lon - start.lon)
         else:
             ang_in = sys.float_info.max
