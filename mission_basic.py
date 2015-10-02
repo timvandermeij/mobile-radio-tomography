@@ -22,15 +22,21 @@ from __init__ import __package__
 from settings import Settings
 from distance.Distance_Sensor_Simulator import Distance_Sensor_Simulator
 from trajectory import Mission, Memory_Map, Environment
+from trajectory.MockVehicle import MockAPI, MockVehicle
 from geometry import Geometry
 
 # TODO: Cleanup code, move more code into modules.
 # Main mission program
 def main():
-    # Connect to API provider and get vehicle object
-    api = local_connect()
-    vehicle = api.get_vehicles()[0]
     mission_settings = Settings("settings.json", "mission")
+
+    if mission_settings.get("vehicle_simulation"):
+        api = MockAPI()
+        vehicle = MockVehicle()
+    else:
+        # Connect to API provider and get vehicle object
+        api = local_connect()
+        vehicle = api.get_vehicles()[0]
 
     try:
         geometry_class = mission_settings.get("geometry_class")
@@ -44,9 +50,7 @@ def main():
         scenefile = None
 
     environment = Environment(vehicle, geo, scenefile)
-
-    # TODO: Pass Environment to Mission and use it there.
-    mission = Mission(api, vehicle, mission_settings)
+    mission = Mission(api, environment, mission_settings)
 
     # Make sure that mission being sent is displayed on console cleanly
     time.sleep(2)
@@ -114,12 +118,12 @@ def main():
             # and change the angle to look around. TODO: Make use of this when 
             # we're at a waypoint to look around? Make whole mission GUIDED?
 
-            #mission.send_global_velocity(0,0,0)
-            #vehicle.flush()
-            #mission.set_yaw(yaw % 360, relative=False)
-            #print("Velocity: {} m/s".format(vehicle.velocity))
-            #print("Altitude: {} m".format(vehicle.location.alt))
-            #print("Yaw: {} Expected: {}".format(vehicle.attitude.yaw*180/math.pi, yaw)
+            mission.send_global_velocity(0,0,0)
+            vehicle.flush()
+            mission.set_yaw(yaw % 360, relative=False)
+            print("Velocity: {} m/s".format(vehicle.velocity))
+            print("Altitude: {} m".format(vehicle.location.alt))
+            print("Yaw: {} Expected: {}".format(vehicle.attitude.yaw*180/math.pi, yaw % 360))
 
             i = 0
             for sensor in sensors:
@@ -141,7 +145,7 @@ def main():
                     # the point itself. This should be the closest "wall" in 
                     # the angle's direction. This is again a "cheat" for 
                     # checking if walls get visualized correctly.
-                    angle = sensor.get_angle(environment.get_yaw())
+                    angle = sensor.get_angle()
                     memory_map.handle_sensor(sensor_distance, angle)
                     sensor.draw_current_edge(plt, memory_map, colors[i])
 

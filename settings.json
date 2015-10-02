@@ -28,6 +28,7 @@
             "size": 50,
             "sensors": [0],
             "scenefile": null,
+            "vehicle_simulation": true,
             "geometry_class": "Geometry_Spherical"
         }
     },

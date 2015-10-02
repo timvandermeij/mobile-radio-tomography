@@ -4,13 +4,19 @@ import math
 from droneapi.lib import VehicleMode, Location, Command
 from pymavlink import mavutil
 from ..geometry.Geometry import Geometry_Spherical
+from MockVehicle import MockVehicle
 
 # Mission trajactory functions
 class Mission(object):
-    def __init__(self, api, vehicle, settings):
+    def __init__(self, api, environment, settings):
         self.api = api
-        self.vehicle = vehicle
-        self.geometry = Geometry_Spherical()
+        self.environment = environment
+        self.vehicle = self.environment.get_vehicle()
+        self.is_mock = False
+        if isinstance(self.vehicle, MockVehicle):
+            self.is_mock = True
+
+        self.geometry = self.environment.get_geometry()
         self.settings = settings
         self._setup()
 
@@ -20,14 +26,14 @@ class Mission(object):
         It returns `None` for the first waypoint (Home location).
         """
         next_waypoint = self.vehicle.commands.next
-        if next_waypoint == 1:
+        if next_waypoint <= 1:
             return None
         mission_item = self.vehicle.commands[next_waypoint]
         lat = mission_item.x
         lon = mission_item.y
         alt = mission_item.z
         waypoint_location = Location(lat, lon, alt, is_relative=True)
-        distance = self.geometry.get_distance_meters(self.vehicle.location, waypoint_location)
+        distance = self.environment.get_distance(waypoint_location)
         return distance
 
     def _setup(self):
@@ -95,7 +101,6 @@ class Mission(object):
     def get_commands(self):
         return self.vehicle.commands
 
-
     def arm_and_takeoff(self):
         """
         Arms vehicle and fly to the target `altitude`.
@@ -145,6 +150,11 @@ class Mission(object):
         """
         Set the current speed of the vehicle during AUTO mode.
         """
+        if self.is_mock:
+            # TODO: AUTO mode is not yet supported by mock
+            #self.vehicle.velocity =
+            return
+
         msg = self.vehicle.message_factory.command_long_encode(
             0, 0,    # target system, target component
             mavutil.mavlink.MAV_CMD_DO_CHANGE_SPEED, # command
@@ -164,6 +174,10 @@ class Mission(object):
 
         This should be used in GUIDED mode. See `set_speed` for another command that works in AUTO mode.
         """
+        if self.is_mock:
+            self.vehicle.velocity = [velocity_x, velocity_y, velocity_z]
+            return
+
         msg = self.vehicle.message_factory.set_position_target_global_int_encode(
             0,       # time_boot_ms (not used)
             0, 0,    # target system, target component
@@ -190,6 +204,15 @@ class Mission(object):
         If `relative` is false, `heading` is the number of degrees off from northward direction, clockwise.
         If `relative` is true, the `heading` is still given as a bearing, but respective to the vehicle's current yaw.
         """
+
+        if self.is_mock:
+            heading = heading * math.pi/180
+            if relative:
+                self.vehicle.attitude.yaw = self.vehicle.attitude.yaw + heading
+            else:
+                self.vehicle.attitude.yaw = heading
+            return
+
         if relative:
             is_relative = 1 # yaw relative to direction of travel
         else:
