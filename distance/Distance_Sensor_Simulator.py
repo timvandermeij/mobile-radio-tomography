@@ -74,7 +74,10 @@ class Distance_Sensor_Simulator(Distance_Sensor):
             else:
                 b1 = edge[0].lat - m1 * edge[0].lon
 
-            x = (b1 - b2) / (m2 - m1)
+            if m2 == m1:
+                x = float('inf')
+            else:
+                x = (b1 - b2) / (m2 - m1)
             y = m1 * x + b1
 
         loc_point = Location(y, x, location.alt, location.is_relative)
