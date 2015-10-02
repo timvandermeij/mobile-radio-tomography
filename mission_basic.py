@@ -30,19 +30,19 @@ from geometry import Geometry
 def main():
     mission_settings = Settings("settings.json", "mission")
 
-    if mission_settings.get("vehicle_simulation"):
-        api = MockAPI()
-        vehicle = MockVehicle()
-    else:
-        # Connect to API provider and get vehicle object
-        api = local_connect()
-        vehicle = api.get_vehicles()[0]
-
     try:
         geometry_class = mission_settings.get("geometry_class")
         geo = Geometry.__dict__[geometry_class]()
     except:
         geo = Geometry.Geometry_Spherical()
+
+    if mission_settings.get("vehicle_simulation"):
+        api = MockAPI()
+        vehicle = MockVehicle(geo)
+    else:
+        # Connect to API provider and get vehicle object
+        api = local_connect()
+        vehicle = api.get_vehicles()[0]
 
     try:
         scenefile = mission_settings.get("scenefile")
@@ -118,6 +118,7 @@ def main():
             # and change the angle to look around. TODO: Make use of this when 
             # we're at a waypoint to look around? Make whole mission GUIDED?
 
+            vehicle.mode = VehicleMode("GUIDED")
             mission.send_global_velocity(0,0,0)
             vehicle.flush()
             mission.set_yaw(yaw % 360, relative=False)

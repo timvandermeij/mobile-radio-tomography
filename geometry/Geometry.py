@@ -29,7 +29,7 @@ class Geometry(object):
 
     def angle_to_bearing(self, angle):
         """
-        Convert an `angle` into the bearing notation.
+        Convert an `angle` into the bearing notation, both in radians.
         """
         return -(angle + math.pi/2.0) % (math.pi*2.0)
 
@@ -56,30 +56,20 @@ class Geometry(object):
         We use standard Euclidean distance.
         """
         dlat = location2.lat - location1.lat
-        dlong = location2.lon - location1.lon
-        return math.sqrt((dlat*dlat) + (dlong*dlong))
+        dlon = location2.lon - location1.lon
+        return math.sqrt((dlat*dlat) + (dlon*dlon))
 
-    def get_angle(self, locA, locB):
+    def get_angle(self, location1, location2):
         """
-        Get the angle in radians for the segment between locations `locA` and `locB` compared to the cardinal directions.
+        Get the angle in radians for the segment between locations `location1` and `location2` compared to the cardinal directions.
 
-        Does not yet take curvature of earth in account, and should thus be used only for close locations.
+        Does not take curvature of earth in account, and should thus be used only for close locations.
         """
+        dlat = location2.lat - location1.lat
+        dlon = location2.lon - location1.lat
+        angle = math.atan2(dlat, dlon)
 
-        if locA.lon == locB.lon:
-            angle = math.pi/2.0
-        else:
-            angle = math.atan(abs(locA.lat - locB.lat) / abs(locA.lon - locB.lon))
-
-        # Flip the angle into the correct quadrant based on non-absolute 
-        # difference.
-        # We use radians so pi rad = 180 degrees and 2*pi rad = 360 degrees
-        if locB.lon < locA.lon:
-            angle = math.pi - angle
-        if locB.lat < locA.lat:
-            angle = 2*math.pi - angle
-
-        return angle % (2*math.pi)
+        return (angle + 2*math.pi) % (2*math.pi)
 
     def diff_angle(self, a1, a2):
         # Based on http://stackoverflow.com/a/7869457 but for radial angles

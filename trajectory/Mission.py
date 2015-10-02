@@ -151,8 +151,7 @@ class Mission(object):
         Set the current speed of the vehicle during AUTO mode.
         """
         if self.is_mock:
-            # TODO: AUTO mode is not yet supported by mock
-            #self.vehicle.velocity =
+            self.vehicle.speed = speed
             return
 
         msg = self.vehicle.message_factory.command_long_encode(
