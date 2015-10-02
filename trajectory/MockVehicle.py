@@ -44,7 +44,7 @@ class CommandSequence(object):
         self._vehicle._target_location = None
 
     def clear(self):
-        self._commands = []
+        self._commands = [None]
 
     def __getitem__(self, key):
         return self._commands[key]
