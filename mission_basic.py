@@ -118,13 +118,13 @@ def main():
             # and change the angle to look around. TODO: Make use of this when 
             # we're at a waypoint to look around? Make whole mission GUIDED?
 
-            vehicle.mode = VehicleMode("GUIDED")
-            mission.send_global_velocity(0,0,0)
-            vehicle.flush()
-            mission.set_yaw(yaw % 360, relative=False)
-            print("Velocity: {} m/s".format(vehicle.velocity))
-            print("Altitude: {} m".format(vehicle.location.alt))
-            print("Yaw: {} Expected: {}".format(vehicle.attitude.yaw*180/math.pi, yaw % 360))
+            #vehicle.mode = VehicleMode("GUIDED")
+            #mission.send_global_velocity(0,0,0)
+            #vehicle.flush()
+            #mission.set_yaw(yaw % 360, relative=False)
+            #print("Velocity: {} m/s".format(vehicle.velocity))
+            #print("Altitude: {} m".format(vehicle.location.alt))
+            #print("Yaw: {} Expected: {}".format(vehicle.attitude.yaw*180/math.pi, yaw % 360))
 
             i = 0
             for sensor in sensors:

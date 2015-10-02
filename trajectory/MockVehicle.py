@@ -95,11 +95,16 @@ class MockVehicle(object):
     def _parse_command(self, cmd):
         # Only supported frame
         if cmd is None or cmd.frame != MAV_FRAME_GLOBAL_RELATIVE_ALT:
+            self.commands._next = self.commands._next + 1
             return
+
         if cmd.command == MAV_CMD_NAV_WAYPOINT:
             self._set_target_location(lat=cmd.x, lon=cmd.y, alt=cmd.z)
         elif cmd.command == MAV_CMD_NAV_TAKEOFF:
-            self._set_target_location(alt=cmd.z, takeoff=True)
+            if self._takeoff:
+                self.commands._next = self.commands._next + 1
+            else:
+                self._set_target_location(alt=cmd.z, takeoff=True)
 
     def _set_target_location(self, location=None, lat=None, lon=None, alt=None, takeoff=False):
         if takeoff:
@@ -144,15 +149,22 @@ class MockVehicle(object):
             if self._speed != 0:
                 # Move to location with given `speed`
                 dist = self._geometry.get_distance_meters(self._location, self._target_location)
-                if dist == 0:
-                    vAlt = self._speed
-                else:
+                dAlt = self._target_location.alt - self._location.alt
+                if dist != 0:
                     a = self._geometry.bearing_to_angle(self.attitude._yaw)
-                    print(a)
                     vNorth = math.sin(a) * self._speed
                     vEast = math.cos(a) * self._speed
-                    dAlt = self._target_location.alt - self._location.alt
                     vAlt = dAlt / (dist/self._speed)
+                elif dAlt != 0:
+                    if dAlt / diff < self._speed:
+                        vAlt = dAlt / diff
+                    else:
+                        vAlt = math.copysign(self._speed, dAlt)
+                else:
+                    # Reached target location.
+                    print("Reached target location")
+                    self._target_location = None
+                    self.commands.next = self.commands.next + 1
         elif self._mode.name == "AUTO":
             cmd = self.commands[self.commands.next]
             self._parse_command(cmd)

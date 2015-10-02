@@ -31,7 +31,7 @@ class Geometry(object):
         """
         Convert an `angle` into the bearing notation, both in radians.
         """
-        return -(angle + math.pi/2.0) % (math.pi*2.0)
+        return -(angle - math.pi/2.0) % (math.pi*2.0)
 
     def _meters_to_coordinates(self, north, east):
         # Since we just put everything in meters, we do not do anything here
