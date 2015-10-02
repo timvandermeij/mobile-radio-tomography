@@ -9,7 +9,7 @@ class Distance_Sensor_Physical(Distance_Sensor):
 
         # Initialize the RPi.GPIO module. Doing it this way instead of using
         # an alias during import allows unit tests to access it too.
-        self.gpio = RPi.GPIO()
+        self.gpio = RPi.GPIO
 
         # Disable warnings about pins being in use.
         self.gpio.setwarnings(False)
