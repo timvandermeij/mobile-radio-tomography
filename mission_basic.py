@@ -157,6 +157,7 @@ def main():
             # Display the current memory map interactively.
             plt.imshow(memory_map.get_map(), origin='lower')
             plt.draw()
+            plt.clf()
 
             # Handle waypoint locations in our mission.
             # If we are close to the next waypoint, then we can start doing 

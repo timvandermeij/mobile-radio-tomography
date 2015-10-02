@@ -16,9 +16,8 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         # Maximum distance in meters that the sensor returns
         self.maximum_distance = self.settings.get("maximum_distance")
 
-        # Variables for tracking the relevant edge that the sensor detected
+        # Tracking the relevant edge that the sensor detected
         self.current_edge = None
-        self.arrow = None
 
     def point_inside_polygon(self, location, points):
         """
@@ -197,10 +196,6 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         Draw the edge that was detected during the previous distance sensor measurement, if any.
         The edge is drawn to the matplotlib plot object `plt` using the index offsets from the Memory_Map `map`. Additionally the `color` of the edge can be given.
         """
-        if self.arrow is not None:
-            self.arrow.remove()
-            self.arrow = None
-
         if self.current_edge is not None:
             options = {
                 "arrowstyle": "-",
@@ -209,5 +204,5 @@ class Distance_Sensor_Simulator(Distance_Sensor):
             }
             e0 = map.get_index(self.current_edge[0])
             e1 = map.get_index(self.current_edge[1])
-            print("Relevant edges: {},{}".format(e0, e1))
-            self.arrow = plt.annotate("", e0, e1, arrowprops=options)
+
+            plt.annotate("", e0, e1, arrowprops=options)
