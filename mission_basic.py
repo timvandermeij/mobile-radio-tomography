@@ -90,7 +90,7 @@ def main():
     memory_map = Memory_Map(environment, memory_size)
 
     # Temporary "cheat" to see 2d map of collision data
-    if scenefile is not None:
+    if scenefile is None:
         for i in xrange(0,memory_size):
             for j in xrange(0,memory_size):
                 loc = memory_map.get_location(i, j)
