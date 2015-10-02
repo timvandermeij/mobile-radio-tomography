@@ -9,18 +9,17 @@ Prerequisites
 =============
 
 In order to use the toolchain you need to have the following software
-installed on your system. The software has been developed for Linux, but
+installed on your system. The toolchain has been developed for Linux, but
 can be made to work on Windows or any other operating system since all
-prerequisites are also available for those systems. The version numbers
-mentioned below have been verified, but other versions are also likely
-to work.
+prerequisites are also available for those systems.
 
-* Git 2.5.3
-* Python 2.7.10
-* pip 7.1.2 with the following packages:
+* Git
+* Python 2.7
+* pip for Python 2.7 with the following packages:
     * matplotlib
     * NumPy
     * RPi.GPIO
+    * mock
 
 For all commands in this file, replace `python2` with `python` if your
 operating system does not need to distinguish between Python 2 and Python 3.
