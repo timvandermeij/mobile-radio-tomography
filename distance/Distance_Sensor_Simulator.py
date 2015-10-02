@@ -94,6 +94,10 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         return d
 
     def get_face_distance(self, face, location, angle):
+        """
+        Get the direction distance to a plane `face` given as a polygon in a list of points from the `location` with `angle`.
+        Returns the distance as well as the edge that was closest to the location, if there is any.
+        """
         # Check if angle is within at least one quadrant of the angles to the 
         # object bounds, and also within the object bounds themselves. Both 
         # requirements have to be met, otherwise angles that are around the 
@@ -122,12 +126,9 @@ class Distance_Sensor_Simulator(Distance_Sensor):
                 dists.append(self.get_edge_distance(edge, location, angle))
 
             e_min = dists.index(min(dists))
-            # TODO: With multiple objects, this can take an edge that is not 
-            # a part of the object with minimal distance
-            self.current_edge = edges[e_min]
-            return min(dists)
+            return (min(dists), edges[e_min])
 
-        return sys.float_info.max
+        return (sys.float_info.max, None)
 
     def get_circle_distance(self, obj, location, angle):
         if obj['center'].alt >= location.alt - self.altitude_margin:
@@ -146,21 +147,23 @@ class Distance_Sensor_Simulator(Distance_Sensor):
     def get_obj_distance(self, obj, location, angle):
         if isinstance(obj, list):
             # List of faces
+            # TODO: Should not use just the edges of each face
             dists = []
             for face in obj:
-                dists.append(self.get_face_distance(face, location, angle))
+                dist, edge = self.get_face_distance(face, location, angle)
+                dists.append(dist)
 
-            return min(dists)
+            return (min(dists), None)
         if isinstance(obj, tuple):
             # Single face
             if self.point_inside_polygon(location, obj):
-                return 0
+                return (0, None)
 
             return self.get_face_distance(obj, location, angle)
         elif 'center' in obj:
-            return self.get_circle_distance(obj, location, angle)
+            return (self.get_circle_distance(obj, location, angle), obj['center'])
 
-        return self.maximum_distance
+        return (self.maximum_distance, None)
 
     def get_distance(self, location=None, angle=None):
         """
@@ -174,7 +177,10 @@ class Distance_Sensor_Simulator(Distance_Sensor):
 
         distance = self.maximum_distance
         for obj in self.environment.objects:
-            distance = min(distance, self.get_obj_distance(obj, location, angle))
+            dist, edge = self.get_obj_distance(obj, location, angle)
+            if dist < distance:
+                distance = dist
+                self.current_edge = edge
 
         return distance
 
@@ -202,7 +208,11 @@ class Distance_Sensor_Simulator(Distance_Sensor):
                 "color": color,
                 "linewidth": 1
             }
-            e0 = map.get_index(self.current_edge[0])
-            e1 = map.get_index(self.current_edge[1])
+            if isinstance(self.current_edge, tuple):
+                e0 = map.get_index(self.current_edge[0])
+                e1 = map.get_index(self.current_edge[1])
+            else:
+                e0 = map.get_index(self.current_edge)
+                e1 = e0
 
             plt.annotate("", e0, e1, arrowprops=options)
