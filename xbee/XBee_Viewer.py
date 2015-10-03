@@ -1,13 +1,14 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from math import *
+from ..settings import Settings
 
 class XBee_Viewer(object):
-    def __init__(self, settings):
+    def __init__(self):
         # Initialize the viewer with a correctly scaled plot.
         self.points = []
         self.arrows = []
-        self.settings = settings
+        self.settings = Settings("settings.json", "xbee_viewer")
 
         plt.xlim(0, self.settings.get("size"))
         plt.ylim(0, self.settings.get("size"))

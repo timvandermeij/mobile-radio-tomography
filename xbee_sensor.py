@@ -9,12 +9,12 @@ from xbee.XBee_Viewer import XBee_Viewer
 def main(argv):
     settings = Settings("settings.json", "xbee_sensor_simulator")
 
-    viewer = XBee_Viewer(settings)
+    viewer = XBee_Viewer()
     viewer.draw_points()
 
     sensors = []
     for sensor_id in range(settings.get("number_of_sensors") + 1):
-        scheduler = XBee_TDMA_Scheduler(settings, sensor_id)
+        scheduler = XBee_TDMA_Scheduler(sensor_id)
         sensor = XBee_Sensor_Simulator(sensor_id, settings, scheduler, viewer)
         sensors.append(sensor)
 
