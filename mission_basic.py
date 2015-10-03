@@ -9,7 +9,13 @@ import os
 import time
 import math
 import traceback
+
+import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.patches import Polygon
+from matplotlib.collections import PatchCollection
+
 from droneapi.lib import VehicleMode, Location, Command
 from pymavlink import mavutil
 
@@ -89,13 +95,21 @@ def main():
     memory_size = mission.get_space_size()
     memory_map = Memory_Map(environment, memory_size)
 
-    # Temporary "cheat" to see 2d map of collision data
+    # "Cheat" to see 2d map of collision data
+    patches = []
     if scenefile is None:
-        for i in xrange(0,memory_size):
-            for j in xrange(0,memory_size):
-                loc = memory_map.get_location(i, j)
-                if sensors[0].get_distance(loc) == 0:
-                    memory_map.set((i,j), 0.5)
+        for obj in environment.objects:
+            if isinstance(obj, tuple):
+                polygon = Polygon([memory_map.get_index(loc) for loc in obj])
+                patches.append(polygon)
+            elif 'center' in obj:
+                idx = memory_map.get_index(obj['center'])
+                patches.append(Circle(idx, radius=obj['radius']))
+
+    p = PatchCollection(patches, cmap=matplotlib.cm.jet)
+    patch_colors = 50*np.ones(len(patches))
+    p.set_array(np.array(patch_colors))
+    fig, ax = plt.subplots()
 
     # Set up interactive drawing of the memory map. This makes the 
     # dronekit/mavproxy fairly annoyed since it creates additional 
@@ -155,9 +169,10 @@ def main():
                 i = i + 1
 
             # Display the current memory map interactively.
+            ax.add_collection(p)
             plt.imshow(memory_map.get_map(), origin='lower')
             plt.draw()
-            plt.clf()
+            plt.cla()
 
             # Handle waypoint locations in our mission.
             # If we are close to the next waypoint, then we can start doing 
