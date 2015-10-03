@@ -10,13 +10,16 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         self.id = id
         self.settings = settings
         self.viewer = viewer
-        self.next_timestamp = 0
         self.scheduler = scheduler
         self.next_timestamp = self.scheduler.get_next_timestamp()
         self.rssi_values = [None for _ in range(self.settings.get("number_of_sensors"))]
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind((self.settings.get("ip"), self.settings.get("port") + self.id))
         self.socket.setblocking(0)
+
+    def __del__(self):
+        self.socket.close()
 
     def activate(self):
         # Activate the sensor to send and receive packets.
