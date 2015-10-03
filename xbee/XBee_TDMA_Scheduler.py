@@ -15,7 +15,7 @@ class XBee_TDMA_Scheduler(object):
         else: 
             self.timestamp += self.settings.get("sweep_delay")
         
-        return self.timestamp
+        return round(self.timestamp)
 
     def synchronize(self, packet):
         # Synchronize the scheduler after receiving a packet from
@@ -32,4 +32,4 @@ class XBee_TDMA_Scheduler(object):
             completed_round = (self.settings.get("number_of_sensors") - from_sensor + 1) * slot_time
             self.timestamp = timestamp + completed_round + ((self.id - 1) * slot_time)
 
-        return self.timestamp
+        return round(self.timestamp)
