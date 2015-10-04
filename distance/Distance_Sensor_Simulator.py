@@ -81,10 +81,17 @@ class Distance_Sensor_Simulator(Distance_Sensor):
 
         loc_point = Location(y, x, location.alt, location.is_relative)
 
-        # Get altitude from edge
         edge_dist = self.geometry.get_distance_meters(edge[0], edge[1])
-        point_dist = self.geometry.get_distance_meters(edge[1], loc_point)
-        alt = edge[1].alt + ((edge[0].alt - edge[1].alt) / edge_dist) * point_dist
+        dists = [self.geometry.get_distance_meters(edge[i], loc_point) for i in (0,1)]
+        if max(dists) > edge_dist:
+            # Point is not actually on the edge, but on the line extending from 
+            # it. This edge case is possible even after skipping object 
+            # detection based on quadrants and angles, since it may be on one 
+            # edge but not the other. This point is actually not detected.
+            return sys.float_info.max
+
+        # Get altitude of the point by basing off edge slope
+        alt = edge[1].alt + ((edge[0].alt - edge[1].alt) / edge_dist) * dists[1]
 
         if alt < location.alt - self.altitude_margin:
             return sys.float_info.max
@@ -125,8 +132,9 @@ class Distance_Sensor_Simulator(Distance_Sensor):
             for edge in edges:
                 dists.append(self.get_edge_distance(edge, location, angle))
 
-            e_min = dists.index(min(dists))
-            return (min(dists), edges[e_min])
+            d_min = min(dists)
+            e_min = dists.index(d_min)
+            return (d_min, edges[e_min])
 
         return (sys.float_info.max, None)
 
