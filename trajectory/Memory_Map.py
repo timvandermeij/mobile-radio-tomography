@@ -28,6 +28,14 @@ class Memory_Map(object):
         x = ((loc.lon - self.bl.lon) / dlon) * self.size
         return (y,x)
 
+    def get_xy_index(self, loc):
+        """
+        Convert location coordinates to indices for plotting (x,y).
+
+        For any positioning other than displaying an image, matplotlib assumes the value is given in (x,y) order instead of (y,x).
+        """
+        return list(reversed(self.get_index(loc)))
+
     def get(self, idx):
         i,j = idx
         if 0 <= i < self.size and 0 <= j < self.size:

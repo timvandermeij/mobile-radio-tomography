@@ -173,7 +173,6 @@ class MockVehicle(object):
             vEast = self._velocity[1]
             vAlt = -self._velocity[2]
 
-        print([vNorth, vEast, vAlt, diff])
         north = vNorth * diff
         east = vEast * diff
         alt = vAlt * diff

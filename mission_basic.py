@@ -100,13 +100,13 @@ def main():
     if scenefile is None:
         for obj in environment.objects:
             if isinstance(obj, tuple):
-                polygon = Polygon([memory_map.get_index(loc) for loc in obj])
+                polygon = Polygon([memory_map.get_xy_index(loc) for loc in obj])
                 patches.append(polygon)
             elif 'center' in obj:
-                idx = memory_map.get_index(obj['center'])
+                idx = memory_map.get_xy_index(obj['center'])
                 patches.append(Circle(idx, radius=obj['radius']))
 
-    p = PatchCollection(patches, cmap=matplotlib.cm.jet)
+    p = PatchCollection(patches, cmap=matplotlib.cm.jet, alpha=0.4)
     patch_colors = 50*np.ones(len(patches))
     p.set_array(np.array(patch_colors))
     fig, ax = plt.subplots()

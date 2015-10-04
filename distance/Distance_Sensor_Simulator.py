@@ -214,13 +214,14 @@ class Distance_Sensor_Simulator(Distance_Sensor):
             options = {
                 "arrowstyle": "-",
                 "color": color,
-                "linewidth": 1
+                "linewidth": 2,
+                "alpha": 0.5
             }
             if isinstance(self.current_edge, tuple):
-                e0 = map.get_index(self.current_edge[0])
-                e1 = map.get_index(self.current_edge[1])
+                e0 = map.get_xy_index(self.current_edge[0])
+                e1 = map.get_xy_index(self.current_edge[1])
             else:
-                e0 = map.get_index(self.current_edge)
+                e0 = map.get_xy_index(self.current_edge)
                 e1 = e0
 
             plt.annotate("", e0, e1, arrowprops=options)
