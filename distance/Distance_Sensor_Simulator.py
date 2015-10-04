@@ -205,7 +205,7 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         # Ensure angle is always in the range [0, 2pi).
         return (angle + self.angle*math.pi/180) % (2*math.pi)
     
-    def draw_current_edge(self, plt, map, color="red"):
+    def draw_current_edge(self, plt, memory_map, color="red"):
         """
         Draw the edge that was detected during the previous distance sensor measurement, if any.
         The edge is drawn to the matplotlib plot object `plt` using the index offsets from the Memory_Map `map`. Additionally the `color` of the edge can be given.
@@ -218,10 +218,10 @@ class Distance_Sensor_Simulator(Distance_Sensor):
                 "alpha": 0.5
             }
             if isinstance(self.current_edge, tuple):
-                e0 = map.get_xy_index(self.current_edge[0])
-                e1 = map.get_xy_index(self.current_edge[1])
+                e0 = memory_map.get_xy_index(self.current_edge[0])
+                e1 = memory_map.get_xy_index(self.current_edge[1])
             else:
-                e0 = map.get_xy_index(self.current_edge)
+                e0 = memory_map.get_xy_index(self.current_edge)
                 e1 = e0
 
             plt.annotate("", e0, e1, arrowprops=options)

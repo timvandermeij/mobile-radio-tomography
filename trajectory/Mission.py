@@ -37,14 +37,18 @@ class Mission(object):
         return distance
 
     def _setup(self):
-        print("Clear the current mission")
+        # Clear the current mission
         self.clear_mission()
 
-        print("Create a new mission")
         self.size = self.settings.get("size")
         self.altitude = self.settings.get("altitude")
         self.speed = self.settings.get("speed")
-        self.add_square_mission(self.vehicle.location)
+
+    def display(self):
+        # Make sure that mission being sent is displayed on console cleanly
+        time.sleep(self.settings.get("mission_delay"))
+        num_commands = self.vehicle.commands.count
+        print("{} commands in the mission!".format(num_commands))
 
     def clear_mission(self):
         """

@@ -22,6 +22,7 @@
             "altitude_undershoot": 0.95,
             "closeness": 2.0,
             "farness": 100.0,
+            "mission_delay": 2.0,
             "loop_delay": 0.5,
             "altitude": 4,
             "speed": 2.5,

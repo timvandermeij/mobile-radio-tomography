@@ -56,12 +56,11 @@ def main():
         scenefile = None
 
     environment = Environment(vehicle, geo, scenefile)
-    mission = Mission(api, environment, mission_settings)
 
-    # Make sure that mission being sent is displayed on console cleanly
-    time.sleep(2)
-    num_commands = mission.get_commands().count
-    print("{} commands in the mission!".format(num_commands))
+    print("Setting up mission")
+    mission = Mission(api, environment, mission_settings)
+    mission.add_square_mission(self.vehicle.location)
+    mission.display()
 
     # As of ArduCopter 3.3 it is possible to take off using a mission item.
     mission.arm_and_takeoff()
