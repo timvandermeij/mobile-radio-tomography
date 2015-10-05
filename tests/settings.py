@@ -22,3 +22,11 @@ class TestSettings(unittest.TestCase):
         settings = Settings("tests/settings.json", "foo")
         with self.assertRaises(KeyError):
             settings.get("qux")
+
+    def test_parent(self):
+        settings = Settings("tests/settings.json", "child")
+        self.assertEqual(settings.get("bar"), 2)
+        self.assertEqual(settings.get("baz"), False)
+        # Test: Exception should still mention child component
+        with self.assertRaisesRegexp(KeyError, "'child'"):
+            settings.get("qux")

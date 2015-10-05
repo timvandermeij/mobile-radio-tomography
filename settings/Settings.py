@@ -25,13 +25,24 @@ class Settings(object):
         self.component_name = component_name
 
         settings = self.__class__.get_settings(file_name)
-        if not self.component_name in settings:
+        if self.component_name not in settings:
             raise KeyError("Component '{}' not found.".format(self.component_name))
 
         self.settings = settings[self.component_name]["settings"]
 
+        if "parent" in settings[self.component_name]:
+            self.parent = Settings(file_name, settings[self.component_name]["parent"])
+        else:
+            self.parent = None
+
     def get(self, key):
         if key not in self.settings:
+            if self.parent is not None:
+                try:
+                    return self.parent.get(key)
+                except KeyError:
+                    pass
+
             raise KeyError("Setting '{}' for component '{}' not found.".format(key, self.component_name))
 
         return self.settings[key]
