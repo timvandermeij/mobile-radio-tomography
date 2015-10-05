@@ -2,7 +2,7 @@ import time
 import unittest
 from random import randint
 from ..settings import Settings
-from ..xbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
+from ..zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 
 class TestXBeeTDMAScheduler(unittest.TestCase):
     def setUp(self):
