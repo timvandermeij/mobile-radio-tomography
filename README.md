@@ -28,7 +28,7 @@ operating system does not need to distinguish between Python 2 and Python 3.
 Cloning the repository
 ======================
 
-The first step is to clone the repository to obtian a local copy of the 
+The first step is to clone the repository to obtain a local copy of the 
 code. Open a terminal and run the following commands.
 
     $ git clone https://github.com/timvandermeij/drone-tomography.git
@@ -60,6 +60,17 @@ Raspberry Pi. Start the tool with `sudo python2 distance_sensor_physical.py`
 to receive continuous measurements from the distance sensor. Change the pin
 numbers for the trigger and echo pins in `settings.json` if you have used
 different pin numbers when connecting the HC-SR04 sensor to the Raspberry Pi.
+
+XBee configurator
+-----------------
+
+The XBee configurator is used to quickly prepare all XBee chips in the
+network. Start the configurator with `sudo python2 xbee_configurator.py` to
+get started. You might need to adjust the settings for the `xbee_configurator`
+component in `settings.json`, for example to set the right port if the
+default port is not correct. After starting the tool, the instructions for
+configuring each sensor are displayed on the screen. The tool takes care of
+setting the PAN ID and the node ID for each sensor.
 
 Running the unit tests
 ======================
