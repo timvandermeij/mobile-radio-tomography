@@ -23,6 +23,27 @@ class TestSettings(unittest.TestCase):
         with self.assertRaises(KeyError):
             settings.get("qux")
 
+    def test_get_all(self):
+        settings = Settings("tests/settings.json", "foo")
+        expected = {
+            "bar": 2,
+            "baz": True
+        }
+        for key, value in settings.get_all():
+            self.assertEqual(value, expected[key])
+            # Disallow key to be multiple times in iterator, and test afterward 
+            # whether all keys were in there.
+            del expected[key]
+
+        self.assertEqual(expected, {})
+
+    def test_set(self):
+        settings = Settings("tests/settings.json", "foo")
+        settings.set("bar", 3)
+        settings.set("new", "added")
+        self.assertEqual(settings.get("bar"), 3)
+        self.assertEqual(settings.get("new"), "added")
+
     def test_parent(self):
         settings = Settings("tests/settings.json", "child")
         self.assertEqual(settings.get("bar"), 2)
