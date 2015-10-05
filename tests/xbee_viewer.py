@@ -1,7 +1,7 @@
 import unittest
 from mock import patch
 from ..settings import Settings
-from ..xbee.XBee_Viewer import XBee_Viewer
+from ..zigbee.XBee_Viewer import XBee_Viewer
 
 class TestXBeeViewer(unittest.TestCase):
     def setUp(self):
