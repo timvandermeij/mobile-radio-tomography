@@ -7,8 +7,8 @@ from ..xbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 class TestXBeeTDMAScheduler(unittest.TestCase):
     def setUp(self):
         self.id = 2
-        self.scheduler = XBee_TDMA_Scheduler(self.id)
         self.settings = Settings("settings.json", "xbee_tdma_scheduler")
+        self.scheduler = XBee_TDMA_Scheduler(self.id, self.settings)
 
     def test_initialization(self):
         # The ID of the sensor must be set.

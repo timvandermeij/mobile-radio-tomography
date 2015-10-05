@@ -1,9 +1,15 @@
 import time
-from ..settings import Settings
+from ..settings import Arguments, Settings
 
 class XBee_TDMA_Scheduler(object):
-    def __init__(self, id, arguments):
-        self.settings = arguments.get_settings("xbee_tdma_scheduler")
+    def __init__(self, id, settings):
+        if isinstance(settings, Arguments):
+            self.settings = settings.get_settings("xbee_tdma_scheduler")
+        elif isinstance(settings, Settings):
+            self.settings = settings
+        else:
+            raise ValueError("'settings' must be an instance of Settings or Arguments")
+
         self.id = id
         self.timestamp = 0
 

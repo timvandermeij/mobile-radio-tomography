@@ -1,13 +1,19 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from math import *
-from ..settings import Settings
+from ..settings import Arguments, Settings
 
 class XBee_Viewer(object):
-    def __init__(self, arguments):
+    def __init__(self, settings):
         self.points = []
         self.arrows = []
-        self.settings = arguments.get_settings("xbee_viewer")
+        if isinstance(settings, Arguments):
+            self.settings = settings.get_settings("xbee_viewer")
+        elif isinstance(settings, Settings):
+            self.settings = settings
+        else:
+            raise ValueError("'settings' must be an instance of Settings or Arguments")
+
         self.started = False
 
     def _start(self):
