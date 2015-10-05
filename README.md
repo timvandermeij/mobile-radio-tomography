@@ -20,6 +20,7 @@ prerequisites are also available for those systems.
     * NumPy
     * RPi.GPIO
     * mock
+    * xbee
 
 For all commands in this file, replace `python2` with `python` if your
 operating system does not need to distinguish between Python 2 and Python 3.
