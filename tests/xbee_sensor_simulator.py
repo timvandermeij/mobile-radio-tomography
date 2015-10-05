@@ -4,9 +4,9 @@ import time
 import socket
 from random import randint
 from ..settings import Settings
-from ..xbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
-from ..xbee.XBee_Viewer import XBee_Viewer
-from ..xbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
+from ..zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
+from ..zigbee.XBee_Viewer import XBee_Viewer
+from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 
 class TestXBeeSensorSimulator(unittest.TestCase):
     def setUp(self):

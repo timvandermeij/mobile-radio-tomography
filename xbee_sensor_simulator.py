@@ -2,9 +2,9 @@ import sys
 import time
 from settings import Settings
 from __init__ import __package__
-from xbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
-from xbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
-from xbee.XBee_Viewer import XBee_Viewer
+from zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
+from zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
+from zigbee.XBee_Viewer import XBee_Viewer
 
 def main(argv):
     settings = Settings("settings.json", "xbee_sensor_simulator")
