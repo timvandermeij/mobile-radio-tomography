@@ -37,15 +37,15 @@
     },
     "xbee_tdma_scheduler": {
         "name": "XBee TDMA scheduler",
+        "parent": "xbee_sensor_simulator",
         "settings": {
-            "number_of_sensors": 8,
             "sweep_delay": 16
         }
     },
     "xbee_viewer": {
         "name": "XBee viewer",
+        "parent": "xbee_sensor_simulator",
         "settings": {
-            "number_of_sensors": 8,
             "size": 10,
             "circle_radius": 3
         }
