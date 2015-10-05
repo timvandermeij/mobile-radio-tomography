@@ -2,8 +2,8 @@ import time
 from ..settings import Settings
 
 class XBee_TDMA_Scheduler(object):
-    def __init__(self, id):
-        self.settings = Settings("settings.json", "xbee_tdma_scheduler")
+    def __init__(self, id, arguments):
+        self.settings = arguments.get_settings("xbee_tdma_scheduler")
         self.id = id
         self.timestamp = 0
 

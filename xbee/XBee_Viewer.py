@@ -4,12 +4,18 @@ from math import *
 from ..settings import Settings
 
 class XBee_Viewer(object):
-    def __init__(self):
-        # Initialize the viewer with a correctly scaled plot.
+    def __init__(self, arguments):
         self.points = []
         self.arrows = []
-        self.settings = Settings("settings.json", "xbee_viewer")
+        self.settings = arguments.get_settings("xbee_viewer")
+        self.started = False
 
+    def _start(self):
+        if self.started:
+            return
+
+        # Initialize the viewer with a correctly scaled plot.
+        self.started = True
         plt.xlim(0, self.settings.get("size"))
         plt.ylim(0, self.settings.get("size"))
         plt.gca().set_aspect("equal", adjustable="box")
@@ -17,6 +23,8 @@ class XBee_Viewer(object):
         plt.show()
 
     def draw_points(self):
+        self._start()
+
         # Draw a static point for each sensor in a circular shape. The
         # spacing between the points is equal. We add an offset to display
         # the circle in the middle of the plot.
