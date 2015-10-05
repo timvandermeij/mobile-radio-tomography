@@ -29,7 +29,7 @@
         "name": "XBee configurator",
         "parent": "xbee_sensor_simulator",
         "settings": {
-            "source": "/dev/ttyUSB0",
+            "port": "/dev/ttyUSB0",
             "baud_rate": 9600,
             "pan_id": 2015
         }
