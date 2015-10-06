@@ -3,6 +3,7 @@ import json
 import time
 import socket
 from random import randint
+from ..settings import Arguments
 from ..settings import Settings
 from ..zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from ..zigbee.XBee_Viewer import XBee_Viewer
@@ -11,10 +12,11 @@ from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 class TestXBeeSensorSimulator(unittest.TestCase):
     def setUp(self):
         self.id = 1
-        self.settings = Settings("settings.json", "xbee_sensor_simulator")
-        self.scheduler = XBee_TDMA_Scheduler(self.id)
-        self.viewer = XBee_Viewer()
-        self.sensor = XBee_Sensor_Simulator(self.id, self.settings,
+        self.arguments = Arguments("settings.json", [])
+        self.settings = self.arguments.get_settings("xbee_sensor_simulator")
+        self.scheduler = XBee_TDMA_Scheduler(self.id, self.arguments)
+        self.viewer = XBee_Viewer(self.arguments)
+        self.sensor = XBee_Sensor_Simulator(self.id, self.arguments,
                                             self.scheduler, self.viewer)
 
         # Pretend that this test case is sensor 2

@@ -5,8 +5,8 @@ from ..zigbee.XBee_Viewer import XBee_Viewer
 
 class TestXBeeViewer(unittest.TestCase):
     def setUp(self):
-        self.viewer = XBee_Viewer()
         self.settings = Settings("settings.json", "xbee_viewer")
+        self.viewer = XBee_Viewer(self.settings)
 
     @patch("matplotlib.pyplot.show")
     def test_initialization(self, mock_show):
