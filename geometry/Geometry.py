@@ -66,7 +66,7 @@ class Geometry(object):
         Does not take curvature of earth in account, and should thus be used only for close locations.
         """
         dlat = location2.lat - location1.lat
-        dlon = location2.lon - location1.lat
+        dlon = location2.lon - location1.lon
         angle = math.atan2(dlat, dlon)
 
         return (angle + 2*math.pi) % (2*math.pi)
