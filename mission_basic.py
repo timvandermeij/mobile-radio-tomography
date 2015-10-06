@@ -107,9 +107,11 @@ def main():
                 idx = memory_map.get_xy_index(obj['center'])
                 patches.append(Circle(idx, radius=obj['radius']))
 
-    p = PatchCollection(patches, cmap=matplotlib.cm.jet, alpha=0.4)
-    patch_colors = 50*np.ones(len(patches))
-    p.set_array(np.array(patch_colors))
+    p = None
+    if len(patches) > 0:
+        p = PatchCollection(patches, cmap=matplotlib.cm.jet, alpha=0.4)
+        patch_colors = 50*np.ones(len(patches))
+        p.set_array(np.array(patch_colors))
     fig, ax = plt.subplots()
 
     # Set up interactive drawing of the memory map. This makes the 
@@ -170,7 +172,8 @@ def main():
                 i = i + 1
 
             # Display the current memory map interactively.
-            ax.add_collection(p)
+            if p is not None:
+                ax.add_collection(p)
             plt.imshow(memory_map.get_map(), origin='lower')
             plt.draw()
             plt.cla()
