@@ -6,9 +6,13 @@ class Environment(object):
     This allows us to simulate a mission without many dependencies on DroneKit.
     """
 
-    def __init__(self, vehicle, geometry, scenefile=None):
+    def __init__(self, vehicle, geometry, simulation=None, scenefile=None):
         self.vehicle = vehicle
         self.geometry = geometry
+
+        if not simulation:
+            self.objects = []
+            return
 
         if scenefile is not None:
             loader = VRMLLoader(self, scenefile)

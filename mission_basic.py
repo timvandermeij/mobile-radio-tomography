@@ -42,7 +42,8 @@ def main():
     except:
         geo = Geometry.Geometry_Spherical()
 
-    if mission_settings.get("vehicle_simulation"):
+    simulation = mission_settings.get("vehicle_simulation")
+    if simulation == "mock":
         api = MockAPI()
         vehicle = MockVehicle(geo)
     else:
@@ -55,7 +56,7 @@ def main():
     except KeyError:
         scenefile = None
 
-    environment = Environment(vehicle, geo, scenefile)
+    environment = Environment(vehicle, geo, simulation, scenefile)
 
     print("Setting up mission")
     mission = Mission(api, environment, mission_settings)
