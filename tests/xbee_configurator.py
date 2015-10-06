@@ -3,7 +3,7 @@ import pty
 import os
 import serial
 from mock import patch
-from ..settings import Settings
+from ..settings import Arguments
 from ..zigbee.XBee_Configurator import XBee_Configurator
 from xbee import ZigBee
 
@@ -15,9 +15,9 @@ class TestXBeeConfigurator(unittest.TestCase):
         master, slave = pty.openpty()
         self.port = os.ttyname(slave)
 
-        self.settings = Settings("settings.json", "xbee_configurator")
-        self.configurator = XBee_Configurator(self.id, self.port,
-                                              self.settings.get("baud_rate"))
+        self.arguments = Arguments("settings.json", ["--port={}".format(self.port)])
+        self.settings = self.arguments.get_settings("xbee_configurator")
+        self.configurator = XBee_Configurator(self.id, self.arguments)
 
     def test_initialization(self):
         self.assertEqual(self.configurator.id, self.id)
