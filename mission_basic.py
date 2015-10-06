@@ -59,7 +59,7 @@ def main():
 
     print("Setting up mission")
     mission = Mission(api, environment, mission_settings)
-    mission.add_square_mission(self.vehicle.location)
+    mission.add_square_mission(vehicle.location)
     mission.display()
 
     # As of ArduCopter 3.3 it is possible to take off using a mission item.
