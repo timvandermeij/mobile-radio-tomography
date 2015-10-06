@@ -6,9 +6,8 @@ from XBee_Sensor import XBee_Sensor
 from ..settings import Arguments, Settings
 
 class XBee_Sensor_Simulator(XBee_Sensor):
-    def __init__(self, id, settings, scheduler, viewer):
+    def __init__(self, sensor_id, settings, scheduler, viewer):
         # Initialize the sensor with its ID and a unique, non-blocking UDP socket.
-        self.id = id
         if isinstance(settings, Arguments):
             self.settings = settings.get_settings("xbee_sensor_simulator")
         elif isinstance(settings, Settings):
@@ -16,6 +15,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         else:
             raise ValueError("'settings' must be an instance of Settings or Arguments")
 
+        self.id = sensor_id
         self.viewer = viewer
         self.scheduler = scheduler
         self.next_timestamp = self.scheduler.get_next_timestamp()

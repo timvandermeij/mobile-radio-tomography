@@ -35,13 +35,21 @@
         }
     },
     "xbee_sensor_simulator": {
-        "name": "XBee sensor simulator",
+        "name": "XBee sensor (simulator)",
         "settings": {
             "ip": "127.0.0.1",
             "port": 3233,
             "buffer_size": 1024,
             "number_of_sensors": 8,
             "loop_delay": 0.1
+        }
+    },
+    "xbee_sensor_physical": {
+        "name": "XBee sensor (physical)",
+        "parent": "xbee_configurator",
+        "settings": {
+            "number_of_sensors": 2,
+            "loop_delay": 0.5
         }
     },
     "xbee_tdma_scheduler": {
