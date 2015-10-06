@@ -1,11 +1,16 @@
 import sys
+import itertools
 import math
+import numpy as np
 from droneapi.lib import Location
 from Distance_Sensor import Distance_Sensor
 from ..settings import Settings
 
-# Virtual sensor class that detects collision distances to simulated objects
 class Distance_Sensor_Simulator(Distance_Sensor):
+    """
+    Virtual sensor class that detects collision distances to simulated objects
+    """
+
     def __init__(self, environment, angle=0):
         self.environment = environment
         self.geometry = self.environment.get_geometry()
@@ -50,9 +55,6 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         # except that the coordinate system there is assumed to revolve around 
         # the vehicle, which is strange. Instead, use a fixed origin and thus 
         # the edge's b1 is fixed, and calculate b2 instead.
-
-        # TODO: Check whether calculations are correct and make use of more 
-        # Geometry functions
 
         m2 = math.tan(angle)
         b2 = location.lat - m2 * location.lon
@@ -138,6 +140,76 @@ class Distance_Sensor_Simulator(Distance_Sensor):
 
         return (sys.float_info.max, None)
 
+    def get_projected_location(self, p, ignore_index):
+        if ignore_index == 0:
+            return Location(p.lon, p.alt, 0)
+        elif ignore_index == 1:
+            return Location(p.lat, p.alt, 0)
+        else:
+            # No need to ignore altitude here since it's ignored by default
+            return p
+
+    def get_plane_distance(self, face, location, angle):
+        if len(face) < 3:
+            print("Face incomplete")
+            return (sys.float_info.max, None)
+
+        epsilon = 0.0001
+        # TODO: Split up/move parts to Geometry
+
+        # Calculate plane equation from points on face
+        # Based on http://stackoverflow.com/a/24540938 expect with less typos 
+        # (see http://stackoverflow.com/a/25809052) and more numpy strength
+
+        # Point on a plane
+        p = face[0]
+        # Vectors from point that define plane direction
+        v1 = [face[1].lat - p.lat, face[1].lon - p.lon, face[1].alt - p.alt]
+        v2 = [face[2].lat - p.lat, face[2].lon - p.lon, face[2].alt - p.alt]
+        cp = np.cross(v1, v2)
+        # Normalized plane coordinates
+        d = -(cp[0] * p.lat + cp[1] * p.lon + cp[2] * p.alt) / np.dot(cp, cp)
+        p_co = cp * d
+
+        # 3D intersection point
+        # Based on http://stackoverflow.com/a/18543221
+
+        # Point at location
+        p0 = np.array([location.lat, location.lon, location.alt])
+        # Slope of the line
+        m = math.tan(angle)
+        # Another point on the line. Assume for now that the vehicle's pitch is 
+        # zero, i.e. it looks straight ahead on the ground plane.
+        p1 = np.array([p0[0] + 0.1, p0[1] + (p0[0] + 0.1) * m, p0[1]])
+        u = p1 - p0
+        dot = np.dot(p_co, u)
+        if abs(dot) <= epsilon:
+            print("Dot product not good enough: {}".format(dot))
+            return (sys.float_info.max, None)
+
+        w = p0 - p_co
+        factor = -np.dot(p_co, w) / dot
+        u = u * factor
+        intersection = p0 + u
+
+        # Point inside 3D polygon check
+        # http://geomalgorithms.com/a03-_inclusion.html#3D-Polygons
+        # Move the "least relevant coordinate" into the altitude value since 
+        # that's ignored for 2D point inside polygon and this creates the 
+        # largest projection of the plane.
+        ignore_index = np.argmax(np.absolute(p_co))
+
+        ignores = itertools.repeat(ignore_index, len(face))
+        projected_face = map(self.get_projected_location, face, ignores)
+
+        loc_point = Location(intersection[0], intersection[1], intersection[2])
+        projected_loc = self.get_projected_location(loc_point, ignore_index)
+        if self.point_inside_polygon(projected_loc, projected_face):
+            d = self.geometry.get_distance_meters(location, loc_point)
+            return (d, None)
+
+        return (sys.float_info.max, None)
+
     def get_circle_distance(self, obj, location, angle):
         if obj['center'].alt >= location.alt - self.altitude_margin:
             # Find directional angle to the object's center.
@@ -158,11 +230,11 @@ class Distance_Sensor_Simulator(Distance_Sensor):
             # TODO: Should not use just the edges of each face
             dists = []
             for face in obj:
-                dist, edge = self.get_face_distance(face, location, angle)
+                dist, edge = self.get_plane_distance(face, location, angle)
                 dists.append(dist)
 
             return (min(dists), None)
-        if isinstance(obj, tuple):
+        elif isinstance(obj, tuple):
             # Single face
             if self.point_inside_polygon(location, obj):
                 return (0, None)
