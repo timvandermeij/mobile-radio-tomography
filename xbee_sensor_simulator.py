@@ -1,4 +1,3 @@
-from argparse import ArgumentParser
 import sys
 import time
 from __init__ import __package__

@@ -4,7 +4,6 @@ import time
 import socket
 from random import randint
 from ..settings import Arguments
-from ..settings import Settings
 from ..zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from ..zigbee.XBee_Viewer import XBee_Viewer
 from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator

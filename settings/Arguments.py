@@ -67,7 +67,6 @@ class Arguments(object):
         """
 
         args, self.argv = self.parser.parse_known_args(self.argv)
-        arguments = []
         for key, _ in settings.get_all():
             settings.set(key, args.__dict__[key])
 
@@ -77,7 +76,7 @@ class Arguments(object):
 
         This should be used after all Settings components have been registered,
         so that help for all settings is available.
-        This function may end the program in case a --help argument is given.
+        This method will end the program in case a --help argument is given.
         """
 
         self.parser.add_argument('-h', '--help', action='help', help="Show this help message and exit")
