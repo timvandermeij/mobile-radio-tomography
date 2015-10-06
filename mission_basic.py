@@ -67,6 +67,7 @@ def main():
     mission.arm_and_takeoff()
 
     print("Starting mission")
+    num_commands = mission.get_commands().count
     # Set mode to AUTO to start mission
     vehicle.mode = VehicleMode("AUTO")
     vehicle.flush()
