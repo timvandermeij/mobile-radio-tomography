@@ -21,6 +21,9 @@ to work.
     * matplotlib
     * NumPy
     * RPi.GPIO
+    * OpenGLContext
+    * PyVRML97
+    * PyDispatcher
 
 For all commands in this file, replace `python2` with `python` if your
 operating system does not need to distinguish between Python 2 and Python 3.
