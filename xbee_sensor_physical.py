@@ -15,14 +15,11 @@ def main(argv):
 
     arguments.check_help()
 
-    sender = 1
+    sender = 0
     while True:
         try:
-            sensors[sender - 1]._send()
-            if sender == 1:
-                sender = 2
-            else:
-                sender = 1
+            sensors[sender]._send()
+            sender = not sender
 
             time.sleep(settings.get("loop_delay"))
         except IOError:
