@@ -49,7 +49,7 @@
         "parent": "xbee_configurator",
         "settings": {
             "number_of_sensors": 2,
-            "loop_delay": 0.5
+            "loop_delay": 0.2
         }
     },
     "xbee_tdma_scheduler": {

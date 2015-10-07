@@ -2,6 +2,7 @@
 # TODO: Document that exactly one sensor has to be a coordinator.
 # TODO: Implement the stubbed methods, partly by moving methods below.
 # TODO: Implement network discovery to remove the hardcoded sensors array.
+# TODO: Fix the start-up delay such that sensors start transmitting immediately.
 
 from xbee import ZigBee
 import serial
