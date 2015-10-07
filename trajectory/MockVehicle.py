@@ -165,7 +165,7 @@ class MockVehicle(object):
                     print("Reached target location")
                     self._target_location = None
                     self.commands.next = self.commands.next + 1
-        elif self._mode.name == "AUTO":
+        elif self._mode.name == "AUTO" and self.commands.count > self.commands.next:
             cmd = self.commands[self.commands.next]
             self._parse_command(cmd)
         elif self._mode.name == "GUIDED":
