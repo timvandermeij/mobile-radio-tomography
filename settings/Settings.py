@@ -1,3 +1,4 @@
+import os
 import json
 
 class Settings(object):
@@ -18,16 +19,30 @@ class Settings(object):
         return cls.settings_files[file_name]
 
     def __init__(self, file_name, component_name):
+        if not os.path.isfile(file_name):
+            raise IOError("File '{}' does not exist.".format(file_name))
+
         self.component_name = component_name
-        
+
         settings = self.__class__.get_settings(file_name)
-        
-        self.settings = None
-        if self.component_name in settings:
-            self.settings = settings[self.component_name]["settings"]
+        if self.component_name not in settings:
+            raise KeyError("Component '{}' not found.".format(self.component_name))
+
+        self.settings = settings[self.component_name]["settings"]
+
+        if "parent" in settings[self.component_name]:
+            self.parent = Settings(file_name, settings[self.component_name]["parent"])
+        else:
+            self.parent = None
 
     def get(self, key):
-        if self.settings == None or key not in self.settings:
+        if key not in self.settings:
+            if self.parent is not None:
+                try:
+                    return self.parent.get(key)
+                except KeyError:
+                    pass
+
             raise KeyError("Setting '{}' for component '{}' not found.".format(key, self.component_name))
 
         return self.settings[key]

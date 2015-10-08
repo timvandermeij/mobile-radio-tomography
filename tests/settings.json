@@ -1,0 +1,16 @@
+{
+    "foo": {
+        "name": "Foo component",
+        "settings": {
+            "bar": 2,
+            "baz": true
+        }
+    },
+    "child": {
+        "name": "Child component",
+        "parent": "foo",
+        "settings": {
+            "baz": false
+        }
+    }
+}

@@ -1,0 +1,15 @@
+set nocompatible " Be iMproved! 
+
+" General editor configuration 
+syntax on " Syntax highlighting 
+set number " Line numbers 
+set smartindent " Automatically indent pasted code 
+set tabstop=4 shiftwidth=4 " Indent with four spaces 
+set expandtab " Convert tabs to spaces 
+set clipboard=unnamedplus " Use the system clipboard by default 
+set scrolloff=5 " Scroll offset 
+set incsearch " Incremental searching 
+set hlsearch " Highlight all results
+
+" Color scheme configuration
+colorscheme torte
