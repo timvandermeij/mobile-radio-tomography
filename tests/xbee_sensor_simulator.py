@@ -1,4 +1,5 @@
 import unittest
+import socket
 import time
 from random import randint
 from ..settings import Arguments
@@ -47,3 +48,9 @@ class TestXBeeSensorSimulator(unittest.TestCase):
         # After receiving that packet, the next timestamp must be synchronized.
         self.sensor._receive(packet)
         self.assertEqual(self.sensor.next_timestamp, self.scheduler.synchronize(packet))
+
+    def test_deactivate(self):
+        # After deactivation the socket should be closed.
+        self.sensor.deactivate()
+        with self.assertRaises(socket.error):
+            self.sensor.socket.sendto("foo", ("127.0.0.1", 100))
