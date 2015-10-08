@@ -37,33 +37,22 @@ def main(argv):
     arguments = Arguments("settings.json", argv)
     mission_settings = arguments.get_settings("mission")
 
-    try:
-        geometry_class = mission_settings.get("geometry_class")
-        geo = Geometry.__dict__[geometry_class]()
-    except:
-        geo = Geometry.Geometry_Spherical()
+    geometry_class = mission_settings.get("geometry_class")
+    geometry = Geometry.__dict__[geometry_class]()
 
     simulation = mission_settings.get("vehicle_simulation")
     if simulation == "mock":
         api = MockAPI()
-        vehicle = MockVehicle(geo)
+        vehicle = MockVehicle(geometry)
     else:
         # Connect to API provider and get vehicle object
         api = local_connect()
         vehicle = api.get_vehicles()[0]
 
-    try:
-        scenefile = mission_settings.get("scenefile")
-    except KeyError:
-        scenefile = None
+    scenefile = mission_settings.get("scenefile")
+    environment = Environment(vehicle, geometry, simulation, scenefile)
 
-    environment = Environment(vehicle, geo, simulation, scenefile)
-
-    try:
-        angles = list(mission_settings.get("sensors"))
-    except KeyError:
-        angles = [0]
-
+    angles = list(mission_settings.get("sensors"))
     sensors = [Distance_Sensor_Simulator(arguments, environment, angle) for angle in angles]
 
     arguments.check_help()
