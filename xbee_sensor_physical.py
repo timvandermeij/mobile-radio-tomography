@@ -22,8 +22,6 @@ def main(argv):
             sender = not sender
 
             time.sleep(settings.get("loop_delay"))
-        except IOError:
-            break
         except KeyboardInterrupt:
             break
 
