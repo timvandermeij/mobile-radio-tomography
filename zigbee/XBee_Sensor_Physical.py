@@ -2,6 +2,8 @@
 # TODO: Implement network discovery to remove the hardcoded sensors array.
 # TODO: Fix the start-up delay such that sensors start transmitting immediately.
 # TODO: Unit testing.
+# TODO: TDMA scheduling.
+# TODO: RSSI list and transmission to ground station.
 
 from xbee import ZigBee
 import serial
