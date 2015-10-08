@@ -87,10 +87,6 @@ def main(argv):
     # finding distance to an object or the next waypoint.
 
     colors = ["red", "purple", "black"]
-    # Margin in meters at which we are too close to an object
-    closeness = mission_settings.get("closeness")
-    # Distance in meters above which we are uninterested in objects
-    farness = mission_settings.get("farness")
     # Seconds to wait before checking sensors and waypoints again
     loop_delay = mission_settings.get("loop_delay")
 
@@ -151,17 +147,7 @@ def main(argv):
             for sensor in sensors:
                 sensor_distance = sensor.get_distance()
 
-                # Decide on doing something with the measured distance. If 
-                # we're too close, we should take action by stopping and going 
-                # somewhere else.
-                if sensor_distance == 0:
-                    print("Inside the object, abort mission.")
-                    sys.exit(1)
-                elif sensor_distance < closeness:
-                    vehicle.mode = VehicleMode("GUIDED")
-                    mission.set_speed(0)
-                    raise RuntimeError("Too close to the object, halting.")
-                elif sensor_distance < farness:
+                if mission.check_sensor_distance(sensor_distance):
                     # Display the edge of the simulated object that is 
                     # responsible for the measured distance, and consequently 
                     # the point itself. This should be the closest "wall" in 
@@ -182,21 +168,7 @@ def main(argv):
             plt.draw()
             plt.cla()
 
-            # Handle waypoint locations in our mission.
-            # If we are close to the next waypoint, then we can start doing 
-            # other things.
-            nextwaypoint = vehicle.commands.next
-            distance = mission.distance_to_current_waypoint()
-            if nextwaypoint > 1:
-                if distance < farness:
-                    print("Distance to waypoint ({}): {} m".format(nextwaypoint, distance))
-                    if distance < closeness:
-                        print("Close enough: skip to next waypoint")
-                        vehicle.commands.next = nextwaypoint + 1
-                        nextwaypoint = nextwaypoint + 1
-
-            if nextwaypoint >= num_commands:
-                print("Exit 'standard' mission when heading for final waypoint ({})".format(num_commands))
+            if not mission.check_waypoint():
                 break
 
             time.sleep(loop_delay)

@@ -44,6 +44,12 @@ class Mission(object):
         self.altitude = self.settings.get("altitude")
         self.speed = self.settings.get("speed")
 
+        # Margin in meters at which we are too close to an object
+        self.closeness = self.settings.get("closeness")
+        # Distance in meters above which we are uninterested in objects
+        self.farness = self.settings.get("farness")
+
+
     def display(self):
         # Make sure that mission being sent is displayed on console cleanly
         time.sleep(self.settings.get("mission_delay"))
@@ -146,6 +152,48 @@ class Mission(object):
                 print("Reached target altitude")
                 break
             time.sleep(1)
+
+    def check_sensor_distance(self, sensor_distance):
+        """
+        Decide on doing something with the measured distance.
+        If we're too close, we should take action by stopping and going somewhere else.
+        Returns `True` if the sensor distance is close enough to be relevant for us.
+        """
+        if sensor_distance == 0:
+            print("Inside the object, abort mission.")
+            sys.exit(1)
+        elif sensor_distance < self.closeness:
+            self.vehicle.mode = VehicleMode("GUIDED")
+            self.set_speed(0)
+            raise RuntimeError("Too close to the object, halting.")
+        elif sensor_distance < self.farness:
+            return True
+
+        return False
+
+    def check_waypoint(self):
+        """
+        Handle waypoint locations in the mission.
+        Only used when this is an AUTO mission.
+        We can perform other tasks when we are close to the next waypoint.
+        Returns `True` when there are no more commands in the mission.
+        """
+        next_waypoint = self.vehicle.commands.next
+        distance = self.distance_to_current_waypoint()
+        if next_waypoint > 1:
+            if distance < self.farness:
+                print("Distance to waypoint ({}): {} m".format(next_waypoint, distance))
+                if distance < self.closeness:
+                    print("Close enough: skip to next waypoint")
+                    self.vehicle.commands.next = next_waypoint + 1
+                    next_waypoint = next_waypoint + 1
+
+        num_commands = self.vehicle.commands.count
+        if next_waypoint >= num_commands:
+            print("Exit 'standard' mission when heading for final waypoint ({})".format(num_commands))
+            return False
+
+        return True
 
     def get_space_size(self):
         return self.size * 4
