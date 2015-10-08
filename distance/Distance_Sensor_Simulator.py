@@ -226,8 +226,7 @@ class Distance_Sensor_Simulator(Distance_Sensor):
 
     def get_obj_distance(self, obj, location, angle):
         if isinstance(obj, list):
-            # List of faces
-            # TODO: Should not use just the edges of each face
+            # List of faces.
             dists = []
             for face in obj:
                 dist, edge = self.get_plane_distance(face, location, angle)
@@ -235,12 +234,14 @@ class Distance_Sensor_Simulator(Distance_Sensor):
 
             return (min(dists), None)
         elif isinstance(obj, tuple):
-            # Single face
+            # Single face with edges that are always perpendicular to our line 
+            # of sight, from the ground up.
             if self.point_inside_polygon(location, obj):
                 return (0, None)
 
             return self.get_face_distance(obj, location, angle)
         elif 'center' in obj:
+            # Cone object.
             return (self.get_circle_distance(obj, location, angle), obj['center'])
 
         return (self.maximum_distance, None)
