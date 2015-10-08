@@ -17,7 +17,6 @@ class Environment(object):
         if scenefile is not None:
             loader = VRMLLoader(self, scenefile)
             self.objects = loader.get_objects()
-            print(len(self.objects))
             return
 
         # TODO: Remove hardcoded objects

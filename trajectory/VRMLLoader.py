@@ -45,10 +45,6 @@ class VRMLLoader(object):
                 self._parse_children(child, transform)
             elif isinstance(child, basenodes.Shape):
                 self._parse_geometry(child.geometry, transform)
-            elif isinstance(child, nodetypes.Children):
-                print(type(child), child)
-            else:
-                print("Other type: ", type(child))
 
     def _parse_geometry(self, geometry, transform=None):
         faces = []
