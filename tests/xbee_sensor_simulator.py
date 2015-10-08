@@ -1,7 +1,5 @@
 import unittest
-import json
 import time
-import socket
 from random import randint
 from ..settings import Arguments
 from ..zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
