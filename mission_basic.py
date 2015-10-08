@@ -25,7 +25,7 @@ from pymavlink import mavutil
 # scripts in general does not define the correct package
 sys.path.insert(0, os.getcwd())
 from __init__ import __package__
-from settings import Settings
+from settings import Arguments
 from distance.Distance_Sensor_Simulator import Distance_Sensor_Simulator
 from trajectory import Mission, Memory_Map, Environment
 from trajectory.MockVehicle import MockAPI, MockVehicle
@@ -33,8 +33,9 @@ from geometry import Geometry
 
 # TODO: Cleanup code, move more code into modules.
 # Main mission program
-def main():
-    mission_settings = Settings("settings.json", "mission")
+def main(argv):
+    arguments = Arguments("settings.json", argv)
+    mission_settings = arguments.get_settings("mission")
 
     try:
         geometry_class = mission_settings.get("geometry_class")
@@ -58,6 +59,15 @@ def main():
 
     environment = Environment(vehicle, geo, simulation, scenefile)
 
+    try:
+        angles = list(mission_settings.get("sensors"))
+    except KeyError:
+        angles = [0]
+
+    sensors = [Distance_Sensor_Simulator(arguments, environment, angle) for angle in angles]
+
+    arguments.check_help()
+
     print("Setting up mission")
     mission = Mission(api, environment, mission_settings)
     mission.add_square_mission(vehicle.location)
@@ -76,12 +86,6 @@ def main():
     # We can get and set the command number and use convenience function for 
     # finding distance to an object or the next waypoint.
 
-    try:
-        angles = list(mission_settings.get("sensors"))
-    except KeyError:
-        angles = [0]
-
-    sensors = [Distance_Sensor_Simulator(environment, angle) for angle in angles]
     colors = ["red", "purple", "black"]
     # Margin in meters at which we are too close to an object
     closeness = mission_settings.get("closeness")
@@ -165,7 +169,7 @@ def main():
                     # checking if walls get visualized correctly.
                     angle = sensor.get_angle()
                     memory_map.handle_sensor(sensor_distance, angle)
-                    sensor.draw_current_edge(plt, memory_map, colors[i])
+                    sensor.draw_current_edge(plt, memory_map, colors[i % len(colors)])
 
                     print("=== [!] Distance to object: {} m (angle {}) ===".format(sensor_distance, angle))
 
@@ -220,4 +224,4 @@ def main():
 # function `execfile`, which makes the module name __builtin__, so allow this 
 # as well as directly executing the file.
 if __name__ in ["__main__", "__builtin__"]:
-    main()
+    main(sys.argv[1:])

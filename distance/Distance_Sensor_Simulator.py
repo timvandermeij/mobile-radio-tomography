@@ -11,11 +11,11 @@ class Distance_Sensor_Simulator(Distance_Sensor):
     Virtual sensor class that detects collision distances to simulated objects
     """
 
-    def __init__(self, environment, angle=0):
+    def __init__(self, arguments, environment, angle=0):
         self.environment = environment
         self.geometry = self.environment.get_geometry()
         self.angle = angle
-        self.settings = Settings("settings.json", "distance_sensor_simulator")
+        self.settings = arguments.get_settings("distance_sensor_simulator")
         # Margin in meters at which an object is still visible
         self.altitude_margin = self.settings.get("altitude_margin")
         # Maximum distance in meters that the sensor returns
