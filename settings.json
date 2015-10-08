@@ -30,6 +30,7 @@
             "sensors": [0],
             "scenefile": null,
             "vehicle_simulation": "mock",
+            "mission_class": "Mission_Square",
             "geometry_class": "Geometry"
         }
     },

@@ -6,8 +6,13 @@ from pymavlink import mavutil
 from ..geometry.Geometry import Geometry_Spherical
 from MockVehicle import MockVehicle
 
-# Mission trajactory functions
 class Mission(object):
+    """
+    Mission trajactory utilities.
+    This includes generic methods to set up a mission and methods to check and handle actions during the mission.
+    Actual missions should be implemented as a subclass.
+    """
+
     def __init__(self, api, environment, settings):
         self.api = api
         self.environment = environment
@@ -49,12 +54,11 @@ class Mission(object):
         # Distance in meters above which we are uninterested in objects
         self.farness = self.settings.get("farness")
 
-
     def display(self):
-        # Make sure that mission being sent is displayed on console cleanly
-        time.sleep(self.settings.get("mission_delay"))
-        num_commands = self.vehicle.commands.count
-        print("{} commands in the mission!".format(num_commands))
+        """
+        Display any details about the mission.
+        """
+        pass
 
     def clear_mission(self):
         """
@@ -78,35 +82,6 @@ class Mission(object):
         cmds.download()
         # Wait until download is complete.
         cmds.wait_valid()
-
-    def add_square_mission(self, center):
-        """
-        Adds a takeoff command and four waypoint commands to the current mission. 
-        The waypoints are positioned to form a square of side length `2*size` around the specified `center` Location.
-
-        The function assumes `vehicle.commands` is the vehicle mission state 
-        (you must have called `download_mission` at least once before in the session and after any use of `clear_mission`)
-        """
-        # Add the commands. The meaning/order of the parameters is documented 
-        # in the Command class.
-        cmds = self.vehicle.commands
-        # Add MAV_CMD_NAV_TAKEOFF command. This is ignored if the vehicle is 
-        # already in the air.
-        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, 0, self.altitude))
-
-        # Define the four MAV_CMD_NAV_WAYPOINT locations and add the commands
-        point1 = self.geometry.get_location_meters(center, self.size, -self.size)
-        point2 = self.geometry.get_location_meters(center, self.size, self.size)
-        point3 = self.geometry.get_location_meters(center, -self.size, self.size)
-        point4 = self.geometry.get_location_meters(center, -self.size, -self.size)
-        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point1.lat, point1.lon, self.altitude))
-        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point2.lat, point2.lon, self.altitude))
-        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point3.lat, point3.lon, self.altitude))
-        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point4.lat, point4.lon, self.altitude))
-        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point1.lat, point1.lon, self.altitude))
-
-        # Send commands to vehicle.
-        self.vehicle.flush()
 
     def get_commands(self):
         return self.vehicle.commands
@@ -153,6 +128,18 @@ class Mission(object):
                 break
             time.sleep(1)
 
+    def start(self):
+        """
+        Actually start the mission after arming and flying off.
+        """
+        raise NotImplemented("Must be implemented in child class")
+
+    def step(self):
+        """
+        Perform any calculations for the current vehicle state.
+        """
+        pass
+
     def check_sensor_distance(self, sensor_distance):
         """
         Decide on doing something with the measured distance.
@@ -176,23 +163,8 @@ class Mission(object):
         Handle waypoint locations in the mission.
         Only used when this is an AUTO mission.
         We can perform other tasks when we are close to the next waypoint.
-        Returns `True` when there are no more commands in the mission.
+        Returns `False` when there are no more commands in the mission.
         """
-        next_waypoint = self.vehicle.commands.next
-        distance = self.distance_to_current_waypoint()
-        if next_waypoint > 1:
-            if distance < self.farness:
-                print("Distance to waypoint ({}): {} m".format(next_waypoint, distance))
-                if distance < self.closeness:
-                    print("Close enough: skip to next waypoint")
-                    self.vehicle.commands.next = next_waypoint + 1
-                    next_waypoint = next_waypoint + 1
-
-        num_commands = self.vehicle.commands.count
-        if next_waypoint >= num_commands:
-            print("Exit 'standard' mission when heading for final waypoint ({})".format(num_commands))
-            return False
-
         return True
 
     def get_space_size(self):
@@ -284,3 +256,112 @@ class Mission(object):
         # Send command to vehicle
         self.vehicle.send_mavlink(msg)
         self.vehicle.flush()
+
+class Mission_Auto(Mission):
+    """
+    A mission that uses the AUTO mode to move to fixed locations.
+    """
+
+    def _setup(self):
+        super(Mission_Auto, self)._setup()
+        self.add_commands(self.environment.get_location())
+
+    def add_commands(self):
+        raise NotImplemented("Must be implementen in child class")
+
+    def display(self):
+        # Make sure that mission being sent is displayed on console cleanly
+        time.sleep(self.settings.get("mission_delay"))
+        num_commands = self.vehicle.commands.count
+        print("{} commands in the mission!".format(num_commands))
+
+    def start(self):
+        # Set mode to AUTO to start mission
+        self.vehicle.mode = VehicleMode("AUTO")
+        self.vehicle.flush()
+
+    def check_waypoint(self):
+        next_waypoint = self.vehicle.commands.next
+        distance = self.distance_to_current_waypoint()
+        if next_waypoint > 1:
+            if distance < self.farness:
+                print("Distance to waypoint ({}): {} m".format(next_waypoint, distance))
+                if distance < self.closeness:
+                    print("Close enough: skip to next waypoint")
+                    self.vehicle.commands.next = next_waypoint + 1
+                    next_waypoint = next_waypoint + 1
+
+        num_commands = self.vehicle.commands.count
+        if next_waypoint >= num_commands:
+            print("Exit 'standard' mission when heading for final waypoint ({})".format(num_commands))
+            return False
+
+        return True
+
+class Mission_Guided(Mission):
+    """
+    A mission that uses the GUIDED mode to move on the fly.
+    This allows the mission to react to unknown situations determined using sensors.
+    """
+
+    def start(self):
+        # Set mode to GUIDED. In fact the arming should already have done this, 
+        # but it is good to do it here as well.
+        self.vehicle.mode = VehicleMode("AUTO")
+        self.vehicle.flush()
+
+# Actual mission implementations
+
+class Mission_Square(Mission_Auto):
+    def add_commands(self, start):
+        """
+        Adds a takeoff command and four waypoint commands to the current mission. 
+        The waypoints are positioned to form a square of side length `2*size` around the specified `center` Location.
+
+        The function assumes `vehicle.commands` is the vehicle mission state 
+        (you must have called `download_mission` at least once before in the session and after any use of `clear_mission`)
+        """
+        # Add the commands. The meaning/order of the parameters is documented 
+        # in the Command class.
+        cmds = self.vehicle.commands
+        # Add MAV_CMD_NAV_TAKEOFF command. This is ignored if the vehicle is 
+        # already in the air.
+        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, 0, self.altitude))
+
+        # Define the four MAV_CMD_NAV_WAYPOINT locations and add the commands
+        point1 = self.geometry.get_location_meters(start, self.size, -self.size)
+        point2 = self.geometry.get_location_meters(start, self.size, self.size)
+        point3 = self.geometry.get_location_meters(start, -self.size, self.size)
+        point4 = self.geometry.get_location_meters(start, -self.size, -self.size)
+        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point1.lat, point1.lon, self.altitude))
+        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point2.lat, point2.lon, self.altitude))
+        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point3.lat, point3.lon, self.altitude))
+        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point4.lat, point4.lon, self.altitude))
+        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point1.lat, point1.lon, self.altitude))
+
+        # Send commands to vehicle.
+        self.vehicle.flush()
+
+class Mission_Browse(Mission_Guided):
+    """
+    Mission that stays at a fixed location and scans its surroundings.
+    """
+
+    def _setup(self):
+        super(Mission_Browse, self)._setup()
+        self.yaw = 0
+        self.yaw_angle_step = 10
+
+    def step(self):
+        # We stand still and change the angle to look around. TODO: Make use of 
+        # this when we're at a point to look around.
+        self.send_global_velocity(0,0,0)
+        self.vehicle.flush()
+        self.set_yaw(self.yaw, relative=False)
+        print("Velocity: {} m/s".format(self.vehicle.velocity))
+        print("Altitude: {} m".format(self.vehicle.location.alt))
+        print("Yaw: {} Expected: {}".format(self.vehicle.attitude.yaw*180/math.pi, self.yaw))
+
+        # When we're standing still, we rotate the vehicle to measure distances 
+        # to objects.
+        self.yaw = (self.yaw + self.yaw_angle_step) % 360

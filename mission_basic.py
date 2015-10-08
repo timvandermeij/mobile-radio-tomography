@@ -58,18 +58,15 @@ def main(argv):
     arguments.check_help()
 
     print("Setting up mission")
-    mission = Mission(api, environment, mission_settings)
-    mission.add_square_mission(vehicle.location)
+    mission_class = mission_settings.get("mission_class")
+    mission = Mission.__dict__[mission_class](api, environment, mission_settings)
     mission.display()
 
     # As of ArduCopter 3.3 it is possible to take off using a mission item.
     mission.arm_and_takeoff()
 
     print("Starting mission")
-    num_commands = mission.get_commands().count
-    # Set mode to AUTO to start mission
-    vehicle.mode = VehicleMode("AUTO")
-    vehicle.flush()
+    mission.start()
 
     # Monitor mission
     # We can get and set the command number and use convenience function for 
@@ -120,17 +117,7 @@ def main(argv):
             vehicle_idx = memory_map.get_index(environment.get_location())
             memory_map.set(vehicle_idx, -1)
 
-            # Instead of performing an AUTO mission, we can also stand still 
-            # and change the angle to look around. TODO: Make use of this when 
-            # we're at a waypoint to look around? Make whole mission GUIDED?
-
-            #vehicle.mode = VehicleMode("GUIDED")
-            #mission.send_global_velocity(0,0,0)
-            #vehicle.flush()
-            #mission.set_yaw(yaw % 360, relative=False)
-            #print("Velocity: {} m/s".format(vehicle.velocity))
-            #print("Altitude: {} m".format(vehicle.location.alt))
-            #print("Yaw: {} Expected: {}".format(vehicle.attitude.yaw*180/math.pi, yaw % 360))
+            mission.step()
 
             i = 0
             for sensor in sensors:
@@ -161,10 +148,6 @@ def main(argv):
                 break
 
             time.sleep(loop_delay)
-
-            # When we're standing still, we can rotate the vehicle to measure 
-            # distances to objects.
-            yaw = yaw + 10
 
             # Remove the vehicle from the current location. We set it to "safe" 
             # since there is no object here.
