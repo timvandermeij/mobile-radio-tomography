@@ -2,11 +2,12 @@
 # TODO: Implement network discovery to remove the hardcoded sensors array.
 # TODO: Fix the start-up delay such that sensors start transmitting immediately.
 # TODO: Unit testing.
-# TODO: TDMA scheduling.
 # TODO: RSSI list and transmission to ground station.
 
-from xbee import ZigBee
 import serial
+import json
+import time
+from xbee import ZigBee
 from XBee_Sensor import XBee_Sensor
 from ..settings import Arguments, Settings
 
@@ -17,7 +18,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
         "\x00\x13\xa2\x00@\xe6o5" # Address of sensor 2
     ]
 
-    def __init__(self, sensor_id, settings):
+    def __init__(self, sensor_id, settings, scheduler):
         """
         Initialize the sensor.
         """
@@ -30,6 +31,8 @@ class XBee_Sensor_Physical(XBee_Sensor):
             raise ValueError("'settings' must be an instance of Settings or Arguments")
 
         self.id = sensor_id
+        self.scheduler = scheduler
+        self.next_timestamp = self.scheduler.get_next_timestamp()
         self._serial_connection = serial.Serial("/dev/ttyUSB{}".format(self.id - 1),
                                                 self.settings.get("baud_rate"))
         self._sensor = ZigBee(self._serial_connection, callback=self._receive)
@@ -48,27 +51,38 @@ class XBee_Sensor_Physical(XBee_Sensor):
         The sensor always receives packets asynchronously.
         """
 
-        if self.id > 0:
+        if self.id > 0 and time.time() >= self.next_timestamp:
             self._send()
+            self.next_timestamp = self.scheduler.get_next_timestamp()
 
     def _send(self):
         """
         Send a packet to a sensor in the network.
         """
 
+        packet = {
+            "from": self.id,
+            "timestamp": time.time()
+        }
         self._sensor.send("tx", dest_addr_long=self.SENSORS[self.id % 2], dest_addr="\xFF\xFE",
-                          frame_id="\x01", data="Data from sensor {}".format(self.id))
+                          frame_id="\x01", data=json.dumps(packet))
 
     def _receive(self, packet):
         """
         Receive and process a received packet from another sensor in the network.
         """
 
-        if "rf_data" in packet:
-            print("Sensor {} received '{}'".format(self.id, packet["rf_data"]))
+        if self.id > 0:
+            if "rf_data" in packet:
+                payload = json.loads(packet["rf_data"])
 
-            # Request the RSSI value for the received packet.
-            self._sensor.send("at", command="DB")
-        elif "parameter" in packet:
-            rssi = ord(packet["parameter"])
-            print("Sensor {} received the packet with RSSI {}.".format(self.id, rssi))
+                print("Sensor {} received a packet from sensor {}.".format(self.id, payload["from"]))
+
+                # Synchronize the scheduler using the timestamp in the payload.
+                self.next_timestamp = self.scheduler.synchronize(payload)
+
+                # Request the RSSI value for the received packet.
+                self._sensor.send("at", command="DB")
+            elif "parameter" in packet:
+                rssi = ord(packet["parameter"])
+                print("Sensor {} received the packet with RSSI {}.".format(self.id, rssi))
