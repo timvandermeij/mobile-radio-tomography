@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 
-from droneapi.lib import VehicleMode, Location, Command
+from droneapi.lib import VehicleMode
 from pymavlink import mavutil
 
 # Package imports

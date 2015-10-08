@@ -4,7 +4,6 @@ import math
 import numpy as np
 from droneapi.lib import Location
 from Distance_Sensor import Distance_Sensor
-from ..settings import Settings
 
 class Distance_Sensor_Simulator(Distance_Sensor):
     """
