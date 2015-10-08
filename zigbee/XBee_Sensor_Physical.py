@@ -49,12 +49,8 @@ class XBee_Sensor_Physical(XBee_Sensor):
         Send a packet to a sensor in the network.
         """
 
-        # Send the packet.
         self._sensor.send("tx", dest_addr_long=self.SENSORS[self.id % 2], dest_addr="\xFF\xFE",
                           frame_id="\x01", data="Data from sensor {}".format(self.id))
-
-        # Request the RSSI value.
-        self._sensor.send("at", command="DB")
 
     def _receive(self):
         pass
