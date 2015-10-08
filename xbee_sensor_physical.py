@@ -24,10 +24,10 @@ def main(argv):
 
             time.sleep(settings.get("loop_delay"))
         except KeyboardInterrupt:
-            break
+            for sensor in sensors:
+                sensor.deactivate()
 
-    for sensor in sensors:
-        del sensor
+            break
 
 if __name__ == "__main__":
     main(sys.argv[1:])

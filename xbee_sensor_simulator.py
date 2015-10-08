@@ -22,10 +22,16 @@ def main(argv):
     viewer.draw_points()
 
     while True:
-        for sensor in sensors:
-            sensor.activate()
-        
-        time.sleep(settings.get("loop_delay"))
+        try:
+            for sensor in sensors:
+                sensor.activate()
+
+            time.sleep(settings.get("loop_delay"))
+        except KeyboardInterrupt:
+            for sensor in sensors:
+                sensor.deactivate()
+
+            break
 
 if __name__ == "__main__":
     main(sys.argv[1:])

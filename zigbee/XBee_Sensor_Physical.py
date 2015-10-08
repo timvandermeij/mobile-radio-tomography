@@ -1,4 +1,3 @@
-# TODO: Fix hang after keyboard interrupt (destructor, asynchronicity).
 # TODO: Implement network discovery to remove the hardcoded sensors array.
 # TODO: Fix the start-up delay such that sensors start transmitting immediately.
 # TODO: Unit testing.
@@ -37,14 +36,6 @@ class XBee_Sensor_Physical(XBee_Sensor):
                                                 self.settings.get("baud_rate"))
         self._sensor = ZigBee(self._serial_connection, callback=self._receive)
 
-    def __del__(self):
-        """
-        Stop the sensor and close the serial connection.
-        """
-
-        self._sensor.halt()
-        self._serial_connection.close()
-
     def activate(self):
         """
         Activate the sensor by sending a packet if it is not a ground station.
@@ -54,6 +45,14 @@ class XBee_Sensor_Physical(XBee_Sensor):
         if self.id > 0 and time.time() >= self.next_timestamp:
             self._send()
             self.next_timestamp = self.scheduler.get_next_timestamp()
+
+    def deactivate(self):
+        """
+        Deactivate the sensor and close the serial connection.
+        """
+
+        self._sensor.halt()
+        self._serial_connection.close()
 
     def _send(self):
         """

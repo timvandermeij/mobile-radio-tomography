@@ -25,9 +25,6 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         self.socket.bind((self.settings.get("ip"), self.settings.get("port") + self.id))
         self.socket.setblocking(0)
 
-    def __del__(self):
-        self.socket.close()
-
     def activate(self):
         # Activate the sensor to send and receive packets.
         # The ground sensor (with ID 0) can only receive packets.
@@ -40,6 +37,9 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             self._receive(packet)
         except socket.error:
             pass
+
+    def deactivate(self):
+        self.socket.close()
 
     def _send(self):
         # Send packets to all other sensors.
