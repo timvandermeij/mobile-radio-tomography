@@ -35,7 +35,11 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             self._send()
             self.next_timestamp = self.scheduler.get_next_timestamp()
 
-        self._receive()
+        try:
+            packet = json.loads(self.socket.recv(self.settings.get("buffer_size")))
+            self._receive(packet)
+        except socket.error:
+            pass
 
     def _send(self):
         # Send packets to all other sensors.
@@ -48,7 +52,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
                 "from": self.id,
                 "to": i,
                 "timestamp": time.time(),
-                "rssi": -randint(1,60)
+                "rssi": randint(1,60)
             }
             self.socket.sendto(json.dumps(packet), (self.settings.get("ip"), self.settings.get("port") + i))
             self.viewer.draw_arrow(self.id, i)
@@ -65,14 +69,10 @@ class XBee_Sensor_Simulator(XBee_Sensor):
 
         self.viewer.refresh()
 
-    def _receive(self):
-        # Receive packets from all other sensors.
-        try:
-            packet = json.loads(self.socket.recv(self.settings.get("buffer_size")))
-            if self.id > 0:
-                self.rssi_values[packet["from"] - 1] = packet["rssi"]
-                self.next_timestamp = self.scheduler.synchronize(packet)
-            else:
-                print("> Ground station received {}".format(packet["rssi_values"]))
-        except socket.error:
-            pass
+    def _receive(self, packet):
+        # Receive and process packets from all other sensors.
+        if self.id > 0:
+            self.rssi_values[packet["from"] - 1] = packet["rssi"]
+            self.next_timestamp = self.scheduler.synchronize(packet)
+        else:
+            print("> Ground station received {}".format(packet["rssi_values"]))

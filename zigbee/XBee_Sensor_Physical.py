@@ -1,5 +1,4 @@
 # TODO: Fix hang after keyboard interrupt (destructor, asynchronicity).
-# TODO: Implement the stubbed methods, partly by moving methods below.
 # TODO: Implement network discovery to remove the hardcoded sensors array.
 # TODO: Fix the start-up delay such that sensors start transmitting immediately.
 # TODO: Unit testing.
@@ -31,7 +30,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self.id = sensor_id
         self._serial_connection = serial.Serial("/dev/ttyUSB{}".format(self.id - 1),
                                                 self.settings.get("baud_rate"))
-        self._sensor = ZigBee(self._serial_connection, callback=self.receive)
+        self._sensor = ZigBee(self._serial_connection, callback=self._receive)
 
     def __del__(self):
         """
@@ -42,7 +41,13 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._serial_connection.close()
 
     def activate(self):
-        pass
+        """
+        Activate the sensor by sending a packet if it is not a ground station.
+        The sensor always receives packets asynchronously.
+        """
+
+        if self.id > 0:
+            self._send()
 
     def _send(self):
         """
@@ -52,16 +57,16 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._sensor.send("tx", dest_addr_long=self.SENSORS[self.id % 2], dest_addr="\xFF\xFE",
                           frame_id="\x01", data="Data from sensor {}".format(self.id))
 
-    def _receive(self):
-        pass
-
-    def receive(self, packet):
+    def _receive(self, packet):
         """
-        Print a received packet from another sensor in the network.
+        Receive and process a received packet from another sensor in the network.
         """
 
         if "rf_data" in packet:
-            print("[Sensor {}] Received packet with '{}'".format(self.id, packet["rf_data"]))
+            print("Sensor {} received '{}'".format(self.id, packet["rf_data"]))
+
+            # Request the RSSI value for the received packet.
             self._sensor.send("at", command="DB")
         elif "parameter" in packet:
-            print("The RSSI value is {}.".format(ord(packet["parameter"])))
+            rssi = ord(packet["parameter"])
+            print("Sensor {} received the packet with RSSI {}.".format(self.id, rssi))

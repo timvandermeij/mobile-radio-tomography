@@ -18,12 +18,6 @@ class TestXBeeSensorSimulator(unittest.TestCase):
         self.sensor = XBee_Sensor_Simulator(self.id, self.arguments,
                                             self.scheduler, self.viewer)
 
-        # Pretend that this test case is sensor 2
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.socket.bind((self.settings.get("ip"), self.settings.get("port") + 2))
-        self.socket.setblocking(0)
-
         self.viewer.draw_points()
 
     def test_initialization(self):
@@ -44,15 +38,14 @@ class TestXBeeSensorSimulator(unittest.TestCase):
                          [None for _ in range(self.settings.get("number_of_sensors"))])
 
     def test_receive(self):
-        # Send a packet from sensor 2 to the current sensor.
+        # Create a packet from sensor 2 to the current sensor.
         packet = {
             "from": 2,
             "to": self.id,
             "timestamp": time.time(),
-            "rssi": -randint(1,60)
+            "rssi": randint(1,60)
         }
-        self.socket.sendto(json.dumps(packet), (self.settings.get("ip"), self.settings.get("port") + self.id))
         
-        # After receiving, the next timestamp must be synchronized.
-        self.sensor._receive()
+        # After receiving that packet, the next timestamp must be synchronized.
+        self.sensor._receive(packet)
         self.assertEqual(self.sensor.next_timestamp, self.scheduler.synchronize(packet))

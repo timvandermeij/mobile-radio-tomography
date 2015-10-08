@@ -18,7 +18,7 @@ def main(argv):
     sender = 0
     while True:
         try:
-            sensors[sender]._send()
+            sensors[sender].activate()
             sender = not sender
 
             time.sleep(settings.get("loop_delay"))
