@@ -35,6 +35,18 @@ class Settings(object):
         else:
             self.parent = None
 
+    def get_all(self):
+        """
+        Retrieve all the settings values for this component.
+
+        This function deliberately does not return inherited values from parent components,
+        because this helper function should only be used for raw interaction
+        with this component only, for example to register arguments for the
+        relevant settings keys.
+        """
+
+        return self.settings.iteritems()
+
     def get(self, key):
         if key not in self.settings:
             if self.parent is not None:
@@ -46,3 +58,6 @@ class Settings(object):
             raise KeyError("Setting '{}' for component '{}' not found.".format(key, self.component_name))
 
         return self.settings[key]
+
+    def set(self, key, value):
+        self.settings[key] = value

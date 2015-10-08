@@ -1,22 +1,25 @@
 import sys
 import time
-from settings import Settings
 from __init__ import __package__
+from settings import Arguments
 from zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 from zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from zigbee.XBee_Viewer import XBee_Viewer
 
 def main(argv):
-    settings = Settings("settings.json", "xbee_sensor_simulator")
+    arguments = Arguments("settings.json", argv)
+    settings = arguments.get_settings("xbee_sensor_simulator")
 
-    viewer = XBee_Viewer()
-    viewer.draw_points()
+    viewer = XBee_Viewer(arguments)
 
     sensors = []
     for sensor_id in range(settings.get("number_of_sensors") + 1):
-        scheduler = XBee_TDMA_Scheduler(sensor_id)
-        sensor = XBee_Sensor_Simulator(sensor_id, settings, scheduler, viewer)
+        scheduler = XBee_TDMA_Scheduler(sensor_id, arguments)
+        sensor = XBee_Sensor_Simulator(sensor_id, arguments, scheduler, viewer)
         sensors.append(sensor)
+
+    arguments.check_help()
+    viewer.draw_points()
 
     while True:
         for sensor in sensors:

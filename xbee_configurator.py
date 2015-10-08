@@ -1,4 +1,6 @@
-from settings import Settings
+import sys
+from __init__ import __package__
+from settings import Arguments
 from zigbee.XBee_Configurator import XBee_Configurator
 
 COLORS = {
@@ -37,24 +39,26 @@ def write(id, configurator):
     else:
         report(id, "Failed writing queued changes.", "red")
 
-def main():
-    settings = Settings("settings.json", "xbee_configurator")
+def main(argv):
+    arguments = Arguments("settings.json", argv)
+    settings = arguments.get_settings("xbee_configurator")
+    arguments.check_help()
 
-    for id in range(0, settings.get("number_of_sensors") + 1):
-        if id == 0:
+    for sensor_id in range(0, settings.get("number_of_sensors") + 1):
+        if sensor_id == 0:
             raw_input("Connect the ground station XBee sensor and press Enter.")
         else:
-            raw_input("Connect XBee sensor {} and press Enter...".format(id))
+            raw_input("Connect XBee sensor {} and press Enter...".format(sensor_id))
 
-        xbee_configurator = XBee_Configurator(id, settings.get("port"), settings.get("baud_rate"))
+        xbee_configurator = XBee_Configurator(sensor_id, arguments)
 
-        set(id, "PAN ID", "ID", settings.get("pan_id"), xbee_configurator)
-        set(id, "node ID", "NI", str(id), xbee_configurator)
-        write(id, xbee_configurator)
-        get(id, "PAN ID", "ID", xbee_configurator)
-        get(id, "node ID", "NI", xbee_configurator)
+        set(sensor_id, "PAN ID", "ID", settings.get("pan_id"), xbee_configurator)
+        set(sensor_id, "node ID", "NI", str(sensor_id), xbee_configurator)
+        write(sensor_id, xbee_configurator)
+        get(sensor_id, "PAN ID", "ID", xbee_configurator)
+        get(sensor_id, "node ID", "NI", xbee_configurator)
 
         del xbee_configurator
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])

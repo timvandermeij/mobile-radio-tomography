@@ -1,13 +1,22 @@
 from xbee import ZigBee
 import serial
+from ..settings import Arguments, Settings
 
 class XBee_Configurator(object):
     STATUS_OK = "\x00"
 
-    def __init__(self, id, port, baud_rate):
+    def __init__(self, sensor_id, settings):
         # Open a serial connection and initialize the sensor (ZigBee) object.
-        self.id = id
-        self._serial_connection = serial.Serial(port, baud_rate)
+        if isinstance(settings, Arguments):
+            self.settings = settings.get_settings("xbee_configurator")
+        elif isinstance(settings, Settings):
+            self.settings = settings
+        else:
+            raise ValueError("'settings' must be an instance of Settings or Arguments")
+
+        self.id = sensor_id
+        self._serial_connection = serial.Serial(self.settings.get("port"),
+                                                self.settings.get("baud_rate"))
         self._sensor = ZigBee(self._serial_connection)
 
     def __del__(self):
