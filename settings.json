@@ -29,7 +29,7 @@
             "size": 50,
             "sensors": [0],
             "scenefile": null,
-            "vehicle_simulation": "mock",
+            "vehicle_simulation": "ardupilot",
             "mission_class": "Mission_Square",
             "geometry_class": "Geometry"
         }
