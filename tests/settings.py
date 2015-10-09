@@ -28,7 +28,8 @@ class TestSettings(unittest.TestCase):
         expected = {
             "bar": 2,
             "baz": True,
-            "long_name": "some_text"
+            "long_name": "some_text",
+            "items": [1,2,3]
         }
         for key, value in settings.get_all():
             self.assertEqual(value, expected[key])

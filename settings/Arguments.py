@@ -53,7 +53,7 @@ class Arguments(object):
                 "default": value
             }
             if isinstance(value, list):
-                kw["nargs"] = "?"
+                kw["nargs"] = "*"
                 if len(value) > 0:
                     kw["type"] = type(value[0])
             elif value is not None:
