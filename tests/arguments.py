@@ -36,3 +36,18 @@ class TestArguments(unittest.TestCase):
                     arguments.check_help()
 
         self.assertRegexpMatches(output.getvalue(), "--help")
+
+    def test_nonexistent_settings(self):
+        arguments = Arguments("tests/settings.json", ['--qux', '42'])
+
+        # Buffer help output so it doesn't mess up the test output and we can 
+        # actually test whether it prints help.
+        output = StringIO()
+        with patch('sys.stdout', output):
+            with patch('sys.stderr', output):
+                # Test whether the argument parser calls sys.exit on help.
+                # This can be caught as an exception.
+                with self.assertRaises(SystemExit):
+                    arguments.check_help()
+
+        self.assertRegexpMatches(output.getvalue(), "unrecognized arguments")

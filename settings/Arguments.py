@@ -76,8 +76,9 @@ class Arguments(object):
 
         This should be used after all Settings components have been registered,
         so that help for all settings is available.
-        This method will end the program in case a --help argument is given.
+        This method will end the program in case a --help argument is given,
+        or in case nonexistent arguments are given.
         """
 
         self.parser.add_argument('-h', '--help', action='help', help="Show this help message and exit")
-        self.parser.parse_known_args(self.argv)
+        self.parser.parse_args(self.argv)
