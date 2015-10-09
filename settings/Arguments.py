@@ -59,7 +59,7 @@ class Arguments(object):
             elif value is not None:
                 kw["type"] = type(value)
 
-            group.add_argument("--{}".format(key), **kw)
+            group.add_argument("--{}".format(key.replace('_','-')), **kw)
 
     def _fill_settings(self, settings):
         """

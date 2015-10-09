@@ -15,12 +15,13 @@ class TestArguments(unittest.TestCase):
         self.assertEqual(settings.get("bar"), 2)
 
     def test_settings(self):
-        arguments = Arguments("tests/settings.json", ['--bar', '5'])
+        arguments = Arguments("tests/settings.json", ['--bar', '5', '--long-name', 'my_text'])
         settings = arguments.get_settings("foo")
         # We get the same object every time
         self.assertEqual(id(settings), id(arguments.get_settings("foo")))
         # Command line arguments override values in JSON.
         self.assertEqual(settings.get("bar"), 5)
+        self.assertEqual(settings.get("long_name"), "my_text")
 
     def test_check_help(self):
         arguments = Arguments("tests/settings.json", ['--help'])

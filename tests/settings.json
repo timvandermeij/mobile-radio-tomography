@@ -3,7 +3,8 @@
         "name": "Foo component",
         "settings": {
             "bar": 2,
-            "baz": true
+            "baz": true,
+            "long_name": "some_text"
         }
     },
     "child": {
