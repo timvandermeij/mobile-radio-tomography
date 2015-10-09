@@ -17,6 +17,11 @@ class Geometry(object):
     Use `Geometry_Spherical` for geographic coordinates on a spherical earth.
     """
 
+    # Epsilon value. This should be low enough to not detect different points 
+    # as being the same, but high enough to work for both coordinates and 
+    # meters.
+    EPSILON = 0.0001
+
     def bearing_to_angle(self, bearing):
         """
         Convert a `bearing` to the usual angle representation, both in radians.
@@ -81,25 +86,24 @@ class Geometry(object):
         '''
         # Based on http://rosettacode.org/wiki/Ray-casting_algorithm#Python but 
         # cleaned up logic and clarified somewhat
-        epsilon = 0.0001
         if start.lat > end.lat:
             # Swap start and end of segment
             start,end = end,start
         if P.lat == start.lat or P.lat == end.lat:
             # Move point off of the line
-            P = Location(P.lat + epsilon, P.lon, P.alt, P.is_relative)
+            P = Location(P.lat + self.EPSILON, P.lon, P.alt, P.is_relative)
 
         if P.lat < start.lat or P.lat > end.lat or P.lon > max(start.lon, end.lon):
             return False
         if P.lon < min(start.lon, end.lon):
             return True
 
-        if abs(start.lon - end.lon) > epsilon:
+        if abs(start.lon - end.lon) > self.EPSILON:
             ang_out = (end.lat - start.lat) / (end.lon - start.lon)
         else:
             ang_out = sys.float_info.max
 
-        if abs(start.lon - P.lon) > epsilon:
+        if abs(start.lon - P.lon) > self.EPSILON:
             ang_in = (P.lat - start.lat) / (P.lon - start.lon)
         else:
             ang_in = sys.float_info.max
