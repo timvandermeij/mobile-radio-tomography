@@ -52,14 +52,19 @@ class Arguments(object):
                 "dest": key,
                 "default": value
             }
+            opt = key.replace('_', '-')
             if isinstance(value, list):
                 kw["nargs"] = "*"
                 if len(value) > 0:
                     kw["type"] = type(value[0])
+            elif isinstance(value, bool):
+                kw["action"] = "store_false"
+                group.add_argument("--no-{}".format(opt), **kw)
+                kw["action"] = "store_true"
             elif value is not None:
                 kw["type"] = type(value)
 
-            group.add_argument("--{}".format(key.replace('_','-')), **kw)
+            group.add_argument("--{}".format(opt), **kw)
 
     def _fill_settings(self, settings):
         """
