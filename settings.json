@@ -31,14 +31,15 @@
             "number_of_sensors": 8,
             "loop_delay": 0.1,
             "port": "/dev/ttyUSB0",
-            "baud_rate": 9600,
-            "pan_id": 2015
+            "baud_rate": 9600
         }
     },
     "xbee_configurator": {
         "name": "XBee configurator",
         "parent": "xbee_base",
-        "settings": {}
+        "settings": {
+            "pan_id": 2015
+        }
     },
     "xbee_sensor_simulator": {
         "name": "XBee sensor (simulator)",
