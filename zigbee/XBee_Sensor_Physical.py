@@ -32,15 +32,20 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self.id = sensor_id
         self.scheduler = scheduler
         self.next_timestamp = self.scheduler.get_next_timestamp()
-        self._serial_connection = serial.Serial("/dev/ttyUSB{}".format(self.id - 1),
-                                                self.settings.get("baud_rate"))
-        self._sensor = ZigBee(self._serial_connection, callback=self._receive)
+        self._serial_connection = None
+        self._sensor = None
 
     def activate(self):
         """
         Activate the sensor by sending a packet if it is not a ground station.
         The sensor always receives packets asynchronously.
         """
+
+        # Lazily initialize the serial connection and ZigBee object.
+        if self._serial_connection == None and self._sensor == None:
+            self._serial_connection = serial.Serial("/dev/ttyUSB{}".format(self.id - 1),
+                                                    self.settings.get("baud_rate"))
+            self._sensor = ZigBee(self._serial_connection, callback=self._receive)
 
         if self.id > 0 and time.time() >= self.next_timestamp:
             self._send()
