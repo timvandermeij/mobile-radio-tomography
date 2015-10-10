@@ -16,9 +16,6 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 
-from droneapi.lib import VehicleMode
-from pymavlink import mavutil
-
 # Package imports
 # Ensure that we can import from the current directory as a package since 
 # running this via pymavproxy makes it not have this in the path, and running 
@@ -159,10 +156,7 @@ def main(argv):
         traceback.print_exc()
         plt.close()
 
-    print("Return to launch")
-    vehicle.mode = VehicleMode("RTL")
-    # Flush to ensure changes are sent to autopilot
-    vehicle.flush()
+    mission.return_to_launch()
 
 # The 'api start' command of pymavlink executes the script using the builtin 
 # function `execfile`, which makes the module name __builtin__, so allow this 

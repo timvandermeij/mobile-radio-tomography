@@ -1,8 +1,10 @@
 import sys
 import time
 import math
+
 from droneapi.lib import VehicleMode, Location, Command
 from pymavlink import mavutil
+
 from ..geometry.Geometry import Geometry_Spherical
 from MockVehicle import MockVehicle
 
@@ -255,6 +257,12 @@ class Mission(object):
 
         # Send command to vehicle
         self.vehicle.send_mavlink(msg)
+        self.vehicle.flush()
+
+    def return_to_launch(self):
+        print("Return to launch")
+        self.vehicle.mode = VehicleMode("RTL")
+        # Flush to ensure changes are sent to autopilot
         self.vehicle.flush()
 
 class Mission_Auto(Mission):
