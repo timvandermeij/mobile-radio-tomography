@@ -1,4 +1,4 @@
-![Build status](https://travis-ci.org/timvandermeij/drone-tomography.svg)
+[![Build status](https://travis-ci.org/timvandermeij/drone-tomography.svg)](https://travis-ci.org/timvandermeij/drone-tomography)
 
 The drone tomography toolchain contains tools to perform radio tomography
 using XBee chips mounted on drones. The goal of this work is to be able
