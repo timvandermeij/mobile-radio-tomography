@@ -38,10 +38,20 @@ def main(argv):
     geometry = Geometry.__dict__[geometry_class]()
 
     simulation = mission_settings.get("vehicle_simulation")
-    if simulation == "mock":
+    if __name__ == "__main__":
+        # Directly running the file means we use our own simulation
+        if not simulation:
+            raise ValueError("Mock vehicle can only be used in simulation")
+
         api = MockAPI()
         vehicle = MockVehicle(geometry)
     else:
+        # We're running via builtins execfile or some other module, so assume 
+        # we use ArduPilot simulation/actual MAVProxy link to the vehicle's 
+        # flight controller.
+        if not isinstance(geometry, Geometry.Geometry_Spherical):
+            raise ValueError("Dronekit only works with spherical geometry")
+
         # Connect to API provider and get vehicle object
         api = local_connect()
         vehicle = api.get_vehicles()[0]

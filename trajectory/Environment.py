@@ -6,7 +6,7 @@ class Environment(object):
     This allows us to simulate a mission without many dependencies on DroneKit.
     """
 
-    def __init__(self, vehicle, geometry, simulation=None, scenefile=None):
+    def __init__(self, vehicle, geometry, simulation=False, scenefile=None):
         self.vehicle = vehicle
         self.geometry = geometry
 
