@@ -1,4 +1,3 @@
-# TODO: Fix the start-up delay such that sensors start transmitting immediately.
 # TODO: Unit testing.
 # TODO: RSSI list and transmission to ground station.
 
@@ -26,7 +25,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
         self.id = sensor_id
         self.scheduler = scheduler
-        self.next_timestamp = self.scheduler.get_next_timestamp()
+        self._next_timestamp = self.scheduler.get_next_timestamp()
         self._serial_connection = None
         self._sensor = None
         self._address = None
@@ -47,9 +46,9 @@ class XBee_Sensor_Physical(XBee_Sensor):
             self._sensor.send("at", command="SH")
             self._sensor.send("at", command="SL")
 
-        if self.id > 0 and time.time() >= self.next_timestamp:
+        if self.id > 0 and time.time() >= self._next_timestamp:
             self._send()
-            self.next_timestamp = self.scheduler.get_next_timestamp()
+            self._next_timestamp = self.scheduler.get_next_timestamp()
 
     def deactivate(self):
         """
@@ -89,7 +88,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
                 print("Sensor {} received a packet from sensor {}.".format(self.id, payload["from"]))
 
                 # Synchronize the scheduler using the timestamp in the payload.
-                self.next_timestamp = self.scheduler.synchronize(payload)
+                self._next_timestamp = self.scheduler.synchronize(payload)
 
                 # Request the RSSI value for the received packet.
                 self._sensor.send("at", command="DB")
