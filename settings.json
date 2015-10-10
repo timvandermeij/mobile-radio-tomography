@@ -53,7 +53,11 @@
         "name": "XBee sensor (physical)",
         "parent": "xbee_base",
         "settings": {
-            "number_of_sensors": 2
+            "number_of_sensors": 2,
+            "sensors": [
+                "\\x00\\x13\\xa2\\x00@\\xe6n\\xb9",
+                "\\x00\\x13\\xa2\\x00@\\xe6o5"
+            ]
         }
     },
     "xbee_tdma_scheduler": {
