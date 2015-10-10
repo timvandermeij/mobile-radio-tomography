@@ -89,4 +89,4 @@ class XBee_Sensor_Physical(XBee_Sensor):
                 self._sensor.send("at", command="DB")
             elif "parameter" in packet:
                 rssi = ord(packet["parameter"])
-                print("Sensor {} received the packet with RSSI {}.".format(self.id, rssi))
+                print("Sensor {} received the packet with RSSI -{} dBm.".format(self.id, rssi))
