@@ -7,7 +7,10 @@ from ..settings import Arguments, Settings
 
 class XBee_Sensor_Simulator(XBee_Sensor):
     def __init__(self, sensor_id, settings, scheduler, viewer):
-        # Initialize the sensor with its ID and a unique, non-blocking UDP socket.
+        """
+        Initialize the sensor with a unique, non-blocking UDP socket.
+        """
+
         if isinstance(settings, Arguments):
             self.settings = settings.get_settings("xbee_sensor_simulator")
         elif isinstance(settings, Settings):
@@ -26,8 +29,11 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         self.socket.setblocking(0)
 
     def activate(self):
-        # Activate the sensor to send and receive packets.
-        # The ground sensor (with ID 0) can only receive packets.
+        """
+        Activate the sensor to send and receive packets.
+        The ground sensor (with ID 0) can only receive packets.
+        """
+
         if self.id > 0 and time.time() >= self.next_timestamp:
             self._send()
             self.next_timestamp = self.scheduler.get_next_timestamp()
@@ -39,10 +45,17 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             pass
 
     def deactivate(self):
+        """
+        Deactivate the sensor by closing the socket.
+        """
+
         self.socket.close()
 
     def _send(self):
-        # Send packets to all other sensors.
+        """
+        Send packets to all other sensors in the network.
+        """
+
         self.viewer.clear_arrows()
         for i in range(1, self.settings.get("number_of_sensors") + 1):
             if i == self.id:
@@ -57,7 +70,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             self.socket.sendto(json.dumps(packet), (self.settings.get("ip"), self.settings.get("port") + i))
             self.viewer.draw_arrow(self.id, i)
         
-        # Send the RSSI values to the ground sensor and clear them for the next round
+        # Send the RSSI values to the ground sensor and clear them for the next round.
         packet = {
             "from": self.id,
             "to": 0,
@@ -70,7 +83,10 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         self.viewer.refresh()
 
     def _receive(self, packet):
-        # Receive and process packets from all other sensors.
+        """
+        Receive and process packets from all other sensors in the network.
+        """
+
         if self.id > 0:
             self.rssi_values[packet["from"] - 1] = packet["rssi"]
             self.next_timestamp = self.scheduler.synchronize(packet)
