@@ -23,8 +23,7 @@ from matplotlib.collections import PatchCollection
 sys.path.insert(0, os.getcwd())
 from __init__ import __package__
 from settings import Arguments
-from distance.Distance_Sensor_Simulator import Distance_Sensor_Simulator
-from trajectory import Mission, Memory_Map, Environment
+from trajectory import Mission, Memory_Map, Environment, Environment_Simulator
 from trajectory.MockVehicle import MockAPI, MockVehicle
 from geometry import Geometry
 
@@ -56,11 +55,12 @@ def main(argv):
         api = local_connect()
         vehicle = api.get_vehicles()[0]
 
-    scenefile = mission_settings.get("scenefile")
-    environment = Environment(vehicle, geometry, simulation, scenefile)
+    if simulation:
+        environment = Environment_Simulator(vehicle, geometry, arguments)
+    else:
+        environment = Environment(vehicle, geometry, arguments)
 
-    angles = list(mission_settings.get("sensors"))
-    sensors = [Distance_Sensor_Simulator(arguments, environment, angle) for angle in angles]
+    sensors = environment.get_distance_sensors()
 
     arguments.check_help()
 
@@ -91,7 +91,7 @@ def main(argv):
 
     # "Cheat" to see 2d map of collision data
     patches = []
-    for obj in environment.objects:
+    for obj in environment.get_objects():
         if isinstance(obj, tuple):
             polygon = Polygon([memory_map.get_xy_index(loc) for loc in obj])
             patches.append(polygon)

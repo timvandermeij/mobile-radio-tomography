@@ -27,11 +27,16 @@
             "altitude": 4,
             "speed": 2.5,
             "size": 50,
-            "sensors": [0],
-            "scenefile": null,
             "vehicle_simulation": true,
             "mission_class": "Mission_Square",
             "geometry_class": "Geometry_Spherical"
+        }
+    },
+    "environment": {
+        "name": "Vehicle environment",
+        "settings": {
+            "sensors": [0],
+            "scenefile": null
         }
     },
     "xbee_configurator": {
