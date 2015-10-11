@@ -27,7 +27,9 @@ class TestSettings(unittest.TestCase):
         settings = Settings("tests/settings.json", "foo")
         expected = {
             "bar": 2,
-            "baz": True
+            "baz": True,
+            "long_name": "some_text",
+            "items": [1,2,3]
         }
         for key, value in settings.get_all():
             self.assertEqual(value, expected[key])

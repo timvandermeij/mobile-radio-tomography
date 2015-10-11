@@ -1,3 +1,5 @@
+[![Build status](https://travis-ci.org/timvandermeij/drone-tomography.svg)](https://travis-ci.org/timvandermeij/drone-tomography)
+
 The drone tomography toolchain contains tools to perform radio tomography
 using XBee chips mounted on drones. The goal of this work is to be able
 to map an object in 3D using collected radio tomography data. This work is
@@ -16,6 +18,7 @@ prerequisites are also available for those systems.
 * Git
 * Python 2.7
 * pip for Python 2.7 with the following packages:
+    * pyserial
     * matplotlib
     * NumPy
     * RPi.GPIO
