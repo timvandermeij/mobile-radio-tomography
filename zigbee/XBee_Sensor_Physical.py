@@ -1,4 +1,5 @@
 # TODO: Implement _get_location() by querying the flight controller.
+# TODO: Intermittent list index out of bounds exception when updating RSSI.
 # TODO: Unit testing.
 
 import serial
