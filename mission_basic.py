@@ -13,7 +13,7 @@ import traceback
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-from matplotlib.patches import Polygon
+from matplotlib.patches import Polygon, Circle
 from matplotlib.collections import PatchCollection
 
 # Package imports
@@ -91,14 +91,13 @@ def main(argv):
 
     # "Cheat" to see 2d map of collision data
     patches = []
-    if scenefile is None:
-        for obj in environment.objects:
-            if isinstance(obj, tuple):
-                polygon = Polygon([memory_map.get_xy_index(loc) for loc in obj])
-                patches.append(polygon)
-            elif 'center' in obj:
-                idx = memory_map.get_xy_index(obj['center'])
-                patches.append(Circle(idx, radius=obj['radius']))
+    for obj in environment.objects:
+        if isinstance(obj, tuple):
+            polygon = Polygon([memory_map.get_xy_index(loc) for loc in obj])
+            patches.append(polygon)
+        elif 'center' in obj:
+            idx = memory_map.get_xy_index(obj['center'])
+            patches.append(Circle(idx, radius=obj['radius']))
 
     p = None
     if len(patches) > 0:
