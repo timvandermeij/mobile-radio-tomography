@@ -30,7 +30,6 @@
         "settings": {
             "number_of_sensors": 8,
             "loop_delay": 0.1,
-            "port": "/dev/ttyUSB0",
             "baud_rate": 9600
         }
     },
@@ -38,6 +37,7 @@
         "name": "XBee configurator",
         "parent": "xbee_base",
         "settings": {
+            "port": "/dev/ttyUSB0",
             "pan_id": 2015
         }
     },
