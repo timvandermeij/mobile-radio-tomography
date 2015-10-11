@@ -9,7 +9,7 @@ def main(argv):
     arguments = Arguments("settings.json", argv)
     settings = arguments.get_settings("xbee_sensor_physical")
 
-    sensor_id = self.settings.get("id")
+    sensor_id = settings.get("id")
     scheduler = XBee_TDMA_Scheduler(sensor_id, arguments)
     sensor = XBee_Sensor_Physical(sensor_id, arguments, scheduler)
 
