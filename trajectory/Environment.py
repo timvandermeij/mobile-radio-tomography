@@ -69,8 +69,9 @@ class Environment_Simulator(Environment):
     def __init__(self, vehicle, geometry, arguments):
         super(Environment_Simulator, self).__init__(vehicle, geometry, arguments)
         scenefile = self.settings.get("scenefile")
+        translation = self.settings.get("translation")
         if scenefile is not None:
-            loader = VRMLLoader(self, scenefile)
+            loader = VRMLLoader(self, scenefile, translation)
             self.objects = loader.get_objects()
             return
 

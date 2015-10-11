@@ -36,7 +36,8 @@
         "name": "Vehicle environment",
         "settings": {
             "sensors": [0],
-            "scenefile": null
+            "scenefile": null,
+            "translation": [0,0,0]
         }
     },
     "xbee_configurator": {
