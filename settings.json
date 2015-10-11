@@ -47,7 +47,7 @@
         "settings": {
             "ip": "127.0.0.1",
             "port": 3233,
-            "buffer_size": 1024
+            "buffer_size": 256
         }
     },
     "xbee_sensor_physical": {

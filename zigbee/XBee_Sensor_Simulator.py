@@ -1,7 +1,7 @@
 import time
 import json
 import socket
-from random import randint
+import random
 from XBee_Sensor import XBee_Sensor
 from ..settings import Arguments, Settings
 
@@ -22,7 +22,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         self.viewer = viewer
         self.scheduler = scheduler
         self.next_timestamp = self.scheduler.get_next_timestamp()
-        self.rssi_values = [None for _ in range(self.settings.get("number_of_sensors"))]
+        self.data = []
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind((self.settings.get("ip"), self.settings.get("port") + self.id))
@@ -62,25 +62,21 @@ class XBee_Sensor_Simulator(XBee_Sensor):
                 continue
 
             packet = {
-                "from": self.id,
-                "to": i,
-                "timestamp": time.time(),
-                "rssi": randint(1,60)
+                "from": self._get_location(),
+                "from_id": self.id,
+                "timestamp": time.time()
             }
             self.socket.sendto(json.dumps(packet), (self.settings.get("ip"), self.settings.get("port") + i))
             self.viewer.draw_arrow(self.id, i)
         
-        # Send the RSSI values to the ground sensor and clear them for the next round.
-        packet = {
-            "from": self.id,
-            "to": 0,
-            "rssi_values": self.rssi_values
-        }
-        self.socket.sendto(json.dumps(packet), (self.settings.get("ip"), self.settings.get("port")))
-        self.viewer.draw_arrow(self.id, 0, "blue")
-        self.rssi_values = [None for _ in range(self.settings.get("number_of_sensors"))]
+        # Send the sweep data to the ground sensor and clear the list for the next round.
+        for packet in self.data:
+            self.socket.sendto(json.dumps(packet), (self.settings.get("ip"), self.settings.get("port")))
+            self.viewer.draw_arrow(self.id, 0, "blue")
 
         self.viewer.refresh()
+
+        self.data = []
 
     def _receive(self, packet):
         """
@@ -88,7 +84,20 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         """
 
         if self.id > 0:
-            self.rssi_values[packet["from"] - 1] = packet["rssi"]
             self.next_timestamp = self.scheduler.synchronize(packet)
+
+            # Sanitize and complete the packet for the ground station.
+            packet["to"] = self._get_location()
+            packet["rssi"] = random.randint(0, 60)
+            packet.pop("from_id")
+            packet.pop("timestamp")
+            self.data.append(packet)
         else:
-            print("> Ground station received {}".format(packet["rssi_values"]))
+            print("> Ground station received {}".format(packet))
+
+    def _get_location(self):
+        """
+        Get the current GPS location (latitude and longitude pair) of the sensor.
+        """
+
+        return (random.uniform(1.0, 50.0), random.uniform(1.0, 50.0))

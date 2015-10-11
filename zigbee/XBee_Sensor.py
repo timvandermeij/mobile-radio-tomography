@@ -10,3 +10,6 @@ class XBee_Sensor(object):
 
     def _receive(self, packet):
         raise NotImplementedError("Subclasses must override _receive()")
+
+    def _get_location(self):
+        raise NotImplementedError("Subclasses must override _get_location()")

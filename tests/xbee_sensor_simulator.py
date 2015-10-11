@@ -1,7 +1,6 @@
 import unittest
 import socket
 import time
-from random import randint
 from ..settings import Arguments
 from ..zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from ..zigbee.XBee_Viewer import XBee_Viewer
@@ -26,28 +25,26 @@ class TestXBeeSensorSimulator(unittest.TestCase):
         # The next timestamp must be set.
         self.assertNotEqual(self.sensor.next_timestamp, 0)
 
-        # The RSSI values list must contain only None entries.
-        self.assertEqual(self.sensor.rssi_values,
-                         [None for _ in range(self.settings.get("number_of_sensors"))])
+        # The sweep data list must be empty.
+        self.assertEqual(self.sensor.data, [])
 
     def test_send(self):
         # After sending, the RSSI values list must be reset.
         self.sensor._send()
-        self.assertEqual(self.sensor.rssi_values,
-                         [None for _ in range(self.settings.get("number_of_sensors"))])
+        self.assertEqual(self.sensor.data, [])
 
     def test_receive(self):
         # Create a packet from sensor 2 to the current sensor.
         packet = {
-            "from": 2,
-            "to": self.id,
-            "timestamp": time.time(),
-            "rssi": randint(1,60)
+            "from_id": 2,
+            "timestamp": time.time()
         }
         
         # After receiving that packet, the next timestamp must be synchronized.
+        # Note that we must make a copy as the receive method will change the packet!
+        copy = packet.copy()
         self.sensor._receive(packet)
-        self.assertEqual(self.sensor.next_timestamp, self.scheduler.synchronize(packet))
+        self.assertEqual(self.sensor.next_timestamp, self.scheduler.synchronize(copy))
 
     def test_deactivate(self):
         # After deactivation the socket should be closed.

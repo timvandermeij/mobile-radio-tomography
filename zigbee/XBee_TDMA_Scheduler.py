@@ -31,7 +31,7 @@ class XBee_TDMA_Scheduler(object):
         # sensor is the received transmission timestamp plus the number of
         # slots inbetween that sensor and this sensor.
         slot_time = float(self.sweep_delay) / self.number_of_sensors
-        from_sensor = int(packet["from"])
+        from_sensor = int(packet["from_id"])
         timestamp = float(packet["timestamp"])
         if from_sensor < self.id:
             self.timestamp = timestamp + ((self.id - from_sensor) * slot_time)
