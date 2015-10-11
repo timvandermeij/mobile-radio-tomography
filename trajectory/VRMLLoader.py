@@ -34,13 +34,13 @@ class VRMLLoader(object):
                     forward = child.localMatrices().data[0]
                     if forward is not None:
                         if transform is not None:
-                            transform = np.dot(transform, forward)
+                            new_transform = np.dot(transform, forward)
                         else:
-                            transform = forward
+                            new_transform = forward
                 except NotImplemented:
-                    transform = forward
+                    new_transform = transform
 
-                self._parse_children(child, transform)
+                self._parse_children(child, new_transform)
             elif isinstance(child, nodetypes.Grouping):
                 self._parse_children(child, transform)
             elif isinstance(child, basenodes.Shape):
@@ -63,7 +63,7 @@ class VRMLLoader(object):
                     point = np.dot(transform.T, np.append(point, 1).T)
 
                 # Convert to Location
-                # point notation is in (x,y,z) where y is the verticlal axis. 
+                # Geometry notation is in (x,y,z) where y is the vertical axis. 
                 # We have to convert it to (x,z,y) since the first two are 
                 # related to distances on the ground (lat/lon) and the y axis 
                 # is related to altitude offset.
