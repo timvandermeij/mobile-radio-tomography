@@ -37,6 +37,8 @@ class VRMLLoader(object):
                             new_transform = np.dot(transform, forward)
                         else:
                             new_transform = forward
+                    else:
+                        new_transform = transform
                 except NotImplemented:
                     new_transform = transform
 
