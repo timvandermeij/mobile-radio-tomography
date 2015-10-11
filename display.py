@@ -75,6 +75,8 @@ class Viewer(object):
         self.ry = (self.ry + dt * self.oy) % 360
         self.rz = (self.rz + dt * self.oz) % 360
 
+        print("[{}, {}, {}]".format(-self.tx, self.tz, -self.ty))
+
     def on_key_press(self, symbol, modifiers):
         if symbol == key.LEFT:
             self.mx = 1.0
@@ -90,6 +92,8 @@ class Viewer(object):
             self.mz = 1.0
         elif symbol == key.R:
             self._reset_location()
+        elif symbol == key.Q:
+            pyglet.app.exit()
         else:
             return
 
@@ -103,6 +107,11 @@ class Viewer(object):
         # Move into/outward
         self.mz = dy
         self.update(1.0)
+        self.mz = 0.0
+
+    def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
+        self.ry = self.ry + 360 * (dx / float(self.win.width))
+        self.rx = self.rx - 360 * (dy / float(self.win.height))
 
     def _draw_polygon(self, face):
         glBegin(GL_POLYGON)
