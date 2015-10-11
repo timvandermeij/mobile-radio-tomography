@@ -44,7 +44,8 @@ class XBee_Sensor_Physical(XBee_Sensor):
                                                     self.settings.get("baud_rate"))
             self._sensor = ZigBee(self._serial_connection, callback=self._receive)
 
-            # Set this sensor's address.
+            # Set this sensor's ID and address.
+            self._sensor.send("at", command="NI")
             self._sensor.send("at", command="SH")
             self._sensor.send("at", command="SL")
 
@@ -88,7 +89,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
                               dest_addr="\xFF\xFE", frame_id="\x01",
                               data=json.dumps(packet))
 
-        self.data = []
+        self._data = []
 
     def _receive(self, packet):
         """
@@ -129,6 +130,9 @@ class XBee_Sensor_Physical(XBee_Sensor):
                     self._address = packet["parameter"]
                 else:
                     self._address = self._address + packet["parameter"]
+            elif packet["command"] == "NI":
+                # Node identifier has been received.
+                self.id = packet["parameter"]
 
     def _get_location(self):
         """
