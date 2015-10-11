@@ -128,6 +128,7 @@ def main(argv):
 
             i = 0
             for sensor in sensors:
+                angle = sensor.get_angle()
                 sensor_distance = sensor.get_distance()
 
                 if mission.check_sensor_distance(sensor_distance):
@@ -136,7 +137,6 @@ def main(argv):
                     # the point itself. This should be the closest "wall" in 
                     # the angle's direction. This is again a "cheat" for 
                     # checking if walls get visualized correctly.
-                    angle = sensor.get_angle()
                     memory_map.handle_sensor(sensor_distance, angle)
                     sensor.draw_current_edge(plt, memory_map, colors[i % len(colors)])
 
