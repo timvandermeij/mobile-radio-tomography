@@ -1,9 +1,11 @@
+# TODO: Implement _get_location() by querying the flight controller.
+# TODO: Replace /dev/ttyUSB.
 # TODO: Unit testing.
-# TODO: RSSI list and transmission to ground station.
 
 import serial
 import json
 import time
+import random
 from xbee import ZigBee
 from XBee_Sensor import XBee_Sensor
 from ..settings import Arguments, Settings
@@ -29,6 +31,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._serial_connection = None
         self._sensor = None
         self._address = None
+        self._data = []
 
     def activate(self):
         """
@@ -64,17 +67,29 @@ class XBee_Sensor_Physical(XBee_Sensor):
         """
 
         packet = {
-            "from": self.id,
+            "from": self._get_location(),
+            "from_id": self.id,
             "timestamp": time.time()
         }
-        for sensor_address in self.settings.get("sensors"):
+        sensors = self.settings.get("sensors")
+        for index, sensor_address in enumerate(sensors):
             # Unescape the string as it is escaped in JSON.
             sensor_address = sensor_address.decode("string_escape")
 
-            if sensor_address != self._address:
+            # Do not send to yourself or the ground sensor.
+            if sensor_address != self._address and index > 0:
                 self._sensor.send("tx", dest_addr_long=sensor_address,
                                   dest_addr="\xFF\xFE", frame_id="\x01",
                                   data=json.dumps(packet))
+
+        # Send the sweep data to the ground sensor and clear the list for the next round.
+        ground_sensor_address = sensors[0].decode("string_escape")
+        for packet in self._data:
+            self._sensor.send("tx", dest_addr_long=ground_sensor_address,
+                              dest_addr="\xFF\xFE", frame_id="\x01",
+                              data=json.dumps(packet))
+
+        self.data = []
 
     def _receive(self, packet):
         """
@@ -85,18 +100,22 @@ class XBee_Sensor_Physical(XBee_Sensor):
             if packet["id"] == "rx":
                 payload = json.loads(packet["rf_data"])
 
-                print("Sensor {} received a packet from sensor {}.".format(self.id, payload["from"]))
-
                 # Synchronize the scheduler using the timestamp in the payload.
                 self._next_timestamp = self.scheduler.synchronize(payload)
+
+                # Sanitize and complete the packet for the ground station.
+                payload["to"] = self._get_location()
+                payload["rssi"] = None
+                payload.pop("from_id")
+                payload.pop("timestamp")
+                self._data.append(payload)
 
                 # Request the RSSI value for the received packet.
                 self._sensor.send("at", command="DB")
             elif packet["id"] == "at_response":
                 if packet["command"] == "DB":
-                    # RSSI value has been received.
-                    rssi = ord(packet["parameter"])
-                    print("Sensor {} received the packet with RSSI -{} dBm.".format(self.id, rssi))
+                    # RSSI value has been received. Update the last received packet.
+                    self._data[-1]["rssi"] = ord(packet["parameter"])
                 elif packet["command"] == "SH":
                     # Serial number (high) has been received.
                     if self._address == None:
@@ -109,3 +128,13 @@ class XBee_Sensor_Physical(XBee_Sensor):
                         self._address = packet["parameter"]
                     else:
                         self._address = self._address + packet["parameter"]
+        else:
+            payload = json.loads(packet["rf_data"])
+            print("> Ground station received {}".format(payload))
+
+    def _get_location(self):
+        """
+        Get the current GPS location (latitude and longitude pair) of the sensor.
+        """
+
+        return (random.uniform(1.0, 50.0), random.uniform(1.0, 50.0))

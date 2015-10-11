@@ -28,7 +28,7 @@
     "xbee_base": {
         "name": "XBee base",
         "settings": {
-            "number_of_sensors": 8,
+            "number_of_sensors": 2,
             "loop_delay": 0.1,
             "baud_rate": 9600
         }
@@ -54,8 +54,8 @@
         "name": "XBee sensor (physical)",
         "parent": "xbee_base",
         "settings": {
-            "number_of_sensors": 2,
             "sensors": [
+                "\\x00\\x13\\xa2\\x00@\\xe6n\\xbd",
                 "\\x00\\x13\\xa2\\x00@\\xe6n\\xb9",
                 "\\x00\\x13\\xa2\\x00@\\xe6o5"
             ]
@@ -65,7 +65,7 @@
         "name": "XBee TDMA scheduler",
         "parent": "xbee_base",
         "settings": {
-            "sweep_delay": 16
+            "sweep_delay": 6
         }
     },
     "xbee_viewer": {
