@@ -96,41 +96,40 @@ class XBee_Sensor_Physical(XBee_Sensor):
         Receive and process a received packet from another sensor in the network.
         """
 
-        if self.id > 0:
-            if packet["id"] == "rx":
-                payload = json.loads(packet["rf_data"])
-
-                # Synchronize the scheduler using the timestamp in the payload.
-                self._next_timestamp = self.scheduler.synchronize(payload)
-
-                # Sanitize and complete the packet for the ground station.
-                payload["to"] = self._get_location()
-                payload["rssi"] = None
-                payload.pop("from_id")
-                payload.pop("timestamp")
-                self._data.append(payload)
-
-                # Request the RSSI value for the received packet.
-                self._sensor.send("at", command="DB")
-            elif packet["id"] == "at_response":
-                if packet["command"] == "DB":
-                    # RSSI value has been received. Update the last received packet.
-                    self._data[-1]["rssi"] = ord(packet["parameter"])
-                elif packet["command"] == "SH":
-                    # Serial number (high) has been received.
-                    if self._address == None:
-                        self._address = packet["parameter"]
-                    else:
-                        self._address = packet["parameter"] + self._address
-                elif packet["command"] == "SL":
-                    # Serial number (low) has been received.
-                    if self._address == None:
-                        self._address = packet["parameter"]
-                    else:
-                        self._address = self._address + packet["parameter"]
-        else:
+        if packet["id"] == "rx":
             payload = json.loads(packet["rf_data"])
-            print("> Ground station received {}".format(payload))
+            if self.id == 0:
+                print("> Ground station received {}".format(payload))
+                return
+
+            # Synchronize the scheduler using the timestamp in the payload.
+            self._next_timestamp = self.scheduler.synchronize(payload)
+
+            # Sanitize and complete the packet for the ground station.
+            payload["to"] = self._get_location()
+            payload["rssi"] = None
+            payload.pop("from_id")
+            payload.pop("timestamp")
+            self._data.append(payload)
+
+            # Request the RSSI value for the received packet.
+            self._sensor.send("at", command="DB")
+        elif packet["id"] == "at_response":
+            if packet["command"] == "DB":
+                # RSSI value has been received. Update the last received packet.
+                self._data[-1]["rssi"] = ord(packet["parameter"])
+            elif packet["command"] == "SH":
+                # Serial number (high) has been received.
+                if self._address == None:
+                    self._address = packet["parameter"]
+                else:
+                    self._address = packet["parameter"] + self._address
+            elif packet["command"] == "SL":
+                # Serial number (low) has been received.
+                if self._address == None:
+                    self._address = packet["parameter"]
+                else:
+                    self._address = self._address + packet["parameter"]
 
     def _get_location(self):
         """
