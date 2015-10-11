@@ -132,7 +132,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
                     self._address = self._address + packet["parameter"]
             elif packet["command"] == "NI":
                 # Node identifier has been received.
-                self.id = packet["parameter"]
+                self.id = int(packet["parameter"])
 
     def _get_location(self):
         """
