@@ -13,20 +13,50 @@ Prerequisites
 In order to use the toolchain you need to have the following software
 installed on your system. The toolchain has been developed for Linux, but
 can be made to work on Windows or any other operating system since all
-prerequisites are also available for those systems.
+prerequisites are also available for those systems, perhaps with slightly
+different installation procedures.
 
 * Git
-* Python 2.7
-* pip for Python 2.7 with the following packages:
-    * pyserial
+* Python 2.7. Note that Python 3 cannot be used at this moment.
+* `pip` for Python 2.7. `pip` is often already available extremely old and bare
+  systems. If it is also not delivered by a package manager, one can also
+  [install with get-pip.py](https://pip.pypa.io/en/latest/installing.html).
+  Ensure you have the correct version of `pip` with `pip --version`, or use
+  `pip2` instead.
+
+  Use `pip install --user` to install the following packages, sorted by purpose:
+  * General packages:
     * matplotlib
     * NumPy
+    * scipy
+  * Physical sensor/communication interfaces:
+    * pyserial
     * RPi.GPIO
-    * mock
     * xbee
+  * Vehicle trajectory mission interfaces:
+    * lxml
+    * pexpect
+    * pymavlink
+    * mavproxy
+    * droneapi
+  * Environment simulation:
     * OpenGLContext
     * PyVRML97
     * PyDispatcher
+    * pyglet
+  * Unit testing:
+    * mock
+* ArduPilot for vehicle simulation. Download the latest code using:
+
+        $ git clone https://github.com/diydrones/ardupilot.git
+
+  Then, add the following line to your `~/.bashrc`:
+
+        export PATH=$PATH:$HOME/ardupilot/Tools/autotest
+
+  Finally, create a file `~/.mavinit.src` with the following line:
+
+        module load droneapi.module.api
 
 For all commands in this file, replace `python2` with `python` if your
 operating system does not need to distinguish between Python 2 and Python 3.
