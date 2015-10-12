@@ -152,3 +152,21 @@ class Viewer_Interactive(Viewer):
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         self.ry = self.ry + 360 * (dx / float(self.win.width))
         self.rx = self.rx - 360 * (dy / float(self.win.height))
+
+class Viewer_Vehicle(Viewer):
+    def __init__(self, environment, monitor):
+        super(Viewer_Vehicle, self).__init__(environment)
+        self.initial_location = self.environment.get_location()
+        self.monitor = monitor
+        pyglet.clock.schedule_interval(self.update, self.monitor.get_delay())
+
+    def update(self, dt):
+        if not self.monitor.step():
+            pyglet.app.exit()
+
+        location = self.environment.get_location()
+        self.tx = location.lon - self.initial_location.lon
+        self.ty = location.alt
+        self.tz = location.lat - self.initial_location.lat
+
+        self.ry = self.environment.get_yaw() * 180/math.pi

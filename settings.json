@@ -23,13 +23,19 @@
             "closeness": 2.0,
             "farness": 100.0,
             "mission_delay": 2.0,
-            "loop_delay": 0.5,
             "altitude": 4,
             "speed": 2.5,
             "size": 50,
             "vehicle_simulation": true,
             "mission_class": "Mission_Square",
             "geometry_class": "Geometry_Spherical"
+        }
+    },
+    "mission_monitor": {
+        "name": "Mission monitoring",
+        "settings": {
+            "loop_delay": 0.5,
+            "viewer": true
         }
     },
     "environment": {

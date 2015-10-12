@@ -25,9 +25,115 @@ from __init__ import __package__
 from settings import Arguments
 from trajectory import Mission, Memory_Map, Environment, Environment_Simulator
 from trajectory.MockVehicle import MockAPI, MockVehicle
+from trajectory.Viewer import Viewer_Vehicle
 from geometry import Geometry
 
-# TODO: Cleanup code, move more code into modules.
+class Monitor(object):
+    def __init__(self, mission, environment):
+        self.mission = mission
+
+        self.environment = environment
+        arguments = self.environment.get_arguments()
+        self.settings = arguments.get_settings("mission_monitor")
+
+        # Seconds to wait before monitoring again
+        self.loop_delay = self.settings.get("loop_delay")
+
+        self.sensors = self.environment.get_distance_sensors()
+
+        self.colors = ["red", "purple", "black"]
+
+        self.memory_map = None
+        self.plot_polygons = None
+
+    def get_delay(self):
+        return self.loop_delay
+
+    def use_viewer(self):
+        return self.settings.get("viewer")
+
+    def _create_patch(self, obj):
+        if isinstance(obj, tuple):
+            return Polygon([self.memory_map.get_xy_index(loc) for loc in obj])
+        elif 'center' in obj:
+            idx = memory_map.get_xy_index(obj['center'])
+            return Circle(idx, radius=obj['radius'])
+
+        return None
+
+    def setup(self):
+        # Create a memory map for the vehicle to track where it has seen 
+        # objects. This can later be used to find the target object or to fly 
+        # around obstacles without colliding.
+        memory_size = self.mission.get_space_size()
+        self.memory_map = Memory_Map(self.environment, memory_size)
+
+        # "Cheat" to see 2d map of collision data
+        patches = []
+        for obj in self.environment.get_objects():
+            patch = self._create_patch(obj)
+            if patch is not None:
+                patches.append(patch)
+
+        p = None
+        if len(patches) > 0:
+            p = PatchCollection(patches, cmap=matplotlib.cm.jet, alpha=0.4)
+            patch_colors = 50*np.ones(len(patches))
+            p.set_array(np.array(patch_colors))
+
+        self.plot_polygons = p
+        self.fig, self.ax = plt.subplots()
+
+        # Set up interactive drawing of the memory map. This makes the 
+        # dronekit/mavproxy fairly annoyed since it creates additional 
+        # threads/windows. One might have to press Ctrl-C and normal keys to 
+        # make the program stop.
+        plt.gca().set_aspect("equal", adjustable="box")
+        plt.ion()
+        plt.show()
+
+    def step(self):
+        # Put our current location on the map for visualization. Of course, 
+        # this location is also "safe" since we are flying there.
+        vehicle_idx = self.memory_map.get_index(self.environment.get_location())
+        self.memory_map.set(vehicle_idx, -1)
+
+        self.mission.step()
+
+        i = 0
+        for sensor in self.sensors:
+            angle = sensor.get_angle()
+            sensor_distance = sensor.get_distance()
+
+            if self.mission.check_sensor_distance(sensor_distance):
+                # Display the edge of the simulated object that is responsible 
+                # for the measured distance, and consequently the point itself. 
+                # This should be the closest "wall" in the angle's direction. 
+                # This is again a "cheat" for checking if walls get visualized 
+                # correctly.
+                self.memory_map.handle_sensor(sensor_distance, angle)
+                sensor.draw_current_edge(plt, self.memory_map, self.colors[i % len(self.colors)])
+
+                print("=== [!] Distance to object: {} m (angle {}) ===".format(sensor_distance, angle))
+
+            i = i + 1
+
+        # Display the current memory map interactively.
+        if self.plot_polygons is not None:
+            self.ax.add_collection(self.plot_polygons)
+        plt.imshow(self.memory_map.get_map(), origin='lower')
+        plt.draw()
+        plt.cla()
+
+        if not self.mission.check_waypoint():
+            return False
+
+        # Remove the vehicle from the current location. We set it to "safe" 
+        # since there is no object here.
+        self.memory_map.set(vehicle_idx, 0)
+
+        return True
+
 # Main mission program
 def main(argv):
     arguments = Arguments("settings.json", argv)
@@ -60,13 +166,15 @@ def main(argv):
     else:
         environment = Environment(vehicle, geometry, arguments)
 
-    sensors = environment.get_distance_sensors()
+    mission_class = mission_settings.get("mission_class")
+    mission = Mission.__dict__[mission_class](api, environment, mission_settings)
+
+    monitor = Monitor(mission, environment)
 
     arguments.check_help()
 
     print("Setting up mission")
-    mission_class = mission_settings.get("mission_class")
-    mission = Mission.__dict__[mission_class](api, environment, mission_settings)
+    mission.setup()
     mission.display()
 
     # As of ArduCopter 3.3 it is possible to take off using a mission item.
@@ -76,94 +184,24 @@ def main(argv):
     mission.start()
 
     # Monitor mission
-    # We can get and set the command number and use convenience function for 
-    # finding distance to an object or the next waypoint.
+    monitor.setup()
 
-    colors = ["red", "purple", "black"]
-    # Seconds to wait before checking sensors and waypoints again
-    loop_delay = mission_settings.get("loop_delay")
+    if monitor.use_viewer():
+        viewer = Viewer_Vehicle(environment, monitor)
+        viewer.start()
+    else:
+        try:
+            while not api.exit:
+                if not monitor.step():
+                    break
 
-    # Create a memory map for the vehicle to track where it has seen objects. 
-    # This can later be used to find the target object or to fly around 
-    # obstacles without colliding.
-    memory_size = mission.get_space_size()
-    memory_map = Memory_Map(environment, memory_size)
-
-    # "Cheat" to see 2d map of collision data
-    patches = []
-    for obj in environment.get_objects():
-        if isinstance(obj, tuple):
-            polygon = Polygon([memory_map.get_xy_index(loc) for loc in obj])
-            patches.append(polygon)
-        elif 'center' in obj:
-            idx = memory_map.get_xy_index(obj['center'])
-            patches.append(Circle(idx, radius=obj['radius']))
-
-    p = None
-    if len(patches) > 0:
-        p = PatchCollection(patches, cmap=matplotlib.cm.jet, alpha=0.4)
-        patch_colors = 50*np.ones(len(patches))
-        p.set_array(np.array(patch_colors))
-    fig, ax = plt.subplots()
-
-    # Set up interactive drawing of the memory map. This makes the 
-    # dronekit/mavproxy fairly annoyed since it creates additional 
-    # threads/windows. One might have to press Ctrl-C and normal keys to make 
-    # the program stop.
-    plt.gca().set_aspect("equal", adjustable="box")
-    plt.ion()
-    plt.show()
-
-    yaw = 0
-    arrow = None
-    try:
-        while not api.exit:
-            # Put our current location on the map for visualization. Of course, 
-            # this location is also "safe" since we are flying there.
-            vehicle_idx = memory_map.get_index(environment.get_location())
-            memory_map.set(vehicle_idx, -1)
-
-            mission.step()
-
-            i = 0
-            for sensor in sensors:
-                angle = sensor.get_angle()
-                sensor_distance = sensor.get_distance()
-
-                if mission.check_sensor_distance(sensor_distance):
-                    # Display the edge of the simulated object that is 
-                    # responsible for the measured distance, and consequently 
-                    # the point itself. This should be the closest "wall" in 
-                    # the angle's direction. This is again a "cheat" for 
-                    # checking if walls get visualized correctly.
-                    memory_map.handle_sensor(sensor_distance, angle)
-                    sensor.draw_current_edge(plt, memory_map, colors[i % len(colors)])
-
-                    print("=== [!] Distance to object: {} m (angle {}) ===".format(sensor_distance, angle))
-
-                i = i + 1
-
-            # Display the current memory map interactively.
-            if p is not None:
-                ax.add_collection(p)
-            plt.imshow(memory_map.get_map(), origin='lower')
-            plt.draw()
-            plt.cla()
-
-            if not mission.check_waypoint():
-                break
-
-            time.sleep(loop_delay)
-
-            # Remove the vehicle from the current location. We set it to "safe" 
-            # since there is no object here.
-            memory_map.set(vehicle_idx, 0)
-    except Exception, e:
-        # Handle exceptions gracefully by attempting to stop the program 
-        # ourselves. Unfortunately KeyboardInterrupts are not passed to us when 
-        # we run under pymavlink.
-        traceback.print_exc()
-        plt.close()
+                time.sleep(monitor.get_delay())
+        except Exception, e:
+            # Handle exceptions gracefully by attempting to stop the program 
+            # ourselves. Unfortunately KeyboardInterrupts are not passed to us 
+            # when we run under pymavlink.
+            traceback.print_exc()
+            plt.close()
 
     mission.return_to_launch()
 

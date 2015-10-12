@@ -25,7 +25,6 @@ class Mission(object):
 
         self.geometry = self.environment.get_geometry()
         self.settings = settings
-        self._setup()
 
     def distance_to_current_waypoint(self):
         """
@@ -43,7 +42,7 @@ class Mission(object):
         distance = self.environment.get_distance(waypoint_location)
         return distance
 
-    def _setup(self):
+    def setup(self):
         # Clear the current mission
         self.clear_mission()
 
@@ -154,7 +153,7 @@ class Mission(object):
         elif sensor_distance < self.closeness:
             self.vehicle.mode = VehicleMode("GUIDED")
             self.set_speed(0)
-            raise RuntimeError("Too close to the object, halting.")
+            raise RuntimeError("Too close to the object ({} m), halting.".format(sensor_distance))
         elif sensor_distance < self.farness:
             return True
 
@@ -270,8 +269,8 @@ class Mission_Auto(Mission):
     A mission that uses the AUTO mode to move to fixed locations.
     """
 
-    def _setup(self):
-        super(Mission_Auto, self)._setup()
+    def setup(self):
+        super(Mission_Auto, self).setup()
         self.add_commands(self.environment.get_location())
 
     def add_commands(self):
@@ -355,8 +354,8 @@ class Mission_Browse(Mission_Guided):
     Mission that stays at a fixed location and scans its surroundings.
     """
 
-    def _setup(self):
-        super(Mission_Browse, self)._setup()
+    def setup(self):
+        super(Mission_Browse, self).setup()
         self.yaw = 0
         self.yaw_angle_step = 10
 
