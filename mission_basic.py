@@ -220,6 +220,9 @@ def main(argv):
 
 # The 'api start' command of pymavlink executes the script using the builtin 
 # function `execfile`, which makes the module name __builtin__, so allow this 
-# as well as directly executing the file.
-if __name__ in ["__main__", "__builtin__"]:
+# as well as directly executing the file. Ensure MAVProxy arguments do not 
+# conflict with our own arguments.
+if __name__ == "__main__":
     main(sys.argv[1:])
+elif __name__ == "__builtin__":
+    main([])
