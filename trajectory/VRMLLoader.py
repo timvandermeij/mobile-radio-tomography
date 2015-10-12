@@ -13,13 +13,11 @@ class VRMLLoader(object):
         self.environment = environment
         self.filename = filename
 
-        print(translation)
         if translation is None:
             translation = Location(0.0, 0.0, 0.0)
         elif isinstance(translation, list):
             translation = Location(*translation)
 
-        print(translation.lat, translation.lon, translation.alt)
         self.translation = translation
 
         self.scene = Loader.load(self.filename)
@@ -70,17 +68,17 @@ class VRMLLoader(object):
                 if transform is not None:
                     # The translation matrices from the VRML library are for 
                     # affine translations, but they are transposed for some 
-                    # reason. See vrml.vrml87.transformmatrix, e.g. line 319.
+                    # reason. See vrml.vrml97.transformmatrix, e.g. line 319.
                     point = np.dot(transform.T, np.append(point, 1).T)
 
                 # Convert to Location
-                # Geometry notation is in (x,y,z) where y is the vertical axis. 
-                # We have to convert it to (x,z,y) since the first two are 
-                # related to distances on the ground (lat/lon) and the y axis 
-                # is related to altitude offset.
-                lat = self.translation.lat + point[0]
-                lon = self.translation.lon + point[2]
-                alt = self.translation.alt + point[1]
+                # VRML geometry notation is in (x,z,y) where y is the vertical 
+                # axis (using GL notation here). We have to convert it to 
+                # (z,x,y) since the z/x are related to distances on the ground 
+                # lat/lon, respectively, and y is still the altitude.
+                lat = self.translation.lat + point[1]
+                lon = self.translation.lon + point[0]
+                alt = self.translation.alt + point[2]
                 loc = self.environment.get_location(lat, lon, alt)
                 face.append(loc)
 
