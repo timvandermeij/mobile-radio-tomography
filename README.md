@@ -24,7 +24,8 @@ different installation procedures.
   Ensure you have the correct version of `pip` with `pip --version`, or use
   `pip2` instead.
 
-  Use `pip install --user` to install the following packages, sorted by purpose:
+  Use `pip install --user <package>` to install each of the following packages,
+  sorted by purpose:
   * General packages:
     * matplotlib
     * NumPy
@@ -48,15 +49,15 @@ different installation procedures.
     * mock
 * ArduPilot for vehicle simulation. Download the latest code using:
 
-        $ git clone https://github.com/diydrones/ardupilot.git
+      $ git clone https://github.com/diydrones/ardupilot.git
 
   Then, add the following line to your `~/.bashrc`:
 
-        export PATH=$PATH:$HOME/ardupilot/Tools/autotest
+      export PATH=$PATH:$HOME/ardupilot/Tools/autotest
 
   Finally, create a file `~/.mavinit.src` with the following line:
 
-        module load droneapi.module.api
+      module load droneapi.module.api
 
 For all commands in this file, replace `python2` with `python` if your
 operating system does not need to distinguish between Python 2 and Python 3.
@@ -74,6 +75,33 @@ Running the tools
 =================
 
 Now that we have a copy of the software, we can run the tools.
+
+Vehicle mission
+---------------
+
+The trajectory mission sets up an unmanned aerial vehicle (UAV) and directs it
+to move and rotate within its environment. The script supports various mission
+types and simulation modes. It can be run using the ArduPilot simulator using
+the following commands:
+
+    $ sim vehicle.sh -v ArduCopter --map
+    [...wait until the simulator is set up, after "GPS lock at 0 meters"...]
+    STABILIZE> script mission.scr
+
+This starts up the mission with default settings from `settings.json`.
+The ArduPilot simulator provides an overhead map showing the copter's position.
+The mission monitor has a map in memory that shows objects in the environment
+during simulation as well as detected points from a distance sensor. It also
+provides a 3D viewer of the simulated objects.
+
+We can also start the mission monitor without ArduPilot simulation using
+`python2 mission_basic.py`. In this case, the vehicle is simulated on our own,
+and no overhead map is provided other than the memory map. The command allows
+changing settings from their defaults using arguments. We can provide a VRML
+scene file to retrieve simulated objects from, or change the geometry from
+a spherical coordinate system (`Geometry_Spherical`) to a flat meter-based
+coordinate system using `--geometry-class Geometry`. Many other options are
+available for simulating various setups.
 
 XBee sensor (simulator)
 -----------------------
