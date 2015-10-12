@@ -29,7 +29,8 @@ from trajectory.Viewer import Viewer_Vehicle
 from geometry import Geometry
 
 class Monitor(object):
-    def __init__(self, mission, environment):
+    def __init__(self, api, mission, environment):
+        self.api = api
         self.mission = mission
 
         self.environment = environment
@@ -93,6 +94,15 @@ class Monitor(object):
         plt.show()
 
     def step(self):
+        """
+        Perform one step of a monitoring loop.
+
+        Returns `Fase` if the loop should be halted.
+        """
+
+        if self.api.exit:
+            return False
+
         # Put our current location on the map for visualization. Of course, 
         # this location is also "safe" since we are flying there.
         vehicle_idx = self.memory_map.get_index(self.environment.get_location())
@@ -134,6 +144,9 @@ class Monitor(object):
 
         return True
 
+    def stop(self):
+        plt.close()
+
 # Main mission program
 def main(argv):
     arguments = Arguments("settings.json", argv)
@@ -169,7 +182,7 @@ def main(argv):
     mission_class = mission_settings.get("mission_class")
     mission = Mission.__dict__[mission_class](api, environment, mission_settings)
 
-    monitor = Monitor(mission, environment)
+    monitor = Monitor(api, mission, environment)
 
     arguments.check_help()
 
@@ -186,23 +199,23 @@ def main(argv):
     # Monitor mission
     monitor.setup()
 
-    if monitor.use_viewer():
-        viewer = Viewer_Vehicle(environment, monitor)
-        viewer.start()
-    else:
-        try:
-            while not api.exit:
-                if not monitor.step():
-                    break
+    try:
+        if monitor.use_viewer():
+            viewer = Viewer_Vehicle(environment, monitor)
+            viewer.start()
+        else:
+            ok = True
+            while ok:
+                ok = monitor.step()
+                if ok:
+                    time.sleep(monitor.get_delay())
+    except Exception, e:
+        # Handle exceptions gracefully by attempting to stop the program 
+        # ourselves. Unfortunately KeyboardInterrupts are not passed to us when 
+        # we run under pymavlink.
+        traceback.print_exc()
 
-                time.sleep(monitor.get_delay())
-        except Exception, e:
-            # Handle exceptions gracefully by attempting to stop the program 
-            # ourselves. Unfortunately KeyboardInterrupts are not passed to us 
-            # when we run under pymavlink.
-            traceback.print_exc()
-            plt.close()
-
+    monitor.stop()
     mission.return_to_launch()
 
 # The 'api start' command of pymavlink executes the script using the builtin 
