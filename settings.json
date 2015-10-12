@@ -3,6 +3,7 @@
         "name": "Distance sensor (simulator)",
         "settings": {
             "altitude_margin": 2.5,
+            "angle_margin": 5.0,
             "maximum_distance": 1000.0
         }
     },

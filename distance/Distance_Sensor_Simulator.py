@@ -18,6 +18,9 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         self.settings = arguments.get_settings("distance_sensor_simulator")
         # Margin in meters at which an object is still visible
         self.altitude_margin = self.settings.get("altitude_margin")
+        # Margin in degrees at which an object is still visible even though the 
+        # angle is slightly different
+        self.angle_margin = self.settings.get("angle_margin")
         # Maximum distance in meters that the sensor returns
         self.maximum_distance = self.settings.get("maximum_distance")
 
@@ -168,9 +171,9 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         v2 = [face[2].lat - p.lat, face[2].lon - p.lon, face[2].alt - p.alt]
         # Plane equation values
         cp = np.cross(v1, v2)
+        d = (cp[0] * p.lat + cp[1] * p.lon + cp[2] * p.alt)
         # Normalized plane coordinates
-        d = -(cp[0] * p.lat + cp[1] * p.lon + cp[2] * p.alt) / np.dot(cp, cp)
-        p_co = cp * d
+        p_co = cp * (d / np.dot(cp, cp))
 
         # 3D intersection point
         # Based on http://stackoverflow.com/a/18543221
@@ -183,32 +186,44 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         # zero, i.e. it looks straight ahead on the ground plane.
         p1 = np.array([p0[0] + 0.1 * m, p0[1] + 0.1, p0[2]])
         u = p1 - p0
-        dot = np.dot(p_co, u)
+        dot = np.dot(cp, u)
         if abs(dot) <= epsilon:
             # Dot product not good enough, usually caused by line and plane not 
             # actually intersecting (line parallel to plane)
             return (sys.float_info.max, None)
 
+        # Finish calculating the intersection point
         w = p0 - p_co
-        factor = -np.dot(p_co, w) / dot
+        factor = -np.dot(cp, w) / dot
         u = u * factor
         intersection = p0 + u
 
+        # Angle difference check
+        loc_point = Location(*intersection)
+        loc_angle = self.geometry.get_angle(location, loc_point)
+        diff = self.geometry.diff_angle(loc_angle, angle)
+        if abs(diff) >= self.angle_margin * math.pi/180:
+            # The difference between the initial angle that determines the ray 
+            # and the angle between the vehicle and the intersection point is 
+            # too large. This usually means that the point is on the line 
+            # extending in the other direction, which we need to ignore as 
+            # well.
+            return (sys.float_info.max, None)
+
         # Point inside 3D polygon check
         # http://geomalgorithms.com/a03-_inclusion.html#3D-Polygons
-        # Move the "least relevant coordinate" into the altitude value since 
-        # that's ignored for 2D point inside polygon and this creates the 
-        # largest projection of the plane.
-        ignore_index = np.argmax(np.absolute(p_co))
+        # Ignore the "least relevant coordinate" by moving the relevant 
+        # coordinates into lat and lon, since those are used by the 2D point 
+        # inside polygon algorithm, and this creates the largest projection of 
+        # the plane.
+        ignore_index = np.argmax(np.absolute(cp))
 
         ignores = itertools.repeat(ignore_index, len(face))
         projected_face = map(self.get_projected_location, face, ignores)
 
-        loc_point = Location(intersection[0], intersection[1], intersection[2])
         projected_loc = self.get_projected_location(loc_point, ignore_index)
         if self.point_inside_polygon(projected_loc, projected_face):
             d = self.geometry.get_distance_meters(location, loc_point)
-            print(d)
             return (d, loc_point)
 
         # The intersection point is not actually inside the polygon, but on the 
@@ -223,7 +238,7 @@ class Distance_Sensor_Simulator(Distance_Sensor):
             # toward the point.
             a2 = self.geometry.get_angle(location, obj['center'])
             diff = self.geometry.diff_angle(a2, angle)
-            if abs(diff) < 5.0 * math.pi/180:
+            if abs(diff) < self.angle_margin * math.pi/180:
                 d = self.geometry.get_distance_meters(location, obj['center'])
                 return d - obj['radius']
 
