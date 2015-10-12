@@ -151,7 +151,7 @@ class Distance_Sensor_Simulator(Distance_Sensor):
 
     def get_plane_distance(self, face, location, angle):
         if len(face) < 3:
-            print("Face incomplete")
+            # Face incomplete
             return (sys.float_info.max, None)
 
         epsilon = 0.0001
@@ -166,6 +166,7 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         # Vectors from point that define plane direction
         v1 = [face[1].lat - p.lat, face[1].lon - p.lon, face[1].alt - p.alt]
         v2 = [face[2].lat - p.lat, face[2].lon - p.lon, face[2].alt - p.alt]
+        # Plane equation values
         cp = np.cross(v1, v2)
         # Normalized plane coordinates
         d = -(cp[0] * p.lat + cp[1] * p.lon + cp[2] * p.alt) / np.dot(cp, cp)
@@ -180,11 +181,12 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         m = math.tan(angle)
         # Another point on the line. Assume for now that the vehicle's pitch is 
         # zero, i.e. it looks straight ahead on the ground plane.
-        p1 = np.array([p0[0] + 0.1, p0[1] + (p0[0] + 0.1) * m, p0[1]])
+        p1 = np.array([p0[0] + 0.1 * m, p0[1] + 0.1, p0[2]])
         u = p1 - p0
         dot = np.dot(p_co, u)
         if abs(dot) <= epsilon:
-            print("Dot product not good enough: {}".format(dot))
+            # Dot product not good enough, usually caused by line and plane not 
+            # actually intersecting (line parallel to plane)
             return (sys.float_info.max, None)
 
         w = p0 - p_co
@@ -206,8 +208,11 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         projected_loc = self.get_projected_location(loc_point, ignore_index)
         if self.point_inside_polygon(projected_loc, projected_face):
             d = self.geometry.get_distance_meters(location, loc_point)
-            return (d, None)
+            print(d)
+            return (d, loc_point)
 
+        # The intersection point is not actually inside the polygon, but on the 
+        # plane extending from it. Thus there is no intersection.
         return (sys.float_info.max, None)
 
     def get_circle_distance(self, obj, location, angle):
@@ -228,11 +233,15 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         if isinstance(obj, list):
             # List of faces.
             dists = []
+            edges = []
             for face in obj:
                 dist, edge = self.get_plane_distance(face, location, angle)
                 dists.append(dist)
+                edges.append(edge)
 
-            return (min(dists), None)
+            d_min = min(dists)
+            e_min = dists.index(d_min)
+            return (d_min, edges[e_min])
         elif isinstance(obj, tuple):
             # Single face with edges that are always perpendicular to our line 
             # of sight, from the ground up.
@@ -274,7 +283,7 @@ class Distance_Sensor_Simulator(Distance_Sensor):
             # 0 degrees when facing north rather than facing east.
             angle = self.geometry.bearing_to_angle(self.environment.get_yaw())
 
-        # Add the the fixed angle of the sensor itself.
+        # Add the fixed angle of the sensor itself.
         # Ensure angle is always in the range [0, 2pi).
         return (angle + self.angle*math.pi/180) % (2*math.pi)
     
@@ -297,4 +306,4 @@ class Distance_Sensor_Simulator(Distance_Sensor):
                 e0 = memory_map.get_xy_index(self.current_edge)
                 e1 = e0
 
-            plt.annotate("", e0, e1, arrowprops=options)
+            plt.annotate("D", e0, e1, arrowprops=options, horizontalalignment='center', verticalalignment='center')
