@@ -57,7 +57,7 @@ class Monitor(object):
         if isinstance(obj, tuple):
             return Polygon([self.memory_map.get_xy_index(loc) for loc in obj])
         elif 'center' in obj:
-            idx = memory_map.get_xy_index(obj['center'])
+            idx = self.memory_map.get_xy_index(obj['center'])
             return Circle(idx, radius=obj['radius'])
 
         return None
