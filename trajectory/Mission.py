@@ -2,10 +2,13 @@ import sys
 import time
 import math
 
+import numpy as np
+
 from droneapi.lib import VehicleMode, Location, Command
 from pymavlink import mavutil
 
 from ..geometry.Geometry import Geometry_Spherical
+from Memory_Map import Memory_Map
 from MockVehicle import MockVehicle
 
 class Mission(object):
@@ -25,6 +28,7 @@ class Mission(object):
 
         self.geometry = self.environment.get_geometry()
         self.settings = settings
+        self.memory_map = None
 
     def distance_to_current_waypoint(self):
         """
@@ -54,6 +58,12 @@ class Mission(object):
         self.closeness = self.settings.get("closeness")
         # Distance in meters above which we are uninterested in objects
         self.farness = self.settings.get("farness")
+
+        # Create a memory map for the vehicle to track where it has seen 
+        # objects. This can later be used to find the target object or to fly 
+        # around obstacles without colliding.
+        memory_size = self.get_space_size()
+        self.memory_map = Memory_Map(self.environment, memory_size)
 
     def display(self):
         """
@@ -141,7 +151,7 @@ class Mission(object):
         """
         pass
 
-    def check_sensor_distance(self, sensor_distance):
+    def check_sensor_distance(self, sensor_distance, angle):
         """
         Decide on doing something with the measured distance.
         If we're too close, we should take action by stopping and going somewhere else.
@@ -171,9 +181,12 @@ class Mission(object):
     def get_space_size(self):
         return self.size * 4
 
+    def get_memory_map(self):
+        return self.memory_map
+
     def set_speed(self, speed):
         """
-        Set the current speed of the vehicle during AUTO mode.
+        Set the current speed of the vehicle during AUTO or GUIDED mode.
         """
         if self.is_mock:
             self.vehicle.speed = speed
@@ -314,7 +327,7 @@ class Mission_Guided(Mission):
     def start(self):
         # Set mode to GUIDED. In fact the arming should already have done this, 
         # but it is good to do it here as well.
-        self.vehicle.mode = VehicleMode("AUTO")
+        self.vehicle.mode = VehicleMode("GUIDED")
         self.vehicle.flush()
 
 # Actual mission implementations

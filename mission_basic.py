@@ -23,7 +23,7 @@ from matplotlib.collections import PatchCollection
 sys.path.insert(0, os.getcwd())
 from __init__ import __package__
 from settings import Arguments
-from trajectory import Mission, Memory_Map, Environment, Environment_Simulator
+from trajectory import Mission, Environment, Environment_Simulator
 from trajectory.MockVehicle import MockAPI, MockVehicle
 from trajectory.Viewer import Viewer_Vehicle
 from geometry import Geometry
@@ -63,11 +63,7 @@ class Monitor(object):
         return None
 
     def setup(self):
-        # Create a memory map for the vehicle to track where it has seen 
-        # objects. This can later be used to find the target object or to fly 
-        # around obstacles without colliding.
-        memory_size = self.mission.get_space_size()
-        self.memory_map = Memory_Map(self.environment, memory_size)
+        self.memory_map = self.mission.get_memory_map()
 
         # "Cheat" to see 2d map of collision data
         patches = []
@@ -115,7 +111,7 @@ class Monitor(object):
             angle = sensor.get_angle()
             sensor_distance = sensor.get_distance()
 
-            if self.mission.check_sensor_distance(sensor_distance):
+            if self.mission.check_sensor_distance(sensor_distance, angle):
                 # Display the edge of the simulated object that is responsible 
                 # for the measured distance, and consequently the point itself. 
                 # This should be the closest "wall" in the angle's direction. 
