@@ -14,5 +14,13 @@
         "settings": {
             "baz": false
         }
+    },
+    "xbee_viewer": {
+        "name": "XBee viewer",
+        "settings": {
+            "size": 10,
+            "circle_radius": 3,
+            "number_of_sensors": 8
+        }
     }
 }

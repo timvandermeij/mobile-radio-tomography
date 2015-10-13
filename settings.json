@@ -29,7 +29,7 @@
         "name": "XBee base",
         "settings": {
             "number_of_sensors": 2,
-            "loop_delay": 0.1,
+            "loop_delay": 0.01,
             "baud_rate": 9600
         }
     },
@@ -58,8 +58,8 @@
             "port": "/dev/ttyUSB0",
             "sensors": [
                 "\\x00\\x13\\xa2\\x00@\\xe6n\\xbd",
-                "\\x00\\x13\\xa2\\x00@\\xe6n\\xb9",
-                "\\x00\\x13\\xa2\\x00@\\xe6o5"
+                "\\x00\\x13\\xa2\\x00@\\xe6o5",
+                "\\x00\\x13\\xa2\\x00@\\xe6n\\xb9"
             ]
         }
     },
@@ -67,7 +67,7 @@
         "name": "XBee TDMA scheduler",
         "parent": "xbee_base",
         "settings": {
-            "sweep_delay": 6
+            "sweep_delay": 1
         }
     },
     "xbee_viewer": {

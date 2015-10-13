@@ -1,6 +1,5 @@
 # TODO: Implement _get_location() by querying the flight controller.
-# TODO: Intermittent list index out of bounds exception when updating RSSI.
-# TODO: Unit testing.
+# TODO: Unit testing and documentation.
 
 import serial
 import json
@@ -31,7 +30,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._serial_connection = None
         self._sensor = None
         self._address = None
-        self._data = []
+        self._data = {}
 
     def activate(self):
         """
@@ -85,12 +84,15 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
         # Send the sweep data to the ground sensor and clear the list for the next round.
         ground_sensor_address = sensors[0].decode("string_escape")
-        for packet in self._data:
+        for frame_id, packet in self._data.iteritems():
+            if packet == None or packet["rssi"] == None:
+                continue
+
             self._sensor.send("tx", dest_addr_long=ground_sensor_address,
                               dest_addr="\xFF\xFE", frame_id="\x01",
                               data=json.dumps(packet))
 
-        self._data = []
+            self._data[frame_id] = None
 
     def _receive(self, packet):
         """
@@ -111,14 +113,18 @@ class XBee_Sensor_Physical(XBee_Sensor):
             payload["rssi"] = None
             payload.pop("from_id")
             payload.pop("timestamp")
-            self._data.append(payload)
+
+            # Generate a frame ID to be able to match this packet and the
+            # associated RSSI (DB command) request.
+            frame_id = chr(random.randint(1, 255))
+            self._data[frame_id] = payload
 
             # Request the RSSI value for the received packet.
-            self._sensor.send("at", command="DB")
+            self._sensor.send("at", command="DB", frame_id=frame_id)
         elif packet["id"] == "at_response":
             if packet["command"] == "DB":
-                # RSSI value has been received. Update the last received packet.
-                self._data[-1]["rssi"] = ord(packet["parameter"])
+                # RSSI value has been received. Update the original packet.
+                self._data[packet["frame_id"]]["rssi"] = ord(packet["parameter"])
             elif packet["command"] == "SH":
                 # Serial number (high) has been received.
                 if self._address == None:
