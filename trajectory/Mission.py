@@ -385,3 +385,34 @@ class Mission_Browse(Mission_Guided):
         # When we're standing still, we rotate the vehicle to measure distances 
         # to objects.
         self.yaw = (self.yaw + self.yaw_angle_step) % 360
+
+class Mission_Search(Mission_Browse):
+    def setup(self):
+        super(Mission_Search, self).setup()
+        self.moving = False
+        self.dists = np.zeros((360 / self.yaw_angle_step,))
+
+    def step(self):
+        if not self.moving:
+            super(Mission_Search, self).step()
+            if self.yaw == 0:
+                print(self.dists)
+                # Find safest "furthest" location (in one line) and move there
+                a = np.argmax(self.dists)
+                angle = a * self.yaw_angle_step * math.pi/180
+                yaw = self.geometry.angle_to_bearing(angle)
+                print(yaw * 180/math.pi, angle)
+                self.set_yaw(yaw * 180/math.pi, relative=False)
+                self.set_speed(self.speed)
+                self.moving = True
+                self.dists = np.zeros((360 / self.yaw_angle_step,))
+
+    def check_sensor_distance(self, sensor_distance, angle):
+        close = super(Mission_Search, self).check_sensor_distance(sensor_distance, angle)
+        if sensor_distance < self.farness:
+            angle_deg = angle * 180/math.pi
+            self.dists[int(angle_deg / self.yaw_angle_step)] = sensor_distance
+        if close:
+            self.moving = False
+
+        return close

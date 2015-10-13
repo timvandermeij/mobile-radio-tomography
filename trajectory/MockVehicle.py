@@ -133,6 +133,17 @@ class MockVehicle(object):
         a = self._geometry.get_angle(self._location, self._target_location)
         self.attitude._yaw = self._geometry.angle_to_bearing(a)
 
+    def _handle_speed(self, dist=0.0, dAlt=0.0):
+        a = self._geometry.bearing_to_angle(self.attitude._yaw)
+        print(self.attitude._yaw, a)
+        vNorth = math.sin(a) * self._speed
+        vEast = math.cos(a) * self._speed
+        if dist != 0.0 and dAlt != 0.0:
+            vAlt = dAlt / (dist/self._speed)
+        else:
+            vAlt = 0.0
+        return (vNorth, vEast, vAlt)
+
     def _update_location(self, altitude=None):
         if not self._takeoff:
             return
@@ -146,16 +157,13 @@ class MockVehicle(object):
         vAlt = 0.0
 
         if self._target_location is not None:
-            if self._speed != 0:
+            if self._speed != 0.0:
                 # Move to location with given `speed`
                 dist = self._geometry.get_distance_meters(self._location, self._target_location)
                 dAlt = self._target_location.alt - self._location.alt
-                if dist != 0:
-                    a = self._geometry.bearing_to_angle(self.attitude._yaw)
-                    vNorth = math.sin(a) * self._speed
-                    vEast = math.cos(a) * self._speed
-                    vAlt = dAlt / (dist/self._speed)
-                elif dAlt != 0:
+                if dist != 0.0:
+                    vNorth, vEast, vAlt = self._handle_speed(dAlt, dist)
+                elif dAlt != 0.0:
                     if dAlt / diff < self._speed:
                         vAlt = dAlt / diff
                     else:
@@ -169,9 +177,13 @@ class MockVehicle(object):
             cmd = self.commands[self.commands.next]
             self._parse_command(cmd)
         elif self._mode.name == "GUIDED":
-            vNorth = self._velocity[0]
-            vEast = self._velocity[1]
-            vAlt = -self._velocity[2]
+            if self._speed != 0.0:
+                vNorth, vEast, vAlt = self._handle_speed()
+                print(vNorth, vEast, vAlt)
+            else:
+                vNorth = self._velocity[0]
+                vEast = self._velocity[1]
+                vAlt = -self._velocity[2]
 
         north = vNorth * diff
         east = vEast * diff
@@ -194,6 +206,7 @@ class MockVehicle(object):
     def speed(self, value):
         self._update_location()
         self._speed = value
+        self._velocity = [0.0,0.0,0.0]
 
     @property
     def velocity(self):
@@ -205,6 +218,7 @@ class MockVehicle(object):
         # Update with old velocity before applying new one
         self._update_location()
         self._velocity = value
+        self._speed = 0.0
 
     @property
     def mode(self):
