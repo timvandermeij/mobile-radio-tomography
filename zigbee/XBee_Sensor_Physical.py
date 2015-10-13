@@ -100,7 +100,12 @@ class XBee_Sensor_Physical(XBee_Sensor):
         """
 
         if packet["id"] == "rx":
-            payload = json.loads(packet["rf_data"])
+            try:
+                payload = json.loads(packet["rf_data"])
+            except:
+                # The packet is malformed, so drop it.
+                return
+
             if self.id == 0:
                 print("> Ground station received {}".format(payload))
                 return
