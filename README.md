@@ -49,7 +49,7 @@ different installation procedures.
     * mock
 * ArduPilot for vehicle simulation. Download the latest code using:
 
-      $ git clone https://github.com/diydrones/ardupilot.git
+        $ git clone https://github.com/diydrones/ardupilot.git
 
   Then, add the following line to your `~/.bashrc`:
 
@@ -81,7 +81,7 @@ Vehicle mission
 
 The trajectory mission sets up an unmanned aerial vehicle (UAV) and directs it
 to move and rotate within its environment. The script supports various mission
-types and simulation modes. It can be run using the ArduPilot simulator using
+types and simulation modes. You can run it using the ArduPilot simulator using
 the following commands:
 
     $ sim vehicle.sh -v ArduCopter --map
@@ -94,14 +94,19 @@ The mission monitor has a map in memory that shows objects in the environment
 during simulation as well as detected points from a distance sensor. It also
 provides a 3D viewer of the simulated objects.
 
-We can also start the mission monitor without ArduPilot simulation using
+You can also start the mission monitor without ArduPilot simulation using
 `python2 mission_basic.py`. In this case, the vehicle is simulated on our own,
 and no overhead map is provided other than the memory map. The command allows
-changing settings from their defaults using arguments. We can provide a VRML
-scene file to retrieve simulated objects from, or change the geometry from
-a spherical coordinate system (`Geometry_Spherical`) to a flat meter-based
-coordinate system using `--geometry-class Geometry`. Many other options are
-available for simulating various setups.
+changing settings from their defaults using arguments. You can provide a VRML
+scene file to retrieve simulated objects from using the `--scenefile` option,
+change the geometry from a spherical coordinate system (`Geometry_Spherical`)
+to a flat meter-based coordinate system using `--geometry-class Geometry`, or
+set sensor positioning angles, for example `--sensors 0 90 -90`. Many other 
+options are available for simulating various missions and sensor setups, and
+the command `python2 mission_basic.py --help` provides a list of them. The most
+important setting might be the Mission class to use for calculating what
+trajectory to take. You can choose one of the classes in `trajectory/Mission.py`
+using `--mission-class <Mission_Name>`.
 
 XBee sensor (simulator)
 -----------------------
