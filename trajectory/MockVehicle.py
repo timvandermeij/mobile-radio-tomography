@@ -189,13 +189,17 @@ class MockVehicle(object):
         east = vEast * diff
         alt = vAlt * diff
 
-        self._location = self._geometry.get_location_meters(self._location, north, east, alt)
+        self.set_location(north, east, alt)
         self._update_time = new_time
 
     @property
     def location(self):
         self._update_location()
         return self._location
+
+    def set_location(self, north, east, alt):
+        l = self._geometry.get_location_meters(self._location, north, east, alt)
+        self._location = l
 
     @property
     def speed(self):

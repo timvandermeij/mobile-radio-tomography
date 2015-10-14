@@ -5,6 +5,8 @@ import pyglet
 from pyglet.window import key
 from pyglet.gl import *
 
+from MockVehicle import MockVehicle
+
 # Based on ideas from https://pyglet.googlecode.com/hg/examples/opengl.py and 
 # https://greendalecs.wordpress.com/2012/04/21/3d-programming-in-python-part-1/
 class Viewer(object):
@@ -70,7 +72,7 @@ class Viewer(object):
         self.ry = (self.ry + dt * self.oy) % 360
         self.rz = (self.rz + dt * self.oz) % 360
 
-        print("[{}, {}, {}]".format(-self.tx, -self.ty, self.tz))
+        print("[{}, {}, {}]".format(self.tx, self.ty, self.tz))
 
     def _draw_polygon(self, face):
         glBegin(GL_POLYGON)
@@ -117,6 +119,29 @@ class Viewer(object):
         return pyglet.event.EVENT_HANDLED
 
 class Viewer_Interactive(Viewer):
+    def __init__(self, environment):
+        super(Viewer_Interactive, self).__init__(environment)
+        self.vehicle = self.environment.get_vehicle()
+        if isinstance(self.vehicle, MockVehicle):
+            self.is_mock = True
+        else:
+            self.is_mock = False
+
+        self.sensors = self.environment.get_distance_sensors()
+
+    def update(self, dt):
+        super(Viewer_Interactive, self).update(dt)
+        if self.is_mock:
+            self.vehicle.set_location(self.mz, self.mx, self.my)
+            self.vehicle.attitude.yaw = self.ry * math.pi/180
+
+        i = 0
+        for sensor in self.sensors:
+            angle = sensor.get_angle()
+            sensor_distance = sensor.get_distance()
+            print("Sensor {} distance: {} m (angle {})".format(i, sensor_distance, angle))
+            i = i + 1
+
     def on_key_press(self, symbol, modifiers):
         if symbol == key.LEFT: # lon
             self.mx = -1.0
