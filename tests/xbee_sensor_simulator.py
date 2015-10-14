@@ -1,13 +1,15 @@
 import unittest
 import socket
 import time
+from mock import patch
 from ..settings import Arguments
 from ..zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from ..zigbee.XBee_Viewer import XBee_Viewer
 from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 
 class TestXBeeSensorSimulator(unittest.TestCase):
-    def setUp(self):
+    @patch("matplotlib.pyplot.show")
+    def setUp(self, mock_show):
         self.id = 1
         self.arguments = Arguments("settings.json", [])
         self.settings = self.arguments.get_settings("xbee_sensor_simulator")
