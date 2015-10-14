@@ -27,7 +27,7 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         # Tracking the relevant edge that the sensor detected
         self.current_edge = None
 
-    def point_inside_polygon(self, location, points):
+    def point_inside_polygon(self, location, points, alt=True):
         """
         Detect objectively whether the vehicle has flown into an object.
         """
@@ -35,9 +35,10 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         # points, then do not consider it to be inside the polygon. We could 
         # also perform interesting calculations here, but we won't have that 
         # many objects of differing altitude anyway.
-        avg_alt = float(sum([point.alt for point in points]))/len(points)
-        if avg_alt < location.alt - self.altitude_margin:
-            return False
+        if alt:
+            avg_alt = float(sum([point.alt for point in points]))/len(points)
+            if avg_alt < location.alt - self.altitude_margin:
+                return False
 
         edges = self.geometry.get_point_edges(points)
         inside = False
@@ -222,7 +223,7 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         projected_face = map(self.get_projected_location, face, ignores)
 
         projected_loc = self.get_projected_location(loc_point, ignore_index)
-        if self.point_inside_polygon(projected_loc, projected_face):
+        if self.point_inside_polygon(projected_loc, projected_face, alt=False):
             d = self.geometry.get_distance_meters(location, loc_point)
             return (d, loc_point)
 
