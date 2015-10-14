@@ -12,14 +12,16 @@ class XBee_TDMA_Scheduler(object):
 
         self.id = id
         self.timestamp = 0
+        self.number_of_sensors = self.settings.get("number_of_sensors")
+        self.sweep_delay = self.settings.get("sweep_delay")
 
     def get_next_timestamp(self):
         # Get the next timestamp for starting transmission of packets.
         if self.timestamp == 0:
-            self.timestamp = time.time() + ((self.id / self.settings.get("number_of_sensors")) *
-                             self.settings.get("sweep_delay"))
+            self.timestamp = time.time() + ((float(self.id) / self.number_of_sensors) *
+                             self.sweep_delay)
         else: 
-            self.timestamp += self.settings.get("sweep_delay")
+            self.timestamp += self.sweep_delay
         
         return round(self.timestamp)
 
@@ -28,14 +30,14 @@ class XBee_TDMA_Scheduler(object):
         # another sensor in the network. The transmission timestamp of this
         # sensor is the received transmission timestamp plus the number of
         # slots inbetween that sensor and this sensor.
-        slot_time = self.settings.get("sweep_delay") / self.settings.get("number_of_sensors")
-        from_sensor = int(packet["from"])
+        slot_time = float(self.sweep_delay) / self.number_of_sensors
+        from_sensor = int(packet["from_id"])
         timestamp = float(packet["timestamp"])
         if from_sensor < self.id:
             self.timestamp = timestamp + ((self.id - from_sensor) * slot_time)
         else:
             # Calculate how much time remains to complete the current round.
-            completed_round = (self.settings.get("number_of_sensors") - from_sensor + 1) * slot_time
+            completed_round = (self.number_of_sensors - from_sensor + 1) * slot_time
             self.timestamp = timestamp + completed_round + ((self.id - 1) * slot_time)
 
         return round(self.timestamp)

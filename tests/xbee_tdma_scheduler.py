@@ -1,6 +1,5 @@
 import time
 import unittest
-from random import randint
 from ..settings import Settings
 from ..zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 
@@ -9,6 +8,8 @@ class TestXBeeTDMAScheduler(unittest.TestCase):
         self.id = 2
         self.settings = Settings("settings.json", "xbee_tdma_scheduler")
         self.scheduler = XBee_TDMA_Scheduler(self.id, self.settings)
+        self.number_of_sensors = self.settings.get("number_of_sensors")
+        self.sweep_delay = self.settings.get("sweep_delay")
 
     def test_initialization(self):
         # The ID of the sensor must be set.
@@ -25,8 +26,8 @@ class TestXBeeTDMAScheduler(unittest.TestCase):
         # in the network. This formula assures that each sensor gets an equally
         # large time slot in the sweep.
         calculated = self.scheduler.get_next_timestamp()
-        correct = time.time() + ((self.id / self.settings.get("number_of_sensors")) *
-                  self.settings.get("sweep_delay"))
+        correct = time.time() + ((float(self.id) / self.number_of_sensors) *
+                  self.sweep_delay)
         self.assertEqual(calculated, round(correct))
 
         # Any subsequent calls to the get_next_timestamp() method should just
@@ -34,7 +35,7 @@ class TestXBeeTDMAScheduler(unittest.TestCase):
         # meantime by the synchronize() method) with the sweep delay to move
         # to the next sweep.
         calculated = self.scheduler.get_next_timestamp()
-        correct = correct + self.settings.get("sweep_delay")
+        correct = correct + self.sweep_delay
         self.assertEqual(calculated, round(correct))
 
     def test_synchronize(self):
@@ -47,15 +48,13 @@ class TestXBeeTDMAScheduler(unittest.TestCase):
         # for one slot, defined as the total sweep time divided by the number
         # of sensors in the network.
         packet = {
-            "from": 1,
-            "to": self.id,
-            "timestamp": time.time(),
-            "rssi": -randint(1,60)
+            "from_id": 1,
+            "timestamp": time.time()
         }
 
         calculated = self.scheduler.synchronize(packet)
-        slot_time = self.settings.get("sweep_delay") / self.settings.get("number_of_sensors")
-        correct = packet["timestamp"] + ((self.id - packet["from"]) * slot_time)
+        slot_time = float(self.sweep_delay) / self.number_of_sensors
+        correct = packet["timestamp"] + ((self.id - packet["from_id"]) * slot_time)
         self.assertEqual(calculated, round(correct))
 
         # If the received packet is from a sensor with a higher ID than the
@@ -69,14 +68,12 @@ class TestXBeeTDMAScheduler(unittest.TestCase):
         # We then need to add 2 - 1 = 1 slot for sensor 1 and then sensor 2 is
         # allowed to start.
         packet = {
-            "from": 6,
-            "to": self.id,
-            "timestamp": time.time(),
-            "rssi": -randint(1,60)
+            "from_id": 6,
+            "timestamp": time.time()
         }
 
         calculated = self.scheduler.synchronize(packet)
-        slot_time = self.settings.get("sweep_delay") / self.settings.get("number_of_sensors")
-        completed_round = (self.settings.get("number_of_sensors") - packet["from"] + 1) * slot_time
+        slot_time = float(self.sweep_delay) / self.number_of_sensors
+        completed_round = (self.number_of_sensors - packet["from_id"] + 1) * slot_time
         correct = packet["timestamp"] + completed_round + ((self.id - 1) * slot_time)
         self.assertEqual(calculated, round(correct))

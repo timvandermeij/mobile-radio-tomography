@@ -45,6 +45,11 @@ steps for each sensor in the network.
           with the XBee sensor intermittently not responding to calls.
 \end{itemize}
 
+It is important to note that exactly one sensor in the network must be a
+coordinator (with function set ZigBee Coordinator API) as that sensor takes
+care of initializing the network. Preferably the ground station is the coordinator
+of the network. Without a coordinator the network will not function!
+
 When all sensors are configured, we can update their settings.
 
 \begin{itemize}
