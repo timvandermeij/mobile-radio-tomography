@@ -107,7 +107,7 @@ have to be executed from the root folder using the following command:
 
     $ python2 -m unittest discover -s tests -p "*.py" -t ..
 
-The result of running all unit tests should be "OK" in the terminal.
+The result of running all unit tests should be "OK" in the terminal. This command is executed automatically by Travis CI for each pull request or push to a branch.
 
 License
 =======
