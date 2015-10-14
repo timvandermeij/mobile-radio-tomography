@@ -1,5 +1,3 @@
-# TODO: Implement _get_location() by querying the flight controller.
-
 import serial
 import json
 import time
