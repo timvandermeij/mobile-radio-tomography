@@ -1,5 +1,5 @@
 # TODO: Implement _get_location() by querying the flight controller.
-# TODO: Unit testing and documentation.
+# TODO: Unit testing.
 
 import serial
 import json
