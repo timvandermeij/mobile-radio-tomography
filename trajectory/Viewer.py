@@ -33,6 +33,10 @@ class Viewer(object):
         glColor3f(1, 0, 0)
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_CULL_FACE)
+        glEnable(GL_POINT_SPRITE)
+        glEnable(GL_POINT_SMOOTH)
+        glEnable(GL_BLEND)
+        glPointSize(50.0)
 
         self._reset_location()
         self._reset_movement()
@@ -74,7 +78,7 @@ class Viewer(object):
 
         print("[{}, {}, {}]".format(self.tx, self.ty, self.tz))
 
-    def _draw_polygon(self, face):
+    def _draw_polygon(self, face, i=-1, j=-1):
         glBegin(GL_POLYGON)
         for p in face:
             # We convert to GL standards here, where the second axis is the 
@@ -102,10 +106,12 @@ class Viewer(object):
         for obj in self.environment.get_objects():
             glColor3f(*self.colors[i])
             if isinstance(obj, list):
+                j = 0
                 for face in obj:
-                    self._draw_polygon(face)
+                    self._draw_polygon(face, i, j)
+                    j = j + 1
             elif isinstance(obj, tuple):
-                self._draw_polygon(obj)
+                self._draw_polygon(obj, i)
 
             i = i + 1
 
@@ -128,6 +134,34 @@ class Viewer_Interactive(Viewer):
             self.is_mock = False
 
         self.sensors = self.environment.get_distance_sensors()
+
+    def _draw_polygon(self, face, i=-1, j=-1):
+        if i != -1 and j != -1:
+            for sensor in self.sensors:
+                edge = sensor.get_current_edge()
+                if isinstance(edge, list) and edge[0] == i and edge[1] == j:
+                    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+                    break
+
+        super(Viewer_Interactive, self)._draw_polygon(face, i, j)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+
+    def on_draw(self):
+        super(Viewer_Interactive, self).on_draw()
+        glBegin(GL_POINTS)
+        glColor3f(1, 0, 0)
+        for sensor in self.sensors:
+            edge = sensor.get_current_edge()
+            point = None
+            if isinstance(edge, list):
+                point = edge[-1]
+            elif not isinstance(edge, tuple):
+                point = edge
+
+            if point is not None:
+                glVertex3f(point.lon, point.alt, point.lat)
+
+        glEnd()
 
     def update(self, dt):
         super(Viewer_Interactive, self).update(dt)

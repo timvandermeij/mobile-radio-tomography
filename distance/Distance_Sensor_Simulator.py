@@ -257,7 +257,7 @@ class Distance_Sensor_Simulator(Distance_Sensor):
 
             d_min = min(dists)
             e_min = dists.index(d_min)
-            return (d_min, edges[e_min])
+            return (d_min, [e_min, edges[e_min]])
         elif isinstance(obj, tuple):
             # Single face with edges that are always perpendicular to our line 
             # of sight, from the ground up.
@@ -282,11 +282,17 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         angle = self.get_angle(angle)
 
         distance = self.maximum_distance
+        i = 0
         for obj in self.environment.get_objects():
             dist, edge = self.get_obj_distance(obj, location, angle)
             if dist < distance:
                 distance = dist
-                self.current_edge = edge
+                if isinstance(edge, list):
+                    self.current_edge = [i] + edge
+                else:
+                    self.current_edge = edge
+
+            i = i + 1
 
         return distance
 
@@ -302,7 +308,10 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         # Add the fixed angle of the sensor itself.
         # Ensure angle is always in the range [0, 2pi).
         return (angle + self.angle*math.pi/180) % (2*math.pi)
-    
+
+    def get_current_edge(self):
+        return self.current_edge
+
     def draw_current_edge(self, plt, memory_map, color="red"):
         """
         Draw the edge that was detected during the previous distance sensor measurement, if any.
@@ -318,6 +327,9 @@ class Distance_Sensor_Simulator(Distance_Sensor):
             if isinstance(self.current_edge, tuple):
                 e0 = memory_map.get_xy_index(self.current_edge[0])
                 e1 = memory_map.get_xy_index(self.current_edge[1])
+            elif isinstance(self.current_edge, list):
+                e0 = memory_map.get_xy_index(self.current_edge[-1])
+                e1 = e0
             else:
                 e0 = memory_map.get_xy_index(self.current_edge)
                 e1 = e0
