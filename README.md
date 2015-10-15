@@ -41,7 +41,6 @@ different installation procedures.
     * mavproxy
     * droneapi
   * Environment simulation:
-    * OpenGLContext
     * PyVRML97
     * PyDispatcher
     * pyglet

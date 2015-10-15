@@ -1,6 +1,5 @@
 import numpy as np
-from OpenGLContext.loaders.loader import Loader
-from vrml.vrml97 import basenodes, nodetypes
+from vrml.vrml97 import basenodes, nodetypes, parser, parseprocessor
 from droneapi.lib import Location
 
 class VRMLLoader(object):
@@ -20,7 +19,13 @@ class VRMLLoader(object):
 
         self.translation = translation
 
-        self.scene = Loader.load(self.filename)
+        vrml_parser = parser.Parser(parser.grammar, "vrmlFile")
+        processor = parseprocessor.ParseProcessor(baseURI=self.filename)
+        with open(self.filename, 'r') as f:
+            data = f.read()
+            self.scene = vrml_parser.parse(data, processor=processor)[1][1]
+            print(self.scene)
+
         self.objects = None
 
     def get_objects(self):
