@@ -5,8 +5,10 @@ from ..settings import Arguments, Settings
 
 class XBee_Viewer(object):
     def __init__(self, settings):
-        self.points = []
-        self.arrows = []
+        """
+        Initialize the viewer. Note that this does not start the viewer yet.
+        """
+
         if isinstance(settings, Arguments):
             self.settings = settings.get_settings("xbee_viewer")
         elif isinstance(settings, Settings):
@@ -14,13 +16,18 @@ class XBee_Viewer(object):
         else:
             raise ValueError("'settings' must be an instance of Settings or Arguments")
 
+        self.points = []
+        self.arrows = []
         self.started = False
 
     def _start(self):
+        """
+        Start the viewer by configuring and showing the (correctly scaled) plot window.
+        """
+
         if self.started:
             return
 
-        # Initialize the viewer with a correctly scaled plot.
         self.started = True
         plt.xlim(0, self.settings.get("size"))
         plt.ylim(0, self.settings.get("size"))
@@ -29,14 +36,17 @@ class XBee_Viewer(object):
         plt.show()
 
     def draw_points(self):
+        """
+        Draw all points (representing the sensors in the network) in a circular shape.
+        The spacing between the points is equal.
+        """
+
         self._start()
 
-        # Draw a static point for each sensor in a circular shape. The
-        # spacing between the points is equal. We add an offset to display
-        # the circle in the middle of the plot.
+        # Add an offset to display the circle in the middle of the plot window.
         offset = self.settings.get("size") / 2
         
-        # Add the ground station separately
+        # Add the ground station separately.
         self.points.append((0,0))
         plt.plot(0, 0, linestyle="None", marker="o", color="black", markersize=10)
 
@@ -47,7 +57,10 @@ class XBee_Viewer(object):
             plt.plot(x, y, linestyle="None", marker="o", color="black", markersize=10)
 
     def draw_arrow(self, point_from, point_to, color="red"):
-        # Draw an arrow from a given point to another given point.
+        """
+        Draw an arrow from a given point to another given point.
+        """
+
         options = {
             "arrowstyle": "<-, head_width=1, head_length=1",
             "color": color,
@@ -57,10 +70,17 @@ class XBee_Viewer(object):
         self.arrows.append(arrow)
 
     def refresh(self):
+        """
+        Redraw the plot to make new arrows or points visible in the plot window.
+        """
+
         plt.draw()
 
     def clear_arrows(self):
-        # Remove all arrows from the plot.
+        """
+        Remove all arrows from the plot.
+        """
+
         for arrow in self.arrows:
             arrow.remove()
 
