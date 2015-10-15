@@ -7,8 +7,6 @@ from XBee_Sensor import XBee_Sensor
 from ..settings import Arguments, Settings
 
 class XBee_Sensor_Physical(XBee_Sensor):
-    STATUS_OK = "\x00"
-
     def __init__(self, sensor_id, settings, scheduler):
         """
         Initialize the sensor.
