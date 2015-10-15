@@ -20,7 +20,7 @@ class Viewer(object):
     def start(self):
         self._setup()
 
-        self.win = pyglet.window.Window()
+        self.win = pyglet.window.Window(resizable=True)
         self.win.push_handlers(self)
         # Log all possible events
         self.win.push_handlers(pyglet.window.event.WindowEventLogger())
