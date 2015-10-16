@@ -84,9 +84,12 @@ class Viewer(object):
             # We convert to GL standards here, where the second axis is the 
             # vertical axis. (lat,lon,alt) = (z,x,y) according to GL and we 
             # need to pass this function (x,y,z) coordinates, so cope with it.
-            # All other variables in this function then make sense in this 
-            # coordinate system.
-            glVertex3f(p.lon, p.alt, p.lat)
+            # Also, the z axis comes "out of the screen" (but only when 
+            # drawing, not when using screen transforms) rather than having the 
+            # latitude increase northward, so we have to flip the entire 
+            # perspective for the z value.
+            # See http://stackoverflow.com/a/12336360 for an overview.
+            glVertex3f(p.lon, p.alt, -p.lat)
         glEnd()
 
     def on_draw(self):
@@ -159,7 +162,7 @@ class Viewer_Interactive(Viewer):
                 point = edge
 
             if point is not None:
-                glVertex3f(point.lon, point.alt, point.lat)
+                glVertex3f(point.lon, point.alt, -point.lat)
 
         glEnd()
 
