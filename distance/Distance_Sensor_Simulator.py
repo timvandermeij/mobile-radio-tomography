@@ -170,37 +170,43 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         # Vectors from point that define plane direction
         v1 = [face[1].lat - p.lat, face[1].lon - p.lon, face[1].alt - p.alt]
         v2 = [face[2].lat - p.lat, face[2].lon - p.lon, face[2].alt - p.alt]
-        # Plane equation values
+        # Plane equation values. This is the normal vector of the plane.
+        # http://geomalgorithms.com/a04-_planes.html#Normal-Implicit-Equation
         cp = np.cross(v1, v2)
-        d = (cp[0] * p.lat + cp[1] * p.lon + cp[2] * p.alt)
-        # Normalized plane coordinates
-        p_co = cp * (d / np.dot(cp, cp))
+        d = -(cp[0] * p.lat + cp[1] * p.lon + cp[2] * p.alt)
 
         # 3D intersection point
         # Based on http://stackoverflow.com/a/18543221
 
         # Point at location
         p0 = np.array([location.lat, location.lon, location.alt])
-        # Slope of the line
-        m = math.tan(angle)
-        # Another point on the line. Assume for now that the vehicle's pitch is 
-        # zero, i.e. it looks straight ahead on the ground plane.
-        p1 = np.array([p0[0] + 0.1 * m, p0[1] + 0.1, p0[2]])
+        if (angle % math.pi) == math.pi/2.0:
+            p1 = np.array([p0[0] + epsilon, p0[1], p0[2]])
+        else:
+            # Slope of the line
+            m = math.tan(angle)
+            # Another point on the line. Assume for now that the vehicle's 
+            # pitch is zero, i.e. it looks straight ahead on the ground plane.
+            p1 = np.array([p0[0] + epsilon * m, p0[1] + epsilon, p0[2]])
+
         u = p1 - p0
-        dot = np.dot(cp, u)
-        if abs(dot) <= epsilon:
+        nu_dot = np.dot(cp, u)
+        if abs(nu_dot) <= epsilon:
             # Dot product not good enough, usually caused by line and plane not 
             # actually intersecting (line parallel to plane)
             return (sys.float_info.max, None)
 
         # Finish calculating the intersection point
-        w = p0 - p_co
-        factor = -np.dot(cp, w) / dot
+        # http://geomalgorithms.com/a05-_intersect-1.html#Line-Plane-Intersection
+        v0 = np.array([p.lat, p.lon, p.alt])
+        w = p0 - v0
+        nw_dot = np.dot(cp, w)
+        factor = -nw_dot / nu_dot
         u = u * factor
         intersection = p0 + u
 
         # Angle difference check
-        loc_point = Location(*intersection)
+        loc_point = Location(*intersection, is_relative=location.is_relative)
         loc_angle = self.geometry.get_angle(location, loc_point)
         diff = self.geometry.diff_angle(loc_angle, angle)
         if abs(diff) >= self.angle_margin * math.pi/180:
@@ -224,8 +230,8 @@ class Distance_Sensor_Simulator(Distance_Sensor):
 
         projected_loc = self.get_projected_location(loc_point, ignore_index)
         if self.point_inside_polygon(projected_loc, projected_face, alt=False):
-            d = self.geometry.get_distance_meters(location, loc_point)
-            return (d, loc_point)
+            dist = self.geometry.get_distance_meters(location, loc_point)
+            return (dist, loc_point)
 
         # The intersection point is not actually inside the polygon, but on the 
         # plane extending from it. Thus there is no intersection.
