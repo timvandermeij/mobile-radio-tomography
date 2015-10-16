@@ -24,7 +24,6 @@ class VRMLLoader(object):
         with open(self.filename, 'r') as f:
             data = f.read()
             self.scene = vrml_parser.parse(data, processor=processor)[1][1]
-            print(self.scene)
 
         self.objects = None
 
