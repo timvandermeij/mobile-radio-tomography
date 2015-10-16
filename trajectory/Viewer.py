@@ -69,14 +69,30 @@ class Viewer(object):
         self.mz = 0.0
 
     def update(self, dt):
-        self.tx = self.tx + self.mx
-        self.ty = self.ty + self.my
-        self.tz = self.tz + self.mz
+        self.tx = self.tx + dt * self.mx
+        self.ty = self.ty + dt * self.my
+        self.tz = self.tz + dt * self.mz
         self.rx = (self.rx + dt * self.ox) % 360
         self.ry = (self.ry + dt * self.oy) % 360
         self.rz = (self.rz + dt * self.oz) % 360
 
         print("[{}, {}, {}]".format(self.tx, self.ty, self.tz))
+
+    def _rotate(self, east, up, south, rotX, rotY, rotZ):
+        # Rotations for each axis in radians
+        x = rotX * math.pi/180
+        y = rotY * math.pi/180
+        z = rotZ * math.pi/180
+        rX = [east, up * math.cos(x) - south * math.sin(x), up * math.sin(x) + south * math.cos(x)]
+        rY = [rX[0] * math.cos(y) + rX[2] * math.sin(y), rX[1], rX[2] * math.cos(y) - rX[0] * math.sin(y)]
+        rZ = [rY[0] * math.cos(z) - rY[1] * math.sin(z), rY[0] * math.sin(z) + rY[1] * math.cos(z), rY[2]]
+        return rZ
+
+    def move(self, east, up, south):
+        dx, dy, dz = self._rotate(east, up, south, self.rx, self.ry, self.rz)
+        self.mx = dx
+        self.my = dy
+        self.mz = dz
 
     def _draw_polygon(self, face, i=-1, j=-1):
         glBegin(GL_POLYGON)
@@ -137,6 +153,8 @@ class Viewer_Interactive(Viewer):
             self.is_mock = False
 
         self.sensors = self.environment.get_distance_sensors()
+        self.camera_speed = 5.0 # meters/second
+        self.rotate_speed = 90.0 # degrees/second
 
     def _draw_polygon(self, face, i=-1, j=-1):
         if i != -1 and j != -1:
@@ -169,7 +187,7 @@ class Viewer_Interactive(Viewer):
     def update(self, dt):
         super(Viewer_Interactive, self).update(dt)
         if self.is_mock:
-            self.vehicle.set_location(self.mz, self.mx, self.my)
+            self.vehicle.set_location(dt * self.mz, dt * self.mx, dt * self.my)
             self.vehicle.attitude.yaw = self.ry * math.pi/180
 
         i = 0
@@ -180,18 +198,26 @@ class Viewer_Interactive(Viewer):
             i = i + 1
 
     def on_key_press(self, symbol, modifiers):
-        if symbol == key.LEFT: # lon
-            self.mx = -1.0
-        elif symbol == key.RIGHT: # lon
-            self.mx = 1.0
-        elif symbol == key.DOWN: # alt
-            self.my = -1.0
-        elif symbol == key.UP: # alt
-            self.my = 1.0
-        elif symbol == key.MINUS or symbol == key.NUM_SUBTRACT: # lat (out)
-            self.mz = -1.0
-        elif symbol == key.PLUS or symbol == key.NUM_ADD: # lat (into)
-            self.mz = 1.0
+        if symbol == key.LEFT or symbol == key.A: # lon, west
+            self.move(-self.camera_speed, 0.0, 0.0)
+        elif symbol == key.RIGHT or symbol == key.D: # lon, east
+            self.move(self.camera_speed, 0.0, 0.0)
+        elif symbol == key.DOWN: # alt, down
+            self.move(0.0, -self.camera_speed, 0.0)
+        elif symbol == key.UP: # alt, up
+            self.move(0.0, self.camera_speed, 0.0)
+        elif symbol == key.NUM_SUBTRACT or symbol == key.S: # lat, north
+            self.move(0.0, 0.0, -self.camera_speed)
+        elif symbol == key.NUM_ADD or symbol == key.W: # lat, south
+            self.move(0.0, 0.0, self.camera_speed)
+        elif symbol == key.I:
+            self.ox = -self.rotate_speed
+        elif symbol == key.K:
+            self.ox = self.rotate_speed
+        elif symbol == key.J:
+            self.oy = -self.rotate_speed
+        elif symbol == key.L:
+            self.oy = self.rotate_speed
         elif symbol == key.R:
             self._reset_location()
         elif symbol == key.Q:
@@ -200,6 +226,10 @@ class Viewer_Interactive(Viewer):
             return
 
         pyglet.clock.schedule(self.update)
+        # Ensure update function is called immediately and not have a large 
+        # time delta caused by delay for the first update.
+        pyglet.clock.get_default().update_time()
+        pyglet.clock.tick()
 
     def on_key_release(self, symbol, modifiers):
         self._reset_movement()
@@ -207,13 +237,21 @@ class Viewer_Interactive(Viewer):
 
     def on_mouse_scroll(self, x, y, dx, dy):
         # Move into/outward
-        self.mz = dy
+        self.move(0.0, 0.0, dy)
         self.update(1.0)
-        self.mz = 0.0
+        self._reset_movement()
+
+    def on_mouse_press(self, x, y, buttons, modifiers):
+        self.sx = self.rx
+        self.sy = self.ry
+        self.sz = 0.0
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
-        self.ry = self.ry + 360 * (dx / float(self.win.width))
-        self.rx = self.rx - 360 * (dy / float(self.win.height))
+        ny = (self.rotate_speed / self.win.width) * dy
+        nx = (self.rotate_speed / self.win.height) * dx
+        rx, ry, rz = self._rotate(ny, nx, ny, self.sx, self.sy, self.sz)
+        self.rx = self.rx - rx
+        self.ry = self.ry + ry
 
 class Viewer_Vehicle(Viewer):
     def __init__(self, environment, monitor):
