@@ -5,10 +5,13 @@ before_install:
   - export DISPLAY=:99.0
   - sh -e /etc/init.d/xvfb start
 install:
-  - pip install pyserial
   - pip install matplotlib
+  - pip install pyserial
   - pip install RPi.GPIO
   - pip install xbee
+  - pip install pymavlink
+  - pip install mavproxy
+  - pip install droneapi
 script: python -m unittest discover -s tests -p "*.py" -t ..
 notifications:
   email: false
