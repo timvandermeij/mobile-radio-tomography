@@ -168,8 +168,8 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         # Point on a plane
         p = face[0]
         # Vectors from point that define plane direction
-        v1 = [face[1].lat - p.lat, face[1].lon - p.lon, face[1].alt - p.alt]
-        v2 = [face[2].lat - p.lat, face[2].lon - p.lon, face[2].alt - p.alt]
+        v1 = self.geometry.diff_location_meters(p, face[1])
+        v2 = self.geometry.diff_location_meters(p, face[2])
         # Plane equation values. This is the normal vector of the plane.
         # http://geomalgorithms.com/a04-_planes.html#Normal-Implicit-Equation
         cp = np.cross(v1, v2)
@@ -181,15 +181,15 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         # Point at location
         p0 = np.array([location.lat, location.lon, location.alt])
         if (angle % math.pi) == math.pi/2.0:
-            p1 = np.array([p0[0] + epsilon, p0[1], p0[2]])
+            p1 = self.geometry.get_location_meters(location, epsilon, 0.0, 0.0)
         else:
             # Slope of the line
             m = math.tan(angle)
             # Another point on the line. Assume for now that the vehicle's 
             # pitch is zero, i.e. it looks straight ahead on the ground plane.
-            p1 = np.array([p0[0] + epsilon * m, p0[1] + epsilon, p0[2]])
+            p1 = self.geometry.get_location_meters(location, epsilon * m, epsilon, 0.0)
 
-        u = p1 - p0
+        u = np.array(self.geometry.diff_location_meters(location, p1)) # p1 - v1
         nu_dot = np.dot(cp, u)
         if abs(nu_dot) <= epsilon:
             # Dot product not good enough, usually caused by line and plane not 
@@ -198,15 +198,13 @@ class Distance_Sensor_Simulator(Distance_Sensor):
 
         # Finish calculating the intersection point
         # http://geomalgorithms.com/a05-_intersect-1.html#Line-Plane-Intersection
-        v0 = np.array([p.lat, p.lon, p.alt])
-        w = p0 - v0
+        w = self.geometry.diff_location_meters(p, location) # p0 - v0
         nw_dot = np.dot(cp, w)
         factor = -nw_dot / nu_dot
         u = u * factor
-        intersection = p0 + u
+        loc_point = self.geometry.get_location_meters(location, *u)
 
         # Angle difference check
-        loc_point = Location(*intersection, is_relative=location.is_relative)
         loc_angle = self.geometry.get_angle(location, loc_point)
         diff = self.geometry.diff_angle(loc_angle, angle)
         if abs(diff) >= self.angle_margin * math.pi/180:
