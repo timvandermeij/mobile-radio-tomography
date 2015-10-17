@@ -47,10 +47,17 @@
             "translation": [0,0,0]
         }
     },
-    "viewer_interactive": {
+    "environment_viewer": {
+        "name": "Environment 3D scene viewer",
+        "settings": {}
+    },
+    "environment_viewer_interactive": {
         "name": "Interactive environment 3D scene viewer",
+        "parent": "environment_viewer",
         "settings": {
-            "geometry_class": "Geometry"
+            "geometry_class": "Geometry",
+            "camera_speed": 5.0,
+            "rotate_speed": 90.0
         }
     },
     "xbee_configurator": {

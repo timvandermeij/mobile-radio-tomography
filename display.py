@@ -9,7 +9,7 @@ from trajectory.Viewer import Viewer_Interactive
 
 def main(argv):
     arguments = Arguments("settings.json", argv)
-    settings = arguments.get_settings("viewer_interactive")
+    settings = arguments.get_settings("environment_viewer_interactive")
 
     geometry_class = settings.get("geometry_class")
     geometry = Geometry.__dict__[geometry_class]()
@@ -17,7 +17,7 @@ def main(argv):
     vehicle = MockVehicle(geometry)
     environment = Environment_Simulator(vehicle, geometry, arguments)
 
-    viewer = Viewer_Interactive(environment)
+    viewer = Viewer_Interactive(environment, settings)
 
     arguments.check_help()
 

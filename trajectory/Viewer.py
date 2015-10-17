@@ -14,8 +14,15 @@ class Viewer(object):
     3D environment scene viewer
     """
 
-    def __init__(self, environment):
+    def __init__(self, environment, settings=None):
         self.environment = environment
+
+        if settings is None:
+            arguments = self.environment.get_arguments()
+            settings = arguments.get_settings("environment_viewer")
+
+        self.settings = settings
+
         self.geometry = self.environment.get_geometry()
         self.initial_location = self.environment.get_location()
 
@@ -167,8 +174,8 @@ class Viewer(object):
         return pyglet.event.EVENT_HANDLED
 
 class Viewer_Interactive(Viewer):
-    def __init__(self, environment):
-        super(Viewer_Interactive, self).__init__(environment)
+    def __init__(self, environment, settings):
+        super(Viewer_Interactive, self).__init__(environment, settings)
         self.vehicle = self.environment.get_vehicle()
         if isinstance(self.vehicle, MockVehicle):
             self.is_mock = True
@@ -176,8 +183,8 @@ class Viewer_Interactive(Viewer):
             self.is_mock = False
 
         self.sensors = self.environment.get_distance_sensors()
-        self.camera_speed = 5.0 # meters/second
-        self.rotate_speed = 90.0 # degrees/second
+        self.camera_speed = self.settings.get("camera_speed") # meters/second
+        self.rotate_speed = self.settings.get("rotate_speed") # degrees/second
 
     def _draw_polygon(self, face, i=-1, j=-1):
         if i != -1 and j != -1:
