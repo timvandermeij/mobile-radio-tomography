@@ -16,6 +16,8 @@ class Viewer(object):
 
     def __init__(self, environment):
         self.environment = environment
+        self.geometry = self.environment.get_geometry()
+        self.initial_location = self.environment.get_location()
 
     def start(self):
         self._setup()
@@ -41,10 +43,37 @@ class Viewer(object):
         self._reset_location()
         self._reset_movement()
 
-        # Colors
+        self._load_objects()
+
+    def _load_objects(self):
         self.colors = []
-        for i in range(len(self.environment.get_objects())):
+        self.objects = []
+        for obj in self.environment.get_objects():
             self.colors.append(np.random.rand(3))
+            if isinstance(obj, list):
+                faces = []
+                for face in obj:
+                    faces.append(self._load_polygon(face))
+
+                self.objects.append(faces)
+            elif isinstance(obj, tuple):
+                self.objects.append(self._load_polygon(obj))
+
+    def _load_polygon(self, points):
+        return tuple(self._convert_point(p) for p in points)
+
+    def _convert_point(self, p):
+        # Convert coordinates to meters
+        dlat, dlon, dalt = self.geometry.diff_location_meters(self.initial_location, p)
+        # We convert to GL standards here, where the second axis is the 
+        # vertical axis. (lat,lon,alt) = (z,x,y) according to GL and we need to 
+        # pass this function (x,y,z) coordinates, so cope with it.
+        # Also, the z axis comes "out of the screen" (but only when drawing, 
+        # not when using screen transforms) rather than having the latitude 
+        # increase northward, so we have to flip the entire perspective for the 
+        # z value.
+        # See http://stackoverflow.com/a/12336360 for an overview.
+        return [dlon, dalt, -dlat]
 
     def _reset_location(self):
         # Rotation
@@ -69,14 +98,16 @@ class Viewer(object):
         self.mz = 0.0
 
     def update(self, dt):
-        self.tx = self.tx + dt * self.mx
-        self.ty = self.ty + dt * self.my
-        self.tz = self.tz + dt * self.mz
+        location = self.environment.get_location(dt * self.mz, dt * self.mx, dt * self.my)
+        print("[{}, {}, {}]".format(location.lat, location.lon, location.alt))
+        self.tz, self.tx, self.ty = self.geometry.diff_location_meters(self.initial_location, location)
+
         self.rx = (self.rx + dt * self.ox) % 360
         self.ry = (self.ry + dt * self.oy) % 360
         self.rz = (self.rz + dt * self.oz) % 360
 
-        print("[{}, {}, {}]".format(self.tx, self.ty, self.tz))
+        print("[{}, {}, {}]".format(self.tz, self.tx, self.ty))
+        return location
 
     def _rotate(self, east, up, south, rotX, rotY, rotZ):
         # Rotations for each axis in radians
@@ -97,15 +128,7 @@ class Viewer(object):
     def _draw_polygon(self, face, i=-1, j=-1):
         glBegin(GL_POLYGON)
         for p in face:
-            # We convert to GL standards here, where the second axis is the 
-            # vertical axis. (lat,lon,alt) = (z,x,y) according to GL and we 
-            # need to pass this function (x,y,z) coordinates, so cope with it.
-            # Also, the z axis comes "out of the screen" (but only when 
-            # drawing, not when using screen transforms) rather than having the 
-            # latitude increase northward, so we have to flip the entire 
-            # perspective for the z value.
-            # See http://stackoverflow.com/a/12336360 for an overview.
-            glVertex3f(p.lon, p.alt, -p.lat)
+            glVertex3f(*p)
         glEnd()
 
     def on_draw(self):
@@ -122,7 +145,7 @@ class Viewer(object):
         glTranslatef(-self.tx, -self.ty, self.tz)
 
         i = 0
-        for obj in self.environment.get_objects():
+        for obj in self.objects:
             glColor3f(*self.colors[i])
             if isinstance(obj, list):
                 j = 0
@@ -180,14 +203,14 @@ class Viewer_Interactive(Viewer):
                 point = edge
 
             if point is not None:
-                glVertex3f(point.lon, point.alt, -point.lat)
+                glVertex3f(*self._convert_point(point))
 
         glEnd()
 
     def update(self, dt):
-        super(Viewer_Interactive, self).update(dt)
+        location = super(Viewer_Interactive, self).update(dt)
         if self.is_mock:
-            self.vehicle.set_location(dt * self.mz, dt * self.mx, dt * self.my)
+            self.vehicle.location = location
             self.vehicle.attitude.yaw = self.ry * math.pi/180
 
         i = 0
@@ -222,6 +245,7 @@ class Viewer_Interactive(Viewer):
             self._reset_location()
         elif symbol == key.Q:
             pyglet.app.exit()
+            return
         else:
             return
 
@@ -256,7 +280,6 @@ class Viewer_Interactive(Viewer):
 class Viewer_Vehicle(Viewer):
     def __init__(self, environment, monitor):
         super(Viewer_Vehicle, self).__init__(environment)
-        self.initial_location = self.environment.get_location()
         self.monitor = monitor
         pyglet.clock.schedule_interval(self.update, self.monitor.get_delay())
 
@@ -264,9 +287,5 @@ class Viewer_Vehicle(Viewer):
         if not self.monitor.step():
             pyglet.app.exit()
 
-        location = self.environment.get_location()
-        self.tx = location.lon - self.initial_location.lon
-        self.ty = location.alt
-        self.tz = location.lat - self.initial_location.lat
-
+        super(Viewer_Vehicle, self).update(0.0)
         self.ry = self.environment.get_yaw() * 180/math.pi

@@ -197,6 +197,11 @@ class MockVehicle(object):
         self._update_location()
         return self._location
 
+    @location.setter
+    def location(self, value):
+        # No need to update since this forces a new location
+        self._location = value
+
     def set_location(self, north, east, alt):
         l = self._geometry.get_location_meters(self._location, north, east, alt)
         self._location = l

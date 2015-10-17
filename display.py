@@ -2,14 +2,18 @@ import sys
 
 from __init__ import __package__
 from settings import Arguments
-from geometry.Geometry import Geometry
+from geometry import Geometry
 from trajectory import Environment_Simulator
 from trajectory.MockVehicle import MockVehicle
 from trajectory.Viewer import Viewer_Interactive
 
 def main(argv):
     arguments = Arguments("settings.json", argv)
-    geometry = Geometry()
+    settings = arguments.get_settings("viewer_interactive")
+
+    geometry_class = settings.get("geometry_class")
+    geometry = Geometry.__dict__[geometry_class]()
+
     vehicle = MockVehicle(geometry)
     environment = Environment_Simulator(vehicle, geometry, arguments)
 
