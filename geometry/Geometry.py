@@ -38,10 +38,6 @@ class Geometry(object):
         """
         return -(angle - math.pi/2.0) % (math.pi*2.0)
 
-    def _meters_to_coordinates(self, north, east):
-        # Since we just put everything in meters, we do not do anything here
-        return (north,east)
-
     def get_location_meters(self, original_location, north, east, alt=0):
         """
         Returns a Location object containing the latitude/longitude `north` and `east` (floating point) meters from the 
@@ -86,13 +82,20 @@ class Geometry(object):
         return (angle + 2*math.pi) % (2*math.pi)
 
     def diff_angle(self, a1, a2):
+        """
+        Given two angles `a1` and `a2`, get the angle difference between the two angles, ignoring periodicity.
+
+        The returned difference may have a sign, but it should not be regarded as an indication of which angle is smaller than the other. Use `abs` to ensure the difference is non-negative so that it can be compared to difference thresholds.
+        """
         # Based on http://stackoverflow.com/a/7869457 but for radial angles
         return (a1 - a2 + math.pi) % (2*math.pi) - math.pi
 
     def ray_intersects_segment(self, P, start, end):
-        '''
+        """
         Given a location point `P` and an edge of two endpoints `start` and `end` of a line segment, returns boolean whether the ray starting from the point eastward intersects the edge.
-        '''
+
+        This algorithm only checks 2D coordinate values.
+        """
         # Based on http://rosettacode.org/wiki/Ray-casting_algorithm#Python but 
         # cleaned up logic and clarified somewhat
         if start.lat > end.lat:
