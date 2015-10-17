@@ -137,6 +137,9 @@ class Monitor(object):
         if self.plt:
             if self.plot_polygons is not None:
                 self.ax.add_collection(self.plot_polygons)
+
+            self._plot_vehicle_angle()
+
             self.plt.imshow(self.memory_map.get_map(), origin='lower')
             self.plt.draw()
             self.plt.cla()
@@ -149,6 +152,25 @@ class Monitor(object):
         self.memory_map.set(vehicle_idx, 0)
 
         return True
+
+    def _plot_vehicle_angle(self):
+        options = {
+            "arrowstyle": "->",
+            "color": "red",
+            "linewidth": 2,
+            "alpha": 0.5
+        }
+        vehicle_idx = self.memory_map.get_xy_index(self.environment.get_location())
+        angle = self.environment.get_angle()
+        arrow_length = 10.0
+        if angle == 0.5*math.pi:
+            angle_idx = (vehicle_idx[0], vehicle_idx[1] + arrow_length)
+        elif angle == 1.5*math.pi:
+            angle_idx = (vehicle_idx[0], vehicle_idx[1] - arrow_length)
+        else:
+            angle_idx = (vehicle_idx[0] + math.cos(angle) * arrow_length, vehicle_idx[1] + math.sin(angle) * arrow_length)
+
+        self.plt.annotate("", angle_idx, vehicle_idx, arrowprops=options)
 
     def stop(self):
         if self.plt:

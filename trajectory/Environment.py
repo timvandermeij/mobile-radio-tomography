@@ -58,6 +58,9 @@ class Environment(object):
     def get_yaw(self):
         return self.vehicle.attitude.yaw
 
+    def get_angle(self):
+        return self.geometry.bearing_to_angle(self.get_yaw())
+
 class Environment_Simulator(Environment):
     """
     Simulated environment including objects around the vehicle and potentially the vehicle itself.
