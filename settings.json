@@ -36,6 +36,7 @@
         "name": "Mission monitoring",
         "settings": {
             "loop_delay": 0.5,
+            "plot": true,
             "viewer": true
         }
     },

@@ -64,13 +64,20 @@ class Monitor(object):
 
     def setup(self):
         self.memory_map = self.mission.get_memory_map()
+        self.plt = None
 
+        if self.settings.get("plot"):
+            # Setup memory map plot
+            self._setup_plot()
+
+    def _setup_plot(self):
         # "Cheat" to see 2d map of collision data
         patches = []
-        for obj in self.environment.get_objects():
-            patch = self._create_patch(obj)
-            if patch is not None:
-                patches.append(patch)
+        if isinstance(self.environment, Environment_Simulator):
+            for obj in self.environment.get_objects():
+                patch = self._create_patch(obj)
+                if patch is not None:
+                    patches.append(patch)
 
         p = None
         if len(patches) > 0:
@@ -79,15 +86,16 @@ class Monitor(object):
             p.set_array(np.array(patch_colors))
 
         self.plot_polygons = p
-        self.fig, self.ax = plt.subplots()
+        self.plt = plt
+        self.fig, self.ax = self.plt.subplots()
 
         # Set up interactive drawing of the memory map. This makes the 
         # dronekit/mavproxy fairly annoyed since it creates additional 
         # threads/windows. One might have to press Ctrl-C and normal keys to 
         # make the program stop.
-        plt.gca().set_aspect("equal", adjustable="box")
-        plt.ion()
-        plt.show()
+        self.plt.gca().set_aspect("equal", adjustable="box")
+        self.plt.ion()
+        self.plt.show()
 
     def step(self):
         """
@@ -118,18 +126,20 @@ class Monitor(object):
                 # This is again a "cheat" for checking if walls get visualized 
                 # correctly.
                 self.memory_map.handle_sensor(sensor_distance, angle)
-                sensor.draw_current_edge(plt, self.memory_map, self.colors[i % len(self.colors)])
+                if self.plt:
+                    sensor.draw_current_edge(self.plt, self.memory_map, self.colors[i % len(self.colors)])
 
                 print("=== [!] Distance to object: {} m (angle {}) ===".format(sensor_distance, angle))
 
             i = i + 1
 
         # Display the current memory map interactively.
-        if self.plot_polygons is not None:
-            self.ax.add_collection(self.plot_polygons)
-        plt.imshow(self.memory_map.get_map(), origin='lower')
-        plt.draw()
-        plt.cla()
+        if self.plt:
+            if self.plot_polygons is not None:
+                self.ax.add_collection(self.plot_polygons)
+            self.plt.imshow(self.memory_map.get_map(), origin='lower')
+            self.plt.draw()
+            self.plt.cla()
 
         if not self.mission.check_waypoint():
             return False
@@ -141,7 +151,9 @@ class Monitor(object):
         return True
 
     def stop(self):
-        plt.close()
+        if self.plt:
+            self.plt.close()
+            self.plt = None
 
 # Main mission program
 def main(argv):
