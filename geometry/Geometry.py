@@ -64,6 +64,15 @@ class Geometry(object):
         dlon = location2.lon - location1.lon
         return math.sqrt((dlat*dlat) + (dlon*dlon))
 
+    def diff_location_meters(self, location1, location2):
+        """
+        Get the distance in meters for each axis between two Location objects.
+        """
+        dlat = location2.lat - location1.lat
+        dlon = location2.lon - location1.lon
+        dalt = location2.alt - location1.alt
+        return (dlat, dlon, dalt)
+
     def get_angle(self, location1, location2):
         """
         Get the angle in radians for the segment between locations `location1` and `location2` compared to the cardinal directions.
@@ -117,6 +126,9 @@ class Geometry(object):
         return zip(points, list(points[1:]) + [points[0]])
 
 class Geometry_Spherical(Geometry):
+    # Radius of "spherical" earth
+    EARTH_RADIUS = 6378137.0
+
     def get_location_meters(self, original_location, north, east, alt=0):
         """
         Returns a Location object containing the latitude/longitude `north` and `east` (floating point) meters from the 
@@ -127,12 +139,9 @@ class Geometry_Spherical(Geometry):
         For more information see:
         http://gis.stackexchange.com/questions/2951/algorithm-for-offsetting-a-latitude-longitude-by-some-amount-of-meters
         """
-        # Radius of "spherical" earth
-        EARTH_RADIUS = 6378137.0
-
         # Coordinate offsets in radians
-        lat = north / EARTH_RADIUS
-        lon = east / (EARTH_RADIUS * math.cos(original_location.lat * math.pi/180))
+        lat = north / self.EARTH_RADIUS
+        lon = east / (self.EARTH_RADIUS * math.cos(original_location.lat * math.pi/180))
 
         # New position in decimal degrees
         newlat = original_location.lat + (lat * 180/math.pi)
@@ -150,3 +159,10 @@ class Geometry_Spherical(Geometry):
         """
         d = super(Geometry_Spherical, self).get_distance_meters(location1, location2)
         return d * 1.113195e5
+
+    def diff_location_meters(self, location1, location2):
+        dlat, dlon, dalt = super(Geometry_Spherical, self).diff_location_meters(location1, location2)
+
+        dlat = dlat * self.EARTH_RADIUS * math.pi/180
+        dlon = dlon * self.EARTH_RADIUS * math.cos(location1.lat * math.pi/180) * math.pi/180
+        return dlat, dlon, dalt

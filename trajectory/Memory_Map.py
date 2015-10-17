@@ -17,15 +17,17 @@ class Memory_Map(object):
         self.map = np.zeros((self.size, self.size))
         self.bl = self.environment.get_location(-self.size/2, -self.size/2)
         self.tr = self.environment.get_location(self.size/2, self.size/2)
+        dlat, dlon, dalt = self.geometry.diff_location_meters(self.bl, self.tr)
+        self.dlat = dlat
+        self.dlon = dlon
 
     def get_index(self, loc):
         """
         Convert location coordinates to indices for a two-dimensional matrix.
         """
-        dlat = self.tr.lat - self.bl.lat
-        dlon = self.tr.lon - self.bl.lon
-        y = ((loc.lat - self.bl.lat) / dlat) * self.size
-        x = ((loc.lon - self.bl.lon) / dlon) * self.size
+        dlat, dlon, dalt = self.geometry.diff_location_meters(self.bl, loc)
+        y = (dlat / self.dlat) * self.size
+        x = (dlon / self.dlon) * self.size
         return (y,x)
 
     def get_xy_index(self, loc):
