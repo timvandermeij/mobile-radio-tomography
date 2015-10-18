@@ -18,9 +18,9 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         self.settings = arguments.get_settings("distance_sensor_simulator")
         # Margin in meters at which an object is still visible
         self.altitude_margin = self.settings.get("altitude_margin")
-        # Margin in degrees at which an object is still visible even though the 
-        # angle is slightly different
-        self.angle_margin = self.settings.get("angle_margin")
+        # Margin (given in degrees, converted to radians) at which an object is 
+        # still visible even though the angle is slightly different
+        self.angle_margin = self.settings.get("angle_margin") * math.pi/180
         # Maximum distance in meters that the sensor returns
         self.maximum_distance = self.settings.get("maximum_distance")
 
@@ -206,8 +206,7 @@ class Distance_Sensor_Simulator(Distance_Sensor):
 
         # Angle difference check
         loc_angle = self.geometry.get_angle(location, loc_point)
-        diff = self.geometry.diff_angle(loc_angle, angle)
-        if abs(diff) >= self.angle_margin * math.pi/180:
+        if not self.geometry.check_angle(loc_angle, angle, self.angle_margin):
             # The difference between the initial angle that determines the ray 
             # and the angle between the vehicle and the intersection point is 
             # too large. This usually means that the point is on the line 
@@ -242,8 +241,7 @@ class Distance_Sensor_Simulator(Distance_Sensor):
             # so that it matches up with the yaw if the vehicle is pointing 
             # toward the point.
             a2 = self.geometry.get_angle(location, obj['center'])
-            diff = self.geometry.diff_angle(a2, angle)
-            if abs(diff) < self.angle_margin * math.pi/180:
+            if self.geometry.check_angle(a2, angle, self.angle_margin):
                 d = self.geometry.get_distance_meters(location, obj['center'])
                 return d - obj['radius']
 

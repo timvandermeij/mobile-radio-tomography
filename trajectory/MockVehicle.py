@@ -212,8 +212,7 @@ class MockVehicle(object):
         """
         current = getattr(self._attitude, field)
         target = getattr(self._target_attitude, field)
-        print(field, current, target, delta)
-        if abs(self._geometry.diff_angle(current, target)) < abs(delta):
+        if self._geometry.check_angle(current, target, abs(delta)):
             setattr(self._attitude, field, target)
             return True
         else:
@@ -229,7 +228,6 @@ class MockVehicle(object):
         if self._target_attitude == self._attitude:
             return True
 
-        print(diff)
         dPitch = self._attitude_speed[0] * math.pi/180 * diff
         dYaw = self._attitude_speed[1] * math.pi/180 * diff * self._yaw_direction
         dRoll = self._attitude_speed[2] * math.pi/180 * diff
@@ -292,7 +290,6 @@ class MockVehicle(object):
         elif self._mode.name == "GUIDED":
             if self._speed != 0.0:
                 vNorth, vEast, vAlt = self._handle_speed()
-                print(vNorth, vEast, vAlt)
             else:
                 vNorth = self._velocity[0]
                 vEast = self._velocity[1]

@@ -91,6 +91,15 @@ class Geometry(object):
         # Based on http://stackoverflow.com/a/7869457 but for radial angles
         return (a1 - a2 + math.pi) % (2*math.pi) - math.pi
 
+    def check_angle(self, a1, a2, diff=0.0):
+        """
+        Check whether two angles `a1` and `a2` are the same or differ only by an angle `diff`, in radians. The difference `diff` must be nonnegative.
+        """
+        if abs(self.diff_angle(a1, a2)) <= diff:
+            return True
+
+        return False
+
     def get_direction(self, a1, a2):
         """
         Given two angles `a1` and `a2`, get the direction in which the first angle should increase to reach the second angle the quickest.
