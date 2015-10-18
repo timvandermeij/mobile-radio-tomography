@@ -31,8 +31,6 @@ class Viewer(object):
 
         self.win = pyglet.window.Window(resizable=True)
         self.win.push_handlers(self)
-        # Log all possible events
-        self.win.push_handlers(pyglet.window.event.WindowEventLogger())
 
         pyglet.app.run()
 
@@ -106,14 +104,12 @@ class Viewer(object):
 
     def update(self, dt):
         location = self.environment.get_location(dt * self.mz, dt * self.mx, dt * self.my)
-        print("[{}, {}, {}]".format(location.lat, location.lon, location.alt))
         self.tz, self.tx, self.ty = self.geometry.diff_location_meters(self.initial_location, location)
 
         self.rx = (self.rx + dt * self.ox) % 360
         self.ry = (self.ry + dt * self.oy) % 360
         self.rz = (self.rz + dt * self.oz) % 360
 
-        print("[{}, {}, {}]".format(self.tz, self.tx, self.ty))
         return location
 
     def _rotate(self, east, up, south, rotX, rotY, rotZ):

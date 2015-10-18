@@ -7,16 +7,19 @@ class Memory_Map(object):
     """
 
     def __init__(self, environment, memory_size):
-        # The `bl` and `tr` are the first and last points that fit in the 
-        # matrix in both dimensions, respectively. The bounds are based off 
-        # from the current vehicle location. The `memory_size` is the number of 
-        # entries per dimension.
         self.environment = environment
         self.geometry = self.environment.get_geometry()
+
+        # The number of entries per dimension
         self.size = memory_size
         self.map = np.zeros((self.size, self.size))
+
+        # The `bl` and `tr` are the first and last points that fit in the 
+        # matrix in both dimensions, respectively. The bounds are based off 
+        # from the current vehicle location.
         self.bl = self.environment.get_location(-self.size/2, -self.size/2)
         self.tr = self.environment.get_location(self.size/2, self.size/2)
+
         dlat, dlon, dalt = self.geometry.diff_location_meters(self.bl, self.tr)
         self.dlat = dlat
         self.dlon = dlon
@@ -65,8 +68,6 @@ class Memory_Map(object):
         dx = math.cos(angle) * sensor_distance
         loc = self.environment.get_location(dy, dx)
         idx = self.get_index(loc)
-
-        print("Estimated location: {}, {} idx={}".format(loc.lat, loc.lon, idx))
 
         # Place point location in the memory map.
         try:

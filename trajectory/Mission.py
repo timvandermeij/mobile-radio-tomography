@@ -131,7 +131,6 @@ class Mission(object):
         # execute immediately).
         altitude_undershoot = self.settings.get("altitude_undershoot")
         while not self.api.exit:
-            # TODO: Check sensors here already?
             print(" Altitude: {} m".format(self.vehicle.location.alt))
             # Just below target, in case of undershoot.
             if self.vehicle.location.alt >= self.altitude * altitude_undershoot:
@@ -386,8 +385,7 @@ class Mission_Browse(Mission_Guided):
         self.yaw_angle_step = 10
 
     def step(self):
-        # We stand still and change the angle to look around. TODO: Make use of 
-        # this when we're at a point to look around.
+        # We stand still and change the angle to look around.
         self.send_global_velocity(0,0,0)
         self.vehicle.flush()
         self.set_yaw(self.yaw, relative=False, direction=1)
