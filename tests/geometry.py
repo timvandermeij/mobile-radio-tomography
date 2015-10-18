@@ -58,6 +58,10 @@ class TestGeometry(unittest.TestCase):
         self.assertEqual(self.geometry.diff_angle(math.pi, 3*math.pi), 0.0)
         self.assertEqual(abs(self.geometry.diff_angle(-math.pi/2, math.pi/2)), math.pi)
 
+    def test_get_direction(self):
+        self.assertEqual(self.geometry.get_direction(0.0, math.pi/2), -1)
+        self.assertEqual(self.geometry.get_direction(-math.pi/2, math.pi), 1)
+
 class TestGeometry_Spherical(TestGeometry):
     def setUp(self):
         super(TestGeometry_Spherical, self).setUp()

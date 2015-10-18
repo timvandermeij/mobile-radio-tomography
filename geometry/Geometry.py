@@ -95,7 +95,7 @@ class Geometry(object):
         """
         Given two angles `a1` and `a2`, get the direction in which the first angle should increase to reach the second angle the quickest.
 
-        Returns `1` if clockwise rotation brings `a1` to `a2` in less than 180 degrees, `-1` if counterclockwise rotation brings `a1` to `a2` in the same fashion, or `0` if the angles are the same.
+        Returns `1` if clockwise rotation brings `a1` to `a2` in less than 180 degrees or `-1` if counterclockwise rotation brings `a1` to `a2` in the same fashion. This function never returns `0`.
         """
         diff = self.diff_angle(a1, a2)
         return int(math.copysign(1, diff))
