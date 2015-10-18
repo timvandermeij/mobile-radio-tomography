@@ -85,10 +85,20 @@ class Geometry(object):
         """
         Given two angles `a1` and `a2`, get the angle difference between the two angles, ignoring periodicity.
 
-        The returned difference may have a sign, but it should not be regarded as an indication of which angle is smaller than the other. Use `abs` to ensure the difference is non-negative so that it can be compared to difference thresholds.
+        The returned difference may have a sign. The sign is negative if the second angle is closest to the first angle when increasing from the first angle counterclockwise. The sign is positive if the second angle is clockwise closest to the first angle.
+        The sign should therefore not be regarded as an indication of which angle is smaller than the other. Use `abs` to ensure the difference is non-negative so that it can be compared to difference thresholds.
         """
         # Based on http://stackoverflow.com/a/7869457 but for radial angles
         return (a1 - a2 + math.pi) % (2*math.pi) - math.pi
+
+    def get_direction(self, a1, a2):
+        """
+        Given two angles `a1` and `a2`, get the direction in which the first angle should increase to reach the second angle the quickest.
+
+        Returns `1` if clockwise rotation brings `a1` to `a2` in less than 180 degrees, `-1` if counterclockwise rotation brings `a1` to `a2` in the same fashion, or `0` if the angles are the same.
+        """
+        diff = self.diff_angle(a1, a2)
+        return int(math.copysign(1, diff))
 
     def ray_intersects_segment(self, P, start, end):
         """

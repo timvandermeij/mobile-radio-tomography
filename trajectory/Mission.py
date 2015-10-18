@@ -233,21 +233,34 @@ class Mission(object):
         self.vehicle.send_mavlink(msg)
         self.vehicle.flush()
 
-    def set_yaw(self, heading, relative=False):
+    def set_yaw(self, heading, relative=False, direction=0):
         """
-        Set the bearing `heading` of the vehicle in degrees. This becomes the yaw of the vehicle (the direction in which it is facing).
+        Set the bearing `heading` of the vehicle in degrees. This becomes the yaw of the vehicle (the direction in which it is facing). The `heading` is a bearing, meaning that north is zero degrees and increasing counterclockwise.
 
         This command works in GUIDED mode and only works after a velocity command has been issued.
         If `relative` is false, `heading` is the number of degrees off from northward direction, clockwise.
         If `relative` is true, the `heading` is still given as a bearing, but respective to the vehicle's current yaw.
+        The `direction` gives the direction in which we should rotate: 1 is clockwise and -1 is counter. If `direction is 0, then use the direction in which we reach the requested heading the quickest.
         """
+
+        if direction == 0:
+            yaw = self.vehicle.attitude.yaw
+            if relative:
+                new_yaw = yaw + heading * math.pi/180
+            else:
+                new_yaw = heading * math.pi/180
+
+            # -1 because the yaw is given as a bearing that increases clockwise 
+            # while geometry works with angles that increase counterclockwise.
+            direction = -1 * self.geometry.get_direction(yaw, new_yaw)
 
         if self.is_mock:
             heading = heading * math.pi/180
             if relative:
-                self.vehicle.attitude.yaw = self.vehicle.attitude.yaw + heading
+                self.vehicle.set_target_attitude(yaw=self.vehicle.attitude.yaw + heading, yaw_direction=direction)
             else:
-                self.vehicle.attitude.yaw = heading
+                self.vehicle.set_target_attitude(yaw=heading, yaw_direction=direction)
+
             return
 
         if relative:
@@ -262,7 +275,7 @@ class Mission(object):
             0, # confirmation
             heading,     # param 1, yaw in degrees
             1,           # param 2, yaw speed deg/s (ignored)
-            1,           # param 3, direction -1 ccw, 1 cw
+            direction,   # param 3, direction -1 ccw, 1 cw
             is_relative, # param 4, relative offset 1, absolute angle 0
             0, 0, 0      # param 5 ~ 7 not used
         )
@@ -377,7 +390,7 @@ class Mission_Browse(Mission_Guided):
         # this when we're at a point to look around.
         self.send_global_velocity(0,0,0)
         self.vehicle.flush()
-        self.set_yaw(self.yaw, relative=False)
+        self.set_yaw(self.yaw, relative=False, direction=1)
         print("Velocity: {} m/s".format(self.vehicle.velocity))
         print("Altitude: {} m".format(self.vehicle.location.alt))
         print("Yaw: {} Expected: {}".format(self.vehicle.attitude.yaw*180/math.pi, self.yaw))
