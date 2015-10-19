@@ -134,6 +134,9 @@ class Viewer(object):
             glVertex3f(*p)
         glEnd()
 
+    def on_expose(self):
+        pass
+
     def on_draw(self):
         # Clear buffers
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
