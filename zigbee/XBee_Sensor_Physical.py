@@ -108,7 +108,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
         Receive and process a received packet from another sensor in the network.
         """
 
-        if packet["id"] == "rx":
+        if packet["id"] == "rx" or packet["id"] == "rx_explicit":
             try:
                 payload = json.loads(packet["rf_data"])
             except:

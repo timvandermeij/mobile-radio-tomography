@@ -30,7 +30,7 @@
         "settings": {
             "number_of_sensors": 2,
             "loop_delay": 0.01,
-            "baud_rate": 9600
+            "baud_rate": 57600
         }
     },
     "xbee_configurator": {
