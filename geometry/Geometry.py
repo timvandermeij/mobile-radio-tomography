@@ -69,6 +69,15 @@ class Geometry(object):
         dalt = location2.alt - location1.alt
         return (dlat, dlon, dalt)
 
+    def get_location_angle(self, location, distance, angle, pitch=0):
+        """
+        Get a location that is `distance` meters away from the given `location` and has an `angle` in vertical plane and `pitch` in horizontal plane compared to the `location`, both in radians.
+        """
+        dlat = math.sin(angle) * distance
+        dlon = math.cos(angle) * distance
+        dalt = math.sin(pitch) * distance
+        return self.get_location_meters(location, dlat, dlon, dalt)
+
     def get_angle(self, location1, location2):
         """
         Get the angle in radians for the segment between locations `location1` and `location2` compared to the cardinal directions.

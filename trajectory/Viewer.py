@@ -40,10 +40,8 @@ class Viewer(object):
         glColor3f(1, 0, 0)
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_CULL_FACE)
-        glEnable(GL_POINT_SPRITE)
         glEnable(GL_POINT_SMOOTH)
         glEnable(GL_BLEND)
-        glPointSize(50.0)
 
         self._reset_location()
         self._reset_movement()
@@ -51,6 +49,7 @@ class Viewer(object):
         self._load_objects()
 
     def _load_objects(self):
+        self.points = []
         self.colors = []
         self.objects = []
         for obj in self.environment.get_objects():
@@ -134,6 +133,9 @@ class Viewer(object):
             glVertex3f(*p)
         glEnd()
 
+    def add_point(self, point):
+        self.points.append(self._convert_point(point))
+
     def on_expose(self):
         pass
 
@@ -162,6 +164,12 @@ class Viewer(object):
                 self._draw_polygon(obj, i)
 
             i = i + 1
+
+        glBegin(GL_POINTS)
+        glColor3f(1, 0, 0)
+        for point in self.points:
+            glVertex3f(*point)
+        glEnd()
 
     def on_resize(self, width, height):
         # Override the default on_resize handler to create a 3D projection
@@ -198,33 +206,19 @@ class Viewer_Interactive(Viewer):
         super(Viewer_Interactive, self)._draw_polygon(face, i, j)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 
-    def on_draw(self):
-        super(Viewer_Interactive, self).on_draw()
-        glBegin(GL_POINTS)
-        glColor3f(1, 0, 0)
-        for sensor in self.sensors:
-            edge = sensor.get_current_edge()
-            point = None
-            if isinstance(edge, list):
-                point = edge[-1]
-            elif not isinstance(edge, tuple):
-                point = edge
-
-            if point is not None:
-                glVertex3f(*self._convert_point(point))
-
-        glEnd()
-
     def update(self, dt):
         location = super(Viewer_Interactive, self).update(dt)
         if self.is_mock:
             self.vehicle.location = location
             self.vehicle.attitude.yaw = self.ry * math.pi/180
 
+        self.points = []
         i = 0
         for sensor in self.sensors:
             angle = sensor.get_angle()
             sensor_distance = sensor.get_distance()
+            loc = self.geometry.get_location_angle(location, sensor_distance, angle)
+            self.add_point(loc)
             print("Sensor {} distance: {} m (angle {})".format(i, sensor_distance, angle))
             i = i + 1
 
@@ -292,7 +286,7 @@ class Viewer_Vehicle(Viewer):
         pyglet.clock.schedule_interval(self.update, self.monitor.get_delay())
 
     def update(self, dt):
-        if not self.monitor.step():
+        if not self.monitor.step(self.add_point):
             pyglet.app.exit()
 
         super(Viewer_Vehicle, self).update(0.0)

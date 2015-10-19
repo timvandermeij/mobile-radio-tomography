@@ -62,11 +62,13 @@ class Memory_Map(object):
         return self.map
 
     def handle_sensor(self, sensor_distance, angle):
+        """
+        Given a distance sensor's measured distance `sensor_distance` and its current angle `angle`, add the detected point to the memory map.
+        Returns the calculated location of the detected point.
+        """
         # Estimate the location of the point based on the distance from the 
         # distance sensor as well as our own angle.
-        dy = math.sin(angle) * sensor_distance
-        dx = math.cos(angle) * sensor_distance
-        loc = self.environment.get_location(dy, dx)
+        loc = self.geometry.get_location_angle(self.environment.get_location(), sensor_distance, angle)
         idx = self.get_index(loc)
 
         # Place point location in the memory map.
@@ -74,3 +76,5 @@ class Memory_Map(object):
             self.set(idx, 1)
         except KeyError:
             pass
+
+        return loc

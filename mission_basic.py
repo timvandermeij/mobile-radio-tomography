@@ -97,9 +97,11 @@ class Monitor(object):
         self.plt.ion()
         self.plt.show()
 
-    def step(self):
+    def step(self, add_point=None):
         """
         Perform one step of a monitoring loop.
+
+        `add_point` can be a callback function that accepts a Location object for a detected point from the distance sensors.
 
         Returns `Fase` if the loop should be halted.
         """
@@ -120,13 +122,15 @@ class Monitor(object):
             sensor_distance = sensor.get_distance()
 
             if self.mission.check_sensor_distance(sensor_distance, angle):
-                # Display the edge of the simulated object that is responsible 
-                # for the measured distance, and consequently the point itself. 
-                # This should be the closest "wall" in the angle's direction. 
-                # This is again a "cheat" for checking if walls get visualized 
-                # correctly.
-                self.memory_map.handle_sensor(sensor_distance, angle)
+                location = self.memory_map.handle_sensor(sensor_distance, angle)
+                if add_point is not None:
+                    add_point(location)
                 if self.plt:
+                    # Display the edge of the simulated object that is 
+                    # responsible for the measured distance, and consequently 
+                    # the point itself. This should be the closest "wall" in 
+                    # the angle's direction. This is again a "cheat" for 
+                    # checking if walls get visualized correctly.
                     sensor.draw_current_edge(self.plt, self.memory_map, self.colors[i % len(self.colors)])
 
                 print("=== [!] Distance to object: {} m (angle {}) ===".format(sensor_distance, angle))
