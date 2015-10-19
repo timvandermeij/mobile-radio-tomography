@@ -104,7 +104,7 @@ over.
           {\tt 10.42.0.10} and the second Raspberry Pi has IP address {\tt 
           10.42.0.11}, and so on.
     \item Unmount the mounts using {\tt umount boot root}. Finally, run {\tt 
-          rm -rf ../\emph{pi\_dir}} to remove the temporary directory.
+          rm -rf~../\emph{pi\_dir}} to remove the temporary directory.
     \item Insert the micro SD card into the Raspberry Pi device. Connect an 
           ethernet cable from the Raspberry Pi to a laptop and then power the 
           Raspberry Pi using a micro USB charger (in that order, as the 
@@ -121,7 +121,7 @@ over.
           password ``alarm''.
     \item Run {\tt su} to become the root superuser. Use the password ``root''.
     \item Edit {\tt /etc/ssh/sshd\_config} and set {\tt PermitRootLogin} to the 
-          value {\tt yes} to allow root login from SSH.
+          value {\tt yes} to allow root login from SSH\@.
     \item Run {\tt systemctl disable dhcpcd@eth0.service} and {\tt systemctl 
           enable network.service}.
     \item Edit {\tt /boot/cmdline.txt} to remove the recently added IP part. 
@@ -157,6 +157,9 @@ over.
     \item Run {\tt pacman -S screen} to use {\tt screen} for running Python
           scripts.
     \item Update the Raspberry Pi frequently using {\tt pacman -Syu}.
+    \item Give the {\tt alarm} user access to USB using
+          {\tt usermod -aG uucp alarm}. After that, reboot the device using
+          {\tt reboot}.
 \end{itemize}
 
 \section{Distance sensor configuration steps}
@@ -177,10 +180,29 @@ over.
     \item Run {\tt pip2 install rpi.gpio} (still as root).
     \item Run {\tt su alarm} and place the file {\tt raspberry-pi/vimrc} in
           {\tt $\sim$/.vimrc}.
-    \item Copy the file {\tt distance\_sensor.py} to the device: \\\\
-          {\tt scp distance\_sensor.py alarm@10.42.0.*:$\sim$/distance\_sensor.py}.
-    \item Run the distance sensor script with {\tt sudo python2 distance\_sensor.py}
+    \item Run the distance sensor script with {\tt python2 distance\_sensor\_physical.py}
           and distance measurements should be displayed continuously.
+\end{itemize}
+
+\section{Autostart configuration steps}
+After booting the Raspberry Pi we immediately want to run the physical XBee
+sensor code instead of starting the script manually using an ethernet cable
+every time. To maintain control over the process we wish to run the process
+in a detached screen. To achieve all this, the following actions have to be
+performed:
+
+\begin{itemize}
+    \item Make sure that the repository is cloned in
+          {\tt /home/alarm/drone-tomography}. If not, edit \\
+          {\tt raspberry-pi/drone-tomography.service} to set the correct path.
+    \item Become root: {\tt su}.
+    \item Place the file {\tt raspberry-pi/drone-tomography.service} in
+          {\tt /etc/systemd/system}.
+    \item Run {\tt systemctl enable drone-tomography.service}.
+    \item Reboot the device: {\tt reboot}. After rebooting, the physical
+          XBee sensor should be running. Verify this by checking if the LEDs on
+          the XBee sensor are blinking and if running {\tt screen -r sensor}
+          opens the detached screen.
 \end{itemize}
 
 \section{References}

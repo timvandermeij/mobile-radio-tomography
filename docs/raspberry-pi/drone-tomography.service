@@ -1,0 +1,11 @@
+[Unit]
+Description=Drone tomography
+
+[Service]
+Type=forking
+User=alarm
+ExecStart=/usr/bin/screen -dmS sensor /home/alarm/drone-tomography/raspberry-pi-start.sh
+ExecStop=/usr/bin/screen -S sensor -X quit
+
+[Install]
+WantedBy=multi-user.target
