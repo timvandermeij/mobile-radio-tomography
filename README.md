@@ -40,13 +40,14 @@ code. Open a terminal and run the following commands.
 Running the tools
 =================
 
-Now that we have a copy of the software, we can run the tools.
+Now that we have a copy of the software, we can run the tools. Use `sudo` if
+your user is not part of the `dialout` or `uucp` group.
 
 XBee configurator
 -----------------
 
 The XBee configurator is used to quickly prepare all XBee chips in the
-network. Start the configurator with `sudo python2 xbee_configurator.py` to
+network. Start the configurator with `python2 xbee_configurator.py` to
 get started. You might need to adjust the settings for the `xbee_configurator`
 component in `settings.json`, for example to set the right port if the
 default port is not correct. After starting the tool, the instructions for
@@ -70,7 +71,7 @@ XBee sensor (physical)
 
 The physical XBee sensor code controls one XBee chip connected to the
 device via USB. Such a device can either be a computer or a Raspberry
-Pi. Start `screen` and run `sudo python2 xbee_sensor_physical.py` to
+Pi. Start `screen` and run `python2 xbee_sensor_physical.py` to
 activate the XBee chip mounted onto an XBee USB dongle. Each sensor
 constantly receives packets (asynchronously), but sends packets according
 to a fixed TDMA schedule as defined by the settings in `settings.json`.
@@ -92,7 +93,7 @@ Distance sensor (physical)
 
 We assume that you have setup a Raspberry Pi with Arch Linux ARM and
 that you have connected the HC-SR04 sensor. This tool must run on the
-Raspberry Pi. Start the tool with `sudo python2 distance_sensor_physical.py`
+Raspberry Pi. Start the tool with `python2 distance_sensor_physical.py`
 to receive continuous measurements from the distance sensor. Change the pin
 numbers for the trigger and echo pins in `settings.json` if you have used
 different pin numbers when connecting the HC-SR04 sensor to the Raspberry Pi.
