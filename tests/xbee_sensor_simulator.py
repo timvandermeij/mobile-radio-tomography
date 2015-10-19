@@ -25,15 +25,15 @@ class TestXBeeSensorSimulator(unittest.TestCase):
         self.assertEqual(self.sensor.id, self.id)
 
         # The next timestamp must be set.
-        self.assertNotEqual(self.sensor.next_timestamp, 0)
+        self.assertNotEqual(self.sensor._next_timestamp, 0)
 
         # The sweep data list must be empty.
-        self.assertEqual(self.sensor.data, [])
+        self.assertEqual(self.sensor._data, [])
 
     def test_send(self):
-        # After sending, the RSSI values list must be reset.
+        # After sending, the sweep data list must be reset.
         self.sensor._send()
-        self.assertEqual(self.sensor.data, [])
+        self.assertEqual(self.sensor._data, [])
 
     def test_receive(self):
         # Create a packet from sensor 2 to the current sensor.
@@ -46,10 +46,10 @@ class TestXBeeSensorSimulator(unittest.TestCase):
         # Note that we must make a copy as the receive method will change the packet!
         copy = packet.copy()
         self.sensor._receive(packet)
-        self.assertEqual(self.sensor.next_timestamp, self.scheduler.synchronize(copy))
+        self.assertEqual(self.sensor._next_timestamp, self.scheduler.synchronize(copy))
 
     def test_deactivate(self):
         # After deactivation the socket should be closed.
         self.sensor.deactivate()
         with self.assertRaises(socket.error):
-            self.sensor.socket.sendto("foo", ("127.0.0.1", 100))
+            self.sensor._socket.sendto("foo", ("127.0.0.1", 100))

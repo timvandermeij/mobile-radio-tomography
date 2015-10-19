@@ -21,13 +21,13 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         self.id = sensor_id
         self.viewer = viewer
         self.scheduler = scheduler
-        self.location_callback = location_callback
-        self.next_timestamp = self.scheduler.get_next_timestamp()
-        self.data = []
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.socket.bind((self.settings.get("ip"), self.settings.get("port") + self.id))
-        self.socket.setblocking(0)
+        self._location_callback = location_callback
+        self._next_timestamp = self.scheduler.get_next_timestamp()
+        self._data = []
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._socket.bind((self.settings.get("ip"), self.settings.get("port") + self.id))
+        self._socket.setblocking(0)
 
     def activate(self):
         """
@@ -35,12 +35,12 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         The ground sensor (with ID 0) can only receive packets.
         """
 
-        if self.id > 0 and time.time() >= self.next_timestamp:
+        if self.id > 0 and time.time() >= self._next_timestamp:
             self._send()
-            self.next_timestamp = self.scheduler.get_next_timestamp()
+            self._next_timestamp = self.scheduler.get_next_timestamp()
 
         try:
-            packet = json.loads(self.socket.recv(self.settings.get("buffer_size")))
+            packet = json.loads(self._socket.recv(self.settings.get("buffer_size")))
             self._receive(packet)
         except socket.error:
             pass
@@ -50,7 +50,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         Deactivate the sensor by closing the socket.
         """
 
-        self.socket.close()
+        self._socket.close()
 
     def _send(self):
         """
@@ -63,21 +63,21 @@ class XBee_Sensor_Simulator(XBee_Sensor):
                 continue
 
             packet = {
-                "from": self.location_callback(),
+                "from": self._location_callback(),
                 "from_id": self.id,
                 "timestamp": time.time()
             }
-            self.socket.sendto(json.dumps(packet), (self.settings.get("ip"), self.settings.get("port") + i))
+            self._socket.sendto(json.dumps(packet), (self.settings.get("ip"), self.settings.get("port") + i))
             self.viewer.draw_arrow(self.id, i)
         
         # Send the sweep data to the ground sensor and clear the list for the next round.
-        for packet in self.data:
-            self.socket.sendto(json.dumps(packet), (self.settings.get("ip"), self.settings.get("port")))
+        for packet in self._data:
+            self._socket.sendto(json.dumps(packet), (self.settings.get("ip"), self.settings.get("port")))
             self.viewer.draw_arrow(self.id, 0, "blue")
 
         self.viewer.refresh()
 
-        self.data = []
+        self._data = []
 
     def _receive(self, packet):
         """
@@ -85,13 +85,13 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         """
 
         if self.id > 0:
-            self.next_timestamp = self.scheduler.synchronize(packet)
+            self._next_timestamp = self.scheduler.synchronize(packet)
 
             # Sanitize and complete the packet for the ground station.
-            packet["to"] = self.location_callback()
+            packet["to"] = self._location_callback()
             packet["rssi"] = random.randint(0, 60)
             packet.pop("from_id")
             packet.pop("timestamp")
-            self.data.append(packet)
+            self._data.append(packet)
         else:
             print("> Ground station received {}".format(packet))
