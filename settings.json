@@ -60,7 +60,8 @@
                 "\\x00\\x13\\xa2\\x00@\\xe6n\\xbd",
                 "\\x00\\x13\\xa2\\x00@\\xe6o5",
                 "\\x00\\x13\\xa2\\x00@\\xe6n\\xb9"
-            ]
+            ],
+            "verbose": false
         }
     },
     "xbee_tdma_scheduler": {
