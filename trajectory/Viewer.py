@@ -167,6 +167,8 @@ class Viewer(object):
         glLoadIdentity()
         gluPerspective(60., width / float(height), .1, 1000.)
         glMatrixMode(GL_MODELVIEW)
+        # Force a redraw
+        self.win.invalid = True
         return pyglet.event.EVENT_HANDLED
 
 class Viewer_Interactive(Viewer):
