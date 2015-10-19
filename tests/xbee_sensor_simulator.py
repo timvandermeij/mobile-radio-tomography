@@ -1,6 +1,7 @@
 import unittest
 import socket
 import time
+import random
 from mock import patch
 from ..settings import Arguments
 from ..zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
@@ -8,6 +9,13 @@ from ..zigbee.XBee_Viewer import XBee_Viewer
 from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 
 class TestXBeeSensorSimulator(unittest.TestCase):
+    def get_location(self):
+        """
+        Get the current GPS location (latitude and longitude pair).
+        """
+
+        return (random.uniform(1.0, 50.0), random.uniform(1.0, 50.0))
+
     @patch("matplotlib.pyplot.show")
     def setUp(self, mock_show):
         self.id = 1
@@ -16,7 +24,8 @@ class TestXBeeSensorSimulator(unittest.TestCase):
         self.scheduler = XBee_TDMA_Scheduler(self.id, self.arguments)
         self.viewer = XBee_Viewer(self.arguments)
         self.sensor = XBee_Sensor_Simulator(self.id, self.arguments,
-                                            self.scheduler, self.viewer)
+                                            self.scheduler, self.viewer,
+                                            self.get_location)
 
         self.viewer.draw_points()
 

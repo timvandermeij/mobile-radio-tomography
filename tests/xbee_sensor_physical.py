@@ -2,6 +2,7 @@ import unittest
 import pty
 import os
 import serial
+import random
 from xbee import ZigBee
 from mock import patch
 from ..settings import Arguments
@@ -9,6 +10,13 @@ from ..zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
 
 class TestXBeeSensorPhysical(unittest.TestCase):
+    def get_location(self):
+        """
+        Get the current GPS location (latitude and longitude pair).
+        """
+
+        return (random.uniform(1.0, 50.0), random.uniform(1.0, 50.0))
+
     def setUp(self):
         self.sensor_id = 1
 
@@ -22,7 +30,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         ])
         self.scheduler = XBee_TDMA_Scheduler(self.sensor_id, self.arguments)
         self.sensor = XBee_Sensor_Physical(self.sensor_id, self.arguments,
-                                           self.scheduler)
+                                           self.scheduler, self.get_location)
 
     def test_initialization(self):
         self.assertEqual(self.sensor.id, self.sensor_id)
@@ -104,7 +112,11 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         for key, value in self.sensor._data.iteritems():
             frame_id = key
 
+        # Check if the destination exists and if it consists only of floats.
         self.assertTrue("to" in self.sensor._data[frame_id])
+        to_location = self.sensor._data[frame_id]["to"]
+        self.assertTrue(all(type(number) == float for number in to_location))
+
         self.assertTrue("rssi" in self.sensor._data[frame_id])
         self.assertFalse("from_id" in self.sensor._data[frame_id])
         self.assertFalse("timestamp" in self.sensor._data[frame_id])
@@ -161,8 +173,3 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.assertEqual(self.sensor.id, 4)
 
         self.sensor.deactivate()
-
-    def test_get_location(self):
-        # Expect a list with two floats indicating latitude and longitude.
-        location = self.sensor._get_location()
-        self.assertTrue(all(type(number) == float for number in location))
