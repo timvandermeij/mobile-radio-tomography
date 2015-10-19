@@ -400,30 +400,83 @@ class Mission_Browse(Mission_Guided):
 class Mission_Search(Mission_Browse):
     def setup(self):
         super(Mission_Search, self).setup()
-        self.moving = False
-        self.dists = np.zeros((360 / self.yaw_angle_step,))
+        self.move_distance = 0
+        self.start_location = self.environment.get_location()
+
+        self.dists_size = 360 / self.yaw_angle_step
+        self.dists = np.zeros(self.dists_size)
+        self.dists_done = np.zeros(self.dists_size, dtype=bool)
+
+        self.padding = 4.0
+        self.yaw_margin = 5.0 * math.pi/180
 
     def step(self):
-        if not self.moving:
+        if self.move_distance > 0:
+            moved = self.environment.get_distance(self.start_location)
+            d = self.move_distance - moved
+            if d <= 0:
+                self.move_distance = 0
+
+        if self.move_distance == 0:
             super(Mission_Search, self).step()
-            if self.yaw == 0:
-                print(self.dists)
+            if all(self.dists_done):
                 # Find safest "furthest" location (in one line) and move there
-                a = np.argmax(self.dists)
+                a = self.yaw
+                dist = 0
+                i = 0
+                d_left = 0
+                right = 0
+                cycle_safe = 0
+                safeness = np.zeros((self.dists_size,))
+                for d in self.dists:
+                    if d == 0:
+                        right = right + 1
+                    else:
+                        if i == 0:
+                            cycle_safe = right
+                        elif i == self.dists_size - 1:
+                            break
+                        else:
+                            safeness[i] = right + d_left
+
+                        safeness[(i + right - 1) % self.dists_size] = right + d/float(self.farness)
+
+                        d_left = d/float(self.farness)
+                        i = i + right + 1
+                        right = 0
+
+                safeness[i % self.dists_size] = right + cycle_safe + d_left
+
+                a = np.argmax(self.dists + safeness)
+                dist = self.dists[a]
+                if safeness[(a+1) % self.dists_size] > safeness[(a-1) % self.dists_size]:
+                    a = a+2
+                else:
+                    a = a-2
+
                 angle = a * self.yaw_angle_step * math.pi/180
-                yaw = self.geometry.angle_to_bearing(angle)
-                print(yaw * 180/math.pi, angle)
-                self.set_yaw(yaw * 180/math.pi, relative=False)
+                self.yaw = self.geometry.angle_to_bearing(angle)
+
+                self.move_distance = dist + self.padding + self.closeness
+                self.start_location = self.environment.get_location()
+
+                self.dists = np.zeros(self.dists_size)
+                self.dists_done = np.zeros(self.dists_size, dtype=bool)
+
+                self.set_yaw(self.yaw * 180/math.pi, relative=False)
                 self.set_speed(self.speed)
-                self.moving = True
-                self.dists = np.zeros((360 / self.yaw_angle_step,))
 
     def check_sensor_distance(self, sensor_distance, angle):
         close = super(Mission_Search, self).check_sensor_distance(sensor_distance, angle)
+
+        angle_deg = angle * 180/math.pi
+        a = int(angle_deg / self.yaw_angle_step)
+        self.dists_done[a] = True
         if sensor_distance < self.farness:
-            angle_deg = angle * 180/math.pi
-            self.dists[int(angle_deg / self.yaw_angle_step)] = sensor_distance
-        if close:
-            self.moving = False
+            self.dists[a] = sensor_distance
+
+        if sensor_distance < self.padding + self.closeness:
+            if self.geometry.check_angle(self.yaw, self.environment.get_yaw(), self.yaw_margin):
+                self.move_distance = 0
 
         return close
