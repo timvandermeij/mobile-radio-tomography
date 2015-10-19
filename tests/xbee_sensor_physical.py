@@ -40,6 +40,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.assertEqual(self.sensor._sensor, None)
         self.assertEqual(self.sensor._address, None)
         self.assertEqual(self.sensor._data, {})
+        self.assertEqual(self.sensor._node_identifier_set, False)
 
     def test_activate_and_deactivate(self):
         # The serial connection and sensor must be lazily initialized.
@@ -171,5 +172,6 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         }
         self.sensor._receive(packet)
         self.assertEqual(self.sensor.id, 4)
+        self.assertEqual(self.sensor._node_identifier_set, True)
 
         self.sensor.deactivate()

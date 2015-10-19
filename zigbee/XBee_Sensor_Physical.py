@@ -27,6 +27,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._sensor = None
         self._address = None
         self._data = {}
+        self._node_identifier_set = False
 
     def activate(self):
         """
@@ -44,6 +45,9 @@ class XBee_Sensor_Physical(XBee_Sensor):
             self._sensor.send("at", command="NI")
             self._sensor.send("at", command="SH")
             self._sensor.send("at", command="SL")
+
+        if not self._node_identifier_set:
+            return
 
         if self.id > 0 and time.time() >= self._next_timestamp:
             self._send()
@@ -78,9 +82,12 @@ class XBee_Sensor_Physical(XBee_Sensor):
                                   dest_addr="\xFF\xFE", frame_id="\x01",
                                   data=json.dumps(packet))
 
-        # Send the sweep data to the ground sensor and clear the list for the next round.
+        # Send the sweep data to the ground sensor and clear the list for 
+        # the next round. Note that we use a copy to make sure that the
+        # sweep data list does not change in size during iteration.
         ground_sensor_address = sensors[0].decode("string_escape")
-        for frame_id, packet in self._data.iteritems():
+        data = self._data.copy()
+        for frame_id, packet in data.iteritems():
             if packet == None or packet["rssi"] == None:
                 continue
 
@@ -125,7 +132,8 @@ class XBee_Sensor_Physical(XBee_Sensor):
         elif packet["id"] == "at_response":
             if packet["command"] == "DB":
                 # RSSI value has been received. Update the original packet.
-                self._data[packet["frame_id"]]["rssi"] = ord(packet["parameter"])
+                if packet["frame_id"] in self._data:
+                    self._data[packet["frame_id"]]["rssi"] = ord(packet["parameter"])
             elif packet["command"] == "SH":
                 # Serial number (high) has been received.
                 if self._address == None:
@@ -141,3 +149,4 @@ class XBee_Sensor_Physical(XBee_Sensor):
             elif packet["command"] == "NI":
                 # Node identifier has been received.
                 self.id = int(packet["parameter"])
+                self._node_identifier_set = True
