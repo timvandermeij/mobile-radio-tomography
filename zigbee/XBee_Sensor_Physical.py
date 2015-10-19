@@ -28,6 +28,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._address = None
         self._data = {}
         self._node_identifier_set = False
+        self._verbose = self.settings.get("verbose")
 
     def activate(self):
         """
@@ -41,12 +42,11 @@ class XBee_Sensor_Physical(XBee_Sensor):
                                                     self.settings.get("baud_rate"))
             self._sensor = ZigBee(self._serial_connection, callback=self._receive)
 
-            # Set this sensor's ID and address.
+        if not self._node_identifier_set:
+            # Request this sensor's ID and address.
             self._sensor.send("at", command="NI")
             self._sensor.send("at", command="SH")
             self._sensor.send("at", command="SL")
-
-        if not self._node_identifier_set:
             return
 
         if self.id > 0 and time.time() >= self._next_timestamp:
@@ -82,6 +82,9 @@ class XBee_Sensor_Physical(XBee_Sensor):
                                   dest_addr="\xFF\xFE", frame_id="\x01",
                                   data=json.dumps(packet))
 
+                if self._verbose:
+                    print("--> Sending to sensor {}.".format(index))
+
         # Send the sweep data to the ground sensor and clear the list for 
         # the next round. Note that we use a copy to make sure that the
         # sweep data list does not change in size during iteration.
@@ -94,6 +97,9 @@ class XBee_Sensor_Physical(XBee_Sensor):
             self._sensor.send("tx", dest_addr_long=ground_sensor_address,
                               dest_addr="\xFF\xFE", frame_id="\x01",
                               data=json.dumps(packet))
+
+            if self._verbose:
+                print("--> Sending to ground station.")
 
             self._data[frame_id] = None
 
@@ -112,6 +118,9 @@ class XBee_Sensor_Physical(XBee_Sensor):
             if self.id == 0:
                 print("> Ground station received {}".format(payload))
                 return
+
+            if self._verbose:
+                print("<-- Received from {}.".format(payload["from_id"]))
 
             # Synchronize the scheduler using the timestamp in the payload.
             self._next_timestamp = self.scheduler.synchronize(payload)
@@ -138,15 +147,18 @@ class XBee_Sensor_Physical(XBee_Sensor):
                 # Serial number (high) has been received.
                 if self._address == None:
                     self._address = packet["parameter"]
-                else:
+                elif packet["parameter"] not in self._address:
                     self._address = packet["parameter"] + self._address
             elif packet["command"] == "SL":
                 # Serial number (low) has been received.
                 if self._address == None:
                     self._address = packet["parameter"]
-                else:
+                elif packet["parameter"] not in self._address:
                     self._address = self._address + packet["parameter"]
             elif packet["command"] == "NI":
                 # Node identifier has been received.
                 self.id = int(packet["parameter"])
                 self._node_identifier_set = True
+
+                if self._verbose:
+                    print("Node identifier set to {}.".format(self.id))
