@@ -7,7 +7,7 @@ from XBee_Sensor import XBee_Sensor
 from ..settings import Arguments, Settings
 
 class XBee_Sensor_Physical(XBee_Sensor):
-    def __init__(self, sensor_id, settings, scheduler):
+    def __init__(self, sensor_id, settings, scheduler, location_callback):
         """
         Initialize the sensor.
         """
@@ -21,6 +21,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
         self.id = sensor_id
         self.scheduler = scheduler
+        self._location_callback = location_callback
         self._next_timestamp = self.scheduler.get_next_timestamp()
         self._serial_connection = None
         self._sensor = None
@@ -62,7 +63,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
         """
 
         packet = {
-            "from": self._get_location(),
+            "from": self._location_callback(),
             "from_id": self.id,
             "timestamp": time.time()
         }
@@ -109,7 +110,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
             self._next_timestamp = self.scheduler.synchronize(payload)
 
             # Sanitize and complete the packet for the ground station.
-            payload["to"] = self._get_location()
+            payload["to"] = self._location_callback()
             payload["rssi"] = None
             payload.pop("from_id")
             payload.pop("timestamp")
@@ -140,10 +141,3 @@ class XBee_Sensor_Physical(XBee_Sensor):
             elif packet["command"] == "NI":
                 # Node identifier has been received.
                 self.id = int(packet["parameter"])
-
-    def _get_location(self):
-        """
-        Get the current GPS location (latitude and longitude pair) of the sensor.
-        """
-
-        return (random.uniform(1.0, 50.0), random.uniform(1.0, 50.0))

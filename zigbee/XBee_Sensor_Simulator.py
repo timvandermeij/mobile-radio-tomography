@@ -6,7 +6,7 @@ from XBee_Sensor import XBee_Sensor
 from ..settings import Arguments, Settings
 
 class XBee_Sensor_Simulator(XBee_Sensor):
-    def __init__(self, sensor_id, settings, scheduler, viewer):
+    def __init__(self, sensor_id, settings, scheduler, viewer, location_callback):
         """
         Initialize the sensor with a unique, non-blocking UDP socket.
         """
@@ -21,6 +21,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         self.id = sensor_id
         self.viewer = viewer
         self.scheduler = scheduler
+        self.location_callback = location_callback
         self.next_timestamp = self.scheduler.get_next_timestamp()
         self.data = []
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -62,7 +63,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
                 continue
 
             packet = {
-                "from": self._get_location(),
+                "from": self.location_callback(),
                 "from_id": self.id,
                 "timestamp": time.time()
             }
@@ -87,17 +88,10 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             self.next_timestamp = self.scheduler.synchronize(packet)
 
             # Sanitize and complete the packet for the ground station.
-            packet["to"] = self._get_location()
+            packet["to"] = self.location_callback()
             packet["rssi"] = random.randint(0, 60)
             packet.pop("from_id")
             packet.pop("timestamp")
             self.data.append(packet)
         else:
             print("> Ground station received {}".format(packet))
-
-    def _get_location(self):
-        """
-        Get the current GPS location (latitude and longitude pair) of the sensor.
-        """
-
-        return (random.uniform(1.0, 50.0), random.uniform(1.0, 50.0))
