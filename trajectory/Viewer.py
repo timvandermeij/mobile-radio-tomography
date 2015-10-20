@@ -61,7 +61,14 @@ class Viewer(object):
 
                 self.objects.append(faces)
             elif isinstance(obj, tuple):
-                self.objects.append(self._load_polygon(obj))
+                points = self._load_polygon(obj)
+                lower = lambda p: (p[0], 0.0, p[2])
+                faces = []
+                for edge in self.geometry.get_point_edges(points):
+                    poly = (edge[0], edge[1], lower(edge[1]), lower(edge[0]))
+                    faces.append(poly)
+
+                self.objects.append(faces)
 
     def _load_polygon(self, points):
         return tuple(self._convert_point(p) for p in points)
