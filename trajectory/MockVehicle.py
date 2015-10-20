@@ -321,6 +321,15 @@ class MockVehicle(object):
         self._update_location()
         return self._attitude
 
+    @attitude.setter
+    def attitude(self, value):
+        if not isinstance(value, MockAttitude):
+            raise ValueError("Must be given a MockAttitude.")
+
+        # No need to update since this forces a new attitude
+        value.vehicle = self
+        self._attitude = value
+
     @property
     def speed(self):
         self._update_location()

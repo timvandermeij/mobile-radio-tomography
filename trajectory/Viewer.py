@@ -5,7 +5,7 @@ import pyglet
 from pyglet.window import key
 from pyglet.gl import *
 
-from MockVehicle import MockVehicle
+from MockVehicle import MockVehicle, MockAttitude
 
 # Based on ideas from https://pyglet.googlecode.com/hg/examples/opengl.py and 
 # https://greendalecs.wordpress.com/2012/04/21/3d-programming-in-python-part-1/
@@ -217,7 +217,7 @@ class Viewer_Interactive(Viewer):
         location = super(Viewer_Interactive, self).update(dt)
         if self.is_mock:
             self.vehicle.location = location
-            self.vehicle.attitude.yaw = self.ry * math.pi/180
+            self.vehicle.attitude = MockAttitude(self.rx * math.pi/180, self.ry * math.pi/180, 0.0)
 
         self.points = []
         i = 0
@@ -285,6 +285,9 @@ class Viewer_Interactive(Viewer):
         rx, ry, rz = self._rotate(ny, nx, ny, self.sx, self.sy, self.sz)
         self.rx = self.rx - rx
         self.ry = self.ry + ry
+
+    def on_mouse_release(self, x, y, buttons, modifiers):
+        self.update(0.0)
 
 class Viewer_Vehicle(Viewer):
     def __init__(self, environment, monitor):
