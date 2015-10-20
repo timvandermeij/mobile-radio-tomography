@@ -154,9 +154,9 @@ class Viewer(object):
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 
         glLoadIdentity()
-        glRotatef(self.rz, 0, 0, 1)
-        glRotatef(self.ry, 0, 1, 0)
         glRotatef(self.rx, 1, 0, 0)
+        glRotatef(self.ry, 0, 1, 0)
+        glRotatef(self.rz, 0, 0, 1)
         glTranslatef(-self.tx, -self.ty, self.tz)
 
         i = 0
@@ -274,17 +274,9 @@ class Viewer_Interactive(Viewer):
         self.update(1.0)
         self._reset_movement()
 
-    def on_mouse_press(self, x, y, buttons, modifiers):
-        self.sx = self.rx
-        self.sy = self.ry
-        self.sz = 0.0
-
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
-        ny = (self.rotate_speed / self.win.width) * dy
-        nx = (self.rotate_speed / self.win.height) * dx
-        rx, ry, rz = self._rotate(ny, nx, ny, self.sx, self.sy, self.sz)
-        self.rx = self.rx - rx
-        self.ry = self.ry + ry
+        self.rx = self.rx - (self.rotate_speed / self.win.width) * dy
+        self.ry = self.ry + (self.rotate_speed / self.win.height) * dx
 
     def on_mouse_release(self, x, y, buttons, modifiers):
         self.update(0.0)
