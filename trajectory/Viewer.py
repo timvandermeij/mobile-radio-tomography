@@ -1,6 +1,5 @@
 import math
 import numpy as np
-from collections import namedtuple
 
 import pyglet
 from pyglet.window import key
@@ -49,6 +48,10 @@ class Vector(np.ndarray):
         self[2] = value
 
 def rotate_2D(angle, M):
+    """
+    Perform a 2D rotation of a given `angle` on a matrix `M`.
+    """
+
     cos_a = math.cos(angle * math.pi/180)
     sin_a = math.sin(angle * math.pi/180)
     R = np.array([
@@ -171,10 +174,10 @@ class Viewer(object):
         self.rotation.y = (self.rotation.y + dt * self.orient.y) % 360
         self.rotation.z = (self.rotation.z + dt * self.orient.z) % 360
 
-        self.update_camera()
+        self._update_camera()
         return location
 
-    def update_camera(self):
+    def _update_camera(self):
         dRot = self.rotation - self.old_rotation
 
         up, right = rotate_2D(dRot.z, np.array([self.up, self.right]))
@@ -346,7 +349,7 @@ class Viewer_Interactive(Viewer):
         my = (self.rotate_speed / self.win.width) * dx
         self.rotation.x = self.rotation.x - mx
         self.rotation.y = self.rotation.y + my
-        self.update_camera()
+        self._update_camera()
 
     def on_mouse_release(self, x, y, buttons, modifiers):
         self.update(0.0)
