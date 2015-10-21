@@ -275,8 +275,8 @@ class Viewer_Interactive(Viewer):
         self._reset_movement()
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
-        self.rx = self.rx - (self.rotate_speed / self.win.width) * dy
-        self.ry = self.ry + (self.rotate_speed / self.win.height) * dx
+        self.rx = self.rx - (self.rotate_speed / self.win.height) * dy
+        self.ry = self.ry + (self.rotate_speed / self.win.width) * dx
 
     def on_mouse_release(self, x, y, buttons, modifiers):
         self.update(0.0)
