@@ -1,5 +1,6 @@
 import math
 import numpy as np
+from collections import namedtuple
 
 import pyglet
 from pyglet.window import key
@@ -7,8 +8,59 @@ from pyglet.gl import *
 
 from MockVehicle import MockVehicle, MockAttitude
 
+class Vector(np.ndarray):
+    """
+    Vector class that is a 3x1 numpy array with accessors called x, y, and z.
+    """
+
+    def __new__(cls, x=0.0, y=0.0, z=0.0, **kwargs):
+        if isinstance(x, np.ndarray):
+            # Make a deep copy and convert numpy array to Vector object.
+            return np.asarray([x[0], x[1], x[2]]).view(cls)
+
+        obj = np.ndarray.__new__(cls, shape=3, **kwargs)
+        obj[0] = x
+        obj[1] = y
+        obj[2] = z
+        return obj
+
+    @property
+    def x(self):
+        return self[0]
+
+    @x.setter
+    def x(self, value):
+        self[0] = value
+
+    @property
+    def y(self):
+        return self[1]
+
+    @y.setter
+    def y(self, value):
+        self[1] = value
+
+    @property
+    def z(self):
+        return self[2]
+
+    @z.setter
+    def z(self, value):
+        self[2] = value
+
+def rotate_2D(angle, M):
+    cos_a = math.cos(angle * math.pi/180)
+    sin_a = math.sin(angle * math.pi/180)
+    R = np.array([
+        [cos_a, -sin_a],
+        [sin_a, cos_a]
+    ])
+    return np.dot(R, M)
+
 # Based on ideas from https://pyglet.googlecode.com/hg/examples/opengl.py and 
 # https://greendalecs.wordpress.com/2012/04/21/3d-programming-in-python-part-1/
+# and https://github.com/holocronweaver/globe/blob/master/globe.py and 
+# http://www.morrowland.com/apron/tutorials/gl/gl_camera_3b.zip
 class Viewer(object):
     """
     3D environment scene viewer
@@ -87,52 +139,60 @@ class Viewer(object):
         return [dlon, dalt, -dlat]
 
     def _reset_location(self):
-        # Rotation
-        self.rx = 0.0
-        self.ry = 0.0
-        self.rz = 0.0
+        # Camera location and rotation vectors
+        self.pos = Vector(0.0, 0.0, 0.0)
 
-        # Translation
-        self.tx = 0.0
-        self.ty = 0.0
-        self.tz = 0.0
+        self.look = Vector(0.0, 0.0, 1.0)
+        self.up = Vector(0.0, 1.0, 0.0)
+        self.right = Vector(1.0, 0.0, 0.0)
+
+        self.rotation = Vector(0.0, 0.0, 0.0)
+        self.old_rotation = Vector(0.0, 0.0, 0.0)
 
     def _reset_movement(self):
         # Orientation (rotation change)
-        self.ox = 0.0
-        self.oy = 0.0
-        self.oz = 0.0
+        self.orient = Vector(0.0, 0.0, 0.0)
 
         # Movement (translation change)
-        self.mx = 0.0
-        self.my = 0.0
-        self.mz = 0.0
+        self.strafe = Vector(0.0, 0.0, 0.0)
 
     def update(self, dt):
-        location = self.environment.get_location(dt * self.mz, dt * self.mx, dt * self.my)
-        self.tz, self.tx, self.ty = self.geometry.diff_location_meters(self.initial_location, location)
+        strafe_look = dt * self.strafe.z * self.look
+        strafe_up = dt * self.strafe.y * self.up
+        strafe_right = dt * self.strafe.x * self.right
 
-        self.rx = (self.rx + dt * self.ox) % 360
-        self.ry = (self.ry + dt * self.oy) % 360
-        self.rz = (self.rz + dt * self.oz) % 360
+        move = strafe_look + strafe_up + strafe_right
 
+        location = self.environment.get_location(-move.z, move.x, move.y)
+        self.pos.z, self.pos.x, self.pos.y = self.geometry.diff_location_meters(self.initial_location, location)
+
+        # Now perform any rotation changes
+        self.rotation.x = (self.rotation.x + dt * self.orient.x) % 360
+        self.rotation.y = (self.rotation.y + dt * self.orient.y) % 360
+        self.rotation.z = (self.rotation.z + dt * self.orient.z) % 360
+
+        self.update_camera()
         return location
 
-    def _rotate(self, east, up, south, rotX, rotY, rotZ):
-        # Rotations for each axis in radians
-        x = rotX * math.pi/180
-        y = rotY * math.pi/180
-        z = rotZ * math.pi/180
-        rX = [east, up * math.cos(x) - south * math.sin(x), up * math.sin(x) + south * math.cos(x)]
-        rY = [rX[0] * math.cos(y) + rX[2] * math.sin(y), rX[1], rX[2] * math.cos(y) - rX[0] * math.sin(y)]
-        rZ = [rY[0] * math.cos(z) - rY[1] * math.sin(z), rY[0] * math.sin(z) + rY[1] * math.cos(z), rY[2]]
-        return rZ
+    def update_camera(self):
+        dRot = self.rotation - self.old_rotation
 
-    def move(self, east, up, south):
-        dx, dy, dz = self._rotate(east, up, south, self.rx, self.ry, self.rz)
-        self.mx = dx
-        self.my = dy
-        self.mz = dz
+        up, right = rotate_2D(dRot.z, np.array([self.up, self.right]))
+        look, up = rotate_2D(dRot.x, np.array([self.look, up]))
+        right, look = rotate_2D(dRot.y, np.array([right, look]))
+
+        # Perform normalization of the new vectors
+        look = look / np.linalg.norm(look)
+        up = np.cross(look, right)
+        up = up / np.linalg.norm(up)
+        right = np.cross(up, look)
+        right = right / np.linalg.norm(right)
+
+        self.look = Vector(look)
+        self.up = Vector(up)
+        self.right = Vector(right)
+
+        self.old_rotation = Vector(self.rotation)
 
     def _draw_polygon(self, face, i=-1, j=-1):
         glBegin(GL_POLYGON)
@@ -154,10 +214,10 @@ class Viewer(object):
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 
         glLoadIdentity()
-        glRotatef(self.rx, 1, 0, 0)
-        glRotatef(self.ry, 0, 1, 0)
-        glRotatef(self.rz, 0, 0, 1)
-        glTranslatef(-self.tx, -self.ty, self.tz)
+        view = self.look + self.pos
+        gluLookAt(self.pos.x, self.pos.y, -self.pos.z,
+                  view.x, view.y, -view.z,
+                  self.up.x, self.up.y, -self.up.z)
 
         i = 0
         for obj in self.objects:
@@ -217,7 +277,10 @@ class Viewer_Interactive(Viewer):
         location = super(Viewer_Interactive, self).update(dt)
         if self.is_mock:
             self.vehicle.location = location
-            self.vehicle.attitude = MockAttitude(self.rx * math.pi/180, self.ry * math.pi/180, 0.0)
+
+            pitch = self.rotation.x * math.pi/180
+            yaw = self.rotation.y * math.pi/180
+            self.vehicle.attitude = MockAttitude(pitch, yaw, 0.0)
 
         self.points = []
         i = 0
@@ -231,25 +294,25 @@ class Viewer_Interactive(Viewer):
 
     def on_key_press(self, symbol, modifiers):
         if symbol == key.LEFT or symbol == key.A: # lon, west
-            self.move(-self.camera_speed, 0.0, 0.0)
+            self.strafe.x = -self.camera_speed
         elif symbol == key.RIGHT or symbol == key.D: # lon, east
-            self.move(self.camera_speed, 0.0, 0.0)
+            self.strafe.x = self.camera_speed
         elif symbol == key.DOWN: # alt, down
-            self.move(0.0, -self.camera_speed, 0.0)
+            self.strafe.y = -self.camera_speed
         elif symbol == key.UP: # alt, up
-            self.move(0.0, self.camera_speed, 0.0)
-        elif symbol == key.NUM_SUBTRACT or symbol == key.S: # lat, north
-            self.move(0.0, 0.0, -self.camera_speed)
+            self.strafe.y = self.camera_speed
         elif symbol == key.NUM_ADD or symbol == key.W: # lat, south
-            self.move(0.0, 0.0, self.camera_speed)
+            self.strafe.z = -self.camera_speed
+        elif symbol == key.NUM_SUBTRACT or symbol == key.S: # lat, north
+            self.strafe.z = self.camera_speed
         elif symbol == key.I:
-            self.ox = -self.rotate_speed
+            self.orient.x = -self.rotate_speed
         elif symbol == key.K:
-            self.ox = self.rotate_speed
+            self.orient.x = self.rotate_speed
         elif symbol == key.J:
-            self.oy = -self.rotate_speed
+            self.orient.y = -self.rotate_speed
         elif symbol == key.L:
-            self.oy = self.rotate_speed
+            self.orient.y = self.rotate_speed
         elif symbol == key.R:
             self._reset_location()
         elif symbol == key.Q:
@@ -270,13 +333,20 @@ class Viewer_Interactive(Viewer):
 
     def on_mouse_scroll(self, x, y, dx, dy):
         # Move into/outward
-        self.move(0.0, 0.0, dy)
+        self.strafe.z = dy
         self.update(1.0)
         self._reset_movement()
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
-        self.rx = self.rx - (self.rotate_speed / self.win.height) * dy
-        self.ry = self.ry + (self.rotate_speed / self.win.width) * dx
+        # dx is horizontal change of mouse position, dy is vertical change.
+        # We want to rotate around the y axis (vertical altitude, yaw) upon 
+        # horizontal change and around the x axis (horizontal on plane, pitch) 
+        # upon vertical change.
+        mx = (self.rotate_speed / self.win.height) * dy
+        my = (self.rotate_speed / self.win.width) * dx
+        self.rotation.x = self.rotation.x - mx
+        self.rotation.y = self.rotation.y + my
+        self.update_camera()
 
     def on_mouse_release(self, x, y, buttons, modifiers):
         self.update(0.0)
@@ -291,5 +361,5 @@ class Viewer_Vehicle(Viewer):
         if not self.monitor.step(self.add_point):
             pyglet.app.exit()
 
+        self.rotation.y = self.environment.get_yaw() * 180/math.pi
         super(Viewer_Vehicle, self).update(0.0)
-        self.ry = self.environment.get_yaw() * 180/math.pi
