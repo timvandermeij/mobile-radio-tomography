@@ -35,7 +35,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
     def test_initialization(self):
         self.assertEqual(self.sensor.id, self.sensor_id)
         self.assertEqual(self.sensor.scheduler, self.scheduler)
-        self.assertTrue(hasattr(self.sensor._location_callback, '__call__'))
+        self.assertTrue(hasattr(self.sensor._location_callback, "__call__"))
         self.assertTrue(self.sensor._next_timestamp > 0)
         self.assertEqual(self.sensor._serial_connection, None)
         self.assertEqual(self.sensor._sensor, None)
