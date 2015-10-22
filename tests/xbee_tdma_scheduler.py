@@ -28,7 +28,7 @@ class TestXBeeTDMAScheduler(unittest.TestCase):
         calculated = self.scheduler.get_next_timestamp()
         correct = time.time() + ((float(self.id) / self.number_of_sensors) *
                   self.sweep_delay)
-        self.assertEqual(calculated, round(correct))
+        self.assertAlmostEqual(calculated, correct, delta=0.1)
 
         # Any subsequent calls to the get_next_timestamp() method should just
         # increase the previous timestamp (which might have been updated in the
@@ -36,7 +36,7 @@ class TestXBeeTDMAScheduler(unittest.TestCase):
         # to the next sweep.
         calculated = self.scheduler.get_next_timestamp()
         correct = correct + self.sweep_delay
-        self.assertEqual(calculated, round(correct))
+        self.assertAlmostEqual(calculated, correct, delta=0.1)
 
     def test_synchronize(self):
         # If the received packet is from a sensor with a lower ID than the
@@ -55,7 +55,7 @@ class TestXBeeTDMAScheduler(unittest.TestCase):
         calculated = self.scheduler.synchronize(packet)
         slot_time = float(self.sweep_delay) / self.number_of_sensors
         correct = packet["timestamp"] + ((self.id - packet["from_id"]) * slot_time)
-        self.assertEqual(calculated, round(correct))
+        self.assertAlmostEqual(calculated, correct, delta=0.1)
 
         # If the received packet is from a sensor with a higher ID than the
         # current sensor, then the next timestamp for the current sensor should
@@ -76,4 +76,4 @@ class TestXBeeTDMAScheduler(unittest.TestCase):
         slot_time = float(self.sweep_delay) / self.number_of_sensors
         completed_round = (self.number_of_sensors - packet["from_id"] + 1) * slot_time
         correct = packet["timestamp"] + completed_round + ((self.id - 1) * slot_time)
-        self.assertEqual(calculated, round(correct))
+        self.assertAlmostEqual(calculated, correct, delta=0.1)

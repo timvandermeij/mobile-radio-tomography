@@ -172,6 +172,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         }
         self.sensor._receive(packet)
         self.assertEqual(self.sensor.id, 4)
+        self.assertEqual(self.sensor.scheduler.id, 4)
         self.assertEqual(self.sensor._node_identifier_set, True)
 
         self.sensor.deactivate()
