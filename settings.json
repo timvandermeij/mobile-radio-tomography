@@ -61,6 +61,7 @@
                 "\\x00\\x13\\xa2\\x00@\\xe6o5",
                 "\\x00\\x13\\xa2\\x00@\\xe6n\\xb9"
             ],
+            "startup_delay": 1.5,
             "verbose": false
         }
     },

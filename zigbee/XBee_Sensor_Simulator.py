@@ -36,8 +36,8 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         """
 
         if self.id > 0 and time.time() >= self._next_timestamp:
-            self._send()
             self._next_timestamp = self.scheduler.get_next_timestamp()
+            self._send()
 
         try:
             packet = json.loads(self._socket.recv(self.settings.get("buffer_size")))
