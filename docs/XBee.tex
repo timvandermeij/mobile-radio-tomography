@@ -41,16 +41,19 @@ steps for each sensor in the network.
               \item Function set: ZigBee End Device API
               \item Firmware version: Newest
           \end{itemize}
-    \item In XCTU change the SM settings to Pin Hibernate to avoid issues
-          with the XBee sensor intermittently not responding to calls.
+    \item In XCTU change the SM setting to Pin Hibernate (to avoid issues with
+          the XBee sensor intermittently not responding to calls) and change the
+          BD (baud rate) setting to 57600.
 \end{itemize}
 
-It is important to note that exactly one sensor in the network must be a
-coordinator (with function set ZigBee Coordinator API) as that sensor takes
-care of initializing the network. Preferably the ground station is the coordinator
-of the network. Without a coordinator the network will not function!
+It is important that exactly one sensor (namely the ground sensor) in the network
+is the coordinator (with function set ZigBee Coordinator API) as that sensor
+takes care of initializing the network. Without a coordinator the network will
+not function correctly!
 
-When all sensors are configured, we can update their settings.
+When all sensors are configured, we can update the other settings such as PAN ID
+and node ID\@. The settings mentioned above only have to be updated once, whereas
+the configurator takes care of settings that might change more frequently.
 
 \begin{itemize}
     \item Run {\tt pip2 install --user pyserial xbee} both as regular user and
