@@ -47,19 +47,6 @@ class Vector(np.ndarray):
     def z(self, value):
         self[2] = value
 
-def rotate_2D(angle, M):
-    """
-    Perform a 2D rotation of a given `angle` on a matrix `M`.
-    """
-
-    cos_a = math.cos(angle * math.pi/180)
-    sin_a = math.sin(angle * math.pi/180)
-    R = np.array([
-        [cos_a, -sin_a],
-        [sin_a, cos_a]
-    ])
-    return np.dot(R, M)
-
 # Based on ideas from https://pyglet.googlecode.com/hg/examples/opengl.py and 
 # https://greendalecs.wordpress.com/2012/04/21/3d-programming-in-python-part-1/
 # and https://github.com/holocronweaver/globe/blob/master/globe.py and 
@@ -82,6 +69,11 @@ class Viewer(object):
         self.initial_location = self.environment.get_location()
 
     def start(self):
+        """
+        Start the viewer application.
+        This sets up the viewer and the window.
+        We then let pyglet take over the current thread for drawing and handling events.
+        """
         self._setup()
 
         self.win = pyglet.window.Window(resizable=True)
@@ -98,12 +90,16 @@ class Viewer(object):
         glEnable(GL_POINT_SMOOTH)
         glEnable(GL_BLEND)
 
-        self._reset_location()
+        self._reset_camera()
         self._reset_movement()
 
         self._load_objects()
 
     def _load_objects(self):
+        """
+        Initialize the simulated objects from the environment for drawing.
+        We convert the objects to GL standards and give each object a color.
+        """
         self.points = []
         self.colors = []
         self.objects = []
@@ -126,9 +122,17 @@ class Viewer(object):
                 self.objects.append(faces)
 
     def _load_polygon(self, points):
+        """
+        Convert a sequence of Location points to GL standards.
+        The returned tuple contains the points in this coordinate system.
+        """
         return tuple(self._convert_point(p) for p in points)
 
     def _convert_point(self, p):
+        """
+        Convert a point Location object `p` to GL standards.
+        The returned list contains the point location in this coordinate system.
+        """
         # Convert coordinates to meters
         dlat, dlon, dalt = self.geometry.diff_location_meters(self.initial_location, p)
         # We convert to GL standards here, where the second axis is the 
@@ -141,7 +145,13 @@ class Viewer(object):
         # See http://stackoverflow.com/a/12336360 for an overview.
         return [dlon, dalt, -dlat]
 
-    def _reset_location(self):
+    def _reset_camera(self):
+        """
+        Resets the camera location and rotation vectors.
+
+        This does not actually update the vehicle location stored in the mock vehicle and environment.
+        """
+
         # Camera location and rotation vectors
         self.pos = Vector(0.0, 0.0, 0.0)
 
@@ -153,6 +163,10 @@ class Viewer(object):
         self.old_rotation = Vector(0.0, 0.0, 0.0)
 
     def _reset_movement(self):
+        """
+        Reset vectors that control the current rotation and movement changes.
+        """
+
         # Orientation (rotation change)
         self.orient = Vector(0.0, 0.0, 0.0)
 
@@ -160,6 +174,13 @@ class Viewer(object):
         self.strafe = Vector(0.0, 0.0, 0.0)
 
     def update(self, dt):
+        """
+        Update the current location and rotation of the camera.
+
+        This can be called using pyglet's scheduling system by adding it as a callback there, or directly in order to force a change.
+        The given `dt` indicates the time in seconds that has passed since the last call to `update`. It can also be `0.0` to skip movement and rotation changes, or `1.0` to do exactly one step of them.
+        """
+
         strafe_look = dt * self.strafe.z * self.look
         strafe_up = dt * self.strafe.y * self.up
         strafe_right = dt * self.strafe.x * self.right
@@ -177,12 +198,29 @@ class Viewer(object):
         self._update_camera()
         return location
 
+    def _rotate_2D(self, angle, M):
+        """
+        Perform a 2D rotation of a given `angle` on a matrix `M`.
+        """
+
+        cos_a = math.cos(angle * math.pi/180)
+        sin_a = math.sin(angle * math.pi/180)
+        R = np.array([
+            [cos_a, -sin_a],
+            [sin_a, cos_a]
+        ])
+        return np.dot(R, M)
+
     def _update_camera(self):
+        """
+        Update camera vectors based on current rotation changes.
+        """
+
         dRot = self.rotation - self.old_rotation
 
-        up, right = rotate_2D(dRot.z, np.array([self.up, self.right]))
-        look, up = rotate_2D(dRot.x, np.array([self.look, up]))
-        right, look = rotate_2D(dRot.y, np.array([right, look]))
+        up, right = self._rotate_2D(dRot.z, np.array([self.up, self.right]))
+        look, up = self._rotate_2D(dRot.x, np.array([self.look, up]))
+        right, look = self._rotate_2D(dRot.y, np.array([right, look]))
 
         # Perform normalization of the new vectors
         look = look / np.linalg.norm(look)
@@ -198,18 +236,29 @@ class Viewer(object):
         self.old_rotation = Vector(self.rotation)
 
     def _draw_polygon(self, face, i=-1, j=-1):
+        """
+        Draw a polygon based on a `face` sequence of converted points.
+        """
         glBegin(GL_POLYGON)
         for p in face:
             glVertex3f(*p)
         glEnd()
 
     def add_point(self, point):
+        """
+        Add a point to be drawn in the environment.
+        The given `point` is a Location object of the point to be drawn.
+        """
         self.points.append(self._convert_point(point))
 
     def on_expose(self):
+        # Dummy method that is necessary to draw when starting pyglet.
         pass
 
     def on_draw(self):
+        """
+        Draw the environment frame as seen by the camera.
+        """
         # Clear buffers
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
@@ -242,6 +291,10 @@ class Viewer(object):
         glEnd()
 
     def on_resize(self, width, height):
+        """
+        Handle a resize of the window.
+        The `width` and `height` are the new window dimensions.
+        """
         # Override the default on_resize handler to create a 3D projection
         glViewport(0, 0, width, height)
         glMatrixMode(GL_PROJECTION)
@@ -318,7 +371,7 @@ class Viewer_Interactive(Viewer):
             self.orient.y = self.rotate_speed
         elif symbol == key.R: # reset location
             self.vehicle.location = self.initial_location
-            self._reset_location()
+            self._reset_camera()
         elif symbol == key.C: # reload objects and colors
             self._load_objects()
         elif symbol == key.Q: # quit
