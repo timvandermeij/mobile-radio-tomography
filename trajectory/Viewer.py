@@ -296,29 +296,32 @@ class Viewer_Interactive(Viewer):
             i = i + 1
 
     def on_key_press(self, symbol, modifiers):
-        if symbol == key.LEFT or symbol == key.A: # lon, west
+        if symbol == key.LEFT or symbol == key.A: # strafe left
             self.strafe.x = -self.camera_speed
-        elif symbol == key.RIGHT or symbol == key.D: # lon, east
+        elif symbol == key.RIGHT or symbol == key.D: # strafe right
             self.strafe.x = self.camera_speed
-        elif symbol == key.DOWN: # alt, down
+        elif symbol == key.DOWN: # downward
             self.strafe.y = -self.camera_speed
-        elif symbol == key.UP: # alt, up
+        elif symbol == key.UP: # upward
             self.strafe.y = self.camera_speed
         elif symbol == key.NUM_SUBTRACT or symbol == key.S: # outward
             self.strafe.z = -self.camera_speed
         elif symbol == key.NUM_ADD or symbol == key.W: # inward
             self.strafe.z = self.camera_speed
-        elif symbol == key.I:
+        elif symbol == key.I: # rotate up
             self.orient.x = -self.rotate_speed
-        elif symbol == key.K:
+        elif symbol == key.K: # rotate down
             self.orient.x = self.rotate_speed
-        elif symbol == key.J:
+        elif symbol == key.J: # rotate left
             self.orient.y = -self.rotate_speed
-        elif symbol == key.L:
+        elif symbol == key.L: # rotate right
             self.orient.y = self.rotate_speed
-        elif symbol == key.R:
+        elif symbol == key.R: # reset location
+            self.vehicle.location = self.initial_location
             self._reset_location()
-        elif symbol == key.Q:
+        elif symbol == key.C: # reload objects and colors
+            self._load_objects()
+        elif symbol == key.Q: # quit
             pyglet.app.exit()
             return
         else:
