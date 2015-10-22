@@ -166,7 +166,7 @@ class Viewer(object):
 
         move = strafe_look + strafe_up + strafe_right
 
-        location = self.environment.get_location(-move.z, move.x, move.y)
+        location = self.environment.get_location(move.z, move.x, move.y)
         self.pos.z, self.pos.x, self.pos.y = self.geometry.diff_location_meters(self.initial_location, location)
 
         # Now perform any rotation changes
@@ -304,9 +304,9 @@ class Viewer_Interactive(Viewer):
             self.strafe.y = -self.camera_speed
         elif symbol == key.UP: # alt, up
             self.strafe.y = self.camera_speed
-        elif symbol == key.NUM_ADD or symbol == key.W: # lat, south
+        elif symbol == key.NUM_SUBTRACT or symbol == key.S: # outward
             self.strafe.z = -self.camera_speed
-        elif symbol == key.NUM_SUBTRACT or symbol == key.S: # lat, north
+        elif symbol == key.NUM_ADD or symbol == key.W: # inward
             self.strafe.z = self.camera_speed
         elif symbol == key.I:
             self.orient.x = -self.rotate_speed
