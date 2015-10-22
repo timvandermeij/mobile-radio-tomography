@@ -150,7 +150,7 @@ class Mission(object):
         """
         pass
 
-    def check_sensor_distance(self, sensor_distance, angle):
+    def check_sensor_distance(self, sensor_distance, yaw, pitch):
         """
         Decide on doing something with the measured distance.
         If we're too close, we should take action by stopping and going somewhere else.
@@ -466,10 +466,10 @@ class Mission_Search(Mission_Browse):
                 self.set_yaw(self.yaw * 180/math.pi, relative=False)
                 self.set_speed(self.speed)
 
-    def check_sensor_distance(self, sensor_distance, angle):
-        close = super(Mission_Search, self).check_sensor_distance(sensor_distance, angle)
+    def check_sensor_distance(self, sensor_distance, yaw, pitch):
+        close = super(Mission_Search, self).check_sensor_distance(sensor_distance, yaw, pitch)
 
-        angle_deg = angle * 180/math.pi
+        angle_deg = yaw * 180/math.pi
         a = int(angle_deg / self.yaw_angle_step)
         self.dists_done[a] = True
         if sensor_distance < self.farness:

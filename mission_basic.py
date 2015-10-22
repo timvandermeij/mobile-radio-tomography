@@ -118,11 +118,12 @@ class Monitor(object):
 
         i = 0
         for sensor in self.sensors:
-            angle = sensor.get_angle()
+            yaw = sensor.get_yaw()
+            pitch = sensor.get_pitch()
             sensor_distance = sensor.get_distance()
 
-            if self.mission.check_sensor_distance(sensor_distance, angle):
-                location = self.memory_map.handle_sensor(sensor_distance, angle)
+            if self.mission.check_sensor_distance(sensor_distance, yaw, pitch):
+                location = self.memory_map.handle_sensor(sensor_distance, yaw)
                 if add_point is not None:
                     add_point(location)
                 if self.plt:
@@ -133,7 +134,7 @@ class Monitor(object):
                     # checking if walls get visualized correctly.
                     sensor.draw_current_edge(self.plt, self.memory_map, self.colors[i % len(self.colors)])
 
-                print("=== [!] Distance to object: {} m (angle {}) ===".format(sensor_distance, angle))
+                print("=== [!] Distance to object: {} m (yaw {}, pitch {}) ===".format(sensor_distance, yaw, pitch))
 
             i = i + 1
 

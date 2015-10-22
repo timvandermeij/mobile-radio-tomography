@@ -341,11 +341,12 @@ class Viewer_Interactive(Viewer):
         self.points = []
         i = 0
         for sensor in self.sensors:
-            angle = sensor.get_angle()
+            yaw = sensor.get_angle()
+            pitch = sensor.get_pitch()
             sensor_distance = sensor.get_distance()
-            loc = self.geometry.get_location_angle(location, sensor_distance, angle)
+            loc = self.geometry.get_location_angle(location, sensor_distance, yaw, pitch)
             self.add_point(loc)
-            print("Sensor {} distance: {} m (angle {})".format(i, sensor_distance, angle))
+            print("Sensor {} distance: {} m (yaw {}, pitch {})".format(i, sensor_distance, yaw, pitch))
             i = i + 1
 
     def on_key_press(self, symbol, modifiers):

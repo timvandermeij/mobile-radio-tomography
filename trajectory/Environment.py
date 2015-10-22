@@ -56,10 +56,24 @@ class Environment(object):
         return self.geometry.get_distance_meters(self.vehicle.location, location)
 
     def get_yaw(self):
+        """
+        Get the yaw bearing of the vehicle.
+        """
         return self.vehicle.attitude.yaw
 
     def get_angle(self):
+        """
+        Helper function to get the yaw angle to the vehicle.
+
+        This performs conversion from bearing to angle, but still returns the angle in radians.
+        """
         return self.geometry.bearing_to_angle(self.get_yaw())
+
+    def get_pitch(self):
+        """
+        Get the pitch bearing of the vehicle.
+        """
+        return self.vehicle.attitude.pitch
 
 class Environment_Simulator(Environment):
     """
