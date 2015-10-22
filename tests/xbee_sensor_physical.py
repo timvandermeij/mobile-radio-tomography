@@ -35,6 +35,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
     def test_initialization(self):
         self.assertEqual(self.sensor.id, self.sensor_id)
         self.assertEqual(self.sensor.scheduler, self.scheduler)
+        self.assertTrue(hasattr(self.sensor._location_callback, '__call__'))
         self.assertTrue(self.sensor._next_timestamp > 0)
         self.assertEqual(self.sensor._serial_connection, None)
         self.assertEqual(self.sensor._sensor, None)
@@ -148,6 +149,12 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.sensor._receive(packet)
         self.assertEqual(self.sensor._address, "highlow")
 
+        # If the high part is already present in the address (due to
+        # a repeated request), it should not be prepended again.
+        self.sensor._address = "highlow"
+        self.sensor._receive(packet)
+        self.assertEqual(self.sensor._address, "highlow")
+
         # AT response SL packets should be processed.
         self.sensor._address = None
         packet = {
@@ -161,6 +168,12 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         # If a high part is already present in the address, the low
         # part should be appended.
         self.sensor._address = "high"
+        self.sensor._receive(packet)
+        self.assertEqual(self.sensor._address, "highlow")
+
+        # If the low part is already present in the address (due to
+        # a repeated request), it should not be appended again.
+        self.sensor._address = "highlow"
         self.sensor._receive(packet)
         self.assertEqual(self.sensor._address, "highlow")
 
