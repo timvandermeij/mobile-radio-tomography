@@ -118,7 +118,7 @@ class Monitor(object):
 
         i = 0
         for sensor in self.sensors:
-            yaw = sensor.get_yaw()
+            yaw = sensor.get_angle()
             pitch = sensor.get_pitch()
             sensor_distance = sensor.get_distance()
 
