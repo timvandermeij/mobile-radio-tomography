@@ -420,6 +420,8 @@ class Mission_Search(Mission_Browse):
         if self.move_distance == 0:
             super(Mission_Search, self).step()
             if all(self.dists_done):
+                current_location = self.environment.get_location()
+
                 # Find safest "furthest" location (in one line) and move there
                 a = self.yaw
                 dist = 0
@@ -427,11 +429,16 @@ class Mission_Search(Mission_Browse):
                 d_left = 0
                 right = 0
                 cycle_safe = 0
-                safeness = np.zeros((self.dists_size,))
+                safeness = np.zeros(self.dists_size)
+                bounds = np.zeros(self.dists_size)
                 for d in self.dists:
                     if d == 0:
                         right = right + 1
                     else:
+                        dist = d + self.padding + self.closeness
+                        angle = (i + right - 1) * self.yaw_angle_step * math.pi/180
+                        loc = self.geometry.get_location_angle(current_location, dist, angle)
+
                         if i == 0:
                             cycle_safe = right
                         elif i == self.dists_size - 1:
@@ -439,9 +446,13 @@ class Mission_Search(Mission_Browse):
                         else:
                             safeness[i] = right + d_left
 
-                        safeness[(i + right - 1) % self.dists_size] = right + d/float(self.farness)
+                        if self.memory_map.location_in_bounds(loc):
+                            d_left = d/float(self.farness)
+                        else:
+                            d_left = -right
 
-                        d_left = d/float(self.farness)
+                        safeness[(i + right - 1) % self.dists_size] = right + d_left
+
                         i = i + right + 1
                         right = 0
 
@@ -458,13 +469,14 @@ class Mission_Search(Mission_Browse):
                 self.yaw = self.geometry.angle_to_bearing(angle)
 
                 self.move_distance = dist + self.padding + self.closeness
-                self.start_location = self.environment.get_location()
+                self.start_location = current_location
 
                 self.dists = np.zeros(self.dists_size)
                 self.dists_done = np.zeros(self.dists_size, dtype=bool)
 
                 self.set_yaw(self.yaw * 180/math.pi, relative=False)
                 self.set_speed(self.speed)
+                self.vehicle.commands.goto(self.geometry.get_location_angle(current_location, self.move_distance, angle))
 
     def check_sensor_distance(self, sensor_distance, yaw, pitch):
         close = super(Mission_Search, self).check_sensor_distance(sensor_distance, yaw, pitch)

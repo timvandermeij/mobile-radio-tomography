@@ -41,16 +41,25 @@ class Memory_Map(object):
         """
         return list(reversed(self.get_index(loc)))
 
+    def index_in_bounds(self, i, j):
+        if 0 <= i < self.size and 0 <= j < self.size:
+            return True
+
+        return False
+
+    def location_in_bounds(self, loc):
+        return self.index_in_bounds(*self.get_index(loc))
+
     def get(self, idx):
         i,j = idx
-        if 0 <= i < self.size and 0 <= j < self.size:
+        if self.index_in_bounds(i,j):
             return self.map[i,j]
 
         raise KeyError("i={} and/or j={} out of bounds ({}).".format(i, j, self.size))
 
     def set(self, idx, value=0):
         i,j = idx
-        if 0 <= i < self.size and 0 <= j < self.size:
+        if self.index_in_bounds(i,j):
             self.map[i,j] = value
         else:
             raise KeyError("i={} and/or j={} out of bounds ({}).".format(i, j, self.size))
