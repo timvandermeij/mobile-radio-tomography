@@ -183,16 +183,9 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         # Based on http://stackoverflow.com/a/18543221
 
         # Point at location
-        # TODO: Pitch angle
         p0 = np.array([location.lat, location.lon, location.alt])
-        if (yaw_angle % math.pi) == math.pi/2.0:
-            p1 = self.geometry.get_location_meters(location, epsilon, 0.0, 0.0)
-        else:
-            # Slope of the line
-            m = math.tan(yaw_angle)
-            # Another point on the line. Assume for now that the vehicle's 
-            # pitch is zero, i.e. it looks straight ahead on the ground plane.
-            p1 = self.geometry.get_location_meters(location, epsilon * m, epsilon, 0.0)
+        # Another point on the line.
+        p1 = self.geometry.get_location_angle(location, epsilon, yaw_angle, pitch_angle)
 
         u = np.array(self.geometry.diff_location_meters(location, p1)) # p1 - v1
         nu_dot = np.dot(cp, u)

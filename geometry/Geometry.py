@@ -73,9 +73,10 @@ class Geometry(object):
         """
         Get a location that is `distance` meters away from the given `location` and has an `angle` in vertical plane and `pitch` in horizontal plane compared to the `location`, both in radians.
         """
-        dlat = math.sin(angle) * distance
-        dlon = math.cos(angle) * distance
         dalt = math.sin(pitch) * distance
+        dist = math.cos(pitch) * distance # distance on horizontal plane
+        dlat = math.sin(angle) * dist
+        dlon = math.cos(angle) * dist
         return self.get_location_meters(location, dlat, dlon, dalt)
 
     def get_angle(self, location1, location2):
