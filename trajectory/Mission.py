@@ -22,13 +22,23 @@ class Mission(object):
         self.api = api
         self.environment = environment
         self.vehicle = self.environment.get_vehicle()
-        self.is_mock = False
         if isinstance(self.vehicle, MockVehicle):
             self.is_mock = True
+        else:
+            self.is_mock = False
+            self.vehicle.set_mavlink_callback(self.get_packet)
 
+        self.is_rover = False
         self.geometry = self.environment.get_geometry()
         self.settings = settings
         self.memory_map = None
+
+    def get_packet(self, msg):
+        if msg.get_type() == "HEARTBEAT":
+            if msg.type == mavutil.mavlink.MAV_TYPE_GROUND_ROVER:
+                self.is_rover = True
+
+            self.vehicle.unset_mavlink_callback()
 
     def distance_to_current_waypoint(self):
         """
@@ -109,6 +119,10 @@ class Mission(object):
         while self.vehicle.gps_0.fix_type < 2:
             print("Waiting for GPS...: {}".format(self.vehicle.gps_0.fix_type))
             time.sleep(1)
+
+        if self.is_rover:
+            # Rover is already armed and does not need to take off.
+            return
 
         print("Arming motors")
         # Copter should arm in GUIDED mode
@@ -197,7 +211,8 @@ class Mission(object):
             0, # confirmation
             0, # param 1
             speed, # speed in meters/second
-            0, 0, 0, 0, 0 # param 3 - 7
+            100, # throttle as a percentage (Rover only)
+            0, 0, 0, 0 # param 4 - 7
         )
 
         # Send command to vehicle
@@ -260,6 +275,13 @@ class Mission(object):
             else:
                 self.vehicle.set_target_attitude(yaw=heading, yaw_direction=direction)
 
+            return
+
+        if self.is_rover:
+            if self.vehicle.mode.name != "STEERING":
+                self.set_speed(self.speed)
+                self.vehicle.mode = VehicleMode("STEERING")
+                self.vehicle.flush()
             return
 
         if relative:
