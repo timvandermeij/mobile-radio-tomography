@@ -3,6 +3,7 @@
         "name": "Distance sensor (simulator)",
         "settings": {
             "altitude_margin": 2.5,
+            "angle_margin": 5.0,
             "maximum_distance": 1000.0
         }
     },
@@ -22,7 +23,42 @@
             "altitude_undershoot": 0.95,
             "closeness": 2.0,
             "farness": 100.0,
-            "loop_delay": 0.5
+            "mission_delay": 2.0,
+            "altitude": 4,
+            "speed": 2.5,
+            "size": 50,
+            "vehicle_simulation": true,
+            "mission_class": "Mission_Square",
+            "geometry_class": "Geometry_Spherical"
+        }
+    },
+    "mission_monitor": {
+        "name": "Mission monitoring",
+        "settings": {
+            "loop_delay": 0.5,
+            "plot": true,
+            "viewer": true
+        }
+    },
+    "environment": {
+        "name": "Vehicle environment",
+        "settings": {
+            "sensors": [0],
+            "scenefile": null,
+            "translation": [0,0,0]
+        }
+    },
+    "environment_viewer": {
+        "name": "Environment 3D scene viewer",
+        "settings": {}
+    },
+    "environment_viewer_interactive": {
+        "name": "Interactive environment 3D scene viewer",
+        "parent": "environment_viewer",
+        "settings": {
+            "geometry_class": "Geometry",
+            "camera_speed": 5.0,
+            "rotate_speed": 90.0
         }
     },
     "xbee_base": {

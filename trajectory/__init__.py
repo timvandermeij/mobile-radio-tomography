@@ -1,4 +1,4 @@
 # Initialize as subpackage
-from Mission import Mission
+from Environment import Environment, Environment_Simulator
 
-__all__ = ["Mission"]
+__all__ = ["Environment", "Environment_Simulator"]

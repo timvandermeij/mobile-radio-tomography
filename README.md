@@ -13,17 +13,52 @@ Prerequisites
 In order to use the toolchain you need to have the following software
 installed on your system. The toolchain has been developed for Linux, but
 can be made to work on Windows or any other operating system since all
-prerequisites are also available for those systems.
+prerequisites are also available for those systems, perhaps with slightly
+different installation procedures.
 
 * Git
-* Python 2.7
-* pip for Python 2.7 with the following packages:
-    * pyserial
+* Python 2.7. Note that Python 3 cannot be used at this moment.
+* `pip` for Python 2.7. `pip` is often already available extremely old and bare
+  systems. If it is also not delivered by a package manager, one can also
+  [install with get-pip.py](https://pip.pypa.io/en/latest/installing.html).
+  Ensure you have the correct version of `pip` with `pip --version`, or use
+  `pip2` instead.
+
+  Use `pip install --user <package>` to install each of the following packages,
+  sorted by purpose:
+  * General packages:
     * matplotlib
     * NumPy
+    * scipy
+  * Physical sensor/communication interfaces:
+    * pyserial
     * RPi.GPIO
-    * mock
     * xbee
+  * Vehicle trajectory mission interfaces:
+    * lxml
+    * pexpect
+    * pymavlink
+    * mavproxy
+    * droneapi
+  * Environment simulation:
+    * PyOpenGL
+    * simpleparse
+    * PyVRML97
+    * PyDispatcher
+    * pyglet
+  * Unit testing:
+    * mock
+* ArduPilot for vehicle simulation. Download the latest code using:
+
+        $ git clone https://github.com/diydrones/ardupilot.git
+
+  Then, add the following line to your `~/.bashrc`:
+
+      export PATH=$PATH:$HOME/ardupilot/Tools/autotest
+
+  Finally, create a file `~/.mavinit.src` with the following line:
+
+      module load droneapi.module.api
 
 For all commands in this file, replace `python2` with `python` if your
 operating system does not need to distinguish between Python 2 and Python 3.
@@ -53,6 +88,38 @@ component in `settings.json`, for example to set the right port if the
 default port is not correct. After starting the tool, the instructions for
 configuring each sensor are displayed on the screen. The tool takes care of
 setting the PAN ID and the node ID for each sensor.
+
+Vehicle mission
+---------------
+
+The trajectory mission sets up an unmanned aerial vehicle (UAV) and directs it
+to move and rotate within its environment. The script supports various mission
+types and simulation modes. You can run it using the ArduPilot simulator using
+the following commands:
+
+    $ sim vehicle.sh -v ArduCopter --map
+    [...wait until the simulator is set up, after "GPS lock at 0 meters"...]
+    STABILIZE> script mission.scr
+
+This starts up the mission with default settings from `settings.json`.
+The ArduPilot simulator provides an overhead map showing the copter's position.
+The mission monitor has a map in memory that shows objects in the environment
+during simulation as well as detected points from a distance sensor. It also
+provides a 3D viewer of the simulated objects.
+
+You can also start the mission monitor without ArduPilot simulation using
+`python2 mission_basic.py`. In this case, the vehicle is simulated on our own,
+and no overhead map is provided other than the memory map. The command allows
+changing settings from their defaults using arguments. You can provide a VRML
+scene file to retrieve simulated objects from using the `--scenefile` option,
+change the geometry from a spherical coordinate system (`Geometry_Spherical`)
+to a flat meter-based coordinate system using `--geometry-class Geometry`, or
+set sensor positioning angles, for example `--sensors 0 90 -90`. Many other 
+options are available for simulating various missions and sensor setups, and
+the command `python2 mission_basic.py --help` provides a list of them. The most
+important setting might be the Mission class to use for calculating what
+trajectory to take. You can choose one of the classes in `trajectory/Mission.py`
+using `--mission-class <Mission_Name>`.
 
 XBee sensor (simulator)
 -----------------------
