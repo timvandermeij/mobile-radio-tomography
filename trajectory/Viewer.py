@@ -338,8 +338,8 @@ class Viewer_Interactive(Viewer):
         if self.is_mock:
             self.vehicle.location = location
 
-            pitch = self.rotation.x * math.pi/180
-            yaw = self.rotation.y * math.pi/180
+            pitch = math.asin(-self.look.y)
+            yaw = math.atan2(self.look.x, self.look.z)
             self.vehicle.attitude = MockAttitude(pitch, yaw, 0.0)
 
         self.points = []
