@@ -58,7 +58,8 @@ class Geometry(object):
         """
         dlat = location2.lat - location1.lat
         dlon = location2.lon - location1.lon
-        return math.sqrt((dlat*dlat) + (dlon*dlon))
+        dalt = location2.alt - location1.alt
+        return math.sqrt((dlat*dlat) + (dlon*dlon) + (dalt*dalt))
 
     def diff_location_meters(self, location1, location2):
         """
@@ -69,21 +70,22 @@ class Geometry(object):
         dalt = location2.alt - location1.alt
         return (dlat, dlon, dalt)
 
-    def get_location_angle(self, location, distance, angle, pitch=0):
+    def get_location_angle(self, location, distance, yaw, pitch=0):
         """
-        Get a location that is `distance` meters away from the given `location` and has an `angle` in vertical plane and `pitch` in horizontal plane compared to the `location`, both in radians.
+        Get a location that is `distance` meters away from the given `location` and has a rotations `yaw` and `pitch`, both in radians.
         """
+        dlon = math.cos(yaw) * distance
+        dist = math.sin(yaw) * distance # distance for latitude calculation
+
         dalt = math.sin(pitch) * distance
-        dist = math.cos(pitch) * distance # distance on horizontal plane
-        dlat = math.sin(angle) * dist
-        dlon = math.cos(angle) * dist
+        dlat = math.cos(pitch) * dist
         return self.get_location_meters(location, dlat, dlon, dalt)
 
     def get_angle(self, location1, location2):
         """
-        Get the angle in radians for the segment between locations `location1` and `location2` compared to the cardinal directions.
+        Get the 2D angle in radians for the segment between locations `location1` and `location2` compared to the cardinal latitude and longitude directions.
 
-        Does not take curvature of earth in account, and should thus be used only for close locations.
+        Does not take curvature of earth in account, and should thus be used only for close locations. Only gives the yaw angle assuming the two locations are at the same level, and thus should not be used for locations at different altitudes.
         """
         dlat = location2.lat - location1.lat
         dlon = location2.lon - location1.lon
@@ -161,6 +163,8 @@ class Geometry_Spherical(Geometry):
     # Radius of "spherical" earth
     EARTH_RADIUS = 6378137.0
 
+    COORD_TO_METERS = 1.113195e5
+
     def get_location_meters(self, original_location, north, east, alt=0):
         """
         Returns a Location object containing the latitude/longitude `north` and `east` (floating point) meters from the 
@@ -189,8 +193,11 @@ class Geometry_Spherical(Geometry):
         earth's poles. It comes from the ArduPilot test code: 
         https://github.com/diydrones/ardupilot/blob/master/Tools/autotest/common.py
         """
-        d = super(Geometry_Spherical, self).get_distance_meters(location1, location2)
-        return d * 1.113195e5
+        dlat = location2.lat - location1.lat
+        dlon = location2.lon - location1.lon
+        dalt = location2.alt - location1.alt
+        d = math.sqrt((dlat*dlat) + (dlon*dlon)) * self.COORD_TO_METERS
+        return math.sqrt((d*d) + (dalt*dalt))
 
     def diff_location_meters(self, location1, location2):
         dlat, dlon, dalt = super(Geometry_Spherical, self).diff_location_meters(location1, location2)
