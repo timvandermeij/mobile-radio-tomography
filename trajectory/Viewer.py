@@ -87,8 +87,6 @@ class Viewer(object):
         glColor3f(1, 0, 0)
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_CULL_FACE)
-        glEnable(GL_POINT_SMOOTH)
-        glEnable(GL_BLEND)
 
         self._reset_camera()
         self._reset_movement()
@@ -101,6 +99,7 @@ class Viewer(object):
         We convert the objects to GL standards and give each object a color.
         """
         self.points = []
+        self.quadrics = []
         self.colors = []
         self.objects = []
         for obj in self.environment.get_objects():
@@ -250,6 +249,7 @@ class Viewer(object):
         The given `point` is a Location object of the point to be drawn.
         """
         self.points.append(self._convert_point(point))
+        self.quadrics.append(gluNewQuadric())
 
     def on_expose(self):
         # Dummy method that is necessary to draw when starting pyglet.
@@ -284,11 +284,15 @@ class Viewer(object):
 
             i = i + 1
 
-        glBegin(GL_POINTS)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         glColor3f(1, 0, 0)
+        i = 0
         for point in self.points:
-            glVertex3f(*point)
-        glEnd()
+            glPushMatrix()
+            glTranslatef(*point)
+            gluSphere(self.quadrics[i], 0.05, 30, 30)
+            glPopMatrix()
+            i = i + 1
 
     def on_resize(self, width, height):
         """
@@ -334,8 +338,8 @@ class Viewer_Interactive(Viewer):
         if self.is_mock:
             self.vehicle.location = location
 
-            pitch = self.rotation.x * math.pi/180
-            yaw = self.rotation.y * math.pi/180
+            pitch = math.asin(-self.look.y)
+            yaw = math.atan2(self.look.x, self.look.z)
             self.vehicle.attitude = MockAttitude(pitch, yaw, 0.0)
 
         self.points = []

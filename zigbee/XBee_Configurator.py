@@ -6,7 +6,10 @@ class XBee_Configurator(object):
     STATUS_OK = "\x00"
 
     def __init__(self, sensor_id, settings):
-        # Open a serial connection and initialize the sensor (ZigBee) object.
+        """
+        Open a serial connection to the XBee chip.
+        """
+
         if isinstance(settings, Arguments):
             self.settings = settings.get_settings("xbee_configurator")
         elif isinstance(settings, Settings):
@@ -20,12 +23,20 @@ class XBee_Configurator(object):
         self._sensor = ZigBee(self._serial_connection)
 
     def __del__(self):
-        # Close the serial connection.
+        """
+        Close the serial connection to the XBee chip.
+        """
+
         self._serial_connection.close()
 
     def _encode_value(self, value):
+        """
+        Encode a given value, if possible, by converting the human-readable
+        integer to a hexadecimal representation.
+        """
+
         if type(value) == int:
-            # Convert to a string, zero-fill and create a hexadecimal representation.
+            # Convert to a string, zero-fill and create the hexadecimal representation.
             value = str(value)
             value = value.zfill(len(value) + len(value) % 2).decode("hex")
         elif type(value) != str:
@@ -34,18 +45,24 @@ class XBee_Configurator(object):
         return value
 
     def _decode_value(self, value):
-        # Check if a given value needs to be decoded.
+        """
+        Decode a given value, if required, by converting the hexadecimal
+        representation to a human-readable string.
+        """
+
         try:
             int(value, 16)
         except ValueError:
-            # Convert the hexadecimal representation to a readable string.
             value = "".join(char.encode("hex").upper() for char in value)
             value = value.lstrip("0")
 
         return value
 
     def get(self, command):
-        # Get a property value from the sensor.
+        """
+        Get a property value from the XBee chip.
+        """
+
         self._sensor.send("at", command=command)
         response = self._sensor.wait_read_frame()
         if "status" in response and response["status"] == self.STATUS_OK:
@@ -54,13 +71,19 @@ class XBee_Configurator(object):
         return None
 
     def set(self, command, value):
-        # Set a property value on the sensor.
+        """
+        Set a property value on the XBee chip.
+        """
+
         self._sensor.send("at", command=command, parameter=self._encode_value(value))
         response = self._sensor.wait_read_frame()
         return ("status" in response and response["status"] == self.STATUS_OK)
 
     def write(self):
-        # Write queued changes to the sensor.
+        """
+        Write queued changes to the XBee chip.
+        """
+
         self._sensor.send("at", command="WR")
         response = self._sensor.wait_read_frame()
         return ("status" in response and response["status"] == self.STATUS_OK)

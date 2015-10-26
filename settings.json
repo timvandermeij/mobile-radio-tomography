@@ -61,35 +61,56 @@
             "rotate_speed": 90.0
         }
     },
+    "xbee_base": {
+        "name": "XBee base",
+        "settings": {
+            "number_of_sensors": 2,
+            "loop_delay": 0.01,
+            "baud_rate": 57600
+        }
+    },
     "xbee_configurator": {
         "name": "XBee configurator",
-        "parent": "xbee_sensor_simulator",
+        "parent": "xbee_base",
         "settings": {
             "port": "/dev/ttyUSB0",
-            "baud_rate": 9600,
             "pan_id": 2015
         }
     },
     "xbee_sensor_simulator": {
-        "name": "XBee sensor simulator",
+        "name": "XBee sensor (simulator)",
+        "parent": "xbee_base",
         "settings": {
             "ip": "127.0.0.1",
             "port": 3233,
-            "buffer_size": 1024,
-            "number_of_sensors": 8,
-            "loop_delay": 0.1
+            "buffer_size": 256
+        }
+    },
+    "xbee_sensor_physical": {
+        "name": "XBee sensor (physical)",
+        "parent": "xbee_base",
+        "settings": {
+            "id": 0,
+            "port": "/dev/ttyUSB0",
+            "sensors": [
+                "\\x00\\x13\\xa2\\x00@\\xe6n\\xbd",
+                "\\x00\\x13\\xa2\\x00@\\xe6o5",
+                "\\x00\\x13\\xa2\\x00@\\xe6n\\xb9"
+            ],
+            "startup_delay": 1.5,
+            "verbose": false
         }
     },
     "xbee_tdma_scheduler": {
         "name": "XBee TDMA scheduler",
-        "parent": "xbee_sensor_simulator",
+        "parent": "xbee_base",
         "settings": {
-            "sweep_delay": 16
+            "sweep_delay": 1
         }
     },
     "xbee_viewer": {
         "name": "XBee viewer",
-        "parent": "xbee_sensor_simulator",
+        "parent": "xbee_base",
         "settings": {
             "size": 10,
             "circle_radius": 3

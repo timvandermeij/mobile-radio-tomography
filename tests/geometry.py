@@ -10,6 +10,7 @@ class TestGeometry(unittest.TestCase):
         self.geometry = Geometry()
         # Handle float inaccuracies
         self.dist_delta = sys.float_info.epsilon * 10
+        self.coord_delta = self.dist_delta
         self.angle_delta = sys.float_info.epsilon * 10
 
     def assertLocationEqual(self, loc1, loc2, msg=None):
@@ -50,11 +51,11 @@ class TestGeometry(unittest.TestCase):
 
     def test_location_angle(self):
         loc = Location(5.0, 3.0, 1.0, is_relative=True)
-        loc2 = self.geometry.get_location_meters(loc, 10.0, 10.0, 10.0)
-        cl = self.geometry.get_location_angle(loc, math.sqrt(200), 45.0 * math.pi/180, 45.0 * math.pi/180)
-        self.assertAlmostEqual(cl.lat, loc2.lat, delta=self.dist_delta)
-        self.assertAlmostEqual(cl.lon, loc2.lon, delta=self.dist_delta)
-        self.assertAlmostEqual(cl.alt, loc2.alt, delta=self.dist_delta)
+        loc2 = self.geometry.get_location_meters(loc, 10, math.sqrt(200), math.sqrt(200))
+        cl = self.geometry.get_location_angle(loc, 20, 45.0 * math.pi/180, 45.0 * math.pi/180)
+        self.assertAlmostEqual(cl.lat, loc2.lat, delta=self.coord_delta)
+        self.assertAlmostEqual(cl.lon, loc2.lon, delta=self.coord_delta)
+        self.assertAlmostEqual(cl.alt, loc2.alt, delta=self.coord_delta)
         self.assertAlmostEqual(self.geometry.get_angle(loc, self.geometry.get_location_angle(loc, 10.0, math.pi/4)), math.pi/4, delta=self.angle_delta)
 
     def test_get_angle(self):
@@ -82,6 +83,7 @@ class TestGeometry_Spherical(TestGeometry):
         # Up to 2 cm accuracy. Geometry is precise, but Geometry_Spherical has 
         # some rounding due to coordinate precision.
         self.dist_delta = 0.02
+        self.coord_delta = self.dist_delta / self.geometry.EARTH_RADIUS
         # Up to 0.15 degrees accuracy. Geometry is precise, but 
         # Geometry_Spherical has some rounding due to get_angle not taking 
         # curvature into account.

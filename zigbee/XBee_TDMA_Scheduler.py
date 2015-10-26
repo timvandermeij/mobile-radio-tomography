@@ -2,7 +2,11 @@ import time
 from ..settings import Arguments, Settings
 
 class XBee_TDMA_Scheduler(object):
-    def __init__(self, id, settings):
+    def __init__(self, sensor_id, settings):
+        """
+        Initialize the TDMA scheduler with the sensor ID.
+        """
+
         if isinstance(settings, Arguments):
             self.settings = settings.get_settings("xbee_tdma_scheduler")
         elif isinstance(settings, Settings):
@@ -10,32 +14,41 @@ class XBee_TDMA_Scheduler(object):
         else:
             raise ValueError("'settings' must be an instance of Settings or Arguments")
 
-        self.id = id
+        self.id = sensor_id
         self.timestamp = 0
+        self.number_of_sensors = self.settings.get("number_of_sensors")
+        self.sweep_delay = self.settings.get("sweep_delay")
 
     def get_next_timestamp(self):
-        # Get the next timestamp for starting transmission of packets.
+        """
+        Get the next timestamp for transmitting packets.
+        """
+
         if self.timestamp == 0:
-            self.timestamp = time.time() + ((self.id / self.settings.get("number_of_sensors")) *
-                             self.settings.get("sweep_delay"))
+            self.timestamp = time.time() + ((float(self.id) / self.number_of_sensors) *
+                             self.sweep_delay)
         else: 
-            self.timestamp += self.settings.get("sweep_delay")
+            self.timestamp += self.sweep_delay
         
-        return round(self.timestamp)
+        return self.timestamp
 
     def synchronize(self, packet):
-        # Synchronize the scheduler after receiving a packet from
-        # another sensor in the network. The transmission timestamp of this
-        # sensor is the received transmission timestamp plus the number of
-        # slots inbetween that sensor and this sensor.
-        slot_time = self.settings.get("sweep_delay") / self.settings.get("number_of_sensors")
-        from_sensor = int(packet["from"])
+        """
+        Synchronize the scheduler after receiving a packet from another sensor
+        in the network. The transmission timestamp of this sensor is the received
+        transmission timestamp plus the number of slots inbetween that sensor
+        and this sensor.
+        """
+
+        slot_time = float(self.sweep_delay) / self.number_of_sensors
+        from_sensor = int(packet["from_id"])
         timestamp = float(packet["timestamp"])
+
         if from_sensor < self.id:
             self.timestamp = timestamp + ((self.id - from_sensor) * slot_time)
         else:
-            # Calculate how much time remains to complete the current round.
-            completed_round = (self.settings.get("number_of_sensors") - from_sensor + 1) * slot_time
+            # Calculate how much time remains to complete the current sweep.
+            completed_round = (self.number_of_sensors - from_sensor + 1) * slot_time
             self.timestamp = timestamp + completed_round + ((self.id - 1) * slot_time)
 
-        return round(self.timestamp)
+        return self.timestamp

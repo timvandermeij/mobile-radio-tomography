@@ -202,14 +202,10 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         u = u * factor
         loc_point = self.geometry.get_location_meters(location, *u)
 
-        # Angle difference check
-        loc_angle = self.geometry.get_angle(location, loc_point)
-        if not self.geometry.check_angle(loc_angle, yaw_angle, self.angle_margin):
-            # The difference between the initial angle that determines the ray 
-            # and the angle between the vehicle and the intersection point is 
-            # too large. This usually means that the point is on the line 
-            # extending in the other direction, which we need to ignore as 
-            # well.
+        if factor < 0:
+            # The factor is too small, which means that the intersection point 
+            # is on the line extending in the other direction, which we need to 
+            # ignore as well.
             return (sys.float_info.max, None)
 
         # Point inside 3D polygon check
