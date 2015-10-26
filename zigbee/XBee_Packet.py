@@ -15,6 +15,14 @@ class XBee_Packet(object):
 
         self._contents[key] = value
 
+    def unset(self, key):
+        """
+        Unset a key in the contents key-value store.
+        """
+
+        if key in self._contents:
+            self._contents.pop(key)
+
     def get(self, key):
         """
         Get the value of a key in the contents key-value store.

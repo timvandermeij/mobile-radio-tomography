@@ -1,7 +1,7 @@
 import time
-import json
 import socket
 import random
+from XBee_Packet import XBee_Packet
 from XBee_Sensor import XBee_Sensor
 from ..settings import Arguments, Settings
 
@@ -40,7 +40,8 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             self._send()
 
         try:
-            packet = json.loads(self._socket.recv(self.settings.get("buffer_size")))
+            packet = XBee_Packet()
+            packet.unserialize(self._socket.recv(self.settings.get("buffer_size")))
             self._receive(packet)
         except socket.error:
             pass
@@ -62,17 +63,16 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             if i == self.id:
                 continue
 
-            packet = {
-                "from": self._location_callback(),
-                "from_id": self.id,
-                "timestamp": time.time()
-            }
-            self._socket.sendto(json.dumps(packet), (self.settings.get("ip"), self.settings.get("port") + i))
+            packet = XBee_Packet()
+            packet.set("from", self._location_callback())
+            packet.set("from_id", self.id)
+            packet.set("timestamp", time.time())
+            self._socket.sendto(packet.serialize(), (self.settings.get("ip"), self.settings.get("port") + i))
             self.viewer.draw_arrow(self.id, i)
         
         # Send the sweep data to the ground sensor and clear the list for the next round.
         for packet in self._data:
-            self._socket.sendto(json.dumps(packet), (self.settings.get("ip"), self.settings.get("port")))
+            self._socket.sendto(packet.serialize(), (self.settings.get("ip"), self.settings.get("port")))
             self.viewer.draw_arrow(self.id, 0, "blue")
 
         self.viewer.refresh()
@@ -88,10 +88,10 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             self._next_timestamp = self.scheduler.synchronize(packet)
 
             # Sanitize and complete the packet for the ground station.
-            packet["to"] = self._location_callback()
-            packet["rssi"] = random.randint(0, 60)
-            packet.pop("from_id")
-            packet.pop("timestamp")
+            packet.set("to", self._location_callback())
+            packet.set("rssi", random.randint(0, 60))
+            packet.unset("from_id")
+            packet.unset("timestamp")
             self._data.append(packet)
         else:
-            print("> Ground station received {}".format(packet))
+            print("> Ground station received {}".format(packet.serialize()))

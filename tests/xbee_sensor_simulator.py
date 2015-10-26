@@ -2,8 +2,10 @@ import unittest
 import socket
 import time
 import random
+import copy
 from mock import patch
 from ..settings import Arguments
+from ..zigbee.XBee_Packet import XBee_Packet
 from ..zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from ..zigbee.XBee_Viewer import XBee_Viewer
 from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
@@ -46,16 +48,16 @@ class TestXBeeSensorSimulator(unittest.TestCase):
 
     def test_receive(self):
         # Create a packet from sensor 2 to the current sensor.
-        packet = {
-            "from_id": 2,
-            "timestamp": time.time()
-        }
+        packet = XBee_Packet()
+        packet.set("from_id", 2)
+        packet.set("timestamp", time.time())
         
         # After receiving that packet, the next timestamp must be synchronized.
         # Note that we must make a copy as the receive method will change the packet!
-        copy = packet.copy()
+        copied_packet = copy.deepcopy(packet)
         self.sensor._receive(packet)
-        self.assertEqual(self.sensor._next_timestamp, self.scheduler.synchronize(copy))
+        self.assertEqual(self.sensor._next_timestamp,
+                         self.scheduler.synchronize(copied_packet))
 
     def test_deactivate(self):
         # After deactivation the socket should be closed.
