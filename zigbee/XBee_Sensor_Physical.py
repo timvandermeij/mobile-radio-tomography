@@ -1,8 +1,8 @@
 import serial
-import json
 import time
 import random
 from xbee import ZigBee
+from XBee_Packet import XBee_Packet
 from XBee_Sensor import XBee_Sensor
 from ..settings import Arguments, Settings
 
@@ -67,11 +67,10 @@ class XBee_Sensor_Physical(XBee_Sensor):
         Send a packet to each other sensor in the network.
         """
 
-        packet = {
-            "from": self._location_callback(),
-            "from_id": self.id,
-            "timestamp": time.time()
-        }
+        packet = XBee_Packet()
+        packet.set("from", self._location_callback())
+        packet.set("from_id", self.id)
+        packet.set("timestamp", time.time())
         sensors = self.settings.get("sensors")
         for index, sensor_address in enumerate(sensors):
             # Unescape the string as it is escaped in JSON.
@@ -81,7 +80,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
             if sensor_address != self._address and index > 0:
                 self._sensor.send("tx", dest_addr_long=sensor_address,
                                   dest_addr="\xFF\xFE", frame_id="\x00",
-                                  data=json.dumps(packet))
+                                  data=packet.serialize())
 
                 if self._verbose:
                     print("--> Sending to sensor {}.".format(index))
@@ -92,73 +91,74 @@ class XBee_Sensor_Physical(XBee_Sensor):
         ground_sensor_address = sensors[0].decode("string_escape")
         data = self._data.copy()
         for frame_id, packet in data.iteritems():
-            if packet == None or packet["rssi"] == None:
+            if packet == None or packet.get("rssi") == None:
                 continue
 
             self._sensor.send("tx", dest_addr_long=ground_sensor_address,
                               dest_addr="\xFF\xFE", frame_id="\x00",
-                              data=json.dumps(packet))
+                              data=packet.serialize())
 
             if self._verbose:
                 print("--> Sending to ground station.")
 
             self._data[frame_id] = None
 
-    def _receive(self, packet):
+    def _receive(self, raw_packet):
         """
-        Receive and process a received packet from another sensor in the network.
+        Receive and process a raw packet from another sensor in the network.
         """
 
-        if packet["id"] == "rx":
+        if raw_packet["id"] == "rx":
             try:
-                payload = json.loads(packet["rf_data"])
+                packet = XBee_Packet()
+                packet.unserialize(raw_packet["rf_data"])
             except:
-                # The packet is malformed, so drop it.
+                # The raw packet is malformed, so drop it.
                 return
 
             if self.id == 0:
-                print("[{}] Ground station received {}".format(time.time(), payload))
+                print("[{}] Ground station received {}".format(time.time(), packet.serialize()))
                 return
 
             if self._verbose:
-                print("<-- Received from sensor {}.".format(payload["from_id"]))
+                print("<-- Received from sensor {}.".format(packet.get("from_id")))
 
-            # Synchronize the scheduler using the timestamp in the payload.
-            self._next_timestamp = self.scheduler.synchronize(payload)
+            # Synchronize the scheduler using the timestamp in the packet.
+            self._next_timestamp = self.scheduler.synchronize(packet)
 
             # Sanitize and complete the packet for the ground station.
-            payload["to"] = self._location_callback()
-            payload["rssi"] = None
-            payload.pop("from_id")
-            payload.pop("timestamp")
+            packet.set("to", self._location_callback())
+            packet.unset("from_id")
+            packet.unset("timestamp")
 
             # Generate a frame ID to be able to match this packet and the
             # associated RSSI (DB command) request.
             frame_id = chr(random.randint(1, 255))
-            self._data[frame_id] = payload
+            self._data[frame_id] = packet
 
             # Request the RSSI value for the received packet.
             self._sensor.send("at", command="DB", frame_id=frame_id)
-        elif packet["id"] == "at_response":
-            if packet["command"] == "DB":
+        elif raw_packet["id"] == "at_response":
+            if raw_packet["command"] == "DB":
                 # RSSI value has been received. Update the original packet.
-                if packet["frame_id"] in self._data:
-                    self._data[packet["frame_id"]]["rssi"] = ord(packet["parameter"])
-            elif packet["command"] == "SH":
+                if raw_packet["frame_id"] in self._data:
+                    original_packet = self._data[raw_packet["frame_id"]]
+                    original_packet.set("rssi", ord(raw_packet["parameter"]))
+            elif raw_packet["command"] == "SH":
                 # Serial number (high) has been received.
                 if self._address == None:
-                    self._address = packet["parameter"]
-                elif packet["parameter"] not in self._address:
-                    self._address = packet["parameter"] + self._address
-            elif packet["command"] == "SL":
+                    self._address = raw_packet["parameter"]
+                elif raw_packet["parameter"] not in self._address:
+                    self._address = raw_packet["parameter"] + self._address
+            elif raw_packet["command"] == "SL":
                 # Serial number (low) has been received.
                 if self._address == None:
-                    self._address = packet["parameter"]
-                elif packet["parameter"] not in self._address:
-                    self._address = self._address + packet["parameter"]
-            elif packet["command"] == "NI":
+                    self._address = raw_packet["parameter"]
+                elif raw_packet["parameter"] not in self._address:
+                    self._address = self._address + raw_packet["parameter"]
+            elif raw_packet["command"] == "NI":
                 # Node identifier has been received.
-                self.id = int(packet["parameter"])
+                self.id = int(raw_packet["parameter"])
                 self.scheduler.id = self.id
                 self._node_identifier_set = True
 
