@@ -18,10 +18,10 @@ different installation procedures.
 
 * Git
 * Python 2.7. Note that Python 3 cannot be used at this moment.
-* `pip` for Python 2.7. `pip` is often already available extremely old and bare
+* `pip` for Python 2.7. `pip` is often not available on extremely old and bare
   systems. If it is also not delivered by a package manager, one can also
-  [install with get-pip.py](https://pip.pypa.io/en/latest/installing.html).
-  Ensure you have the correct version of `pip` with `pip --version`, or use
+  [install it with get-pip.py](https://pip.pypa.io/en/latest/installing.html).
+  Ensure that you have the correct version of `pip` with `pip --version` or use
   `pip2` instead.
 
   Use `pip install --user <package>` to install each of the following packages,
@@ -94,15 +94,15 @@ Vehicle mission
 
 The trajectory mission sets up an unmanned aerial vehicle (UAV) and directs it
 to move and rotate within its environment. The script supports various mission
-types and simulation modes. You can run it using the ArduPilot simulator using
-the following commands:
+types and simulation modes. You can run it using the ArduPilot simulator with
+the following command:
 
     $ sim vehicle.sh -v ArduCopter --map
     [...wait until the simulator is set up, after "GPS lock at 0 meters"...]
     STABILIZE> script mission.scr
 
-This starts up the mission with default settings from `settings.json`.
-The ArduPilot simulator provides an overhead map showing the copter's position.
+This starts the mission with default settings from `settings.json`. The
+ArduPilot simulator provides an overhead map showing the copter's position.
 The mission monitor has a map in memory that shows objects in the environment
 during simulation as well as detected points from a distance sensor. It also
 provides a 3D viewer of the simulated objects.
@@ -117,7 +117,7 @@ to a flat meter-based coordinate system using `--geometry-class Geometry`, or
 set sensor positioning angles, for example `--sensors 0 90 -90`. Many other 
 options are available for simulating various missions and sensor setups, and
 the command `python2 mission_basic.py --help` provides a list of them. The most
-important setting might be the Mission class to use for calculating what
+important setting might be the mission class to use for calculating what
 trajectory to take. You can choose one of the classes in `trajectory/Mission.py`
 using `--mission-class <Mission_Name>`.
 
