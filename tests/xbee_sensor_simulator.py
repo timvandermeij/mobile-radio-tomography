@@ -49,8 +49,8 @@ class TestXBeeSensorSimulator(unittest.TestCase):
     def test_receive(self):
         # Create a packet from sensor 2 to the current sensor.
         packet = XBee_Packet()
-        packet.set("from_id", 2)
-        packet.set("timestamp", time.time())
+        packet.set("_from_id", 2)
+        packet.set("_timestamp", time.time())
         
         # After receiving that packet, the next timestamp must be synchronized.
         # Note that we must make a copy as the receive method will change the packet!

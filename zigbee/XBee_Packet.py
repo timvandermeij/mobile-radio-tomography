@@ -4,6 +4,9 @@ class XBee_Packet(object):
     def __init__(self):
         """
         Initialize the packet with an empty contents key-value store.
+        Items in the key-value store of which the key start with an underscore
+        are reserved for internal usage by the XBee code and may not be
+        added, removed or changed for custom packets.
         """
 
         self._contents = {}

@@ -64,9 +64,9 @@ class XBee_Sensor_Simulator(XBee_Sensor):
                 continue
 
             packet = XBee_Packet()
-            packet.set("from", self._location_callback())
-            packet.set("from_id", self.id)
-            packet.set("timestamp", time.time())
+            packet.set("_from", self._location_callback())
+            packet.set("_from_id", self.id)
+            packet.set("_timestamp", time.time())
             self._socket.sendto(packet.serialize(), (self.settings.get("ip"), self.settings.get("port") + i))
             self.viewer.draw_arrow(self.id, i)
         
@@ -76,7 +76,6 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             self.viewer.draw_arrow(self.id, 0, "blue")
 
         self.viewer.refresh()
-
         self._data = []
 
     def _receive(self, packet):
@@ -88,10 +87,10 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             self._next_timestamp = self.scheduler.synchronize(packet)
 
             # Sanitize and complete the packet for the ground station.
-            packet.set("to", self._location_callback())
-            packet.set("rssi", random.randint(0, 60))
-            packet.unset("from_id")
-            packet.unset("timestamp")
+            packet.set("_to", self._location_callback())
+            packet.set("_rssi", random.randint(0, 60))
+            packet.unset("_from_id")
+            packet.unset("_timestamp")
             self._data.append(packet)
         else:
             print("> Ground station received {}".format(packet.serialize()))

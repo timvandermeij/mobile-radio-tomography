@@ -3,6 +3,7 @@ import pty
 import os
 import serial
 import random
+import json
 from xbee import ZigBee
 from mock import patch
 from ..settings import Arguments
@@ -80,7 +81,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         mock_send.call_count = 0
         valid = 42
         valid_packet = XBee_Packet()
-        valid_packet.set("rssi", valid)
+        valid_packet.set("_rssi", valid)
         self.sensor._data = {
             12: None,
             16: XBee_Packet(),
@@ -104,9 +105,13 @@ class TestXBeeSensorPhysical(unittest.TestCase):
 
         # Valid RX packets should be processed. Store the frame ID
         # for the DB call test following this test.
+        data = {
+            "_from_id": 2,
+            "_timestamp": 123456
+        }
         raw_packet = {
             "id": "rx",
-            "rf_data": "{\"from_id\": 2, \"timestamp\": 1234}"
+            "rf_data": json.dumps(data)
         }
         self.sensor._receive(raw_packet)
         frame_id = None
@@ -115,13 +120,13 @@ class TestXBeeSensorPhysical(unittest.TestCase):
 
         # Check if the destination exists and if it consists only of floats.
         original_packet = self.sensor._data[frame_id]
-        to_location = original_packet.get("to")
+        to_location = original_packet.get("_to")
         self.assertTrue(to_location != None)
         self.assertTrue(all(type(number) == float for number in to_location))
 
-        self.assertTrue(original_packet.get("rssi") == None)
-        self.assertTrue(original_packet.get("from_id") == None)
-        self.assertTrue(original_packet.get("timestamp") == None)
+        self.assertTrue(original_packet.get("_rssi") == None)
+        self.assertTrue(original_packet.get("_from_id") == None)
+        self.assertTrue(original_packet.get("_timestamp") == None)
 
         # AT response DB packets should be processed. The parsed RSSI value
         # should be placed in the original packet in the data object.
@@ -132,7 +137,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
             "parameter": "\x4E"
         }
         self.sensor._receive(raw_packet)
-        self.assertEqual(self.sensor._data[frame_id].get("rssi"), ord("\x4E"))
+        self.assertEqual(self.sensor._data[frame_id].get("_rssi"), ord("\x4E"))
 
         # AT response SH packets should be processed.
         raw_packet = {
