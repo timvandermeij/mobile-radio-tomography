@@ -3,6 +3,7 @@ import time
 import random
 from __init__ import __package__
 from settings import Arguments
+from zigbee.XBee_Packet import XBee_Packet
 from zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 from zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from zigbee.XBee_Viewer import XBee_Viewer
@@ -31,9 +32,18 @@ def main(argv):
     arguments.check_help()
     viewer.draw_points()
 
+    timestamp = 0
     while True:
         try:
             for sensor in sensors:
+                # Enqueue a custom packet every three seconds.
+                if time.time() > timestamp and sensor.id > 0:
+                    packet = XBee_Packet()
+                    packet.set("to_id", sensor.id % 2 + 1)
+                    packet.set("command", "continue")
+                    sensor.enqueue(packet)
+                    timestamp = time.time() + 3
+
                 sensor.activate()
 
             time.sleep(settings.get("loop_delay"))
