@@ -61,7 +61,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         the ID of the destination XBee device.
         """
 
-        if type(packet) != XBee_Packet:
+        if not isinstance(packet, XBee_Packet):
             raise TypeError("Only XBee_Packet objects can be enqueued")
 
         if packet.get("to_id") == None:

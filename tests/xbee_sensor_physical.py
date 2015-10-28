@@ -48,8 +48,8 @@ class TestXBeeSensorPhysical(unittest.TestCase):
     def test_activate_and_deactivate(self):
         # The serial connection and sensor must be lazily initialized.
         self.sensor.activate()
-        self.assertTrue(type(self.sensor._serial_connection) == serial.Serial)
-        self.assertTrue(type(self.sensor._sensor) == ZigBee)
+        self.assertTrue(isinstance(self.sensor._serial_connection, serial.Serial))
+        self.assertTrue(isinstance(self.sensor._sensor, ZigBee))
 
         # After deactivation the serial connection must be closed.
         # Note that this also means that the sensor is halted.
