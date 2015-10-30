@@ -13,12 +13,15 @@ from ..zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
 
 class TestXBeeSensorPhysical(unittest.TestCase):
-    def get_location(self):
+    def location_callback(self):
         """
         Get the current GPS location (latitude and longitude pair).
         """
 
         return (random.uniform(1.0, 50.0), random.uniform(1.0, 50.0))
+
+    def receive_callback(self, packet):
+        pass
 
     def setUp(self):
         self.sensor_id = 1
@@ -34,12 +37,14 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.settings = self.arguments.get_settings("xbee_sensor_physical")
         self.scheduler = XBee_TDMA_Scheduler(self.sensor_id, self.arguments)
         self.sensor = XBee_Sensor_Physical(self.sensor_id, self.arguments,
-                                           self.scheduler, self.get_location)
+                                           self.scheduler, self.location_callback,
+                                           self.receive_callback)
 
     def test_initialization(self):
         self.assertEqual(self.sensor.id, self.sensor_id)
         self.assertEqual(self.sensor.scheduler, self.scheduler)
         self.assertTrue(hasattr(self.sensor._location_callback, "__call__"))
+        self.assertTrue(hasattr(self.sensor._receive_callback, "__call__"))
         self.assertTrue(self.sensor._next_timestamp > 0)
         self.assertEqual(self.sensor._serial_connection, None)
         self.assertEqual(self.sensor._sensor, None)

@@ -44,8 +44,8 @@ class TestXBeeSensorSimulator(unittest.TestCase):
         self.assertNotEqual(self.sensor._next_timestamp, 0)
 
         # Both the location and the receive callback must be set.
-        self.assertNotEqual(self.sensor._location_callback, None)
-        self.assertNotEqual(self.sensor._receive_callback, None)
+        self.assertTrue(hasattr(self.sensor._location_callback, "__call__"))
+        self.assertTrue(hasattr(self.sensor._receive_callback, "__call__"))
 
         # The sweep data list must be empty.
         self.assertEqual(self.sensor._data, [])
