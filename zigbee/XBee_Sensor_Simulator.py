@@ -75,8 +75,11 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         Send packets to all other sensors in the network.
         """
 
+        ip = self.settings.get("ip")
+        port = self.settings.get("port")
+
         self.viewer.clear_arrows()
-        for i in range(1, self.settings.get("number_of_sensors") + 1):
+        for i in xrange(1, self.settings.get("number_of_sensors") + 1):
             if i == self.id:
                 continue
 
@@ -84,27 +87,31 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             packet.set("_from", self._location_callback())
             packet.set("_from_id", self.id)
             packet.set("_timestamp", time.time())
-            self._socket.sendto(packet.serialize(), (self.settings.get("ip"), self.settings.get("port") + i))
+            self._socket.sendto(packet.serialize(), (ip, port + i))
             self.viewer.draw_arrow(self.id, i)
         
         # Send the sweep data to the ground sensor.
         for packet in self._data:
-            self._socket.sendto(packet.serialize(), (self.settings.get("ip"), self.settings.get("port")))
+            self._socket.sendto(packet.serialize(), (ip, port))
             self.viewer.draw_arrow(self.id, 0, "blue")
+
+        self._data = []
 
         # Send custom packets to their destination. Since the time slots are
         # limited in length, so is the number of custom packets we transfer
         # in each sweep.
-        limit = min(len(self._queue), self.settings.get("custom_packet_limit"))
-        for item in range(limit):
-            packet = self._queue[item]
+        limit = self.settings.get("custom_packet_limit")
+        for packet in self._queue:
+            if limit == 0:
+                break
+
+            limit -= 1
             to_id = packet.get("to_id")
-            self._socket.sendto(packet.serialize(), (self.settings.get("ip"), self.settings.get("port") + to_id))
+            self._socket.sendto(packet.serialize(), (ip, port + to_id))
             self.viewer.draw_arrow(self.id, to_id, "green")
             self._queue.remove(packet)
 
         self.viewer.refresh()
-        self._data = []
 
     def _receive(self, packet):
         """

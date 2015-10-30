@@ -29,13 +29,13 @@ def main(argv):
     timestamp = 0
     while True:
         try:
-            # Enqueue a custom packet every three seconds.
-            if time.time() > timestamp and sensor.id > 0:
+            # Enqueue a custom packet at a fixed interval.
+            if sensor.id > 0 and time.time() > timestamp:
+                timestamp = time.time() + 5
                 packet = XBee_Packet()
                 packet.set("to_id", sensor.id % 2 + 1)
                 packet.set("command", "continue")
                 sensor.enqueue(packet)
-                timestamp = time.time() + 3
 
             sensor.activate()
             time.sleep(settings.get("loop_delay"))

@@ -89,18 +89,19 @@ class XBee_Sensor_Physical(XBee_Sensor):
         packet.set("_from_id", self.id)
         packet.set("_timestamp", time.time())
         sensors = self.settings.get("sensors")
-        for index, sensor_address in enumerate(sensors):
+        for index in xrange(1, self.settings.get("number_of_sensors") + 1):
+            if index == self.id:
+                continue
+
             # Unescape the string as it is escaped in JSON.
-            sensor_address = sensor_address.decode("string_escape")
+            address = sensors[index].decode("string_escape")
 
-            # Do not send to yourself or the ground sensor.
-            if sensor_address != self._address and index > 0:
-                self._sensor.send("tx", dest_addr_long=sensor_address,
-                                  dest_addr="\xFF\xFE", frame_id="\x00",
-                                  data=packet.serialize())
+            self._sensor.send("tx", dest_addr_long=address,
+                              dest_addr="\xFF\xFE", frame_id="\x00",
+                              data=packet.serialize())
 
-                if self._verbose:
-                    print("--> Sending to sensor {}.".format(index))
+            if self._verbose:
+                print("--> Sending to sensor {}.".format(index))
 
         # Send the sweep data to the ground sensor and clear the list for 
         # the next round. Note that we use a copy to make sure that the
@@ -123,9 +124,12 @@ class XBee_Sensor_Physical(XBee_Sensor):
         # Send custom packets to their destination. Since the time slots are
         # limited in length, so is the number of custom packets we transfer
         # in each sweep.
-        limit = min(len(self._queue), self.settings.get("custom_packet_limit"))
-        for item in range(limit):
-            packet = self._queue[item]
+        limit = self.settings.get("custom_packet_limit")
+        for packet in self._queue:
+            if limit == 0:
+                break
+
+            limit -= 1
             to_id = packet.get("to_id")
             to_address = sensors[to_id].decode("string_escape")
             self._sensor.send("tx", dest_addr_long=to_address,
