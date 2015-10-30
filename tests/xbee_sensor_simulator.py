@@ -54,11 +54,14 @@ class TestXBeeSensorSimulator(unittest.TestCase):
             }
             self.sensor.enqueue(packet)
 
-        # Packets that do not contain a destination should be refused.
-        with self.assertRaises(ValueError):
-            packet = XBee_Packet()
-            packet.set("foo", "bar")
-            self.sensor.enqueue(packet)
+        # Packets that do not contain a destination should be broadcasted.
+        # We subtract one because we do not send to ourself.
+        packet = XBee_Packet()
+        packet.set("foo", "bar")
+        self.sensor.enqueue(packet)
+        self.assertEqual(self.sensor._queue.qsize(),
+                         self.settings.get("number_of_sensors") - 1)
+        self.sensor._queue = Queue.Queue()
 
         # Valid packets should be enqueued.
         packet = XBee_Packet()

@@ -40,7 +40,6 @@ def main(argv):
                 if sensor.id > 0 and time.time() > timestamp:
                     timestamp = time.time() + 8
                     packet = XBee_Packet()
-                    packet.set("to_id", sensor.id % 2 + 1)
                     packet.set("command", "continue")
                     sensor.enqueue(packet)
 
