@@ -31,7 +31,8 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._node_identifier_set = False
         self._verbose = self.settings.get("verbose")
 
-        # Prepare the sensor data.
+        # Prepare the packet and sensor data.
+        self._custom_packet_limit = self.settings.get("custom_packet_limit")
         self._number_of_sensors = self.settings.get("number_of_sensors")
         self._sensors = self.settings.get("sensors")
         for index, address in enumerate(self._sensors):
@@ -105,11 +106,9 @@ class XBee_Sensor_Physical(XBee_Sensor):
             if self._verbose:
                 print("--> Sending to sensor {}.".format(index))
 
-        # Send the sweep data to the ground sensor and clear the list for 
-        # the next round. Note that we use a copy to make sure that the
-        # sweep data list does not change in size during iteration.
-        data = self._data.copy()
-        for frame_id, packet in data.iteritems():
+        # Send the sweep data to the ground sensor and clear the list
+        # for the next round.
+        for frame_id, packet in self._data.iteritems():
             if packet == None or packet.get("_rssi") == None:
                 continue
 
@@ -117,15 +116,15 @@ class XBee_Sensor_Physical(XBee_Sensor):
                               dest_addr="\xFF\xFE", frame_id="\x00",
                               data=packet.serialize())
 
+            self._data[frame_id] = None
+
             if self._verbose:
                 print("--> Sending to ground station.")
-
-            self._data[frame_id] = None
 
         # Send custom packets to their destination. Since the time slots are
         # limited in length, so is the number of custom packets we transfer
         # in each sweep.
-        limit = self.settings.get("custom_packet_limit")
+        limit = self._custom_packet_limit
         for packet in self._queue:
             if limit == 0:
                 break
