@@ -31,6 +31,12 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._node_identifier_set = False
         self._verbose = self.settings.get("verbose")
 
+        # Prepare the sensor data.
+        self._number_of_sensors = self.settings.get("number_of_sensors")
+        self._sensors = self.settings.get("sensors")
+        for index, address in enumerate(self._sensors):
+            self._sensors[index] = address.decode("string_escape")
+
     def activate(self):
         """
         Activate the sensor by sending a packet if it is not a ground station.
@@ -88,15 +94,11 @@ class XBee_Sensor_Physical(XBee_Sensor):
         packet.set("_from", self._location_callback())
         packet.set("_from_id", self.id)
         packet.set("_timestamp", time.time())
-        sensors = self.settings.get("sensors")
-        for index in xrange(1, self.settings.get("number_of_sensors") + 1):
+        for index in xrange(1, self._number_of_sensors + 1):
             if index == self.id:
                 continue
 
-            # Unescape the string as it is escaped in JSON.
-            address = sensors[index].decode("string_escape")
-
-            self._sensor.send("tx", dest_addr_long=address,
+            self._sensor.send("tx", dest_addr_long=self._sensors[index],
                               dest_addr="\xFF\xFE", frame_id="\x00",
                               data=packet.serialize())
 
@@ -106,13 +108,12 @@ class XBee_Sensor_Physical(XBee_Sensor):
         # Send the sweep data to the ground sensor and clear the list for 
         # the next round. Note that we use a copy to make sure that the
         # sweep data list does not change in size during iteration.
-        ground_sensor_address = sensors[0].decode("string_escape")
         data = self._data.copy()
         for frame_id, packet in data.iteritems():
             if packet == None or packet.get("_rssi") == None:
                 continue
 
-            self._sensor.send("tx", dest_addr_long=ground_sensor_address,
+            self._sensor.send("tx", dest_addr_long=self._sensors[0],
                               dest_addr="\xFF\xFE", frame_id="\x00",
                               data=packet.serialize())
 
@@ -131,8 +132,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
             limit -= 1
             to_id = packet.get("to_id")
-            to_address = sensors[to_id].decode("string_escape")
-            self._sensor.send("tx", dest_addr_long=to_address,
+            self._sensor.send("tx", dest_addr_long=self._sensors[to_id],
                               dest_addr="\xFF\xFE", frame_id="\x00",
                               data=packet.serialize())
             self._queue.remove(packet)
