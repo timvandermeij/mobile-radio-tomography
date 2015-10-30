@@ -123,15 +123,16 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
         # Send the sweep data to the ground sensor and clear the list
         # for the next round.
-        for frame_id, packet in self._data.iteritems():
-            if packet == None or packet.get("_rssi") == None:
+        for frame_id in self._data.keys():
+            packet = self._data[frame_id]
+            if packet.get("_rssi") == None:
                 continue
 
             self._sensor.send("tx", dest_addr_long=self._sensors[0],
                               dest_addr="\xFF\xFE", frame_id="\x00",
                               data=packet.serialize())
 
-            self._data[frame_id] = None
+            self._data.pop(frame_id)
 
             if self._verbose:
                 print("--> Sending to ground station.")

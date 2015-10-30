@@ -94,9 +94,9 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.sensor._send()
         self.assertEqual(mock_send.call_count, 1)
 
-        # If the data object contains valid packets (i.e., both packet and RSSI
-        # value not None), then they must be sent to the ground station. We
-        # expect 2 here as the first call originates from the call tested above
+        # If the data object contains valid packets (i.e., the RSSI value is
+        # not None), then they must be sent to the ground station. We expect
+        # value 2 here as the first call originates from the call tested above
         # and the second call is for transmitting the only valid packet in the
         # data object below to the ground station. After transmission, the
         # packet should be removed from the data object.
@@ -105,13 +105,12 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         valid_packet = XBee_Packet()
         valid_packet.set("_rssi", valid)
         self.sensor._data = {
-            12: None,
             16: XBee_Packet(),
             42: valid_packet
         }
         self.sensor._send()
         self.assertEqual(mock_send.call_count, 2)
-        self.assertEqual(self.sensor._data[valid], None)
+        self.assertFalse(valid in self.sensor._data)
 
         # If the queue contains packets, some of them must be sent.
         # At least one packet is sent because of the call tested above where
