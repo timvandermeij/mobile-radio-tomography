@@ -1,6 +1,7 @@
 import serial
 import time
 import random
+import Queue
 from xbee import ZigBee
 from XBee_Packet import XBee_Packet
 from XBee_Sensor import XBee_Sensor
@@ -27,7 +28,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._sensor = None
         self._address = None
         self._data = {}
-        self._queue = []
+        self._queue = Queue.Queue()
         self._node_identifier_set = False
         self._verbose = self.settings.get("verbose")
 
@@ -84,7 +85,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
             raise ValueError("The custom packet is missing a destination ID")
 
         packet.set("_type", "custom")
-        self._queue.append(packet)
+        self._queue.put(packet)
 
     def _send(self):
         """
@@ -110,16 +111,16 @@ class XBee_Sensor_Physical(XBee_Sensor):
         # limited in length, so is the number of custom packets we transfer
         # in each sweep.
         limit = self._custom_packet_limit
-        for packet in self._queue:
+        while not self._queue.empty():
             if limit == 0:
                 break
 
             limit -= 1
+            packet = self._queue.get()
             to_id = packet.get("to_id")
             self._sensor.send("tx", dest_addr_long=self._sensors[to_id],
                               dest_addr="\xFF\xFE", frame_id="\x00",
                               data=packet.serialize())
-            self._queue.remove(packet)
 
         # Send the sweep data to the ground sensor and clear the list
         # for the next round.

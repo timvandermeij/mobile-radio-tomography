@@ -4,6 +4,7 @@ import os
 import serial
 import random
 import json
+import Queue
 from xbee import ZigBee
 from mock import patch
 from ..settings import Arguments
@@ -43,7 +44,8 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.assertEqual(self.sensor._sensor, None)
         self.assertEqual(self.sensor._address, None)
         self.assertEqual(self.sensor._data, {})
-        self.assertEqual(self.sensor._queue, [])
+        self.assertTrue(isinstance(self.sensor._queue, Queue.Queue))
+        self.assertEqual(self.sensor._queue.qsize(), 0)
         self.assertEqual(self.sensor._node_identifier_set, False)
 
     def test_activate_and_deactivate(self):
@@ -77,7 +79,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         packet.set("to_id", 2)
         packet.set("foo", "bar")
         self.sensor.enqueue(packet)
-        self.assertTrue(packet in self.sensor._queue)
+        self.assertEqual(packet, self.sensor._queue.get())
 
     @patch("xbee.ZigBee.send")
     def test_send(self, mock_send):
@@ -121,12 +123,12 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         packet.set("to_id", 2)
         packet.set("foo", "bar")
         self.sensor.enqueue(packet)
-        queue_length_before = len(self.sensor._queue)
+        queue_length_before = self.sensor._queue.qsize()
         self.sensor._send()
         custom_packet_limit = self.sensor.settings.get("custom_packet_limit")
         queue_length_after = max(0, queue_length_before - custom_packet_limit)
         self.assertEqual(mock_send.call_count, 1 + (queue_length_before - queue_length_after))
-        self.assertEqual(len(self.sensor._queue), queue_length_after)
+        self.assertEqual(self.sensor._queue.qsize(), queue_length_after)
 
         self.sensor.deactivate()
 
