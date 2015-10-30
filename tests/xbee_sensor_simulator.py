@@ -3,6 +3,7 @@ import socket
 import time
 import random
 import copy
+import Queue
 from mock import patch
 from ..settings import Arguments
 from ..zigbee.XBee_Packet import XBee_Packet
@@ -42,7 +43,8 @@ class TestXBeeSensorSimulator(unittest.TestCase):
         self.assertEqual(self.sensor._data, [])
 
         # The custom packet queue must be empty.
-        self.assertEqual(self.sensor._queue, [])
+        self.assertTrue(isinstance(self.sensor._queue, Queue.Queue))
+        self.assertEqual(self.sensor._queue.qsize(), 0)
 
     def test_enqueue(self):
         # Packets that are not XBee_Packet objects should be refused.
@@ -63,7 +65,7 @@ class TestXBeeSensorSimulator(unittest.TestCase):
         packet.set("to_id", 2)
         packet.set("foo", "bar")
         self.sensor.enqueue(packet)
-        self.assertTrue(packet in self.sensor._queue)
+        self.assertEqual(packet, self.sensor._queue.get())
         self.assertEqual(packet.get("_type"), "custom")
 
     def test_send(self):
@@ -76,11 +78,11 @@ class TestXBeeSensorSimulator(unittest.TestCase):
         packet.set("to_id", 2)
         packet.set("foo", "bar")
         self.sensor.enqueue(packet)
-        queue_length_before = len(self.sensor._queue)
+        queue_length_before = self.sensor._queue.qsize()
         self.sensor._send()
         custom_packet_limit = self.sensor.settings.get("custom_packet_limit")
         queue_length_after = max(0, queue_length_before - custom_packet_limit)
-        self.assertEqual(len(self.sensor._queue), queue_length_after)
+        self.assertEqual(self.sensor._queue.qsize(), queue_length_after)
 
     def test_receive(self):
         # Create a packet from sensor 2 to the current sensor.

@@ -1,6 +1,7 @@
 import time
 import socket
 import random
+import Queue
 from XBee_Packet import XBee_Packet
 from XBee_Sensor import XBee_Sensor
 from ..settings import Arguments, Settings
@@ -24,7 +25,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         self._location_callback = location_callback
         self._next_timestamp = self.scheduler.get_next_timestamp()
         self._data = []
-        self._queue = []
+        self._queue = Queue.Queue()
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._socket.bind((self.settings.get("ip"), self.settings.get("port") + self.id))
@@ -68,7 +69,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             raise ValueError("The custom packet is missing a destination ID")
 
         packet.set("_type", "custom")
-        self._queue.append(packet)
+        self._queue.put(packet)
 
     def _send(self):
         """
@@ -94,15 +95,15 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         # limited in length, so is the number of custom packets we transfer
         # in each sweep.
         limit = self.settings.get("custom_packet_limit")
-        for packet in self._queue:
+        while not self._queue.empty():
             if limit == 0:
                 break
 
             limit -= 1
+            packet = self._queue.get()
             to_id = packet.get("to_id")
             self._socket.sendto(packet.serialize(), (ip, port + to_id))
             self.viewer.draw_arrow(self.id, to_id, "green")
-            self._queue.remove(packet)
 
         # Send the sweep data to the ground sensor.
         for packet in self._data:
