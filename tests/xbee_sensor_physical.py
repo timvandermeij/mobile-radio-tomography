@@ -31,6 +31,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
             "--port", self.port,
             "--sensors", "sensor_0", "sensor_1", "sensor_2"
         ])
+        self.settings = self.arguments.get_settings("xbee_sensor_physical")
         self.scheduler = XBee_TDMA_Scheduler(self.sensor_id, self.arguments)
         self.sensor = XBee_Sensor_Physical(self.sensor_id, self.arguments,
                                            self.scheduler, self.get_location)
@@ -68,11 +69,14 @@ class TestXBeeSensorPhysical(unittest.TestCase):
             }
             self.sensor.enqueue(packet)
 
-        # Packets that do not contain a destination should be refused.
-        with self.assertRaises(ValueError):
-            packet = XBee_Packet()
-            packet.set("foo", "bar")
-            self.sensor.enqueue(packet)
+        # Packets that do not contain a destination should be broadcasted.
+        # We subtract one because we do not send to ourself.
+        packet = XBee_Packet()
+        packet.set("foo", "bar")
+        self.sensor.enqueue(packet)
+        self.assertEqual(self.sensor._queue.qsize(),
+                         self.settings.get("number_of_sensors") - 1)
+        self.sensor._queue = Queue.Queue()
 
         # Valid packets should be enqueued.
         packet = XBee_Packet()

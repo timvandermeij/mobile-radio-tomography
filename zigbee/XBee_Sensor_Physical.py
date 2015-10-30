@@ -1,6 +1,7 @@
 import serial
 import time
 import random
+import copy
 import Queue
 from xbee import ZigBee
 from XBee_Packet import XBee_Packet
@@ -81,11 +82,19 @@ class XBee_Sensor_Physical(XBee_Sensor):
         if not isinstance(packet, XBee_Packet):
             raise TypeError("Only XBee_Packet objects can be enqueued")
 
-        if packet.get("to_id") == None:
-            raise ValueError("The custom packet is missing a destination ID")
-
         packet.set("_type", "custom")
-        self._queue.put(packet)
+        if packet.get("to_id") != None:
+            self._queue.put(packet)
+        else:
+            # No destination ID has been provided, therefore we broadcast
+            # the packet to all sensors in the network except for ourself
+            # and the ground sensor.
+            for index in xrange(1, self.settings.get("number_of_sensors") + 1):
+                if index == self.id:
+                    continue
+
+                packet.set("to_id", index)
+                self._queue.put(copy.deepcopy(packet))
 
     def _send(self):
         """
