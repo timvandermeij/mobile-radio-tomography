@@ -12,12 +12,15 @@ from ..zigbee.XBee_Viewer import XBee_Viewer
 from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 
 class TestXBeeSensorSimulator(unittest.TestCase):
-    def get_location(self):
+    def location_callback(self):
         """
         Get the current GPS location (latitude and longitude pair).
         """
 
         return (random.uniform(1.0, 50.0), random.uniform(1.0, 50.0))
+
+    def receive_callback(self, packet):
+        pass
 
     @patch("matplotlib.pyplot.show")
     def setUp(self, mock_show):
@@ -28,7 +31,8 @@ class TestXBeeSensorSimulator(unittest.TestCase):
         self.viewer = XBee_Viewer(self.arguments)
         self.sensor = XBee_Sensor_Simulator(self.id, self.arguments,
                                             self.scheduler, self.viewer,
-                                            self.get_location)
+                                            self.location_callback,
+                                            self.receive_callback)
 
         self.viewer.draw_points()
 
@@ -38,6 +42,10 @@ class TestXBeeSensorSimulator(unittest.TestCase):
 
         # The next timestamp must be set.
         self.assertNotEqual(self.sensor._next_timestamp, 0)
+
+        # Both the location and the receive callback must be set.
+        self.assertNotEqual(self.sensor._location_callback, None)
+        self.assertNotEqual(self.sensor._receive_callback, None)
 
         # The sweep data list must be empty.
         self.assertEqual(self.sensor._data, [])

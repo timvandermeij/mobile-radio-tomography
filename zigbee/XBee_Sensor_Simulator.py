@@ -8,7 +8,8 @@ from XBee_Sensor import XBee_Sensor
 from ..settings import Arguments, Settings
 
 class XBee_Sensor_Simulator(XBee_Sensor):
-    def __init__(self, sensor_id, settings, scheduler, viewer, location_callback):
+    def __init__(self, sensor_id, settings, scheduler, viewer,
+                 location_callback=None, receive_callback=None):
         """
         Initialize the sensor with a unique, non-blocking UDP socket.
         """
@@ -20,10 +21,14 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         else:
             raise ValueError("'settings' must be an instance of Settings or Arguments")
 
+        if location_callback == None or receive_callback == None:
+            raise TypeError("Missing required location and receive callbacks")
+
         self.id = sensor_id
         self.viewer = viewer
         self.scheduler = scheduler
         self._location_callback = location_callback
+        self._receive_callback = receive_callback
         self._next_timestamp = self.scheduler.get_next_timestamp()
         self._data = []
         self._queue = Queue.Queue()
@@ -130,7 +135,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
 
         if packet.get("_type") == "custom":
             packet.unset("_type")
-            print("> Custom packet received: {}".format(packet.serialize()))
+            self._receive_callback(packet)
         else:
             if self.id > 0:
                 self._next_timestamp = self.scheduler.synchronize(packet)

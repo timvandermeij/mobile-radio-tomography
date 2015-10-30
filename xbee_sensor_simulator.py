@@ -8,12 +8,19 @@ from zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 from zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from zigbee.XBee_Viewer import XBee_Viewer
 
-def get_location():
+def location_callback():
     """
     Get the current GPS location (latitude and longitude pair).
     """
 
     return (random.uniform(1.0, 50.0), random.uniform(1.0, 50.0))
+
+def receive_callback(packet):
+    """
+    Handle a custom packet that has been sent to this sensor.
+    """
+
+    print("> Custom packet received: {}".format(packet.serialize()))
 
 def main(argv):
     arguments = Arguments("settings.json", argv)
@@ -24,9 +31,9 @@ def main(argv):
     sensors = []
     for sensor_id in range(settings.get("number_of_sensors") + 1):
         scheduler = XBee_TDMA_Scheduler(sensor_id, arguments)
-        location_callback = get_location
         sensor = XBee_Sensor_Simulator(sensor_id, arguments, scheduler,
-                                       viewer, location_callback)
+                                       viewer, location_callback,
+                                       receive_callback)
         sensors.append(sensor)
 
     arguments.check_help()
