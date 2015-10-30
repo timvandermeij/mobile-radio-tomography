@@ -27,6 +27,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._sensor = None
         self._address = None
         self._data = {}
+        self._queue = []
         self._node_identifier_set = False
         self._verbose = self.settings.get("verbose")
 
@@ -61,6 +62,22 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
         self._sensor.halt()
         self._serial_connection.close()
+
+    def enqueue(self, packet):
+        """
+        Enqueue a custom packet to send to another XBee device.
+        Valid packets must be XBee_Packet objects and must contain
+        the ID of the destination XBee device.
+        """
+
+        if not isinstance(packet, XBee_Packet):
+            raise TypeError("Only XBee_Packet objects can be enqueued")
+
+        if packet.get("to_id") == None:
+            raise ValueError("The custom packet is missing a destination ID")
+
+        packet.set("_type", "custom")
+        self._queue.append(packet)
 
     def _send(self):
         """
@@ -103,6 +120,19 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
             self._data[frame_id] = None
 
+        # Send custom packets to their destination. Since the time slots are
+        # limited in length, so is the number of custom packets we transfer
+        # in each sweep.
+        limit = min(len(self._queue), self.settings.get("custom_packet_limit"))
+        for item in range(limit):
+            packet = self._queue[item]
+            to_id = packet.get("to_id")
+            to_address = sensors[to_id].decode("string_escape")
+            self._sensor.send("tx", dest_addr_long=to_address,
+                              dest_addr="\xFF\xFE", frame_id="\x00",
+                              data=packet.serialize())
+            self._queue.remove(packet)
+
     def _receive(self, raw_packet):
         """
         Receive and process a raw packet from another sensor in the network.
@@ -114,6 +144,11 @@ class XBee_Sensor_Physical(XBee_Sensor):
                 packet.unserialize(raw_packet["rf_data"])
             except:
                 # The raw packet is malformed, so drop it.
+                return
+
+            if packet.get("_type") == "custom":
+                packet.unset("_type")
+                print("[{}] Custom packet received {}".format(time.time(), packet.serialize()))
                 return
 
             if self.id == 0:
