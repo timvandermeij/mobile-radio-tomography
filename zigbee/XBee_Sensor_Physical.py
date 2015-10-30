@@ -106,21 +106,6 @@ class XBee_Sensor_Physical(XBee_Sensor):
             if self._verbose:
                 print("--> Sending to sensor {}.".format(index))
 
-        # Send the sweep data to the ground sensor and clear the list
-        # for the next round.
-        for frame_id, packet in self._data.iteritems():
-            if packet == None or packet.get("_rssi") == None:
-                continue
-
-            self._sensor.send("tx", dest_addr_long=self._sensors[0],
-                              dest_addr="\xFF\xFE", frame_id="\x00",
-                              data=packet.serialize())
-
-            self._data[frame_id] = None
-
-            if self._verbose:
-                print("--> Sending to ground station.")
-
         # Send custom packets to their destination. Since the time slots are
         # limited in length, so is the number of custom packets we transfer
         # in each sweep.
@@ -135,6 +120,21 @@ class XBee_Sensor_Physical(XBee_Sensor):
                               dest_addr="\xFF\xFE", frame_id="\x00",
                               data=packet.serialize())
             self._queue.remove(packet)
+
+        # Send the sweep data to the ground sensor and clear the list
+        # for the next round.
+        for frame_id, packet in self._data.iteritems():
+            if packet == None or packet.get("_rssi") == None:
+                continue
+
+            self._sensor.send("tx", dest_addr_long=self._sensors[0],
+                              dest_addr="\xFF\xFE", frame_id="\x00",
+                              data=packet.serialize())
+
+            self._data[frame_id] = None
+
+            if self._verbose:
+                print("--> Sending to ground station.")
 
     def _receive(self, raw_packet):
         """

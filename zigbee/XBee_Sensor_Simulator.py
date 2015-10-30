@@ -89,13 +89,6 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             packet.set("_timestamp", time.time())
             self._socket.sendto(packet.serialize(), (ip, port + i))
             self.viewer.draw_arrow(self.id, i)
-        
-        # Send the sweep data to the ground sensor.
-        for packet in self._data:
-            self._socket.sendto(packet.serialize(), (ip, port))
-            self.viewer.draw_arrow(self.id, 0, "blue")
-
-        self._data = []
 
         # Send custom packets to their destination. Since the time slots are
         # limited in length, so is the number of custom packets we transfer
@@ -110,6 +103,13 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             self._socket.sendto(packet.serialize(), (ip, port + to_id))
             self.viewer.draw_arrow(self.id, to_id, "green")
             self._queue.remove(packet)
+
+        # Send the sweep data to the ground sensor.
+        for packet in self._data:
+            self._socket.sendto(packet.serialize(), (ip, port))
+            self.viewer.draw_arrow(self.id, 0, "blue")
+
+        self._data = []
 
         self.viewer.refresh()
 

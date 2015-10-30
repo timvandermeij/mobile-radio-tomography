@@ -38,7 +38,7 @@ def main(argv):
             for sensor in sensors:
                 # Enqueue a custom packet at a fixed interval.
                 if sensor.id > 0 and time.time() > timestamp:
-                    timestamp = time.time() + 5
+                    timestamp = time.time() + 8
                     packet = XBee_Packet()
                     packet.set("to_id", sensor.id % 2 + 1)
                     packet.set("command", "continue")
