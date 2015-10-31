@@ -1,6 +1,7 @@
 import time
 import unittest
 from ..settings import Settings
+from ..zigbee.XBee_Packet import XBee_Packet
 from ..zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 
 class TestXBeeTDMAScheduler(unittest.TestCase):
@@ -47,14 +48,13 @@ class TestXBeeTDMAScheduler(unittest.TestCase):
         # timestamp for sensor 2 is the timestamp of sensor 1 plus the time required
         # for one slot, defined as the total sweep time divided by the number
         # of sensors in the network.
-        packet = {
-            "from_id": 1,
-            "timestamp": time.time()
-        }
+        packet = XBee_Packet()
+        packet.set("_from_id", 1)
+        packet.set("_timestamp", time.time())
 
         calculated = self.scheduler.synchronize(packet)
         slot_time = float(self.sweep_delay) / self.number_of_sensors
-        correct = packet["timestamp"] + ((self.id - packet["from_id"]) * slot_time)
+        correct = packet.get("_timestamp") + ((self.id - packet.get("_from_id")) * slot_time)
         self.assertAlmostEqual(calculated, correct, delta=0.1)
 
         # If the received packet is from a sensor with a higher ID than the
@@ -67,13 +67,12 @@ class TestXBeeTDMAScheduler(unittest.TestCase):
         # the current sweep (as we need a full slot for sensors 6, 7 and 8).
         # We then need to add 2 - 1 = 1 slot for sensor 1 and then sensor 2 is
         # allowed to start.
-        packet = {
-            "from_id": 6,
-            "timestamp": time.time()
-        }
+        packet = XBee_Packet()
+        packet.set("_from_id", 6)
+        packet.set("_timestamp", time.time())
 
         calculated = self.scheduler.synchronize(packet)
         slot_time = float(self.sweep_delay) / self.number_of_sensors
-        completed_round = (self.number_of_sensors - packet["from_id"] + 1) * slot_time
-        correct = packet["timestamp"] + completed_round + ((self.id - 1) * slot_time)
+        completed_round = (self.number_of_sensors - packet.get("_from_id") + 1) * slot_time
+        correct = packet.get("_timestamp") + completed_round + ((self.id - 1) * slot_time)
         self.assertAlmostEqual(calculated, correct, delta=0.1)

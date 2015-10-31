@@ -65,6 +65,7 @@
         "name": "XBee base",
         "settings": {
             "number_of_sensors": 2,
+            "custom_packet_limit": 1,
             "loop_delay": 0.01,
             "baud_rate": 57600
         }
