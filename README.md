@@ -43,7 +43,7 @@ different installation procedures.
   * Environment simulation:
     * PyOpenGL
     * simpleparse
-    * PyVRML97
+    * PyVRML97 (you may need to use `pip install --user "PyVRML97==2.3.0b1"`)
     * PyDispatcher
     * pyglet
   * Unit testing:
@@ -147,7 +147,7 @@ To create the setup, first plug the ground station XBee chip into a USB
 port of the ground station computer. Start the physical XBee sensor code
 as mentioned above and observe that nothing is happening yet. Then, for
 each other XBee chip in the network, power up the accompanying Raspberry
-Pi, connect it to the ground station computer via an ethetnet cable as 
+Pi, connect it to the ground station computer via an ethernet cable as 
 described in the Raspberry Pi document, plug in the XBee USB dongle
 and start the physical XBee sensor code as mentioned above. You should now
 see packets arriving in the ground station's terminal. Note that once the
