@@ -24,9 +24,9 @@
             "closeness": 2.0,
             "farness": 100.0,
             "mission_delay": 2.0,
-            "altitude": 4,
+            "altitude": 4.0,
             "speed": 2.5,
-            "size": 50,
+            "size": 50.0,
             "vehicle_simulation": true,
             "mission_class": "Mission_Square",
             "geometry_class": "Geometry_Spherical"
@@ -43,9 +43,9 @@
     "environment": {
         "name": "Vehicle environment",
         "settings": {
-            "sensors": [0],
+            "sensors": [0.0],
             "scenefile": null,
-            "translation": [0,0,0]
+            "translation": [0.0,0.0,0.0]
         }
     },
     "environment_viewer": {
