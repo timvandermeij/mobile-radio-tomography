@@ -29,13 +29,15 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self.scheduler = scheduler
         self._location_callback = location_callback
         self._receive_callback = receive_callback
-        self._next_timestamp = self.scheduler.get_next_timestamp()
+        self._next_timestamp = 0
         self._serial_connection = None
+        self._node_identifier_set = False
+        self._address_set = False
+        self._joined = False
         self._sensor = None
         self._address = None
         self._data = {}
         self._queue = Queue.Queue()
-        self._node_identifier_set = False
         self._verbose = self.settings.get("verbose")
 
         # Prepare the packet and sensor data.
@@ -57,12 +59,9 @@ class XBee_Sensor_Physical(XBee_Sensor):
                                                     self.settings.get("baud_rate"))
             self._sensor = ZigBee(self._serial_connection, callback=self._receive)
             time.sleep(self.settings.get("startup_delay"))
+            self._join()
 
-        if not self._node_identifier_set:
-            # Request this sensor's ID and address.
-            self._sensor.send("at", command="NI")
-            self._sensor.send("at", command="SH")
-            self._sensor.send("at", command="SL")
+        if not self._joined:
             return
 
         if self.id > 0 and time.time() >= self._next_timestamp:
@@ -100,6 +99,27 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
                 packet.set("to_id", index)
                 self._queue.put(copy.deepcopy(packet))
+
+    def _join(self):
+        """
+        Join the network and set this sensor's ID and address before sending.
+        """
+
+        response_delay = self.settings.get("response_delay")
+
+        while not self._node_identifier_set:
+            self._sensor.send("at", command="NI")
+            time.sleep(response_delay)
+
+        while not self._address_set:
+            self._sensor.send("at", command="SH")
+            time.sleep(response_delay)
+            self._sensor.send("at", command="SL")
+            time.sleep(response_delay)
+
+        while not self._joined:
+            self._sensor.send("at", command="AI")
+            time.sleep(response_delay)
 
     def _send(self):
         """
@@ -167,6 +187,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
             if packet.get("_type") == "custom":
                 packet.unset("_type")
+                packet.unset("to_id")
                 self._receive_callback(packet)
                 return
 
@@ -204,17 +225,20 @@ class XBee_Sensor_Physical(XBee_Sensor):
                     self._address = raw_packet["parameter"]
                 elif raw_packet["parameter"] not in self._address:
                     self._address = raw_packet["parameter"] + self._address
+                    self._address_set = True
             elif raw_packet["command"] == "SL":
                 # Serial number (low) has been received.
                 if self._address == None:
                     self._address = raw_packet["parameter"]
                 elif raw_packet["parameter"] not in self._address:
                     self._address = self._address + raw_packet["parameter"]
+                    self._address_set = True
             elif raw_packet["command"] == "NI":
                 # Node identifier has been received.
                 self.id = int(raw_packet["parameter"])
                 self.scheduler.id = self.id
                 self._node_identifier_set = True
-
-                if self._verbose:
-                    print("Node identifier set to {}.".format(self.id))
+            elif raw_packet["command"] == "AI":
+                # Association indicator has been received.
+                if raw_packet["parameter"] == "\x00":
+                    self._joined = True
