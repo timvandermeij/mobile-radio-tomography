@@ -48,6 +48,22 @@ different installation procedures.
     * pyglet
   * Unit testing:
     * mock
+* In order to use the map display of ArduPilot, make sure that OpenCV and 
+  wxWidgets as well as their respective Python bindings are installed and 
+  available. If not, the following directions might help you get it:
+  * OpenCV: This is sometimes provided by the package manager. It can also be 
+    installed from the [official download](http://opencv.org/downloads.html) 
+    using the appropriate 
+    [documentation](http://docs.opencv.org/2.4/doc/tutorials/introduction/table_of_content_introduction/table_of_content_introduction.html). 
+    Note that for Linux, you must change the install prefix for `cmake` if you 
+    do not have superuser rights. You can speed up the installation by passing 
+    `-j4` to the `cmake` command.
+  * wxWidgets: Again, if this is not provided by the package manager, see an 
+    [explanation](http://wiki.wxpython.org/How%20to%20install%20wxPython) on 
+    how to install from source. This requires wxGTK as well as the wxWidgets 
+    library itself: these are combined within 
+    a [download](http://www.wxwidgets.org/downloads/). You can install without 
+    superuser rights using `./configure --with-gtk --prefix=$HOME/.local`.
 * ArduPilot for vehicle simulation. Download the latest code using:
 
         $ git clone https://github.com/diydrones/ardupilot.git
@@ -97,7 +113,7 @@ to move and rotate within its environment. The script supports various mission
 types and simulation modes. You can run it using the ArduPilot simulator with
 the following command:
 
-    $ sim vehicle.sh -v ArduCopter --map
+    $ sim_vehicle.sh -v ArduCopter --map
     [...wait until the simulator is set up, after "GPS lock at 0 meters"...]
     STABILIZE> script mission.scr
 
