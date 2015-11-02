@@ -28,30 +28,14 @@ from trajectory.MockVehicle import MockAPI, MockVehicle
 from trajectory.Viewer import Viewer_Vehicle
 from geometry import Geometry
 
-class Monitor(object):
-    def __init__(self, api, mission, environment):
-        self.api = api
-        self.mission = mission
-
+class Plot(object):
+    """
+    Plotter that can display an environment memory map.
+    """
+    def __init__(self, environment, memory_map):
         self.environment = environment
-        arguments = self.environment.get_arguments()
-        self.settings = arguments.get_settings("mission_monitor")
-
-        # Seconds to wait before monitoring again
-        self.loop_delay = self.settings.get("loop_delay")
-
-        self.sensors = self.environment.get_distance_sensors()
-
-        self.colors = ["red", "purple", "black"]
-
-        self.memory_map = None
-        self.plot_polygons = None
-
-    def get_delay(self):
-        return self.loop_delay
-
-    def use_viewer(self):
-        return self.settings.get("viewer")
+        self.memory_map = memory_map
+        self._setup()
 
     def _create_patch(self, obj):
         if isinstance(obj, tuple):
@@ -62,15 +46,7 @@ class Monitor(object):
 
         return None
 
-    def setup(self):
-        self.memory_map = self.mission.get_memory_map()
-        self.plt = None
-
-        if self.settings.get("plot"):
-            # Setup memory map plot
-            self._setup_plot()
-
-    def _setup_plot(self):
+    def _setup(self):
         # "Cheat" to see 2d map of collision data
         patches = []
         if isinstance(self.environment, Environment_Simulator):
@@ -96,6 +72,80 @@ class Monitor(object):
         self.plt.gca().set_aspect("equal", adjustable="box")
         self.plt.ion()
         self.plt.show()
+
+    def get_plot(self):
+        return self.plt
+
+    def display(self):
+        if self.plot_polygons is not None:
+            self.ax.add_collection(self.plot_polygons)
+
+        self._plot_vehicle_angle()
+
+        self.plt.imshow(self.memory_map.get_map(), origin='lower')
+        self.plt.pause(sys.float_info.epsilon)
+        self.plt.cla()
+
+    def _plot_vehicle_angle(self):
+        options = {
+            "arrowstyle": "->",
+            "color": "red",
+            "linewidth": 2,
+            "alpha": 0.5
+        }
+        vehicle_idx = self.memory_map.get_xy_index(self.environment.get_location())
+        angle = self.environment.get_angle()
+        arrow_length = 10.0
+        if angle == 0.5*math.pi:
+            angle_idx = (vehicle_idx[0], vehicle_idx[1] + arrow_length)
+        elif angle == 1.5*math.pi:
+            angle_idx = (vehicle_idx[0], vehicle_idx[1] - arrow_length)
+        else:
+            angle_idx = (vehicle_idx[0] + math.cos(angle) * arrow_length, vehicle_idx[1] + math.sin(angle) * arrow_length)
+
+        self.plt.annotate("", angle_idx, vehicle_idx, arrowprops=options)
+
+    def close(self):
+        self.plt.close()
+        self.plt = None
+
+class Monitor(object):
+    """
+    Mission monitor class.
+
+    Tracks sensors and mission actions in a stepwise fashion.
+    """
+
+    def __init__(self, api, mission, environment):
+        self.api = api
+        self.mission = mission
+
+        self.environment = environment
+        arguments = self.environment.get_arguments()
+        self.settings = arguments.get_settings("mission_monitor")
+
+        # Seconds to wait before monitoring again
+        self.loop_delay = self.settings.get("loop_delay")
+
+        self.sensors = self.environment.get_distance_sensors()
+
+        self.colors = ["red", "purple", "black"]
+
+        self.memory_map = None
+        self.plot = None
+
+    def get_delay(self):
+        return self.loop_delay
+
+    def use_viewer(self):
+        return self.settings.get("viewer")
+
+    def setup(self):
+        self.memory_map = self.mission.get_memory_map()
+
+        if self.settings.get("plot"):
+            # Setup memory map plot
+            self.plot = Plot(self.environment, self.memory_map)
 
     def step(self, add_point=None):
         """
@@ -126,28 +176,21 @@ class Monitor(object):
                 location = self.memory_map.handle_sensor(sensor_distance, yaw)
                 if add_point is not None:
                     add_point(location)
-                if self.plt:
+                if self.plot:
                     # Display the edge of the simulated object that is 
                     # responsible for the measured distance, and consequently 
                     # the point itself. This should be the closest "wall" in 
                     # the angle's direction. This is again a "cheat" for 
                     # checking if walls get visualized correctly.
-                    sensor.draw_current_edge(self.plt, self.memory_map, self.colors[i % len(self.colors)])
+                    sensor.draw_current_edge(self.plot.get_plot(), self.memory_map, self.colors[i % len(self.colors)])
 
                 print("=== [!] Distance to object: {} m (yaw {}, pitch {}) ===".format(sensor_distance, yaw, pitch))
 
             i = i + 1
 
         # Display the current memory map interactively.
-        if self.plt:
-            if self.plot_polygons is not None:
-                self.ax.add_collection(self.plot_polygons)
-
-            self._plot_vehicle_angle()
-
-            self.plt.imshow(self.memory_map.get_map(), origin='lower')
-            self.plt.pause(sys.float_info.epsilon)
-            self.plt.cla()
+        if self.plot:
+            self.plot.display()
 
         if not self.mission.check_waypoint():
             return False
@@ -158,29 +201,9 @@ class Monitor(object):
 
         return True
 
-    def _plot_vehicle_angle(self):
-        options = {
-            "arrowstyle": "->",
-            "color": "red",
-            "linewidth": 2,
-            "alpha": 0.5
-        }
-        vehicle_idx = self.memory_map.get_xy_index(self.environment.get_location())
-        angle = self.environment.get_angle()
-        arrow_length = 10.0
-        if angle == 0.5*math.pi:
-            angle_idx = (vehicle_idx[0], vehicle_idx[1] + arrow_length)
-        elif angle == 1.5*math.pi:
-            angle_idx = (vehicle_idx[0], vehicle_idx[1] - arrow_length)
-        else:
-            angle_idx = (vehicle_idx[0] + math.cos(angle) * arrow_length, vehicle_idx[1] + math.sin(angle) * arrow_length)
-
-        self.plt.annotate("", angle_idx, vehicle_idx, arrowprops=options)
-
     def stop(self):
-        if self.plt:
-            self.plt.close()
-            self.plt = None
+        if self.plot:
+            self.plot.close()
 
 # Main mission program
 def main(argv):
