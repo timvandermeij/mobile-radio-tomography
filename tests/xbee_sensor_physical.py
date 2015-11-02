@@ -45,20 +45,31 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.assertEqual(self.sensor.scheduler, self.scheduler)
         self.assertTrue(hasattr(self.sensor._location_callback, "__call__"))
         self.assertTrue(hasattr(self.sensor._receive_callback, "__call__"))
-        self.assertTrue(self.sensor._next_timestamp > 0)
+        self.assertEqual(self.sensor._next_timestamp, 0)
         self.assertEqual(self.sensor._serial_connection, None)
+        self.assertEqual(self.sensor._node_identifier_set, False)
+        self.assertEqual(self.sensor._address_set, False)
+        self.assertEqual(self.sensor._joined, False)
         self.assertEqual(self.sensor._sensor, None)
         self.assertEqual(self.sensor._address, None)
         self.assertEqual(self.sensor._data, {})
         self.assertTrue(isinstance(self.sensor._queue, Queue.Queue))
         self.assertEqual(self.sensor._queue.qsize(), 0)
-        self.assertEqual(self.sensor._node_identifier_set, False)
 
     def test_activate_and_deactivate(self):
-        # The serial connection and sensor must be lazily initialized.
+        # Set all status variables to True to avoid being stuck in
+        # the join loops. We cannot test the join process in the unit tests.
+        self.sensor._node_identifier_set = True
+        self.sensor._address_set = True
+        self.sensor._joined = True
+
+        # The serial connection and sensor must be initialized lazily.
         self.sensor.activate()
         self.assertTrue(isinstance(self.sensor._serial_connection, serial.Serial))
         self.assertTrue(isinstance(self.sensor._sensor, ZigBee))
+        self.assertEqual(self.sensor._node_identifier_set, True)
+        self.assertEqual(self.sensor._address_set, True)
+        self.assertEqual(self.sensor._joined, True)
 
         # After deactivation the serial connection must be closed.
         # Note that this also means that the sensor is halted.
@@ -93,6 +104,12 @@ class TestXBeeSensorPhysical(unittest.TestCase):
     @patch("xbee.ZigBee.send")
     def test_send(self, mock_send):
         self.sensor._address = "sensor_{}".format(self.sensor_id)
+
+        # Set all status variables to True to avoid being stuck in
+        # the join loops. We cannot test the join process in the unit tests.
+        self.sensor._node_identifier_set = True
+        self.sensor._address_set = True
+        self.sensor._joined = True
 
         # Activate the sensor and ignore any _send() calls as we are not
         # interested in the initialization calls.
@@ -142,6 +159,12 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.sensor.deactivate()
 
     def test_receive(self):
+        # Set all status variables to True to avoid being stuck in
+        # the join loops. We cannot test the join process in the unit tests.
+        self.sensor._node_identifier_set = True
+        self.sensor._address_set = True
+        self.sensor._joined = True
+
         self.sensor.activate()
 
         # Malformed RX packets should be dropped.
@@ -189,6 +212,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.assertEqual(self.sensor._data[frame_id].get("_rssi"), ord("\x4E"))
 
         # AT response SH packets should be processed.
+        self.sensor._address_set = False
         raw_packet = {
             "id": "at_response",
             "command": "SH",
@@ -202,6 +226,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.sensor._address = "low"
         self.sensor._receive(raw_packet)
         self.assertEqual(self.sensor._address, "highlow")
+        self.assertEqual(self.sensor._address_set, True)
 
         # If the high part is already present in the address (due to
         # a repeated request), it should not be prepended again.
@@ -210,6 +235,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.assertEqual(self.sensor._address, "highlow")
 
         # AT response SL packets should be processed.
+        self.sensor._address_set = False
         self.sensor._address = None
         raw_packet = {
             "id": "at_response",
@@ -224,6 +250,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.sensor._address = "high"
         self.sensor._receive(raw_packet)
         self.assertEqual(self.sensor._address, "highlow")
+        self.assertEqual(self.sensor._address_set, True)
 
         # If the low part is already present in the address (due to
         # a repeated request), it should not be appended again.
@@ -232,6 +259,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.assertEqual(self.sensor._address, "highlow")
 
         # AT response NI packets should be processed.
+        self.sensor._node_identifier_set = False
         raw_packet = {
             "id": "at_response",
             "command": "NI",
@@ -241,5 +269,24 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.assertEqual(self.sensor.id, 4)
         self.assertEqual(self.sensor.scheduler.id, 4)
         self.assertEqual(self.sensor._node_identifier_set, True)
+
+        # AT response AI failure packets should be processed.
+        self.sensor._joined = False
+        raw_packet = {
+            "id": "at_response",
+            "command": "AI",
+            "parameter": "\x01"
+        }
+        self.sensor._receive(raw_packet)
+        self.assertEqual(self.sensor._joined, False)
+
+        # AT response AI success packets should be processed.
+        raw_packet = {
+            "id": "at_response",
+            "command": "AI",
+            "parameter": "\x00"
+        }
+        self.sensor._receive(raw_packet)
+        self.assertEqual(self.sensor._joined, True)
 
         self.sensor.deactivate()
