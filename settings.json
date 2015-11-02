@@ -28,7 +28,7 @@
             "speed": 2.5,
             "size": 50,
             "vehicle_simulation": true,
-            "mission_class": "Mission_Square",
+            "mission_class": "Mission_Browse",
             "geometry_class": "Geometry_Spherical"
         }
     },
@@ -43,9 +43,16 @@
     "environment": {
         "name": "Vehicle environment",
         "settings": {
-            "sensors": [0],
             "scenefile": null,
-            "translation": [0,0,0]
+            "translation": [0,0,0],
+            "sensors": [0],
+            "servo_pins": [
+                {
+                    "pin": 7,
+                    "angles": [0,360],
+                    "pwm": [1000,2000]
+                }
+            ]
         }
     },
     "environment_viewer": {

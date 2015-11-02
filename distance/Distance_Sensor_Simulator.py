@@ -10,8 +10,9 @@ class Distance_Sensor_Simulator(Distance_Sensor):
     Virtual sensor class that detects collision distances to simulated objects
     """
 
-    def __init__(self, environment, angle=0):
+    def __init__(self, environment, id, angle=0):
         self.environment = environment
+        self.id = id
         self.geometry = self.environment.get_geometry()
         self.angle = angle
         arguments = self.environment.get_arguments()
@@ -306,7 +307,7 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         """
 
         if bearing is None:
-            bearing = self.environment.get_yaw()
+            bearing = self.environment.get_sensor_yaw(self.id)
 
         # Offset for the yaw being increasing clockwise and starting at 
         # 0 degrees when facing north rather than facing east.

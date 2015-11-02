@@ -34,11 +34,16 @@ class Mission(object):
         self.memory_map = None
 
     def get_packet(self, msg):
-        if msg.get_type() == "HEARTBEAT":
+        msg_type = msg.get_type()
+        if msg_type == "HEARTBEAT":
             if msg.type == mavutil.mavlink.MAV_TYPE_GROUND_ROVER:
                 self.is_rover = True
-
-            self.vehicle.unset_mavlink_callback()
+        elif msg_type == "SERVO_OUTPUT_RAW":
+            fields = msg.get_fieldnames()
+            for servo in self.environment.get_servos():
+                key = "servo{}_raw".format(servo.pin)
+                if key in fields:
+                    servo.set_current_pwm(getattr(msg, key))
 
     def distance_to_current_waypoint(self):
         """
@@ -247,6 +252,14 @@ class Mission(object):
         self.vehicle.send_mavlink(msg)
         self.vehicle.flush()
 
+    def _get_new_yaw(self, heading, relative):
+        if relative:
+            new_yaw = self.vehicle.attitude.yaw + heading * math.pi/180
+        else:
+            new_yaw = heading * math.pi/180
+
+        return new_yaw
+
     def set_yaw(self, heading, relative=False, direction=0):
         """
         Set the bearing `heading` of the vehicle in degrees. This becomes the yaw of the vehicle (the direction in which it is facing). The `heading` is a bearing, meaning that north is zero degrees and increasing counterclockwise.
@@ -259,10 +272,7 @@ class Mission(object):
 
         if direction == 0:
             yaw = self.vehicle.attitude.yaw
-            if relative:
-                new_yaw = yaw + heading * math.pi/180
-            else:
-                new_yaw = heading * math.pi/180
+            new_yaw = self._get_new_yaw(heading, relative)
 
             # -1 because the yaw is given as a bearing that increases clockwise 
             # while geometry works with angles that increase counterclockwise.
@@ -299,6 +309,43 @@ class Mission(object):
             direction,   # param 3, direction -1 ccw, 1 cw
             is_relative, # param 4, relative offset 1, absolute angle 0
             0, 0, 0      # param 5 ~ 7 not used
+        )
+
+        # Send command to vehicle
+        self.vehicle.send_mavlink(msg)
+        self.vehicle.flush()
+
+    def set_sensor_yaw(self, heading, relative=False, direction=0):
+        """
+        Set the yaw for the distance sensors.
+        This may be the yaw of the entire vehicle, or changing a servo output.
+        In either case, at least one of the distance sensors (if there are any) will in time point in the given direction.
+        """
+        if not self.environment.get_servos():
+            self.set_yaw(heading, relative, direction)
+            return
+
+        new_yaw = self._get_new_yaw(heading, relative)
+        yaw_angle = self.geometry.bearing_to_angle(new_yaw) * 180/math.pi
+        pin = None
+        pwm = None
+        for servo in self.environment.get_servos():
+            if servo.check_angle(yaw_angle):
+                pin = servo.get_pin()
+                pwm = servo.get_pwm(yaw_angle)
+                break
+
+        if pin is None:
+            return
+
+        # Create the DO_SET_SERVO command using command_long_encode()
+        msg = self.vehicle.message_factory.command_long_encode(
+            0, 0,    # target system, target component
+            mavutil.mavlink.MAV_CMD_DO_SET_SERVO, # command
+            0, # confirmation
+            pin,          # param 1, servo pin number
+            pwm,          # param 2, PWM value
+            0, 0, 0, 0, 0 # param 3 ~ 7 not used
         )
 
         # Send command to vehicle
@@ -410,7 +457,7 @@ class Mission_Browse(Mission_Guided):
         # We stand still and change the angle to look around.
         self.send_global_velocity(0,0,0)
         self.vehicle.flush()
-        self.set_yaw(self.yaw, relative=False, direction=1)
+        self.set_sensor_yaw(self.yaw, relative=False, direction=1)
         print("Velocity: {} m/s".format(self.vehicle.velocity))
         print("Altitude: {} m".format(self.vehicle.location.alt))
         print("Yaw: {} Expected: {}".format(self.vehicle.attitude.yaw*180/math.pi, self.yaw))

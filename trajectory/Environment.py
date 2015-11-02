@@ -1,3 +1,6 @@
+import math
+
+from Servo import Servo
 from VRMLLoader import VRMLLoader
 from ..distance.Distance_Sensor_Simulator import Distance_Sensor_Simulator
 
@@ -15,6 +18,12 @@ class Environment(object):
         self.settings = self.arguments.get_settings("environment")
         self._distance_sensors = None
 
+        # Servo pins of the flight controller for distance sensor rotation
+        self._servos = []
+        for servo in self.settings.get("servo_pins"):
+            pwm = servo["pwm"] if "pwm" in servo else None
+            self._servos.append(Servo(servo["pin"], servo["angles"], pwm))
+
     def get_vehicle(self):
         return self.vehicle
 
@@ -31,10 +40,13 @@ class Environment(object):
             else:
                 angles = list(self.settings.get("sensors"))
                 self._distance_sensors = [
-                    self._sensor_class(self, angle) for angle in angles
+                    self._sensor_class(self, i, angles[i]) for i in range(len(angles))
                 ]
 
         return self._distance_sensors
+
+    def get_servos(self):
+        return self._servos
 
     def get_objects(self):
         return []
@@ -68,6 +80,20 @@ class Environment(object):
         This performs conversion from bearing to angle, but still returns the angle in radians.
         """
         return self.geometry.bearing_to_angle(self.get_yaw())
+
+    def get_sensor_yaw(self, id=0):
+        """
+        Get the relative yaw of the given sensor.
+
+        In case servos are used, this calculates the current servo angle.
+
+        This method is meant to be used by `Distance_Sensor` objects only, and does not include the fixed (starting) angle of the sensor itself. The angle may not be within a constrained range.
+        """
+        yaw = self.get_yaw()
+        if id < len(self._servos):
+            yaw = yaw + self._servos[id].get_angle() * math.pi/180
+
+        return yaw
 
     def get_pitch(self):
         """
