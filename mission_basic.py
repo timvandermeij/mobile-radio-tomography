@@ -146,7 +146,7 @@ class Monitor(object):
             self._plot_vehicle_angle()
 
             self.plt.imshow(self.memory_map.get_map(), origin='lower')
-            self.plt.draw()
+            self.plt.pause(sys.float_info.epsilon)
             self.plt.cla()
 
         if not self.mission.check_waypoint():
