@@ -23,7 +23,8 @@ from matplotlib.collections import PatchCollection
 sys.path.insert(0, os.getcwd())
 from __init__ import __package__
 from settings import Arguments
-from trajectory import Mission, Environment, Environment_Simulator
+from trajectory import Mission
+from trajectory.Environment import Environment, Environment_Simulator
 from trajectory.MockVehicle import MockAPI, MockVehicle
 from trajectory.Viewer import Viewer_Vehicle
 from geometry import Geometry
