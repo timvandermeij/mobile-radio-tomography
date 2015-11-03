@@ -1,6 +1,8 @@
 import sys
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import warnings
 from math import *
 from ..settings import Arguments, Settings
 
@@ -16,6 +18,9 @@ class XBee_Viewer(object):
             self.settings = settings
         else:
             raise ValueError("'settings' must be an instance of Settings or Arguments")
+
+        if not self.settings.get("warnings"):
+            warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)
 
         self.points = []
         self.arrows = []

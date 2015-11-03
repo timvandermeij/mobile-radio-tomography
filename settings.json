@@ -114,7 +114,8 @@
         "parent": "xbee_base",
         "settings": {
             "size": 10,
-            "circle_radius": 3
+            "circle_radius": 3,
+            "warnings": false
         }
     }
 }

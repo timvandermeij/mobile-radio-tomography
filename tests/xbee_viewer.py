@@ -1,6 +1,6 @@
 import unittest
 from mock import patch, MagicMock
-from ..settings import Settings
+from ..settings import Arguments
 
 class TestXBeeViewer(unittest.TestCase):
     def setUp(self):
@@ -15,7 +15,11 @@ class TestXBeeViewer(unittest.TestCase):
         self.patcher = patch.dict('sys.modules', modules)
         self.patcher.start()
         from ..zigbee.XBee_Viewer import XBee_Viewer
-        self.settings = Settings("tests/settings.json", "xbee_viewer")
+        self.arguments = Arguments("settings.json", [
+            "--warnings",
+            "--number-of-sensors", "8"
+        ])
+        self.settings = self.arguments.get_settings("xbee_viewer")
         self.viewer = XBee_Viewer(self.settings)
 
     def test_initialization(self):

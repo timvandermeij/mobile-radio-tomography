@@ -35,7 +35,9 @@ class TestXBeeSensorSimulator(unittest.TestCase):
         from ..zigbee.XBee_Viewer import XBee_Viewer
 
         self.id = 1
-        self.arguments = Arguments("settings.json", [])
+        self.arguments = Arguments("settings.json", [
+            "--warnings"
+        ])
         self.settings = self.arguments.get_settings("xbee_sensor_simulator")
         self.scheduler = XBee_TDMA_Scheduler(self.id, self.arguments)
         self.viewer = XBee_Viewer(self.arguments)
