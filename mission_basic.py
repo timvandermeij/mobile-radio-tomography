@@ -17,7 +17,7 @@ sys.path.insert(0, os.getcwd())
 from __init__ import __package__
 from settings import Arguments
 from trajectory import Mission
-from trajectory.Environment import Environment, Environment_Simulator
+from trajectory.Environment import Environment_Physical, Environment_Simulator
 from trajectory.MockVehicle import MockAPI, MockVehicle
 from trajectory.Monitor import Monitor
 from trajectory.Viewer import Viewer_Vehicle
@@ -35,7 +35,7 @@ def main(argv):
     if __name__ == "__main__":
         # Directly running the file means we use our own simulation
         if not simulation:
-            raise ValueError("Mock vehicle can only be used in simulation")
+            print("Warning: Using mock vehicle while not in simulation. This may be useful for testing the distance sensor but might indicate an incorrect setting in other cases.")
 
         api = MockAPI()
         vehicle = MockVehicle(geometry)
@@ -53,7 +53,7 @@ def main(argv):
     if simulation:
         environment = Environment_Simulator(vehicle, geometry, arguments)
     else:
-        environment = Environment(vehicle, geometry, arguments)
+        environment = Environment_Physical(vehicle, geometry, arguments)
 
     mission_class = mission_settings.get("mission_class")
     mission = Mission.__dict__[mission_class](api, environment, mission_settings)

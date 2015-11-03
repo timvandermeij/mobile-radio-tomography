@@ -26,7 +26,7 @@ class Environment(object):
         if isinstance(vehicle, MockVehicle):
             return Environment_Simulator(vehicle, geometry, arguments)
 
-        return Environment(vehicle, geometry, arguments)
+        return Environment_Physical(vehicle, geometry, arguments)
 
     def __init__(self, vehicle, geometry, arguments):
         self.vehicle = vehicle
@@ -94,6 +94,9 @@ class Environment(object):
         Get the pitch bearing of the vehicle.
         """
         return self.vehicle.attitude.pitch
+
+class Environment_Physical(Environment):
+    _sensor_class = Distance_Sensor_Physical
 
 class Environment_Simulator(Environment):
     """
