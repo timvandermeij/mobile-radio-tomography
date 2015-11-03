@@ -1,3 +1,6 @@
+from droneapi.lib import Location
+from ..zigbee.XBee_Packet import XBee_Packet
+
 class Monitor(object):
     """
     Mission monitor class.
@@ -30,6 +33,7 @@ class Monitor(object):
         return self.settings.get("viewer")
 
     def setup(self):
+        self.environment.add_packet_action("memory_map", self.add_memory_map)
         self.memory_map = self.mission.get_memory_map()
 
         if self.settings.get("plot"):
@@ -56,6 +60,8 @@ class Monitor(object):
 
         self.mission.step()
 
+        xbee_sensor = self.environment.get_xbee_sensor()
+
         i = 0
         for sensor in self.sensors:
             yaw = sensor.get_angle()
@@ -73,13 +79,20 @@ class Monitor(object):
                     # the angle's direction. This is again a "cheat" for 
                     # checking if walls get visualized correctly.
                     sensor.draw_current_edge(self.plot.get_plot(), self.memory_map, self.colors[i % len(self.colors)])
+                if xbee_sensor:
+                    home_location = self.mission.get_home_location()
+                    packet = XBee_Packet()
+                    packet.set("action", "memory_map")
+                    packet.set("lat", home_location.lat + location.lat)
+                    packet.set("lon", home_location.lon + location.lon)
+                    xbee_sensor.enqueue(packet)
 
                 print("=== [!] Distance to object: {} m (yaw {}, pitch {}) ===".format(sensor_distance, yaw, pitch))
 
             i = i + 1
 
-        xbee_sensor = self.environment.get_xbee_sensor()
-        xbee_sensor.activate()
+        if xbee_sensor:
+            xbee_sensor.activate()
 
         # Display the current memory map interactively.
         if self.plot:
@@ -94,9 +107,19 @@ class Monitor(object):
 
         return True
 
+    def add_memory_map(self, packet):
+        loc = Location(packet.get("lat"), packet.get("lon"), 0.0, is_relative=False)
+        idx = self.memory_map.get_index(loc)
+        print(loc.lat, loc.lon, idx)
+        try:
+            self.memory_map.set(idx, 1)
+        except KeyError:
+            pass
+
     def stop(self):
         xbee_sensor = self.environment.get_xbee_sensor()
-        xbee_sensor.deactivate()
+        if xbee_sensor:
+            xbee_sensor.deactivate()
 
         if self.plot:
             self.plot.close()
