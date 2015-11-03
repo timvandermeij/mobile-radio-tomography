@@ -1,5 +1,7 @@
 from VRMLLoader import VRMLLoader
 from ..distance.Distance_Sensor_Simulator import Distance_Sensor_Simulator
+from ..geometry import Geometry
+from MockVehicle import MockVehicle
 
 class Environment(object):
     """
@@ -7,6 +9,24 @@ class Environment(object):
     """
 
     _sensor_class = None
+
+    @classmethod
+    def setup(self, arguments, geometry_class="Geometry", vehicle=None):
+        """
+        Create an Environment object or simulated environment.
+
+        The returned object is an Enviromnent object or a subclass, loaded with the given `arguments` object. Optionally one can specify which `geometry_class` to use and what `vehicle` object to use.
+        Based on whether the `vehicle` is a `MockVehicle` (default), the environment is simulated or not.
+        For more control over simulated environment setup, use the normal constructors instead.
+        """
+        geometry = Geometry.__dict__[geometry_class]()
+        if vehicle is None:
+            vehicle = MockVehicle(geometry)
+
+        if isinstance(vehicle, MockVehicle):
+            return Environment_Simulator(vehicle, geometry, arguments)
+
+        return Environment(vehicle, geometry, arguments)
 
     def __init__(self, vehicle, geometry, arguments):
         self.vehicle = vehicle
