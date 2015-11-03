@@ -3,9 +3,7 @@ import time
 from __init__ import __package__
 from settings import Arguments
 from distance.Distance_Sensor_Physical import Distance_Sensor_Physical
-from geometry.Geometry import Geometry
 from environment import Environment
-from trajectory.MockVehicle import MockVehicle
 
 def main(argv):
     arguments = Arguments("settings.json", argv)
