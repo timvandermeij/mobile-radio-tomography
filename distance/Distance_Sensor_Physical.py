@@ -4,13 +4,15 @@ from ..settings import Settings
 from Distance_Sensor import Distance_Sensor
 
 class Distance_Sensor_Physical(Distance_Sensor):
-    def __init__(self):
+    def __init__(self, environment, angle=0):
         """
         Initialize the physical distance sensor by, most importantly, setting
         the echo and trigger pin numbers.
         """
+        super(Distance_Sensor_Physical, self).__init__(environment, angle)
 
-        self.settings = Settings("settings.json", "distance_sensor_physical")
+        arguments = self.environment.get_arguments()
+        self.settings = arguments.get_settings("distance_sensor_physical")
 
         # Initialize the RPi.GPIO module. Doing it this way instead of using
         # an alias during import allows unit tests to access it too.

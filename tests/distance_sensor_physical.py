@@ -1,6 +1,7 @@
 import unittest
 from mock import patch, call, MagicMock
-from ..settings import Settings
+from ..settings import Arguments
+from ..trajectory.Environment import Environment
 
 class TestDistanceSensorPhysical(unittest.TestCase):
     def setUp(self):
@@ -15,8 +16,10 @@ class TestDistanceSensorPhysical(unittest.TestCase):
         self.patcher = patch.dict('sys.modules', modules)
         self.patcher.start()
         from ..distance.Distance_Sensor_Physical import Distance_Sensor_Physical
-        self.settings = Settings("settings.json", "distance_sensor_physical")
-        self.distance_sensor = Distance_Sensor_Physical()
+        arguments = Arguments("settings.json", [])
+        self.settings = arguments.get_settings("distance_sensor_physical")
+        environment = Environment.setup(arguments)
+        self.distance_sensor = Distance_Sensor_Physical(environment)
 
     def tearDown(self):
         self.patcher.stop()
