@@ -19,7 +19,6 @@ from settings import Arguments
 from trajectory import Mission
 from trajectory.MockVehicle import MockAPI, MockVehicle
 from trajectory.Monitor import Monitor
-from trajectory.Viewer import Viewer_Vehicle
 from geometry import Geometry
 
 # Main mission program
@@ -78,6 +77,7 @@ def main(argv):
 
     try:
         if monitor.use_viewer():
+            from trajectory.Viewer import Viewer_Vehicle
             viewer = Viewer_Vehicle(environment, monitor)
             viewer.start()
         else:
