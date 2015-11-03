@@ -36,7 +36,9 @@ class Environment(object):
         self.arguments = arguments
         self.settings = self.arguments.get_settings("environment")
         self._distance_sensors = None
+
         self._xbee_sensor = None
+        self.packet_callbacks = {}
         self._setup_xbee_sensor()
 
     def _setup_xbee_sensor(self):
@@ -75,8 +77,14 @@ class Environment(object):
     def get_xbee_sensor(self):
         return self._xbee_sensor
 
+    def add_packet_action(self, action, callback):
+        self.packet_callbacks[action] = callback
+
     def receive_packet(self, packet):
-        print("> Custom packet received: {}".format(packet.serialize()))
+        action = packet.get("action")
+        if action in self.packet_callbacks:
+            callback = self.packet_callbacks[action]
+            callback(packet)
 
     def get_objects(self):
         return []
