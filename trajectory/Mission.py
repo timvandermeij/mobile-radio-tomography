@@ -99,6 +99,9 @@ class Mission(object):
     def get_commands(self):
         return self.vehicle.commands
 
+    def get_home_location(self):
+        return self.vehicle.home_location
+
     def arm_and_takeoff(self):
         """
         Arms vehicle and fly to the target `altitude`.
