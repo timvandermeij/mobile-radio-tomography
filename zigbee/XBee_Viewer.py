@@ -1,3 +1,4 @@
+import sys
 import matplotlib.pyplot as plt
 import numpy as np
 from math import *
@@ -74,7 +75,7 @@ class XBee_Viewer(object):
         Redraw the plot to make new arrows or points visible in the plot window.
         """
 
-        plt.draw()
+        plt.pause(sys.float_info.epsilon)
 
     def clear_arrows(self):
         """

@@ -91,7 +91,6 @@
         "name": "XBee sensor (physical)",
         "parent": "xbee_base",
         "settings": {
-            "id": 0,
             "port": "/dev/ttyUSB0",
             "sensors": [
                 "\\x00\\x13\\xa2\\x00@\\xe6n\\xbd",
