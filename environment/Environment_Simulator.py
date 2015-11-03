@@ -17,6 +17,7 @@ class Environment_Simulator(Environment):
         translation = self.settings.get("translation")
         if isinstance(self.vehicle, MockVehicle):
             self.vehicle.home_location = self.get_location(*translation)
+            self.geometry.set_home_location(self.vehicle.home_location)
         if scenefile is not None:
             loader = VRMLLoader(self, scenefile, translation)
             self.objects = loader.get_objects()
