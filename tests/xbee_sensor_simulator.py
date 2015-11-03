@@ -4,11 +4,10 @@ import time
 import random
 import copy
 import Queue
-from mock import patch
+from mock import patch, MagicMock
 from ..settings import Arguments
 from ..zigbee.XBee_Packet import XBee_Packet
 from ..zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
-from ..zigbee.XBee_Viewer import XBee_Viewer
 from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 
 class TestXBeeSensorSimulator(unittest.TestCase):
@@ -22,10 +21,23 @@ class TestXBeeSensorSimulator(unittest.TestCase):
     def receive_callback(self, packet):
         pass
 
-    @patch("matplotlib.pyplot.show")
-    def setUp(self, mock_show):
+    def setUp(self):
+        # We need to mock the Matplotlib module as we do not want to use
+        # plotting facilities during the tests.
+        self.matplotlib_mock = MagicMock()
+        modules = {
+            'matplotlib': self.matplotlib_mock,
+            'matplotlib.pyplot': self.matplotlib_mock.pyplot
+        }
+
+        self.patcher = patch.dict('sys.modules', modules)
+        self.patcher.start()
+        from ..zigbee.XBee_Viewer import XBee_Viewer
+
         self.id = 1
-        self.arguments = Arguments("settings.json", [])
+        self.arguments = Arguments("settings.json", [
+            "--warnings"
+        ])
         self.settings = self.arguments.get_settings("xbee_sensor_simulator")
         self.scheduler = XBee_TDMA_Scheduler(self.id, self.arguments)
         self.viewer = XBee_Viewer(self.arguments)

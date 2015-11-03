@@ -32,7 +32,7 @@ class Arguments(object):
         if group in self.groups:
             return self.groups[group]
 
-        settings = Settings(self.settings_file, group)
+        settings = Settings(self.settings_file, group, self)
         self._parse_settings(group, settings)
         self.groups[group] = settings
         return self.groups[group]

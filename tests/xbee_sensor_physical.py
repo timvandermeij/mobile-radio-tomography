@@ -32,13 +32,15 @@ class TestXBeeSensorPhysical(unittest.TestCase):
 
         self.arguments = Arguments("settings.json", [
             "--port", self.port,
-            "--sensors", "sensor_0", "sensor_1", "sensor_2"
+            "--sensors", "sensor_0", "sensor_1", "sensor_2", "sensor_3",
+            "sensor_4", "sensor_5", "sensor_6", "sensor_7", "sensor_8"
         ])
         self.settings = self.arguments.get_settings("xbee_sensor_physical")
         self.scheduler = XBee_TDMA_Scheduler(self.sensor_id, self.arguments)
-        self.sensor = XBee_Sensor_Physical(self.sensor_id, self.arguments,
-                                           self.scheduler, self.location_callback,
+        self.sensor = XBee_Sensor_Physical(self.arguments, self.scheduler,
+                                           self.location_callback,
                                            self.receive_callback)
+        self.sensor.id = self.sensor_id
 
     def test_initialization(self):
         self.assertEqual(self.sensor.id, self.sensor_id)
@@ -117,17 +119,16 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         mock_send.call_count = 0
 
         # Packets must be sent to all other sensors except the ground sensor
-        # and itself. Since there are three sensors in the settings, one
-        # packet is expected here.
+        # and itself (the latter explains the subtraction of one).
         self.sensor._send()
-        self.assertEqual(mock_send.call_count, 1)
+        self.assertEqual(mock_send.call_count,
+                         self.settings.get("number_of_sensors") - 1)
 
         # If the data object contains valid packets (i.e., the RSSI value is
         # not None), then they must be sent to the ground station. We expect
-        # value 2 here as the first call originates from the call tested above
-        # and the second call is for transmitting the only valid packet in the
-        # data object below to the ground station. After transmission, the
-        # packet should be removed from the data object.
+        # the same number of calls as before, but with one additional call
+        # for transmitting the valid packet. After transmission, the packet
+        # should be removed from the data object.
         mock_send.call_count = 0
         valid = 42
         valid_packet = XBee_Packet()
@@ -137,13 +138,11 @@ class TestXBeeSensorPhysical(unittest.TestCase):
             42: valid_packet
         }
         self.sensor._send()
-        self.assertEqual(mock_send.call_count, 2)
+        self.assertEqual(mock_send.call_count,
+                         self.settings.get("number_of_sensors"))
         self.assertFalse(valid in self.sensor._data)
 
         # If the queue contains packets, some of them must be sent.
-        # At least one packet is sent because of the call tested above where
-        # we send a packet to another XBee. The other calls originate from the
-        # custom packet sending logic.
         mock_send.call_count = 0
         packet = XBee_Packet()
         packet.set("to_id", 2)
@@ -153,7 +152,9 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.sensor._send()
         custom_packet_limit = self.sensor.settings.get("custom_packet_limit")
         queue_length_after = max(0, queue_length_before - custom_packet_limit)
-        self.assertEqual(mock_send.call_count, 1 + (queue_length_before - queue_length_after))
+        original_number_of_packets = self.settings.get("number_of_sensors") - 1
+        self.assertEqual(mock_send.call_count, original_number_of_packets +
+                         (queue_length_before - queue_length_after))
         self.assertEqual(self.sensor._queue.qsize(), queue_length_after)
 
         self.sensor.deactivate()

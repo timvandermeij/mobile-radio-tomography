@@ -9,7 +9,7 @@ from XBee_Sensor import XBee_Sensor
 from ..settings import Arguments, Settings
 
 class XBee_Sensor_Physical(XBee_Sensor):
-    def __init__(self, sensor_id, settings, scheduler, location_callback=None,
+    def __init__(self, settings, scheduler, location_callback=None,
                  receive_callback=None):
         """
         Initialize the sensor.
@@ -25,7 +25,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
         if location_callback == None or receive_callback == None:
             raise TypeError("Missing required location and receive callbacks")
 
-        self.id = sensor_id
+        self.id = 0
         self.scheduler = scheduler
         self._location_callback = location_callback
         self._receive_callback = receive_callback

@@ -18,7 +18,7 @@ class Settings(object):
 
         return cls.settings_files[file_name]
 
-    def __init__(self, file_name, component_name):
+    def __init__(self, file_name, component_name, arguments=None):
         if not os.path.isfile(file_name):
             raise IOError("File '{}' does not exist.".format(file_name))
 
@@ -31,7 +31,10 @@ class Settings(object):
         self.settings = settings[self.component_name]["settings"]
 
         if "parent" in settings[self.component_name]:
-            self.parent = Settings(file_name, settings[self.component_name]["parent"])
+            if arguments is not None:
+                self.parent = arguments.get_settings(settings[self.component_name]["parent"])
+            else:
+                self.parent = Settings(file_name, settings[self.component_name]["parent"])
         else:
             self.parent = None
 

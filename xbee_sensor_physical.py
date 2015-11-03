@@ -24,11 +24,11 @@ def receive_callback(packet):
 def main(argv):
     arguments = Arguments("settings.json", argv)
     settings = arguments.get_settings("xbee_sensor_physical")
+    default_sensor_id = 0
 
-    sensor_id = settings.get("id")
-    scheduler = XBee_TDMA_Scheduler(sensor_id, arguments)
-    sensor = XBee_Sensor_Physical(sensor_id, arguments, scheduler,
-                                  location_callback, receive_callback)
+    scheduler = XBee_TDMA_Scheduler(default_sensor_id, arguments)
+    sensor = XBee_Sensor_Physical(arguments, scheduler, location_callback,
+                                  receive_callback)
 
     arguments.check_help()
 
