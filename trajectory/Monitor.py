@@ -3,7 +3,6 @@ import sys
 
 import numpy as np
 import matplotlib
-matplotlib.use('WXAgg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon, Circle
 from matplotlib.collections import PatchCollection

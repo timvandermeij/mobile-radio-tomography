@@ -4,7 +4,6 @@ import time
 import random
 import copy
 import Queue
-from mock import patch
 from ..settings import Arguments
 from ..zigbee.XBee_Packet import XBee_Packet
 from ..zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
@@ -22,8 +21,7 @@ class TestXBeeSensorSimulator(unittest.TestCase):
     def receive_callback(self, packet):
         pass
 
-    @patch("matplotlib.pyplot.show")
-    def setUp(self, mock_show):
+    def setUp(self):
         self.id = 1
         self.arguments = Arguments("settings.json", [])
         self.settings = self.arguments.get_settings("xbee_sensor_simulator")
