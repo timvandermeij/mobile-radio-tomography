@@ -36,9 +36,10 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         ])
         self.settings = self.arguments.get_settings("xbee_sensor_physical")
         self.scheduler = XBee_TDMA_Scheduler(self.sensor_id, self.arguments)
-        self.sensor = XBee_Sensor_Physical(self.sensor_id, self.arguments,
-                                           self.scheduler, self.location_callback,
+        self.sensor = XBee_Sensor_Physical(self.arguments, self.scheduler,
+                                           self.location_callback,
                                            self.receive_callback)
+        self.sensor.id = self.sensor_id
 
     def test_initialization(self):
         self.assertEqual(self.sensor.id, self.sensor_id)
