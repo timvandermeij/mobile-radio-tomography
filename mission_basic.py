@@ -17,7 +17,6 @@ sys.path.insert(0, os.getcwd())
 from __init__ import __package__
 from settings import Arguments
 from trajectory import Mission
-from trajectory.Environment import Environment_Physical, Environment_Simulator
 from trajectory.MockVehicle import MockAPI, MockVehicle
 from trajectory.Monitor import Monitor
 from trajectory.Viewer import Viewer_Vehicle
@@ -51,8 +50,10 @@ def main(argv):
         vehicle = api.get_vehicles()[0]
 
     if simulation:
+        from environment.Environment_Simulator import Environment_Simulator
         environment = Environment_Simulator(vehicle, geometry, arguments)
     else:
+        from environment.Environment_Physical import Environment_Physical
         environment = Environment_Physical(vehicle, geometry, arguments)
 
     mission_class = mission_settings.get("mission_class")

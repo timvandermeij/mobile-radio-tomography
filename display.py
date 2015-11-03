@@ -3,7 +3,7 @@ import sys
 from __init__ import __package__
 from settings import Arguments
 from geometry import Geometry
-from trajectory.Environment import Environment
+from environment import Environment
 from trajectory.MockVehicle import MockVehicle
 from trajectory.Viewer import Viewer_Interactive
 
