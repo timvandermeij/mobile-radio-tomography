@@ -4,6 +4,7 @@ import time
 import random
 import copy
 import Queue
+from mock import patch, MagicMock
 from ..settings import Arguments
 from ..zigbee.XBee_Packet import XBee_Packet
 from ..zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
