@@ -14,7 +14,7 @@ class Monitor(object):
         self.settings = arguments.get_settings("mission_monitor")
 
         # Seconds to wait before monitoring again
-        self.loop_delay = self.settings.get("loop_delay")
+        self.step_delay = self.settings.get("step_delay")
 
         self.sensors = self.environment.get_distance_sensors()
 
@@ -24,7 +24,7 @@ class Monitor(object):
         self.plot = None
 
     def get_delay(self):
-        return self.loop_delay
+        return self.step_delay
 
     def use_viewer(self):
         return self.settings.get("viewer")
@@ -78,6 +78,9 @@ class Monitor(object):
 
             i = i + 1
 
+        xbee_sensor = self.environment.get_xbee_sensor()
+        xbee_sensor.activate()
+
         # Display the current memory map interactively.
         if self.plot:
             self.plot.display()
@@ -92,5 +95,8 @@ class Monitor(object):
         return True
 
     def stop(self):
+        xbee_sensor = self.environment.get_xbee_sensor()
+        xbee_sensor.deactivate()
+
         if self.plot:
             self.plot.close()

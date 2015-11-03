@@ -5,16 +5,15 @@ from __init__ import __package__
 from settings import Arguments
 from zigbee.XBee_Packet import XBee_Packet
 from zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
-from zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 
-def location_callback():
+def get_location():
     """
     Get the current GPS location (latitude and longitude pair).
     """
 
     return (random.uniform(1.0, 50.0), random.uniform(1.0, 50.0))
 
-def receive_callback(packet):
+def receive_packet(packet):
     """
     Handle a custom packet that has been sent to this sensor.
     """
@@ -24,11 +23,8 @@ def receive_callback(packet):
 def main(argv):
     arguments = Arguments("settings.json", argv)
     settings = arguments.get_settings("xbee_sensor_physical")
-    default_sensor_id = 0
 
-    scheduler = XBee_TDMA_Scheduler(default_sensor_id, arguments)
-    sensor = XBee_Sensor_Physical(arguments, scheduler, location_callback,
-                                  receive_callback)
+    sensor = XBee_Sensor_Physical(arguments, get_location, receive_packet)
 
     arguments.check_help()
 
