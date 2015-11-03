@@ -7,7 +7,6 @@ before_install:
 install:
   - pip install matplotlib
   - pip install pyserial
-  - pip install RPi.GPIO
   - pip install xbee
   - pip install pymavlink
   - pip install mavproxy
