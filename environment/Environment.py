@@ -1,5 +1,6 @@
 from ..geometry import Geometry
 from ..trajectory.MockVehicle import MockVehicle
+from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 
 class Environment(object):
     """
@@ -34,6 +35,9 @@ class Environment(object):
         self.arguments = arguments
         self.settings = self.arguments.get_settings("environment")
         self._distance_sensors = None
+        self._xbee_sensor = XBee_Sensor_Simulator(self.arguments,
+                                                  self.get_raw_location,
+                                                  self.receive_packet)
 
     def get_vehicle(self):
         return self.vehicle
@@ -56,6 +60,12 @@ class Environment(object):
 
         return self._distance_sensors
 
+    def get_xbee_sensor(self):
+        return self._xbee_sensor
+
+    def receive_packet(self, packet):
+        print("> Custom packet received: {}".format(packet.serialize()))
+
     def get_objects(self):
         return []
 
@@ -68,6 +78,10 @@ class Environment(object):
             return self.vehicle.location
 
         return self.geometry.get_location_meters(self.vehicle.location, north, east, alt)
+
+    def get_raw_location(self):
+        location = self.get_location()
+        return (location.lat, location.lon)
 
     def get_distance(self, location):
         """
