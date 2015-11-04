@@ -9,7 +9,6 @@ from xbee import ZigBee
 from mock import patch
 from ..settings import Arguments
 from ..zigbee.XBee_Packet import XBee_Packet
-from ..zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
 
 class TestXBeeSensorPhysical(unittest.TestCase):
@@ -36,15 +35,13 @@ class TestXBeeSensorPhysical(unittest.TestCase):
             "sensor_4", "sensor_5", "sensor_6", "sensor_7", "sensor_8"
         ])
         self.settings = self.arguments.get_settings("xbee_sensor_physical")
-        self.scheduler = XBee_TDMA_Scheduler(self.sensor_id, self.arguments)
-        self.sensor = XBee_Sensor_Physical(self.arguments, self.scheduler,
+        self.sensor = XBee_Sensor_Physical(self.arguments,
                                            self.location_callback,
                                            self.receive_callback)
         self.sensor.id = self.sensor_id
 
     def test_initialization(self):
         self.assertEqual(self.sensor.id, self.sensor_id)
-        self.assertEqual(self.sensor.scheduler, self.scheduler)
         self.assertTrue(hasattr(self.sensor._location_callback, "__call__"))
         self.assertTrue(hasattr(self.sensor._receive_callback, "__call__"))
         self.assertEqual(self.sensor._next_timestamp, 0)

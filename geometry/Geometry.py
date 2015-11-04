@@ -22,6 +22,30 @@ class Geometry(object):
     # meters.
     EPSILON = 0.0001
 
+    def __init__(self):
+        self.home_location = Location(0.0, 0.0, 0.0, is_relative=False)
+
+    def set_home_location(self, home_location):
+        if home_location.is_relative:
+            raise ValueError("Home location cannot be a relative location")
+
+        self.home_location = home_location
+
+    def equalize(self, location1, location2):
+        if location1.is_relative != location2.is_relative:
+            if location1.is_relative:
+                location1 = Location(location1.lat + self.home_location.lat,
+                                     location1.lon + self.home_location.lon,
+                                     location1.alt + self.home_location.alt,
+                                     is_relative=False)
+            if location2.is_relative:
+                location2 = Location(location2.lat + self.home_location.lat,
+                                     location2.lon + self.home_location.lon,
+                                     location2.alt + self.home_location.alt,
+                                     is_relative=False)
+
+        return location1, location2
+
     def bearing_to_angle(self, bearing):
         """
         Convert a `bearing` to the usual angle representation, both in radians.
@@ -56,6 +80,7 @@ class Geometry(object):
 
         We use standard Euclidean distance.
         """
+        location1, location2 = self.equalize(location1, location2)
         dlat = location2.lat - location1.lat
         dlon = location2.lon - location1.lon
         dalt = location2.alt - location1.alt
@@ -65,6 +90,7 @@ class Geometry(object):
         """
         Get the distance in meters for each axis between two Location objects.
         """
+        location1, location2 = self.equalize(location1, location2)
         dlat = location2.lat - location1.lat
         dlon = location2.lon - location1.lon
         dalt = location2.alt - location1.alt
@@ -87,6 +113,7 @@ class Geometry(object):
 
         Does not take curvature of earth in account, and should thus be used only for close locations. Only gives the yaw angle assuming the two locations are at the same level, and thus should not be used for locations at different altitudes.
         """
+        location1, location2 = self.equalize(location1, location2)
         dlat = location2.lat - location1.lat
         dlon = location2.lon - location1.lon
         angle = math.atan2(dlat, dlon)
@@ -193,6 +220,7 @@ class Geometry_Spherical(Geometry):
         earth's poles. It comes from the ArduPilot test code: 
         https://github.com/diydrones/ardupilot/blob/master/Tools/autotest/common.py
         """
+        location1, location2 = self.equalize(location1, location2)
         dlat = location2.lat - location1.lat
         dlon = location2.lon - location1.lon
         dalt = location2.alt - location1.alt

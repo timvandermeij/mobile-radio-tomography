@@ -80,9 +80,9 @@ class VRMLLoader(object):
                 # axis (using GL notation here). We have to convert it to 
                 # (z,x,y) since the z/x are related to distances on the ground 
                 # lat/lon, respectively, and y is still the altitude.
-                lat = self.translation.lat + point[1]
-                lon = self.translation.lon + point[0]
-                alt = self.translation.alt + point[2]
+                lat = point[1] + self.translation.lat
+                lon = point[0] - self.translation.lon
+                alt = point[2] + self.translation.alt
                 loc = self.environment.get_location(lat, lon, alt)
                 face.append(loc)
 
