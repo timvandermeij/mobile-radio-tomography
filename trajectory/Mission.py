@@ -50,7 +50,9 @@ class Mission(object):
         # Clear the current mission
         self.clear_mission()
 
-        self.size = self.settings.get("size")
+        # Size in meters of one dimension of the part of the space that we are 
+        # allowed to be in.
+        self.size = self.settings.get("space_size")
         self.altitude = self.settings.get("altitude")
         self.speed = self.settings.get("speed")
 
@@ -96,6 +98,9 @@ class Mission(object):
 
     def get_commands(self):
         return self.vehicle.commands
+
+    def get_home_location(self):
+        return self.vehicle.home_location
 
     def arm_and_takeoff(self):
         """

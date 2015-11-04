@@ -1,5 +1,7 @@
 from ..geometry import Geometry
 from ..trajectory.MockVehicle import MockVehicle
+from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
+from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 
 class Environment(object):
     """
@@ -31,9 +33,27 @@ class Environment(object):
     def __init__(self, vehicle, geometry, arguments):
         self.vehicle = vehicle
         self.geometry = geometry
+        self.geometry.set_home_location(self.vehicle.home_location)
+
         self.arguments = arguments
         self.settings = self.arguments.get_settings("environment")
         self._distance_sensors = None
+
+        self._xbee_sensor = None
+        self.packet_callbacks = {}
+        self._setup_xbee_sensor()
+
+    def _setup_xbee_sensor(self):
+        xbee_type = self.settings.get("xbee_type")
+        if xbee_type == "simulator":
+            xbee_class = XBee_Sensor_Simulator
+        elif xbee_type == "physical":
+            xbee_class = XBee_Sensor_Physical
+        else:
+            return
+
+        self._xbee_sensor = xbee_class(self.arguments, self.get_raw_location,
+                                       self.receive_packet)
 
     def get_vehicle(self):
         return self.vehicle
@@ -49,12 +69,24 @@ class Environment(object):
             if self._sensor_class is None:
                 self._distance_sensors = []
             else:
-                angles = list(self.settings.get("sensors"))
+                angles = list(self.settings.get("distance_sensors"))
                 self._distance_sensors = [
                     self._sensor_class(self, angle) for angle in angles
                 ]
 
         return self._distance_sensors
+
+    def get_xbee_sensor(self):
+        return self._xbee_sensor
+
+    def add_packet_action(self, action, callback):
+        self.packet_callbacks[action] = callback
+
+    def receive_packet(self, packet):
+        action = packet.get("action")
+        if action in self.packet_callbacks:
+            callback = self.packet_callbacks[action]
+            callback(packet)
 
     def get_objects(self):
         return []
@@ -68,6 +100,10 @@ class Environment(object):
             return self.vehicle.location
 
         return self.geometry.get_location_meters(self.vehicle.location, north, east, alt)
+
+    def get_raw_location(self):
+        location = self.get_location()
+        return (location.lat, location.lon)
 
     def get_distance(self, location):
         """

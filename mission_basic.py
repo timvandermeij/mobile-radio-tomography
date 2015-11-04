@@ -6,7 +6,6 @@ Documentation is provided at http://python.dronekit.io/examples/mission_basic.ht
 
 import sys
 import os
-import time
 import traceback
 
 # Package imports
@@ -85,7 +84,7 @@ def main(argv):
             while ok:
                 ok = monitor.step()
                 if ok:
-                    time.sleep(monitor.get_delay())
+                    monitor.sleep()
     except Exception, e:
         # Handle exceptions gracefully by attempting to stop the program 
         # ourselves. Unfortunately KeyboardInterrupts are not passed to us when 

@@ -7,7 +7,6 @@ import Queue
 from mock import patch, MagicMock
 from ..settings import Arguments
 from ..zigbee.XBee_Packet import XBee_Packet
-from ..zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 
 class TestXBeeSensorSimulator(unittest.TestCase):
@@ -36,15 +35,14 @@ class TestXBeeSensorSimulator(unittest.TestCase):
 
         self.id = 1
         self.arguments = Arguments("settings.json", [
-            "--warnings"
+            "--warnings", "--xbee-id", "1"
         ])
         self.settings = self.arguments.get_settings("xbee_sensor_simulator")
-        self.scheduler = XBee_TDMA_Scheduler(self.id, self.arguments)
         self.viewer = XBee_Viewer(self.arguments)
-        self.sensor = XBee_Sensor_Simulator(self.id, self.arguments,
-                                            self.scheduler, self.viewer,
+        self.sensor = XBee_Sensor_Simulator(self.arguments,
                                             self.location_callback,
-                                            self.receive_callback)
+                                            self.receive_callback,
+                                            viewer=self.viewer)
 
         self.viewer.draw_points()
 
@@ -118,7 +116,7 @@ class TestXBeeSensorSimulator(unittest.TestCase):
         copied_packet = copy.deepcopy(packet)
         self.sensor._receive(packet)
         self.assertEqual(self.sensor._next_timestamp,
-                         self.scheduler.synchronize(copied_packet))
+                         self.sensor.scheduler.synchronize(copied_packet))
 
     def test_deactivate(self):
         # After deactivation the socket should be closed.

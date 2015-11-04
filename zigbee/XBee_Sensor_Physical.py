@@ -6,27 +6,25 @@ import Queue
 from xbee import ZigBee
 from XBee_Packet import XBee_Packet
 from XBee_Sensor import XBee_Sensor
-from ..settings import Arguments, Settings
+from XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
+from ..settings import Arguments
 
 class XBee_Sensor_Physical(XBee_Sensor):
-    def __init__(self, settings, scheduler, location_callback=None,
-                 receive_callback=None):
+    def __init__(self, arguments, location_callback=None, receive_callback=None):
         """
         Initialize the sensor.
         """
 
-        if isinstance(settings, Arguments):
-            self.settings = settings.get_settings("xbee_sensor_physical")
-        elif isinstance(settings, Settings):
-            self.settings = settings
+        if isinstance(arguments, Arguments):
+            self.settings = arguments.get_settings("xbee_sensor_physical")
         else:
-            raise ValueError("'settings' must be an instance of Settings or Arguments")
+            raise ValueError("'settings' must be an instance of Arguments")
 
         if location_callback == None or receive_callback == None:
             raise TypeError("Missing required location and receive callbacks")
 
         self.id = 0
-        self.scheduler = scheduler
+        self.scheduler = XBee_TDMA_Scheduler(self.id, arguments)
         self._location_callback = location_callback
         self._receive_callback = receive_callback
         self._next_timestamp = 0

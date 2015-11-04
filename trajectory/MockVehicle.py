@@ -114,7 +114,7 @@ class MockVehicle(object):
         self._takeoff = False
 
         # The current (updated-on-request) location of the vehicle.
-        self._location = Location(0.0, 0.0, 0.0, True)
+        self._location = Location(0.0, 0.0, 0.0, is_relative=True)
         # The target location parsed from commands.
         self._target_location = None
 
@@ -145,6 +145,8 @@ class MockVehicle(object):
         self.gps_0 = GPSInfo(0.0, 0.0, 3, 0)
 
         self.commands = CommandSequence(self)
+
+        self._home_location = Location(0.0, 0.0, 0.0, is_relative=False)
 
     def _parse_command(self, cmd):
         # Only supported frame
@@ -369,6 +371,14 @@ class MockVehicle(object):
     @property
     def groundspeed(self):
         return 0.0
+
+    @property
+    def home_location(self):
+        return self._home_location
+
+    @home_location.setter
+    def home_location(self, value):
+        self._home_location = Location(value.lat, value.lon, value.alt, is_relative=False)
 
     def flush(self):
         pass
