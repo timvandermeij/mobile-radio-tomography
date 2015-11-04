@@ -52,6 +52,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.assertEqual(self.sensor._node_identifier_set, False)
         self.assertEqual(self.sensor._address_set, False)
         self.assertEqual(self.sensor._joined, False)
+        self.assertEqual(self.sensor._synchronized, False)
         self.assertEqual(self.sensor._sensor, None)
         self.assertEqual(self.sensor._address, None)
         self.assertEqual(self.sensor._data, {})
@@ -64,6 +65,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.sensor._node_identifier_set = True
         self.sensor._address_set = True
         self.sensor._joined = True
+        self.sensor._synchronized = True
 
         # The serial connection and sensor must be initialized lazily.
         self.sensor.activate()
@@ -72,6 +74,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.assertEqual(self.sensor._node_identifier_set, True)
         self.assertEqual(self.sensor._address_set, True)
         self.assertEqual(self.sensor._joined, True)
+        self.assertEqual(self.sensor._synchronized, True)
 
         # After deactivation the serial connection must be closed.
         # Note that this also means that the sensor is halted.
@@ -112,6 +115,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.sensor._node_identifier_set = True
         self.sensor._address_set = True
         self.sensor._joined = True
+        self.sensor._synchronized = True
 
         # Activate the sensor and ignore any _send() calls as we are not
         # interested in the initialization calls.
@@ -165,6 +169,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.sensor._node_identifier_set = True
         self.sensor._address_set = True
         self.sensor._joined = True
+        self.sensor._synchronized = True
 
         self.sensor.activate()
 
@@ -291,3 +296,17 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.assertEqual(self.sensor._joined, True)
 
         self.sensor.deactivate()
+
+    @patch("subprocess.call")
+    def test_ntp(self, mock_subprocess_call):
+        # Prepare the NTP packet.
+        packet = XBee_Packet()
+        packet.set("_t1", 100)
+        packet.set("_t2", 150)
+        packet.set("_t3", 160)
+        packet.set("_t4", 120)
+
+        # Perform the NTP algorithm.
+        clock_offset = self.sensor._ntp(packet)
+        self.assertEqual(clock_offset, 45)
+        self.assertEqual(mock_subprocess_call.call_count, 1)
