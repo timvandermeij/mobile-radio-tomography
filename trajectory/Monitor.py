@@ -1,3 +1,5 @@
+import thread
+import time
 from droneapi.lib import Location
 from ..zigbee.XBee_Packet import XBee_Packet
 
@@ -26,6 +28,8 @@ class Monitor(object):
         self.memory_map = None
         self.plot = None
 
+        self.stopped = False
+
     def get_delay(self):
         return self.step_delay
 
@@ -40,6 +44,8 @@ class Monitor(object):
             # Setup memory map plot
             from Plot import Plot
             self.plot = Plot(self.environment, self.memory_map)
+
+        thread.start_new_thread(self.xbee_sensor_loop, ())
 
     def step(self, add_point=None):
         """
@@ -107,6 +113,16 @@ class Monitor(object):
 
         return True
 
+    def xbee_sensor_loop(self):
+        xbee_sensor = self.environment.get_xbee_sensor()
+        loop_delay = xbee_sensor.settings.get("loop_delay")
+        while not self.stopped:
+            xbee_sensor.activate()
+            time.sleep(loop_delay)
+
+    def sleep(self):
+        time.sleep(self.step_delay)
+
     def add_memory_map(self, packet):
         loc = Location(packet.get("lat"), packet.get("lon"), 0.0, is_relative=False)
         idx = self.memory_map.get_index(loc)
@@ -117,6 +133,7 @@ class Monitor(object):
             pass
 
     def stop(self):
+        self.stopped = True
         xbee_sensor = self.environment.get_xbee_sensor()
         if xbee_sensor:
             xbee_sensor.deactivate()
