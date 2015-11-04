@@ -44,7 +44,7 @@
         "name": "Vehicle environment",
         "settings": {
             "distance_sensors": [0.0],
-            "xbee_type": "simulator",
+            "xbee_type": "",
             "scenefile": null,
             "translation": [0.0,0.0,0.0]
         }

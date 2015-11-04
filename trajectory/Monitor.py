@@ -45,7 +45,8 @@ class Monitor(object):
             from Plot import Plot
             self.plot = Plot(self.environment, self.memory_map)
 
-        thread.start_new_thread(self.xbee_sensor_loop, ())
+        if self.environment.get_xbee_sensor():
+            thread.start_new_thread(self.xbee_sensor_loop, ())
 
     def step(self, add_point=None):
         """
