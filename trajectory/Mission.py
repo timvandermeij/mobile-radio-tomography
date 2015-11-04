@@ -296,7 +296,7 @@ class Mission_Auto(Mission):
 
     def setup(self):
         super(Mission_Auto, self).setup()
-        self.add_commands(self.environment.get_location())
+        self.add_commands()
 
     def add_commands(self):
         raise NotImplemented("Must be implementen in child class")
@@ -345,6 +345,19 @@ class Mission_Guided(Mission):
 # Actual mission implementations
 
 class Mission_Square(Mission_Auto):
+    def get_points(self):
+        """
+        Define the four waypoint locations.
+        This method returns the points relative to the current location at the same altitude.
+        """
+        points = []
+        points.append(self.environment.get_location(self.size, -self.size))
+        points.append(self.environment.get_location(self.size, self.size)
+        points.append(self.environment.get_location(-self.size, self.size))
+        points.append(self.environment.get_location(-self.size, -self.size))
+        points.append(points[0])
+        return points
+
     def add_commands(self, start):
         """
         Adds a takeoff command and four waypoint commands to the current mission. 
@@ -360,16 +373,10 @@ class Mission_Square(Mission_Auto):
         # already in the air.
         cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, 0, self.altitude))
 
-        # Define the four MAV_CMD_NAV_WAYPOINT locations and add the commands
-        point1 = self.geometry.get_location_meters(start, self.size, -self.size)
-        point2 = self.geometry.get_location_meters(start, self.size, self.size)
-        point3 = self.geometry.get_location_meters(start, -self.size, self.size)
-        point4 = self.geometry.get_location_meters(start, -self.size, -self.size)
-        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point1.lat, point1.lon, self.altitude))
-        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point2.lat, point2.lon, self.altitude))
-        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point3.lat, point3.lon, self.altitude))
-        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point4.lat, point4.lon, self.altitude))
-        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point1.lat, point1.lon, self.altitude))
+        # Add the MAV_CMD_NAV_WAYPOINT commands.
+        points = self.get_points()
+        for point in points:
+            cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point.lat, point.lon, self.altitude))
 
         # Send commands to vehicle.
         self.vehicle.flush()
@@ -492,3 +499,95 @@ class Mission_Search(Mission_Browse):
                 self.move_distance = 0
 
         return close
+
+class Mission_Pathfind(Mission_Guided):
+    def start(self):
+        super(Mission_Pathfind, self).start()
+        self.points = Mission_Square.get_points(self)
+        self.current_point = -1
+        self.next_waypoint = 0
+        self.padding = 4.0
+
+    def distance_to_point(self):
+        point = self.points[self.current_point]
+        return self.environment.get_distance(point)
+
+    def step(self):
+        if self.current_point >= len(self.points):
+            return
+        if self.current_point < 0 or self.distance_to_point() < self.closeness:
+            self.current_point = self.current_point + 1
+            self.vehicle.commands.goto(self.points[self.current_point])
+
+    def check_sensor_distance(self, sensor_distance, yaw, pitch):
+        close = super(Mission_Pathfind, self).check_sensor_distance(sensor_distance, yaw, pitch)
+        if close < self.padding + self.closeness:
+            self.send_global_velocity(0,0,0)
+            self.vehicle.flush()
+            points = self.astar(self.vehicle.location, self.points[self.current_point])
+            self.points[self.current_point:self.next_waypoint] = points
+            self.next_waypoint = self.current_point + len(points)
+            self.vehicle.commands.goto(self.points[self.current_point])
+
+    def astar(self, start, goal):
+        size = self.memory_map.size
+        start_idx = self.memory_map.get_index(start)
+        goal_idx = self.memory_map.get_index(goal)
+
+        evaluated = set()
+        open_nodes = set([start_idx])
+        came_from = {}
+
+        # Cost along best known path
+        g = np.full((size,size), np.inf)
+        g[start_idx] = 0.0
+
+        # Estimated total cost from start to goal when passing through 
+        # a specific index.
+        f = np.full((size,size), np.inf)
+        f[start_idx] = self.cost(start, goal)
+
+        while open_nodes:
+            # Get the node in open_nodes with the lowest f score
+            open_idx = [idx for idx in open_nodes]
+            min_idx = np.argmin(f[[idx[0] for idx in open_idx], [idx[1] for idx in open_idx]])
+            current = open_idx[min_idx]
+            if current == goal_idx:
+                return self.reconstruct(came_from, goal)
+
+            open_nodes.remove(current)
+            evaluated.add(current)
+            for neighbor_idx in self.neighbors(current):
+                if self.memory_map.get(neighbor_idx) == 1:
+                    continue
+                if neighbor_idx in evaluated:
+                    continue
+                tentative_g = g[current_idx] + self.geometry.get_distance_meters(current, neighbor)
+                if neighbor_idx not in open_nodes:
+                    open_nodes.add(neighbor_idx)
+                elif tentative_g >= g[neighbor_idx]:
+                    # Not a better path
+                    continue
+
+                came_from[neighbor_idx] = current
+                g[neighbor_idx] = tentative_g
+                f[neighbor_idx] = tentative_g + self.cost(neighbor, goal)
+
+        return []
+
+    def reconstruct(self, came_from, current):
+        total_path = [self.memory_map.get_location(current)]
+        while current in came_from:
+            current = came_from[current]
+            total_path.append(self.memory_map.get_location(current))
+
+        return total_path
+
+    def neighbors(self, current):
+        y, x = current
+        return [[y-1, x-1], [y-1, x], [y-1, x+1],
+                [y, x-1],             [y, x+1],
+                [y+1, x-1], [y+1, x], [y+1, x+1]]
+
+    def cost(self, start, goal):
+        return self.geometry.get_distance_meters(start, goal)
