@@ -352,13 +352,13 @@ class Mission_Square(Mission_Auto):
         """
         points = []
         points.append(self.environment.get_location(self.size, -self.size))
-        points.append(self.environment.get_location(self.size, self.size)
+        points.append(self.environment.get_location(self.size, self.size))
         points.append(self.environment.get_location(-self.size, self.size))
         points.append(self.environment.get_location(-self.size, -self.size))
         points.append(points[0])
         return points
 
-    def add_commands(self, start):
+    def add_commands(self):
         """
         Adds a takeoff command and four waypoint commands to the current mission. 
         The waypoints are positioned to form a square of side length `2*size` around the specified `center` Location.
@@ -500,10 +500,16 @@ class Mission_Search(Mission_Browse):
 
         return close
 
-class Mission_Pathfind(Mission_Guided):
+class Mission_Pathfind(Mission_Guided, Mission_Square):
+    def add_commands(self):
+        pass
+
+    def check_waypoint(self):
+        return True
+
     def start(self):
         super(Mission_Pathfind, self).start()
-        self.points = Mission_Square.get_points(self)
+        self.points = self.get_points()
         self.current_point = -1
         self.next_waypoint = 0
         self.padding = 4.0
@@ -515,19 +521,26 @@ class Mission_Pathfind(Mission_Guided):
     def step(self):
         if self.current_point >= len(self.points):
             return
-        if self.current_point < 0 or self.distance_to_point() < self.closeness:
+
+        distance = self.distance_to_point()
+        print("Distance to current point: {} m".format(distance))
+        if self.current_point < 0 or distance < self.closeness:
             self.current_point = self.current_point + 1
+            print("Next point: {}".format(self.current_point))
             self.vehicle.commands.goto(self.points[self.current_point])
 
     def check_sensor_distance(self, sensor_distance, yaw, pitch):
         close = super(Mission_Pathfind, self).check_sensor_distance(sensor_distance, yaw, pitch)
-        if close < self.padding + self.closeness:
+        if sensor_distance < self.padding + self.closeness:
             self.send_global_velocity(0,0,0)
             self.vehicle.flush()
             points = self.astar(self.vehicle.location, self.points[self.current_point])
             self.points[self.current_point:self.next_waypoint] = points
             self.next_waypoint = self.current_point + len(points)
+            self.set_speed(self.speed)
             self.vehicle.commands.goto(self.points[self.current_point])
+
+        return close
 
     def astar(self, start, goal):
         size = self.memory_map.size
@@ -551,43 +564,50 @@ class Mission_Pathfind(Mission_Guided):
             # Get the node in open_nodes with the lowest f score
             open_idx = [idx for idx in open_nodes]
             min_idx = np.argmin(f[[idx[0] for idx in open_idx], [idx[1] for idx in open_idx]])
-            current = open_idx[min_idx]
-            if current == goal_idx:
-                return self.reconstruct(came_from, goal)
+            current_idx = open_idx[min_idx]
+            if current_idx == goal_idx:
+                return self.reconstruct(came_from, goal_idx)
 
-            open_nodes.remove(current)
-            evaluated.add(current)
-            for neighbor_idx in self.neighbors(current):
-                if self.memory_map.get(neighbor_idx) == 1:
-                    continue
+            open_nodes.remove(current_idx)
+            evaluated.add(current_idx)
+            current = self.memory_map.get_location(*current_idx)
+            for neighbor_idx in self.neighbors(current_idx):
                 if neighbor_idx in evaluated:
                     continue
+
+                try:
+                    if self.memory_map.get(neighbor_idx) == 1:
+                        print(neighbor_idx)
+                        break
+                except KeyError:
+                    continue
+
+                neighbor = self.memory_map.get_location(*neighbor_idx)
                 tentative_g = g[current_idx] + self.geometry.get_distance_meters(current, neighbor)
-                if neighbor_idx not in open_nodes:
-                    open_nodes.add(neighbor_idx)
-                elif tentative_g >= g[neighbor_idx]:
+                open_nodes.add(neighbor_idx)
+                if tentative_g >= g[neighbor_idx]:
                     # Not a better path
                     continue
 
-                came_from[neighbor_idx] = current
+                came_from[neighbor_idx] = current_idx
                 g[neighbor_idx] = tentative_g
                 f[neighbor_idx] = tentative_g + self.cost(neighbor, goal)
 
         return []
 
     def reconstruct(self, came_from, current):
-        total_path = [self.memory_map.get_location(current)]
+        total_path = [self.memory_map.get_location(*current)]
         while current in came_from:
-            current = came_from[current]
-            total_path.append(self.memory_map.get_location(current))
+            current = came_from.pop(current)
+            total_path.append(self.memory_map.get_location(*current))
 
-        return total_path
+        return list(reversed(total_path))
 
     def neighbors(self, current):
         y, x = current
-        return [[y-1, x-1], [y-1, x], [y-1, x+1],
-                [y, x-1],             [y, x+1],
-                [y+1, x-1], [y+1, x], [y+1, x+1]]
+        return [(y-1, x-1), (y-1, x), (y-1, x+1),
+                (y, x-1),             (y, x+1),
+                (y+1, x-1), (y+1, x), (y+1, x+1)]
 
     def cost(self, start, goal):
         return self.geometry.get_distance_meters(start, goal)

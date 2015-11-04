@@ -31,7 +31,7 @@ class Memory_Map(object):
         dlat, dlon, dalt = self.geometry.diff_location_meters(self.bl, loc)
         y = (dlat / self.dlat) * self.size
         x = (dlon / self.dlon) * self.size
-        return (y,x)
+        return (int(y),int(x))
 
     def get_xy_index(self, loc):
         """
@@ -39,7 +39,7 @@ class Memory_Map(object):
 
         For any positioning other than displaying an image, matplotlib assumes the value is given in (x,y) order instead of (y,x).
         """
-        return list(reversed(self.get_index(loc)))
+        return tuple(reversed(self.get_index(loc)))
 
     def index_in_bounds(self, i, j):
         if 0 <= i < self.size and 0 <= j < self.size:

@@ -288,12 +288,9 @@ class MockVehicle(object):
             cmd = self.commands[self.commands.next]
             self._parse_command(cmd)
         elif self._mode.name == "GUIDED":
-            if self._speed != 0.0:
-                vNorth, vEast, vAlt = self._handle_speed()
-            else:
-                vNorth = self._velocity[0]
-                vEast = self._velocity[1]
-                vAlt = -self._velocity[2]
+            vNorth = self._velocity[0]
+            vEast = self._velocity[1]
+            vAlt = -self._velocity[2]
 
         north = vNorth * diff
         east = vEast * diff
