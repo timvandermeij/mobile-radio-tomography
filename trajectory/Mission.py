@@ -304,13 +304,40 @@ class Mission_Auto(Mission):
 
     def setup(self):
         super(Mission_Auto, self).setup()
+        self._waypoints = None
         self.add_commands()
 
-    def add_commands(self):
-        raise NotImplemented("Must be implementen in child class")
-
     def get_waypoints(self):
+        if self._waypoints is None:
+            self._waypoints = self.get_points()
+
+        return self._waypoints
+
+    def get_points(self):
         raise NotImplemented("Must be implemented in child class")
+
+    def add_commands(self):
+        """
+        Adds a takeoff command and four waypoint commands to the current mission. 
+        The waypoints are positioned to form a square of side length `2*size` around the specified `center` Location.
+
+        The function assumes `vehicle.commands` is the vehicle mission state 
+        (you must have called `download_mission` at least once before in the session and after any use of `clear_mission`)
+        """
+        # Add the commands. The meaning/order of the parameters is documented 
+        # in the Command class.
+        cmds = self.vehicle.commands
+        # Add MAV_CMD_NAV_TAKEOFF command. This is ignored if the vehicle is 
+        # already in the air.
+        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, 0, self.altitude))
+
+        # Add the MAV_CMD_NAV_WAYPOINT commands.
+        points = self.get_waypoints()
+        for point in points:
+            cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point.lat, point.lon, self.altitude))
+
+        # Send commands to vehicle.
+        self.vehicle.flush()
 
     def display(self):
         # Make sure that mission being sent is displayed on console cleanly
@@ -368,32 +395,6 @@ class Mission_Square(Mission_Auto):
         points.append(self.environment.get_location(-self.size, -self.size))
         points.append(points[0])
         return points
-
-    def get_waypoints(self):
-        return self.get_points()
-
-    def add_commands(self):
-        """
-        Adds a takeoff command and four waypoint commands to the current mission. 
-        The waypoints are positioned to form a square of side length `2*size` around the specified `center` Location.
-
-        The function assumes `vehicle.commands` is the vehicle mission state 
-        (you must have called `download_mission` at least once before in the session and after any use of `clear_mission`)
-        """
-        # Add the commands. The meaning/order of the parameters is documented 
-        # in the Command class.
-        cmds = self.vehicle.commands
-        # Add MAV_CMD_NAV_TAKEOFF command. This is ignored if the vehicle is 
-        # already in the air.
-        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, 0, self.altitude))
-
-        # Add the MAV_CMD_NAV_WAYPOINT commands.
-        points = self.get_points()
-        for point in points:
-            cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point.lat, point.lon, self.altitude))
-
-        # Send commands to vehicle.
-        self.vehicle.flush()
 
 class Mission_Browse(Mission_Guided):
     """
