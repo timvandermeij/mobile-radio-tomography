@@ -99,6 +99,9 @@ class Mission(object):
     def get_commands(self):
         return self.vehicle.commands
 
+    def get_waypoints(self):
+        return []
+
     def get_home_location(self):
         return self.vehicle.home_location
 
@@ -306,6 +309,9 @@ class Mission_Auto(Mission):
     def add_commands(self):
         raise NotImplemented("Must be implementen in child class")
 
+    def get_waypoints(self):
+        raise NotImplemented("Must be implemented in child class")
+
     def display(self):
         # Make sure that mission being sent is displayed on console cleanly
         time.sleep(self.settings.get("mission_delay"))
@@ -362,6 +368,9 @@ class Mission_Square(Mission_Auto):
         points.append(self.environment.get_location(-self.size, -self.size))
         points.append(points[0])
         return points
+
+    def get_waypoints(self):
+        return self.get_points()
 
     def add_commands(self):
         """
@@ -518,6 +527,9 @@ class Mission_Pathfind(Mission_Guided, Mission_Square):
         self.current_point = -1
         self.next_waypoint = 0
         self.padding = 4.0
+
+    def get_waypoints(self):
+        return self.points
 
     def distance_to_point(self):
         point = self.points[self.current_point]
