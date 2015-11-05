@@ -99,8 +99,10 @@
                 "\\x00\\x13\\xa2\\x00@\\xe6o5",
                 "\\x00\\x13\\xa2\\x00@\\xe6n\\xb9"
             ],
+            "ntp_delay": 3,
             "response_delay": 0.5,
             "startup_delay": 1,
+            "synchronize": false,
             "verbose": false
         }
     },
