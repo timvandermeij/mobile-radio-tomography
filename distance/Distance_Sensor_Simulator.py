@@ -25,6 +25,9 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         # Tracking the relevant edge that the sensor detected
         self.current_edge = None
 
+        self.current_object = -1
+        self.current_face = -1
+
     def point_inside_polygon(self, location, points, alt=True):
         """
         Detect objectively whether the vehicle has flown into an object.
@@ -155,8 +158,11 @@ class Distance_Sensor_Simulator(Distance_Sensor):
             # No need to ignore altitude here since it's ignored by default
             return p
 
-    def get_plane_distance(self, face, location, yaw_angle, pitch_angle):
+    def get_plane_distance(self, face, location, yaw_angle, pitch_angle, verbose=False):
         if len(face) < 3:
+            if verbose:
+                print("Face incomplete")
+
             # Face incomplete
             return (sys.float_info.max, None)
 
@@ -188,6 +194,9 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         u = np.array(self.geometry.diff_location_meters(location, p1)) # p1 - v1
         nu_dot = np.dot(cp, u)
         if abs(nu_dot) <= epsilon:
+            if verbose:
+                print("Dot product not good enough, no intersection: dot={}, u={}.".format(nu_dot, u))
+
             # Dot product not good enough, usually caused by line and plane not 
             # actually intersecting (line parallel to plane)
             return (sys.float_info.max, None)
@@ -201,6 +210,9 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         loc_point = self.geometry.get_location_meters(location, *u)
 
         if factor < 0:
+            if verbose:
+                print("Factor too small: {}".format(factor))
+
             # The factor is too small, which means that the intersection point 
             # is on the line extending in the other direction, which we need to 
             # ignore as well.
@@ -222,6 +234,9 @@ class Distance_Sensor_Simulator(Distance_Sensor):
             dist = self.geometry.get_distance_meters(location, loc_point)
             return (dist, loc_point)
 
+        if verbose:
+            print("Point not actually inside polygon")
+
         # The intersection point is not actually inside the polygon, but on the 
         # plane extending from it. Thus there is no intersection.
         return (sys.float_info.max, None)
@@ -239,15 +254,17 @@ class Distance_Sensor_Simulator(Distance_Sensor):
 
         return sys.float_info.max
 
-    def get_obj_distance(self, obj, location, yaw_angle, pitch_angle):
+    def get_obj_distance(self, obj, location, yaw_angle, pitch_angle, verbose=False):
         if isinstance(obj, list):
             # List of faces.
             dists = []
             edges = []
+            j = 0
             for face in obj:
-                dist, edge = self.get_plane_distance(face, location, yaw_angle, pitch_angle)
+                dist, edge = self.get_plane_distance(face, location, yaw_angle, pitch_angle, verbose and j == self.current_face)
                 dists.append(dist)
                 edges.append(edge)
+                j = j + 1
 
             d_min = min(dists)
             e_min = dists.index(d_min)
@@ -286,7 +303,7 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         distance = self.maximum_distance
         i = 0
         for obj in self.environment.get_objects():
-            dist, edge = self.get_obj_distance(obj, location, yaw_angle, pitch_angle)
+            dist, edge = self.get_obj_distance(obj, location, yaw_angle, pitch_angle, i == self.current_object)
             if dist < distance:
                 distance = dist
                 if isinstance(edge, list):
