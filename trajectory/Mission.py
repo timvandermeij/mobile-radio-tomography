@@ -403,7 +403,7 @@ class Mission_Browse(Mission_Guided):
     def setup(self):
         super(Mission_Browse, self).setup()
         self.yaw = 0
-        self.yaw_angle_step = 10
+        self.yaw_angle_step = self.settings.get("yaw_step")
 
     def step(self):
         # We stand still and change the angle to look around.
@@ -428,7 +428,9 @@ class Mission_Search(Mission_Browse):
         self.dists = np.zeros(self.dists_size)
         self.dists_done = np.zeros(self.dists_size, dtype=bool)
 
-        self.padding = 4.0
+        # The space around the distance sensor that we do not want to have 
+        # other objects in.
+        self.padding = self.settings.get("padding")
         self.yaw_margin = 5.0 * math.pi/180
 
     def step(self):
@@ -526,7 +528,6 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
         self.points = self.get_points()
         self.current_point = -1
         self.next_waypoint = 0
-        self.padding = 4.0
         self.browsing = False
         self.rotating = False
         self.start_yaw = self.yaw
