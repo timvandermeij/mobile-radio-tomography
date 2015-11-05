@@ -514,7 +514,7 @@ class Mission_Search(Mission_Browse):
 
         return close
 
-class Mission_Pathfind(Mission_Guided, Mission_Square):
+class Mission_Pathfind(Mission_Browse, Mission_Square):
     def add_commands(self):
         pass
 
@@ -527,11 +527,17 @@ class Mission_Pathfind(Mission_Guided, Mission_Square):
         self.current_point = -1
         self.next_waypoint = 0
         self.padding = 4.0
+        self.browsing = False
+        self.rotating = False
+        self.start_yaw = self.yaw
 
     def get_waypoints(self):
         return self.points
 
     def distance_to_point(self):
+        if self.current_point < 0:
+            return 0
+
         point = self.points[self.current_point]
         return self.environment.get_distance(point)
 
@@ -539,8 +545,30 @@ class Mission_Pathfind(Mission_Guided, Mission_Square):
         if self.current_point >= len(self.points):
             return
 
+        if self.browsing:
+            super(Mission_Pathfind, self).step()
+            if self.geometry.check_angle(self.start_yaw, self.yaw, self.yaw_angle_step * math.pi/180):
+                self.browsing = False
+
+                points = self.astar(self.vehicle.location, self.points[self.next_waypoint])
+                if not points:
+                    raise RuntimeError("Could not find a suitable path to the next waypoint.")
+
+                self.points[self.current_point:self.next_waypoint] = points
+                self.next_waypoint = self.current_point + len(points)
+                self.set_speed(self.speed)
+                self.vehicle.commands.goto(self.points[self.current_point])
+                self.rotating = True
+                self.start_yaw = self.vehicle.attitude.yaw
+        elif self.rotating:
+            # Keep track of whether we are rotating because of a goto command.
+            if self.geometry.check_angle(self.start_yaw, self.vehicle.attitude.yaw, math.pi/180):
+                self.rotating = False
+            else:
+                self.start_yaw = self.vehicle.attitude.yaw
+
         distance = self.distance_to_point()
-        print("Distance to current point: {} m".format(distance))
+        print("Distance to current point ({}): {} m".format(self.current_point, distance))
         if self.current_point < 0 or distance < self.closeness:
             if self.current_point == self.next_waypoint:
                 print("Waypoint reached.")
@@ -553,14 +581,14 @@ class Mission_Pathfind(Mission_Guided, Mission_Square):
 
     def check_sensor_distance(self, sensor_distance, yaw, pitch):
         close = super(Mission_Pathfind, self).check_sensor_distance(sensor_distance, yaw, pitch)
-        if sensor_distance < self.padding + self.closeness:
+        # Do not start scanning if we already are or if we are rotating because 
+        # of a goto command.
+        if not self.browsing and not self.rotating and sensor_distance < 2 * self.padding + self.closeness:
+            print("Start scanning due to closeness.")
             self.send_global_velocity(0,0,0)
             self.vehicle.flush()
-            points = self.astar(self.vehicle.location, self.points[self.next_waypoint])
-            self.points[self.current_point:self.next_waypoint] = points
-            self.next_waypoint = self.current_point + len(points)
-            self.set_speed(self.speed)
-            self.vehicle.commands.goto(self.points[self.current_point])
+            self.browsing = True
+            self.start_yaw = self.vehicle.attitude.yaw
 
         return close
 
@@ -568,6 +596,7 @@ class Mission_Pathfind(Mission_Guided, Mission_Square):
         size = self.memory_map.size
         start_idx = self.memory_map.get_index(start)
         goal_idx = self.memory_map.get_index(goal)
+        nonzero = self.memory_map.get_nonzero_locations()
 
         evaluated = set()
         open_nodes = set([start_idx])
@@ -599,12 +628,14 @@ class Mission_Pathfind(Mission_Guided, Mission_Square):
 
                 try:
                     if self.memory_map.get(neighbor_idx) == 1:
-                        print(neighbor_idx)
                         break
                 except KeyError:
                     continue
 
                 neighbor = self.memory_map.get_location(*neighbor_idx)
+                if self.too_close(neighbor, nonzero):
+                    continue
+
                 tentative_g = g[current_idx] + self.geometry.get_distance_meters(current, neighbor)
                 open_nodes.add(neighbor_idx)
                 if tentative_g >= g[neighbor_idx]:
@@ -630,6 +661,14 @@ class Mission_Pathfind(Mission_Guided, Mission_Square):
         return [(y-1, x-1), (y-1, x), (y-1, x+1),
                 (y, x-1),             (y, x+1),
                 (y+1, x-1), (y+1, x), (y+1, x+1)]
+
+    def too_close(self, current, nonzero):
+        for loc in nonzero:
+            dist = self.geometry.get_distance_meters(current, loc)
+            if dist < self.padding + self.closeness:
+                return True
+
+        return False
 
     def cost(self, start, goal):
         return self.geometry.get_distance_meters(start, goal)
