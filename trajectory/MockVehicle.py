@@ -275,7 +275,10 @@ class MockVehicle(object):
                 dist = self._geometry.get_distance_meters(self._location, self._target_location)
                 dAlt = self._target_location.alt - self._location.alt
                 if dist != 0.0:
-                    vNorth, vEast, vAlt = self._handle_speed(dist, dAlt)
+                    if dist < diff * self._speed:
+                        self._location = self._target_location
+                    else:
+                        vNorth, vEast, vAlt = self._handle_speed(dist, dAlt)
                 elif dAlt != 0.0:
                     if dAlt / diff < self._speed:
                         vAlt = dAlt / diff
