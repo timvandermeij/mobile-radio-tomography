@@ -13,7 +13,7 @@ class XBee_Custom_Packet(XBee_Packet):
 
         super(XBee_Custom_Packet, self).__init__()
         settings = Settings("settings.json", "xbee_base")
-        self.specifications = settings.get("specifications")
+        self._specifications = settings.get("specifications")
 
     def serialize(self):
         """
@@ -37,10 +37,10 @@ class XBee_Custom_Packet(XBee_Packet):
         specification_name = self._contents["specification"]
 
         # Verify that the provided specification exists.
-        if specification_name not in self.specifications:
+        if specification_name not in self._specifications:
             raise KeyError("Unknown specification has been provided")
 
-        specification = self.specifications[specification_name]
+        specification = self._specifications[specification_name]
         self._contents.pop("specification")
 
         # Verify that all fields in the specification have been provided.
@@ -83,14 +83,14 @@ class XBee_Custom_Packet(XBee_Packet):
         # Fetch the specification belonging to the found identifier.
         specification = None
         specification_name = ""
-        for name, fields in self.specifications.iteritems():
+        for name, fields in self._specifications.iteritems():
             if fields[0]["value"] == specification_id:
                 specification = fields
                 specification_name = name
                 break
 
         if specification == None:
-            raise ValueError("Invalid specification has been provided")
+            raise KeyError("Invalid specification has been provided")
 
         # Loop through all fields in the specification that do not have
         # a fixed value (in order). Using the format of the field, we
