@@ -65,7 +65,7 @@ class Mission(object):
         # objects. This can later be used to find the target object or to fly 
         # around obstacles without colliding.
         memory_size = self.get_space_size()
-        self.memory_map = Memory_Map(self.environment, memory_size)
+        self.memory_map = Memory_Map(self.environment, memory_size, self.altitude)
 
     def display(self):
         """
