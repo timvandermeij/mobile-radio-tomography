@@ -532,6 +532,7 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
         self.browsing = False
         self.rotating = False
         self.start_yaw = self.yaw
+        self.padding = self.settings.get("padding")
 
     def get_waypoints(self):
         return self.points
