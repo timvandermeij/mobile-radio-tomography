@@ -542,8 +542,13 @@ class Mission_Pathfind(Mission_Guided, Mission_Square):
         distance = self.distance_to_point()
         print("Distance to current point: {} m".format(distance))
         if self.current_point < 0 or distance < self.closeness:
+            if self.current_point == self.next_waypoint:
+                print("Waypoint reached.")
+                self.next_waypoint = self.next_waypoint + 1
+
             self.current_point = self.current_point + 1
-            print("Next point: {}".format(self.current_point))
+            print("Next point: {i}: Location({p.lat}, {p.lon}, is_relative={p.is_relative})".format(i=self.current_point, p=self.points[self.current_point]))
+
             self.vehicle.commands.goto(self.points[self.current_point])
 
     def check_sensor_distance(self, sensor_distance, yaw, pitch):
@@ -551,7 +556,7 @@ class Mission_Pathfind(Mission_Guided, Mission_Square):
         if sensor_distance < self.padding + self.closeness:
             self.send_global_velocity(0,0,0)
             self.vehicle.flush()
-            points = self.astar(self.vehicle.location, self.points[self.current_point])
+            points = self.astar(self.vehicle.location, self.points[self.next_waypoint])
             self.points[self.current_point:self.next_waypoint] = points
             self.next_waypoint = self.current_point + len(points)
             self.set_speed(self.speed)
