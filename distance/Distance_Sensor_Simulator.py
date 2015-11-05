@@ -189,7 +189,7 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         # Point at location
         p0 = np.array([location.lat, location.lon, location.alt])
         # Another point on the line.
-        p1 = self.geometry.get_location_angle(location, epsilon, yaw_angle, pitch_angle)
+        p1 = self.geometry.get_location_angle(location, 1.0, yaw_angle, pitch_angle)
 
         u = np.array(self.geometry.diff_location_meters(location, p1)) # p1 - v1
         nu_dot = np.dot(cp, u)
