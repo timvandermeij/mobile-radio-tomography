@@ -191,7 +191,9 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         # Another point on the line.
         p1 = self.geometry.get_location_angle(location, 1.0, yaw_angle, pitch_angle)
 
+        # Equation of the line
         u = np.array(self.geometry.diff_location_meters(location, p1)) # p1 - v1
+        # Dot product between the line and the plane vector
         nu_dot = np.dot(cp, u)
         if abs(nu_dot) <= epsilon:
             if verbose:
