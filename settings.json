@@ -73,7 +73,8 @@
                 "memory_map_chunk": [
                     {
                         "name": "id",
-                        "format": "B"
+                        "format": "B",
+                        "value": 1
                     },
                     {
                         "name": "latitude",
