@@ -275,7 +275,10 @@ class MockVehicle(object):
                 dist = self._geometry.get_distance_meters(self._location, self._target_location)
                 dAlt = self._target_location.alt - self._location.alt
                 if dist != 0.0:
-                    vNorth, vEast, vAlt = self._handle_speed(dist, dAlt)
+                    if dist < diff * self._speed:
+                        self._location = self._target_location
+                    else:
+                        vNorth, vEast, vAlt = self._handle_speed(dist, dAlt)
                 elif dAlt != 0.0:
                     if dAlt / diff < self._speed:
                         vAlt = dAlt / diff
@@ -290,12 +293,9 @@ class MockVehicle(object):
             cmd = self.commands[self.commands.next]
             self._parse_command(cmd)
         elif self._mode.name == "GUIDED":
-            if self._speed != 0.0:
-                vNorth, vEast, vAlt = self._handle_speed()
-            else:
-                vNorth = self._velocity[0]
-                vEast = self._velocity[1]
-                vAlt = -self._velocity[2]
+            vNorth = self._velocity[0]
+            vEast = self._velocity[1]
+            vAlt = -self._velocity[2]
 
         north = vNorth * diff
         east = vEast * diff
