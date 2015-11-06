@@ -1,5 +1,6 @@
 import math
 import time
+from droneapi.lib import Location
 from collections import namedtuple
 
 # Constants used in commands according to mavutil
@@ -8,7 +9,6 @@ MAV_CMD_NAV_WAYPOINT = 16
 MAV_CMD_NAV_TAKEOFF = 22
 
 # Read only classes
-Location = namedtuple('Location',['lat', 'lon', 'alt', 'is_relative'])
 VehicleMode = namedtuple('VehicleMode',['name'])
 GPSInfo = namedtuple('GPSInfo',['eph', 'epv', 'fix_type', 'sattelites_visible'])
 
