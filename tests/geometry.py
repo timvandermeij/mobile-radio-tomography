@@ -4,14 +4,9 @@ import sys
 from droneapi.lib import Location
 from ..geometry.Geometry import Geometry, Geometry_Spherical
 
-class TestGeometry(unittest.TestCase):
+class LocationTestCase(unittest.TestCase):
     def setUp(self):
         self.addTypeEqualityFunc(Location, self.assertLocationEqual)
-        self.geometry = Geometry()
-        # Handle float inaccuracies
-        self.dist_delta = sys.float_info.epsilon * 10
-        self.coord_delta = self.dist_delta
-        self.angle_delta = sys.float_info.epsilon * 10
 
     def assertLocationEqual(self, loc1, loc2, msg=None):
         if loc1.lat != loc2.lat or loc1.lon != loc2.lon or loc1.alt != loc2.alt:
@@ -21,6 +16,15 @@ class TestGeometry(unittest.TestCase):
             raise self.failureException(msg)
         if loc1.is_relative != loc2.is_relative:
             raise self.failureException("Location relativeness differs")
+
+class TestGeometry(LocationTestCase):
+    def setUp(self):
+        super(TestGeometry, self).setUp()
+        self.geometry = Geometry()
+        # Handle float inaccuracies
+        self.dist_delta = sys.float_info.epsilon * 10
+        self.coord_delta = self.dist_delta
+        self.angle_delta = sys.float_info.epsilon * 10
 
     def test_home_location(self):
         self.assertEqual(self.geometry.home_location, Location(0.0, 0.0, 0.0, False))
