@@ -4,14 +4,9 @@ import sys
 from droneapi.lib import Location
 from ..geometry.Geometry import Geometry, Geometry_Spherical
 
-class TestGeometry(unittest.TestCase):
+class LocationTestCase(unittest.TestCase):
     def setUp(self):
         self.addTypeEqualityFunc(Location, self.assertLocationEqual)
-        self.geometry = Geometry()
-        # Handle float inaccuracies
-        self.dist_delta = sys.float_info.epsilon * 10
-        self.coord_delta = self.dist_delta
-        self.angle_delta = sys.float_info.epsilon * 10
 
     def assertLocationEqual(self, loc1, loc2, msg=None):
         if loc1.lat != loc2.lat or loc1.lon != loc2.lon or loc1.alt != loc2.alt:
@@ -19,6 +14,31 @@ class TestGeometry(unittest.TestCase):
                 msg = ""
             msg += "Location({}, {}, {}) != Location({}, {}, {})".format(loc1.lat, loc1.lon, loc1.alt, loc2.lat, loc2.lon, loc2.alt)
             raise self.failureException(msg)
+        if loc1.is_relative != loc2.is_relative:
+            raise self.failureException("Location relativeness differs")
+
+class TestGeometry(LocationTestCase):
+    def setUp(self):
+        super(TestGeometry, self).setUp()
+        self.geometry = Geometry()
+        # Handle float inaccuracies
+        self.dist_delta = sys.float_info.epsilon * 10
+        self.coord_delta = self.dist_delta
+        self.angle_delta = sys.float_info.epsilon * 10
+
+    def test_home_location(self):
+        self.assertEqual(self.geometry.home_location, Location(0.0, 0.0, 0.0, False))
+        with self.assertRaises(ValueError):
+            self.geometry.set_home_location(Location(3.0, 2.0, 1.0, True))
+        self.geometry.set_home_location(Location(1.0, 2.0, 3.0, False))
+        self.assertEqual(self.geometry.home_location, Location(1.0, 2.0, 3.0, False))
+
+    def test_equalize(self):
+        loc1 = Location(0.4, 0.06, 1.0, is_relative=True)
+        loc2 = Location(5.4, 3.2, 11.0, is_relative=False)
+        self.geometry.set_home_location(Location(5.0, 3.14, 10.0, False))
+        loc1, loc2 = self.geometry.equalize(loc1, loc2)
+        self.assertEqual(loc1, loc2)
 
     def test_bearing_to_angle(self):
         bearing = -45.0 * math.pi/180

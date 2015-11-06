@@ -3,7 +3,7 @@ Description=Drone tomography
 
 [Service]
 Type=forking
-User=alarm
+User=root
 ExecStart=/usr/bin/screen -dmS sensor /home/alarm/drone-tomography/raspberry-pi-start.sh
 ExecStop=/usr/bin/screen -S sensor -X quit
 

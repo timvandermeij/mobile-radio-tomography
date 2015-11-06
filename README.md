@@ -18,10 +18,10 @@ different installation procedures.
 
 * Git
 * Python 2.7. Note that Python 3 cannot be used at this moment.
-* `pip` for Python 2.7. `pip` is often already available extremely old and bare
+* `pip` for Python 2.7. `pip` is often not available on extremely old and bare
   systems. If it is also not delivered by a package manager, one can also
-  [install with get-pip.py](https://pip.pypa.io/en/latest/installing.html).
-  Ensure you have the correct version of `pip` with `pip --version`, or use
+  [install it with get-pip.py](https://pip.pypa.io/en/latest/installing.html).
+  Ensure that you have the correct version of `pip` with `pip --version` or use
   `pip2` instead.
 
   Use `pip install --user <package>` to install each of the following packages,
@@ -43,11 +43,27 @@ different installation procedures.
   * Environment simulation:
     * PyOpenGL
     * simpleparse
-    * PyVRML97
+    * PyVRML97 (you may need to use `pip install --user "PyVRML97==2.3.0b1"`)
     * PyDispatcher
     * pyglet
   * Unit testing:
     * mock
+* In order to use the map display of ArduPilot, make sure that OpenCV and 
+  wxWidgets as well as their respective Python bindings are installed and 
+  available. If not, the following directions might help you get it:
+  * OpenCV: This is sometimes provided by the package manager. It can also be 
+    installed from the [official download](http://opencv.org/downloads.html) 
+    using the appropriate 
+    [documentation](http://docs.opencv.org/2.4/doc/tutorials/introduction/table_of_content_introduction/table_of_content_introduction.html). 
+    Note that for Linux, you must change the install prefix for `cmake` if you 
+    do not have superuser rights. You can speed up the installation by passing 
+    `-j4` to the `cmake` command.
+  * wxWidgets: Again, if this is not provided by the package manager, see an 
+    [explanation](http://wiki.wxpython.org/How%20to%20install%20wxPython) on 
+    how to install from source. This requires wxGTK as well as the wxWidgets 
+    library itself: these are combined within 
+    a [download](http://www.wxwidgets.org/downloads/). You can install without 
+    superuser rights using `./configure --with-gtk --prefix=$HOME/.local`.
 * ArduPilot for vehicle simulation. Download the latest code using:
 
         $ git clone https://github.com/diydrones/ardupilot.git
@@ -94,15 +110,15 @@ Vehicle mission
 
 The trajectory mission sets up an unmanned aerial vehicle (UAV) and directs it
 to move and rotate within its environment. The script supports various mission
-types and simulation modes. You can run it using the ArduPilot simulator using
-the following commands:
+types and simulation modes. You can run it using the ArduPilot simulator with
+the following command:
 
-    $ sim vehicle.sh -v ArduCopter --map
+    $ sim_vehicle.sh -v ArduCopter --map
     [...wait until the simulator is set up, after "GPS lock at 0 meters"...]
     STABILIZE> script mission.scr
 
-This starts up the mission with default settings from `settings.json`.
-The ArduPilot simulator provides an overhead map showing the copter's position.
+This starts the mission with default settings from `settings.json`. The
+ArduPilot simulator provides an overhead map showing the copter's position.
 The mission monitor has a map in memory that shows objects in the environment
 during simulation as well as detected points from a distance sensor. It also
 provides a 3D viewer of the simulated objects.
@@ -117,7 +133,7 @@ to a flat meter-based coordinate system using `--geometry-class Geometry`, or
 set sensor positioning angles, for example `--sensors 0 90 -90`. Many other 
 options are available for simulating various missions and sensor setups, and
 the command `python2 mission_basic.py --help` provides a list of them. The most
-important setting might be the Mission class to use for calculating what
+important setting might be the mission class to use for calculating what
 trajectory to take. You can choose one of the classes in `trajectory/Mission.py`
 using `--mission-class <Mission_Name>`.
 
@@ -147,7 +163,7 @@ To create the setup, first plug the ground station XBee chip into a USB
 port of the ground station computer. Start the physical XBee sensor code
 as mentioned above and observe that nothing is happening yet. Then, for
 each other XBee chip in the network, power up the accompanying Raspberry
-Pi, connect it to the ground station computer via an ethetnet cable as 
+Pi, connect it to the ground station computer via an ethernet cable as 
 described in the Raspberry Pi document, plug in the XBee USB dongle
 and start the physical XBee sensor code as mentioned above. You should now
 see packets arriving in the ground station's terminal. Note that once the

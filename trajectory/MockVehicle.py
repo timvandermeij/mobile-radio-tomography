@@ -114,7 +114,7 @@ class MockVehicle(object):
         self._takeoff = False
 
         # The current (updated-on-request) location of the vehicle.
-        self._location = Location(0.0, 0.0, 0.0, True)
+        self._location = Location(0.0, 0.0, 0.0, is_relative=True)
         # The target location parsed from commands.
         self._target_location = None
 
@@ -145,6 +145,8 @@ class MockVehicle(object):
         self.gps_0 = GPSInfo(0.0, 0.0, 3, 0)
 
         self.commands = CommandSequence(self)
+
+        self._home_location = Location(0.0, 0.0, 0.0, is_relative=False)
 
     def _parse_command(self, cmd):
         # Only supported frame
@@ -273,7 +275,10 @@ class MockVehicle(object):
                 dist = self._geometry.get_distance_meters(self._location, self._target_location)
                 dAlt = self._target_location.alt - self._location.alt
                 if dist != 0.0:
-                    vNorth, vEast, vAlt = self._handle_speed(dist, dAlt)
+                    if dist < diff * self._speed:
+                        self._location = self._target_location
+                    else:
+                        vNorth, vEast, vAlt = self._handle_speed(dist, dAlt)
                 elif dAlt != 0.0:
                     if dAlt / diff < self._speed:
                         vAlt = dAlt / diff
@@ -288,12 +293,9 @@ class MockVehicle(object):
             cmd = self.commands[self.commands.next]
             self._parse_command(cmd)
         elif self._mode.name == "GUIDED":
-            if self._speed != 0.0:
-                vNorth, vEast, vAlt = self._handle_speed()
-            else:
-                vNorth = self._velocity[0]
-                vEast = self._velocity[1]
-                vAlt = -self._velocity[2]
+            vNorth = self._velocity[0]
+            vEast = self._velocity[1]
+            vAlt = -self._velocity[2]
 
         north = vNorth * diff
         east = vEast * diff
@@ -372,6 +374,14 @@ class MockVehicle(object):
     @property
     def groundspeed(self):
         return 0.0
+
+    @property
+    def home_location(self):
+        return self._home_location
+
+    @home_location.setter
+    def home_location(self, value):
+        self._home_location = Location(value.lat, value.lon, value.alt, is_relative=False)
 
     def flush(self):
         pass

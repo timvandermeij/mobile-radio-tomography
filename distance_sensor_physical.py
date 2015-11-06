@@ -1,15 +1,21 @@
+import sys
 import time
 from __init__ import __package__
-from settings import Settings
+from settings import Arguments
 from distance.Distance_Sensor_Physical import Distance_Sensor_Physical
+from environment import Environment
 
-def main():
-    distance_sensor = Distance_Sensor_Physical()
-    settings = Settings("settings.json", "distance_sensor_physical")
+def main(argv):
+    arguments = Arguments("settings.json", argv)
+
+    environment = Environment.setup(arguments, simulated=False)
+    distance_sensors = environment.get_distance_sensors()
+    settings = arguments.get_settings("distance_sensor_physical")
 
     while True:
-        print("Measured distance: {} m".format(distance_sensor.get_distance()))
+        for sensor in distance_sensors:
+            print("Measured distance: {} m".format(sensor.get_distance()))
         time.sleep(settings.get("interval_delay"))
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])

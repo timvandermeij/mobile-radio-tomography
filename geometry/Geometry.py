@@ -1,5 +1,6 @@
 import sys
 import math
+import numpy as np
 from droneapi.lib import Location
 
 class Geometry(object):
@@ -21,6 +22,30 @@ class Geometry(object):
     # as being the same, but high enough to work for both coordinates and 
     # meters.
     EPSILON = 0.0001
+
+    def __init__(self):
+        self.home_location = Location(0.0, 0.0, 0.0, is_relative=False)
+
+    def set_home_location(self, home_location):
+        if home_location.is_relative:
+            raise ValueError("Home location cannot be a relative location")
+
+        self.home_location = home_location
+
+    def equalize(self, location1, location2):
+        if location1.is_relative != location2.is_relative:
+            if location1.is_relative:
+                location1 = Location(location1.lat + self.home_location.lat,
+                                     location1.lon + self.home_location.lon,
+                                     location1.alt + self.home_location.alt,
+                                     is_relative=False)
+            if location2.is_relative:
+                location2 = Location(location2.lat + self.home_location.lat,
+                                     location2.lon + self.home_location.lon,
+                                     location2.alt + self.home_location.alt,
+                                     is_relative=False)
+
+        return location1, location2
 
     def bearing_to_angle(self, bearing):
         """
@@ -56,6 +81,7 @@ class Geometry(object):
 
         We use standard Euclidean distance.
         """
+        location1, location2 = self.equalize(location1, location2)
         dlat = location2.lat - location1.lat
         dlon = location2.lon - location1.lon
         dalt = location2.alt - location1.alt
@@ -65,6 +91,7 @@ class Geometry(object):
         """
         Get the distance in meters for each axis between two Location objects.
         """
+        location1, location2 = self.equalize(location1, location2)
         dlat = location2.lat - location1.lat
         dlon = location2.lon - location1.lon
         dalt = location2.alt - location1.alt
@@ -87,6 +114,7 @@ class Geometry(object):
 
         Does not take curvature of earth in account, and should thus be used only for close locations. Only gives the yaw angle assuming the two locations are at the same level, and thus should not be used for locations at different altitudes.
         """
+        location1, location2 = self.equalize(location1, location2)
         dlat = location2.lat - location1.lat
         dlon = location2.lon - location1.lon
         angle = math.atan2(dlat, dlon)
@@ -159,6 +187,47 @@ class Geometry(object):
         """
         return zip(points, list(points[1:]) + [points[0]])
 
+    def get_plane_vector(self, points):
+        """
+        Calculate the plane equation from the given `points` that determine a face on the plane.
+        """
+        # Based on http://stackoverflow.com/a/24540938 expect with less typos 
+        # (see http://stackoverflow.com/a/25809052) and more numpy strength
+
+        # Point on the plane
+        p = points[0]
+        # Vectors from point that define plane direction
+        v1 = self.diff_location_meters(p, points[1])
+        v2 = self.diff_location_meters(p, points[2])
+
+        # Plane equation values. This is the normal vector of the plane.
+        # http://geomalgorithms.com/a04-_planes.html#Normal-Implicit-Equation
+        cp = np.cross(v1, v2)
+        d = -(cp[0] * p.lat + cp[1] * p.lon + cp[2] * p.alt)
+
+        return cp, d
+
+    def check_dot(self, dot):
+        """
+        Check whether a given dot product `dot` is large enough to be noticeable.
+        This is useful to check whether an intersection between vectors exists.
+        """
+        return abs(dot) > self.EPSILON
+
+    def get_intersection(self, face, cp, location, u, dot):
+        """
+        Finish calculating the intersection point of a line `u` from a given `location` and a plane `face`.
+        The plane has a vector `cp`, and the line has a dot product with the plane vector `dot`.
+        The returned values are the `factor`, is positive if and only if this is a positive ray intersection, and the intersection point `loc_point`.
+        """
+        # http://geomalgorithms.com/a05-_intersect-1.html#Line-Plane-Intersection
+        w = self.diff_location_meters(face[0], location)
+        nw_dot = np.dot(cp, w)
+        factor = -nw_dot / dot
+        u = u * factor
+        loc_point = self.get_location_meters(location, *u)
+        return factor, loc_point
+
 class Geometry_Spherical(Geometry):
     # Radius of "spherical" earth
     EARTH_RADIUS = 6378137.0
@@ -193,6 +262,7 @@ class Geometry_Spherical(Geometry):
         earth's poles. It comes from the ArduPilot test code: 
         https://github.com/diydrones/ardupilot/blob/master/Tools/autotest/common.py
         """
+        location1, location2 = self.equalize(location1, location2)
         dlat = location2.lat - location1.lat
         dlon = location2.lon - location1.lon
         dalt = location2.alt - location1.alt

@@ -3,8 +3,8 @@ import time
 import random
 from __init__ import __package__
 from settings import Arguments
+from zigbee.XBee_Packet import XBee_Packet
 from zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
-from zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from zigbee.XBee_Viewer import XBee_Viewer
 
 def get_location():
@@ -14,32 +14,39 @@ def get_location():
 
     return (random.uniform(1.0, 50.0), random.uniform(1.0, 50.0))
 
+def receive_packet(packet):
+    """
+    Handle a custom packet that has been sent to this sensor.
+    """
+
+    print("> Custom packet received: {}".format(packet.serialize()))
+
 def main(argv):
     arguments = Arguments("settings.json", argv)
     settings = arguments.get_settings("xbee_sensor_simulator")
 
     viewer = XBee_Viewer(arguments)
-
-    sensors = []
-    for sensor_id in range(settings.get("number_of_sensors") + 1):
-        scheduler = XBee_TDMA_Scheduler(sensor_id, arguments)
-        location_callback = get_location
-        sensor = XBee_Sensor_Simulator(sensor_id, arguments, scheduler,
-                                       viewer, location_callback)
-        sensors.append(sensor)
+    sensor = XBee_Sensor_Simulator(arguments, get_location, receive_packet,
+                                   viewer=viewer)
 
     arguments.check_help()
     viewer.draw_points()
 
+    timestamp = 0
     while True:
         try:
-            for sensor in sensors:
-                sensor.activate()
+            # Enqueue a custom packet at a fixed interval.
+            if sensor.id > 0 and time.time() > timestamp:
+                timestamp = time.time() + 8
+                packet = XBee_Packet()
+                packet.set("command", "continue")
+                sensor.enqueue(packet)
+
+            sensor.activate()
 
             time.sleep(settings.get("loop_delay"))
         except KeyboardInterrupt:
-            for sensor in sensors:
-                sensor.deactivate()
+            sensor.deactivate()
 
             break
 

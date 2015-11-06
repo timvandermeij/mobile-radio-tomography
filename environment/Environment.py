@@ -1,8 +1,8 @@
-import math
-
-from Servo import Servo
-from VRMLLoader import VRMLLoader
-from ..distance.Distance_Sensor_Simulator import Distance_Sensor_Simulator
+from ..geometry import Geometry
+from ..trajectory.MockVehicle import MockVehicle
+from ..trajectory.Servo import Servo
+from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
+from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 
 class Environment(object):
     """
@@ -11,9 +11,31 @@ class Environment(object):
 
     _sensor_class = None
 
+    @classmethod
+    def setup(self, arguments, geometry_class="Geometry", vehicle=None, simulated=True):
+        """
+        Create an Environment object or simulated environment.
+
+        The returned object is an Enviromnent object or a subclass, loaded with the given `arguments` object. Optionally one can specify which `geometry_class` to use and what `vehicle` object to use. To use an environment with physical distance sensors, set `simulated` to `False`.
+        By default, the `vehicle` is a `MockVehicle`.
+        For more control over simulated environment setup, use the normal constructors instead.
+        """
+        geometry = Geometry.__dict__[geometry_class]()
+        if vehicle is None:
+            vehicle = MockVehicle(geometry)
+
+        if simulated:
+            from Environment_Simulator import Environment_Simulator
+            return Environment_Simulator(vehicle, geometry, arguments)
+
+        from Environment_Physical import Environment_Physical
+        return Environment_Physical(vehicle, geometry, arguments)
+
     def __init__(self, vehicle, geometry, arguments):
         self.vehicle = vehicle
         self.geometry = geometry
+        self.geometry.set_home_location(self.vehicle.home_location)
+
         self.arguments = arguments
         self.settings = self.arguments.get_settings("environment")
         self._distance_sensors = None
@@ -23,6 +45,22 @@ class Environment(object):
         for servo in self.settings.get("servo_pins"):
             pwm = servo["pwm"] if "pwm" in servo else None
             self._servos.append(Servo(servo["pin"], servo["angles"], pwm))
+
+        self._xbee_sensor = None
+        self.packet_callbacks = {}
+        self._setup_xbee_sensor()
+
+    def _setup_xbee_sensor(self):
+        xbee_type = self.settings.get("xbee_type")
+        if xbee_type == "simulator":
+            xbee_class = XBee_Sensor_Simulator
+        elif xbee_type == "physical":
+            xbee_class = XBee_Sensor_Physical
+        else:
+            return
+
+        self._xbee_sensor = xbee_class(self.arguments, self.get_raw_location,
+                                       self.receive_packet)
 
     def get_vehicle(self):
         return self.vehicle
@@ -38,7 +76,7 @@ class Environment(object):
             if self._sensor_class is None:
                 self._distance_sensors = []
             else:
-                angles = list(self.settings.get("sensors"))
+                angles = list(self.settings.get("distance_sensors"))
                 self._distance_sensors = [
                     self._sensor_class(self, i, angles[i]) for i in range(len(angles))
                 ]
@@ -47,6 +85,18 @@ class Environment(object):
 
     def get_servos(self):
         return self._servos
+
+    def get_xbee_sensor(self):
+        return self._xbee_sensor
+
+    def add_packet_action(self, action, callback):
+        self.packet_callbacks[action] = callback
+
+    def receive_packet(self, packet):
+        action = packet.get("action")
+        if action in self.packet_callbacks:
+            callback = self.packet_callbacks[action]
+            callback(packet)
 
     def get_objects(self):
         return []
@@ -61,6 +111,10 @@ class Environment(object):
 
         return self.geometry.get_location_meters(self.vehicle.location, north, east, alt)
 
+    def get_raw_location(self):
+        location = self.get_location()
+        return (location.lat, location.lon)
+
     def get_distance(self, location):
         """
         Get the distance to the `location` from the vehicle's location.
@@ -72,14 +126,6 @@ class Environment(object):
         Get the yaw bearing of the vehicle.
         """
         return self.vehicle.attitude.yaw
-
-    def get_angle(self):
-        """
-        Helper function to get the yaw angle to the vehicle.
-
-        This performs conversion from bearing to angle, but still returns the angle in radians.
-        """
-        return self.geometry.bearing_to_angle(self.get_yaw())
 
     def get_sensor_yaw(self, id=0):
         """
@@ -95,55 +141,16 @@ class Environment(object):
 
         return yaw
 
+    def get_angle(self):
+        """
+        Helper function to get the yaw angle to the vehicle.
+
+        This performs conversion from bearing to angle, but still returns the angle in radians.
+        """
+        return self.geometry.bearing_to_angle(self.get_yaw())
+
     def get_pitch(self):
         """
         Get the pitch bearing of the vehicle.
         """
         return self.vehicle.attitude.pitch
-
-class Environment_Simulator(Environment):
-    """
-    Simulated environment including objects around the vehicle and potentially the vehicle itself.
-    This allows us to simulate a mission without many dependencies on ArduPilot.
-    """
-
-    _sensor_class = Distance_Sensor_Simulator
-
-    def __init__(self, vehicle, geometry, arguments):
-        super(Environment_Simulator, self).__init__(vehicle, geometry, arguments)
-        scenefile = self.settings.get("scenefile")
-        translation = self.settings.get("translation")
-        if scenefile is not None:
-            loader = VRMLLoader(self, scenefile, translation)
-            self.objects = loader.get_objects()
-            return
-
-        # Use hardcoded objects for testing
-        l1 = self.get_location(100, 0, 10)
-        l2 = self.get_location(0, 100, 10)
-        l3 = self.get_location(-100, 0, 10)
-        l4 = self.get_location(0, -100, 10)
-
-        # Simplify function call
-        get_location_meters = self.geometry.get_location_meters
-        self.objects = [
-            {
-                'center': get_location_meters(self.vehicle.location, 40, -10),
-                'radius': 2.5,
-            },
-            (get_location_meters(l1, 40, -40), get_location_meters(l1, 40, 40),
-             get_location_meters(l1, -40, 40), get_location_meters(l1, -40, -40)
-            ),
-            (get_location_meters(l2, 40, -40), get_location_meters(l2, 40, 40),
-             get_location_meters(l2, -40, 40), get_location_meters(l2, -40, -40)
-            ),
-            (get_location_meters(l3, 40, -40), get_location_meters(l3, 40, 40),
-             get_location_meters(l3, -40, 40), get_location_meters(l3, -40, -40)
-            ),
-            (get_location_meters(l4, 40, -40), get_location_meters(l4, 40, 40),
-             get_location_meters(l4, -40, 40), get_location_meters(l4, -40, -40)
-            )
-        ]
-
-    def get_objects(self):
-        return self.objects

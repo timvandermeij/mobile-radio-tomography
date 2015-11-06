@@ -24,9 +24,11 @@
             "closeness": 2.0,
             "farness": 100.0,
             "mission_delay": 2.0,
-            "altitude": 4,
+            "altitude": 4.0,
+            "padding": 4.0,
             "speed": 2.5,
-            "size": 50,
+            "space_size": 50.0,
+            "yaw_step": 10.0,
             "vehicle_simulation": true,
             "mission_class": "Mission_Browse",
             "geometry_class": "Geometry_Spherical"
@@ -35,7 +37,7 @@
     "mission_monitor": {
         "name": "Mission monitoring",
         "settings": {
-            "loop_delay": 0.5,
+            "step_delay": 0.5,
             "plot": true,
             "viewer": true
         }
@@ -43,16 +45,17 @@
     "environment": {
         "name": "Vehicle environment",
         "settings": {
-            "scenefile": null,
-            "translation": [0,0,0],
-            "sensors": [0],
+            "distance_sensors": [0.0],
             "servo_pins": [
                 {
                     "pin": 7,
                     "angles": [0,360],
                     "pwm": [1000,2000]
                 }
-            ]
+            ],
+            "xbee_type": "",
+            "scenefile": null,
+            "translation": [0.0,0.0,0.0]
         }
     },
     "environment_viewer": {
@@ -72,6 +75,7 @@
         "name": "XBee base",
         "settings": {
             "number_of_sensors": 2,
+            "custom_packet_limit": 1,
             "loop_delay": 0.01,
             "baud_rate": 57600
         }
@@ -90,21 +94,24 @@
         "settings": {
             "ip": "127.0.0.1",
             "port": 3233,
-            "buffer_size": 256
+            "buffer_size": 256,
+            "xbee_id": 0
         }
     },
     "xbee_sensor_physical": {
         "name": "XBee sensor (physical)",
         "parent": "xbee_base",
         "settings": {
-            "id": 0,
             "port": "/dev/ttyUSB0",
             "sensors": [
                 "\\x00\\x13\\xa2\\x00@\\xe6n\\xbd",
                 "\\x00\\x13\\xa2\\x00@\\xe6o5",
                 "\\x00\\x13\\xa2\\x00@\\xe6n\\xb9"
             ],
-            "startup_delay": 1.5,
+            "ntp_delay": 3,
+            "response_delay": 0.5,
+            "startup_delay": 1,
+            "synchronize": false,
             "verbose": false
         }
     },
@@ -120,7 +127,8 @@
         "parent": "xbee_base",
         "settings": {
             "size": 10,
-            "circle_radius": 3
+            "circle_radius": 3,
+            "warnings": false
         }
     }
 }

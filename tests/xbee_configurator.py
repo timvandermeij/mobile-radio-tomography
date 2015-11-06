@@ -21,11 +21,11 @@ class TestXBeeConfigurator(unittest.TestCase):
 
     def test_initialization(self):
         self.assertEqual(self.configurator.id, self.id)
-        self.assertTrue(type(self.configurator._serial_connection) == serial.Serial)
+        self.assertTrue(isinstance(self.configurator._serial_connection, serial.Serial))
         self.assertEqual(self.configurator._serial_connection.port, self.port)
         self.assertEqual(self.configurator._serial_connection.baudrate,
                          self.settings.get("baud_rate"))
-        self.assertTrue(type(self.configurator._sensor) == ZigBee)
+        self.assertTrue(isinstance(self.configurator._sensor, ZigBee))
 
     def test_encode_value(self):
         # Integers should be encoded as hexadecimal.
