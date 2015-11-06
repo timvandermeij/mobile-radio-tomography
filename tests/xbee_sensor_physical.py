@@ -143,7 +143,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.sensor._send()
         self.assertEqual(mock_send.call_count,
                          self.settings.get("number_of_sensors"))
-        self.assertFalse(valid in self.sensor._data)
+        self.assertNotIn(valid, self.sensor._data)
 
         # If the queue contains packets, some of them must be sent.
         mock_send.call_count = 0

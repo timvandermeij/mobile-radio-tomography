@@ -19,7 +19,7 @@ class TestXBeePacket(unittest.TestCase):
         # A given key should not be present in the contents.
         self.packet._contents["foo"] = "bar"
         self.packet.unset("foo")
-        self.assertFalse("foo" in self.packet._contents)
+        self.assertNotIn("foo", self.packet._contents)
 
         # Verify that unsetting a nonexistent key does not throw
         # a KeyError, but instead does nothing.
