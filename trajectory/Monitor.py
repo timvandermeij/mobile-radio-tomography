@@ -1,7 +1,7 @@
 import thread
 import time
 from droneapi.lib import Location
-from ..zigbee.XBee_Packet import XBee_Packet
+from ..zigbee.XBee_Custom_Packet import XBee_Custom_Packet
 
 class Monitor(object):
     """
@@ -127,7 +127,7 @@ class Monitor(object):
         time.sleep(self.step_delay)
 
     def add_memory_map(self, packet):
-        loc = Location(packet.get("lat"), packet.get("lon"), 0.0, is_relative=False)
+        loc = Location(packet.get("latitude"), packet.get("longitude"), 0.0, is_relative=False)
         idx = self.memory_map.get_index(loc)
         print(loc.lat, loc.lon, idx)
         try:
