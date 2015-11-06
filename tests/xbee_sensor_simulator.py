@@ -61,7 +61,7 @@ class TestXBeeSensorSimulator(unittest.TestCase):
         self.assertEqual(self.sensor._data, [])
 
         # The custom packet queue must be empty.
-        self.assertTrue(isinstance(self.sensor._queue, Queue.Queue))
+        self.assertIsInstance(self.sensor._queue, Queue.Queue)
         self.assertEqual(self.sensor._queue.qsize(), 0)
 
     def test_enqueue(self):

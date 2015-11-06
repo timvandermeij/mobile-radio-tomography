@@ -11,7 +11,7 @@ class TestXBeeCustomPacket(unittest.TestCase):
         self.assertEqual(self.custom_packet._contents, {})
 
         # The specifications dictionary must be set.
-        self.assertTrue(isinstance(self.custom_packet._specifications, dict))
+        self.assertIsInstance(self.custom_packet._specifications, dict)
 
     def test_serialize(self):
         # A specification must be provided.
