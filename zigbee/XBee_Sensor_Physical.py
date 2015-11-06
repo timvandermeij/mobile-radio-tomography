@@ -7,6 +7,7 @@ import copy
 import Queue
 from xbee import ZigBee
 from XBee_Packet import XBee_Packet
+from XBee_Custom_Packet import XBee_Custom_Packet
 from XBee_Sensor import XBee_Sensor
 from XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from ..settings import Arguments
@@ -85,7 +86,6 @@ class XBee_Sensor_Physical(XBee_Sensor):
         if not isinstance(packet, XBee_Packet):
             raise TypeError("Only XBee_Packet objects can be enqueued")
 
-        packet.set("_type", "custom")
         if to != None:
             self._queue.put({
                 "packet": packet,
@@ -227,11 +227,10 @@ class XBee_Sensor_Physical(XBee_Sensor):
                 packet = XBee_Packet()
                 packet.unserialize(raw_packet["rf_data"])
             except:
-                # The raw packet is malformed, so drop it.
-                return
+                packet = XBee_Custom_Packet()
+                packet.unserialize(raw_packet["rf_data"])
 
-            if packet.get("_type") == "custom":
-                packet.unset("_type")
+            if packet.get("specification") != None:
                 self._receive_callback(packet)
                 return
 
@@ -249,7 +248,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
                 return
 
             if self.id == 0:
-                print("[{}] Ground station received {}".format(time.time(), packet.serialize()))
+                print("[{}] Ground station received {}".format(time.time(), packet.get_all()))
                 return
 
             if self._verbose:

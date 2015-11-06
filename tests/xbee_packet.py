@@ -33,6 +33,15 @@ class TestXBeePacket(unittest.TestCase):
         # "None" should be returned for a nonexistent key.
         self.assertEqual(self.packet.get("quux"), None)
 
+    def test_get_all(self):
+        # All contents should be fetched.
+        self.packet._contents["foo"] = "bar"
+        self.packet._contents["baz"] = "quux"
+        self.assertEqual(self.packet.get_all(), {
+            "foo": "bar",
+            "baz": "quux"
+        })
+
     def test_serialize(self):
         # A JSON string of the contents dictionary should be returned.
         self.packet._contents["foo"] = "bar"

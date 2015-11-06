@@ -89,7 +89,6 @@ class TestXBeeSensorSimulator(unittest.TestCase):
             "packet": packet,
             "to": 2
         })
-        self.assertEqual(packet.get("_type"), "custom")
 
     def test_send(self):
         # After sending, the sweep data list must be empty.

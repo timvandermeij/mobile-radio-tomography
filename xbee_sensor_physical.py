@@ -3,7 +3,7 @@ import time
 import random
 from __init__ import __package__
 from settings import Arguments
-from zigbee.XBee_Packet import XBee_Packet
+from zigbee.XBee_Custom_Packet import XBee_Custom_Packet
 from zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
 
 def get_location():
@@ -18,7 +18,7 @@ def receive_packet(packet):
     Handle a custom packet that has been sent to this sensor.
     """
 
-    print("> Custom packet received: {}".format(packet.serialize()))
+    print("> Custom packet received: {}".format(packet.get_all()))
 
 def main(argv):
     arguments = Arguments("settings.json", argv)
@@ -34,8 +34,10 @@ def main(argv):
             # Enqueue a custom packet at a fixed interval.
             if sensor.id > 0 and time.time() > timestamp:
                 timestamp = time.time() + 8
-                packet = XBee_Packet()
-                packet.set("command", "continue")
+                packet = XBee_Custom_Packet()
+                packet.set("specification", "memory_map_chunk")
+                packet.set("latitude", 123456789.12)
+                packet.set("longitude", 123495678.34)
                 sensor.enqueue(packet)
 
             sensor.activate()

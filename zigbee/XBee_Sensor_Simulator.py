@@ -4,6 +4,7 @@ import random
 import copy
 import Queue
 from XBee_Packet import XBee_Packet
+from XBee_Custom_Packet import XBee_Custom_Packet
 from XBee_Sensor import XBee_Sensor
 from XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from ..settings import Arguments
@@ -45,12 +46,22 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             self._next_timestamp = self.scheduler.get_next_timestamp()
             self._send()
 
+        # Check if there is data to be processed.
+        try:
+            data = self._socket.recv(self.settings.get("buffer_size"))
+        except socket.error:
+            return
+
+        # Unserialize the data. Assume that the data is JSON encoded (default)
+        # and otherwise fall back to handling byte-encoded custom packets.
         try:
             packet = XBee_Packet()
-            packet.unserialize(self._socket.recv(self.settings.get("buffer_size")))
-            self._receive(packet)
-        except socket.error:
-            pass
+            packet.unserialize(data)
+        except ValueError:
+            packet = XBee_Custom_Packet()
+            packet.unserialize(data)
+
+        self._receive(packet)
 
     def deactivate(self):
         """
@@ -67,7 +78,6 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         if not isinstance(packet, XBee_Packet):
             raise TypeError("Only XBee_Packet objects can be enqueued")
 
-        packet.set("_type", "custom")
         if to != None:
             self._queue.put({
                 "packet": packet,
@@ -138,8 +148,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         Receive and process packets from all other sensors in the network.
         """
 
-        if packet.get("_type") == "custom":
-            packet.unset("_type")
+        if packet.get("specification") != None:
             self._receive_callback(packet)
         else:
             if self.id > 0:
@@ -152,4 +161,4 @@ class XBee_Sensor_Simulator(XBee_Sensor):
                 packet.unset("_timestamp")
                 self._data.append(packet)
             else:
-                print("> Ground station received {}".format(packet.serialize()))
+                print("> Ground station received {}".format(packet.get_all()))
