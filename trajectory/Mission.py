@@ -578,6 +578,10 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
                 self.next_waypoint = self.next_waypoint + 1
 
             self.current_point = self.current_point + 1
+            if self.current_point >= len(self.points):
+                print("Reached final point.")
+                return
+
             print("Next point: {i}: Location({p.lat}, {p.lon}, is_relative={p.is_relative})".format(i=self.current_point, p=self.points[self.current_point]))
 
             self.vehicle.commands.goto(self.points[self.current_point])
