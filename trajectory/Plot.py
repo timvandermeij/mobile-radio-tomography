@@ -43,6 +43,12 @@ class Plot(object):
             p.set_array(np.array(patch_colors))
 
         self.plot_polygons = p
+        self.arrow_options = {
+            "arrowstyle": "->",
+            "color": "red",
+            "linewidth": 2,
+            "alpha": 0.5
+        }
         self.plt = plt
         self.fig, self.ax = self.plt.subplots()
 
@@ -67,13 +73,14 @@ class Plot(object):
         self.plt.pause(sys.float_info.epsilon)
         self.plt.cla()
 
+    def plot_lines(self, points):
+        geometry = self.environment.get_geometry()
+        for edge in geometry.get_point_edges(points):
+            start_idx = self.memory_map.get_xy_index(edge[0])
+            end_idx = self.memory_map.get_xy_index(edge[1])
+            plt.annotate("", end_idx, start_idx, arrowprops=self.arrow_options)
+
     def _plot_vehicle_angle(self):
-        options = {
-            "arrowstyle": "->",
-            "color": "red",
-            "linewidth": 2,
-            "alpha": 0.5
-        }
         vehicle_idx = self.memory_map.get_xy_index(self.environment.get_location())
         angle = self.environment.get_angle()
         arrow_length = 10.0
@@ -84,7 +91,7 @@ class Plot(object):
         else:
             angle_idx = (vehicle_idx[0] + math.cos(angle) * arrow_length, vehicle_idx[1] + math.sin(angle) * arrow_length)
 
-        self.plt.annotate("", angle_idx, vehicle_idx, arrowprops=options)
+        self.plt.annotate("", angle_idx, vehicle_idx, arrowprops=self.arrow_options)
 
     def close(self):
         self.plt.close()

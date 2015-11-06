@@ -7,6 +7,10 @@ install:
   - pip install pymavlink
   - pip install mavproxy
   - pip install droneapi
+  - pip install PyOpenGL
+  - pip install simpleparse
+  - pip install PyVRML97
+  - pip install PyDispatcher
 script: python -m unittest discover -s tests -p "*.py" -t ..
 notifications:
   email: false
