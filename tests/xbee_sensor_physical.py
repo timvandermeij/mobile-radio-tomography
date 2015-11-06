@@ -98,10 +98,12 @@ class TestXBeeSensorPhysical(unittest.TestCase):
 
         # Valid packets should be enqueued.
         packet = XBee_Packet()
-        packet.set("to_id", 2)
         packet.set("foo", "bar")
-        self.sensor.enqueue(packet)
-        self.assertEqual(packet, self.sensor._queue.get())
+        self.sensor.enqueue(packet, to=2)
+        self.assertEqual(self.sensor._queue.get(), {
+            "packet": packet,
+            "to": 2
+        })
 
     @patch("xbee.ZigBee.send")
     def test_send(self, mock_send):
@@ -146,9 +148,8 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         # If the queue contains packets, some of them must be sent.
         mock_send.call_count = 0
         packet = XBee_Packet()
-        packet.set("to_id", 2)
         packet.set("foo", "bar")
-        self.sensor.enqueue(packet)
+        self.sensor.enqueue(packet, to=2)
         queue_length_before = self.sensor._queue.qsize()
         self.sensor._send()
         custom_packet_limit = self.sensor.settings.get("custom_packet_limit")
