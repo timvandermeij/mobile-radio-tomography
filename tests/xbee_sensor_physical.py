@@ -171,14 +171,6 @@ class TestXBeeSensorPhysical(unittest.TestCase):
 
         self.sensor.activate()
 
-        # Malformed RX packets should be dropped.
-        raw_packet = {
-            "id": "rx",
-            "rf_data": "invalid"
-        }
-        self.sensor._receive(raw_packet)
-        self.assertEqual(self.sensor._data, {})
-
         # Valid RX packets should be processed. Store the frame ID
         # for the DB call test following this test.
         data = {
