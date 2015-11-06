@@ -166,36 +166,19 @@ class Distance_Sensor_Simulator(Distance_Sensor):
             # Face incomplete
             return (sys.float_info.max, None)
 
-        epsilon = 0.0001
-        # TODO: Split up/move parts to Geometry
-
-        # Calculate plane equation from points on face
-        # Based on http://stackoverflow.com/a/24540938 expect with less typos 
-        # (see http://stackoverflow.com/a/25809052) and more numpy strength
-
-        # Point on a plane
-        p = face[0]
-        # Vectors from point that define plane direction
-        v1 = self.geometry.diff_location_meters(p, face[1])
-        v2 = self.geometry.diff_location_meters(p, face[2])
-        # Plane equation values. This is the normal vector of the plane.
-        # http://geomalgorithms.com/a04-_planes.html#Normal-Implicit-Equation
-        cp = np.cross(v1, v2)
-        d = -(cp[0] * p.lat + cp[1] * p.lon + cp[2] * p.alt)
+        cp, d = self.geometry.get_plane_vector(face)
 
         # 3D intersection point
         # Based on http://stackoverflow.com/a/18543221
 
-        # Point at location
-        p0 = np.array([location.lat, location.lon, location.alt])
         # Another point on the line.
         p1 = self.geometry.get_location_angle(location, 1.0, yaw_angle, pitch_angle)
 
         # Equation of the line
-        u = np.array(self.geometry.diff_location_meters(location, p1)) # p1 - v1
+        u = np.array(self.geometry.diff_location_meters(location, p1))
         # Dot product between the line and the plane vector
         nu_dot = np.dot(cp, u)
-        if abs(nu_dot) <= epsilon:
+        if not self.geometry.check_dot(nu_dot):
             if verbose:
                 print("Dot product not good enough, no intersection: dot={}, u={}.".format(nu_dot, u))
 
@@ -203,13 +186,8 @@ class Distance_Sensor_Simulator(Distance_Sensor):
             # actually intersecting (line parallel to plane)
             return (sys.float_info.max, None)
 
-        # Finish calculating the intersection point
-        # http://geomalgorithms.com/a05-_intersect-1.html#Line-Plane-Intersection
-        w = self.geometry.diff_location_meters(p, location) # p0 - v0
-        nw_dot = np.dot(cp, w)
-        factor = -nw_dot / nu_dot
-        u = u * factor
-        loc_point = self.geometry.get_location_meters(location, *u)
+        # Calculate the intersection point
+        factor, loc_point = self.geometry.get_intersection(face, cp, location, u, nu_dot)
 
         if factor < 0:
             if verbose:
