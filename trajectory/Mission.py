@@ -50,10 +50,22 @@ class Mission(object):
         # Clear the current mission
         self.clear_mission()
 
-        # Size in meters of one dimension of the part of the space that we are 
-        # allowed to be in.
+        # Size in meters of one dimension of the space that we are allowed to 
+        # be in.
         self.size = self.settings.get("space_size")
+        # The number of entries in the memory map per meter
+        self.resolution = self.settings.get("resolution")
+
+        # The space around the vehicle's center (where the distance sensor is) 
+        # that we do not want to have other objects in. This is used for 
+        # additional padding in certain calculations.
+        self.padding = self.settings.get("padding")
+
+        # Operating altitude in meters
         self.altitude = self.settings.get("altitude")
+
+        # Speed of the vehicle in meters per second when moving to a location 
+        # given in a (goto) command.
         self.speed = self.settings.get("speed")
 
         # Margin in meters at which we are too close to an object
@@ -64,8 +76,10 @@ class Mission(object):
         # Create a memory map for the vehicle to track where it has seen 
         # objects. This can later be used to find the target object or to fly 
         # around obstacles without colliding.
-        memory_size = self.get_space_size()
-        self.memory_map = Memory_Map(self.environment, memory_size, self.altitude)
+        # The size is the number of entries in each dimension. We add some 
+        # padding to allow for deviations.
+        memory_size = (self.size + self.padding)*2
+        self.memory_map = Memory_Map(self.environment, memory_size, self.resolution, self.altitude)
 
     def display(self):
         """
@@ -186,7 +200,7 @@ class Mission(object):
         return True
 
     def get_space_size(self):
-        return self.size * 4
+        return self.size
 
     def get_memory_map(self):
         return self.memory_map
@@ -389,10 +403,10 @@ class Mission_Square(Mission_Auto):
         This method returns the points relative to the current location at the same altitude.
         """
         points = []
-        points.append(self.environment.get_location(self.size, -self.size))
-        points.append(self.environment.get_location(self.size, self.size))
-        points.append(self.environment.get_location(-self.size, self.size))
-        points.append(self.environment.get_location(-self.size, -self.size))
+        points.append(self.environment.get_location(self.size/2, -self.size/2))
+        points.append(self.environment.get_location(self.size/2, self.size/2))
+        points.append(self.environment.get_location(-self.size/2, self.size/2))
+        points.append(self.environment.get_location(-self.size/2, -self.size/2))
         points.append(points[0])
         return points
 
@@ -429,9 +443,6 @@ class Mission_Search(Mission_Browse):
         self.dists = np.zeros(self.dists_size)
         self.dists_done = np.zeros(self.dists_size, dtype=bool)
 
-        # The space around the distance sensor that we do not want to have 
-        # other objects in.
-        self.padding = self.settings.get("padding")
         self.yaw_margin = 5.0 * math.pi/180
 
     def step(self):
@@ -596,7 +607,7 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
         return close
 
     def astar(self, start, goal):
-        size = self.memory_map.size
+        size = self.memory_map.get_size()
         start_idx = self.memory_map.get_index(start)
         goal_idx = self.memory_map.get_index(goal)
         nonzero = self.memory_map.get_nonzero_locations()
