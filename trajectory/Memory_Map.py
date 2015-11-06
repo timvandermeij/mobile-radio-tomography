@@ -17,12 +17,13 @@ class Memory_Map(object):
         self.size = int(memory_size * resolution)
         self.resolution = resolution
         self.map = np.zeros((self.size, self.size))
+        self.altitude = altitude
 
         # The `bl` and `tr` are the first and last points that fit in the 
         # matrix in both dimensions, respectively. The bounds are based off 
         # from the current vehicle location.
-        self.bl = self.environment.get_location(-memory_size/2, -memory_size/2, altitude)
-        self.tr = self.environment.get_location(memory_size/2, memory_size/2, altitude)
+        self.bl = self.environment.get_location(-memory_size/2, -memory_size/2, self.altitude)
+        self.tr = self.environment.get_location(memory_size/2, memory_size/2, self.altitude)
 
         dlat, dlon, dalt = self.geometry.diff_location_meters(self.bl, self.tr)
         self.dlat = dlat
@@ -104,7 +105,7 @@ class Memory_Map(object):
         The given location is at the same altitude as the memory map.
         It might be an imprecise location for the grid index.
         """
-        return self.geometry.get_location_meters(self.bl, i, j)
+        return self.geometry.get_location_meters(self.bl, i/float(self.resolution), j/float(self.resolution))
 
     def get_map(self):
         """
@@ -131,7 +132,8 @@ class Memory_Map(object):
         """
         # Estimate the location of the point based on the distance from the 
         # distance sensor as well as our own angle.
-        loc = self.geometry.get_location_angle(self.environment.get_location(), sensor_distance, angle)
+        location = self.environment.get_location()
+        loc = self.geometry.get_location_angle(location, sensor_distance, angle)
         idx = self.get_index(loc)
 
         # Place point location in the memory map.
