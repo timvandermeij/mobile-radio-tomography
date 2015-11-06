@@ -150,7 +150,7 @@ class Mission(object):
         """
         Actually start the mission after arming and flying off.
         """
-        raise NotImplemented("Must be implemented in child class")
+        raise NotImplementedError("Must be implemented in child class")
 
     def step(self):
         """
@@ -314,7 +314,7 @@ class Mission_Auto(Mission):
         return self._waypoints
 
     def get_points(self):
-        raise NotImplemented("Must be implemented in child class")
+        raise NotImplementedError("Must be implemented in child class")
 
     def add_commands(self):
         """
