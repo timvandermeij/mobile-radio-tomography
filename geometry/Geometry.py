@@ -185,6 +185,9 @@ class Geometry(object):
         """
         From a given list of `points` in a polygon (sorted on edge positions), generate a list of edges, which are tuples of two points of the line segment.
         """
+        if not points:
+            return []
+
         return zip(points, list(points[1:]) + [points[0]])
 
     def get_plane_vector(self, points):

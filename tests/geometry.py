@@ -96,6 +96,14 @@ class TestGeometry(LocationTestCase):
         self.assertEqual(self.geometry.get_direction(0.0, math.pi/2), -1)
         self.assertEqual(self.geometry.get_direction(-math.pi/2, math.pi), 1)
 
+    def test_get_point_edges(self):
+        self.assertEqual(self.geometry.get_point_edges([]), [])
+        locations = [Location(*p) for p in [(1,2,3), (20.0, 4.3, 2.5), (3.14, 4.443, 1.2)]]
+        edges = self.geometry.get_point_edges(locations)
+        self.assertEqual(edges[0], (locations[0], locations[1]))
+        self.assertEqual(edges[1], (locations[1], locations[2]))
+        self.assertEqual(edges[2], (locations[2], locations[0]))
+
 class TestGeometry_Spherical(TestGeometry):
     def setUp(self):
         super(TestGeometry_Spherical, self).setUp()
