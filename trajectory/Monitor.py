@@ -37,7 +37,7 @@ class Monitor(object):
         return self.settings.get("viewer")
 
     def setup(self):
-        self.environment.add_packet_action("memory_map", self.add_memory_map)
+        self.environment.add_packet_action("memory_map_chunk", self.add_memory_map)
         self.memory_map = self.mission.get_memory_map()
 
         if self.settings.get("plot"):
