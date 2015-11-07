@@ -70,7 +70,24 @@
             "number_of_sensors": 2,
             "custom_packet_limit": 1,
             "loop_delay": 0.01,
-            "baud_rate": 57600
+            "baud_rate": 57600,
+            "specifications": {
+                "memory_map_chunk": [
+                    {
+                        "name": "id",
+                        "format": "B",
+                        "value": 1
+                    },
+                    {
+                        "name": "latitude",
+                        "format": "d"
+                    },
+                    {
+                        "name": "longitude",
+                        "format": "d"
+                    }
+                ]
+            }
         }
     },
     "xbee_configurator": {

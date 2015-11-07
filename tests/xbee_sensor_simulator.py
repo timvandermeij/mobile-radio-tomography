@@ -61,7 +61,7 @@ class TestXBeeSensorSimulator(unittest.TestCase):
         self.assertEqual(self.sensor._data, [])
 
         # The custom packet queue must be empty.
-        self.assertTrue(isinstance(self.sensor._queue, Queue.Queue))
+        self.assertIsInstance(self.sensor._queue, Queue.Queue)
         self.assertEqual(self.sensor._queue.qsize(), 0)
 
     def test_enqueue(self):
@@ -83,11 +83,12 @@ class TestXBeeSensorSimulator(unittest.TestCase):
 
         # Valid packets should be enqueued.
         packet = XBee_Packet()
-        packet.set("to_id", 2)
         packet.set("foo", "bar")
-        self.sensor.enqueue(packet)
-        self.assertEqual(packet, self.sensor._queue.get())
-        self.assertEqual(packet.get("_type"), "custom")
+        self.sensor.enqueue(packet, to=2)
+        self.assertEqual(self.sensor._queue.get(), {
+            "packet": packet,
+            "to": 2
+        })
 
     def test_send(self):
         # After sending, the sweep data list must be empty.
@@ -96,9 +97,8 @@ class TestXBeeSensorSimulator(unittest.TestCase):
 
         # If the queue contains packets, some of them must be sent.
         packet = XBee_Packet()
-        packet.set("to_id", 2)
         packet.set("foo", "bar")
-        self.sensor.enqueue(packet)
+        self.sensor.enqueue(packet, to=2)
         queue_length_before = self.sensor._queue.qsize()
         self.sensor._send()
         custom_packet_limit = self.sensor.settings.get("custom_packet_limit")

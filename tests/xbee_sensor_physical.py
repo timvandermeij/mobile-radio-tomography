@@ -53,7 +53,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.assertEqual(self.sensor._sensor, None)
         self.assertEqual(self.sensor._address, None)
         self.assertEqual(self.sensor._data, {})
-        self.assertTrue(isinstance(self.sensor._queue, Queue.Queue))
+        self.assertIsInstance(self.sensor._queue, Queue.Queue)
         self.assertEqual(self.sensor._queue.qsize(), 0)
 
     def test_activate_and_deactivate(self):
@@ -66,8 +66,8 @@ class TestXBeeSensorPhysical(unittest.TestCase):
 
         # The serial connection and sensor must be initialized lazily.
         self.sensor.activate()
-        self.assertTrue(isinstance(self.sensor._serial_connection, serial.Serial))
-        self.assertTrue(isinstance(self.sensor._sensor, ZigBee))
+        self.assertIsInstance(self.sensor._serial_connection, serial.Serial)
+        self.assertIsInstance(self.sensor._sensor, ZigBee)
         self.assertEqual(self.sensor._node_identifier_set, True)
         self.assertEqual(self.sensor._address_set, True)
         self.assertEqual(self.sensor._joined, True)
@@ -98,10 +98,12 @@ class TestXBeeSensorPhysical(unittest.TestCase):
 
         # Valid packets should be enqueued.
         packet = XBee_Packet()
-        packet.set("to_id", 2)
         packet.set("foo", "bar")
-        self.sensor.enqueue(packet)
-        self.assertEqual(packet, self.sensor._queue.get())
+        self.sensor.enqueue(packet, to=2)
+        self.assertEqual(self.sensor._queue.get(), {
+            "packet": packet,
+            "to": 2
+        })
 
     @patch("xbee.ZigBee.send")
     def test_send(self, mock_send):
@@ -141,14 +143,13 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.sensor._send()
         self.assertEqual(mock_send.call_count,
                          self.settings.get("number_of_sensors"))
-        self.assertFalse(valid in self.sensor._data)
+        self.assertNotIn(valid, self.sensor._data)
 
         # If the queue contains packets, some of them must be sent.
         mock_send.call_count = 0
         packet = XBee_Packet()
-        packet.set("to_id", 2)
         packet.set("foo", "bar")
-        self.sensor.enqueue(packet)
+        self.sensor.enqueue(packet, to=2)
         queue_length_before = self.sensor._queue.qsize()
         self.sensor._send()
         custom_packet_limit = self.sensor.settings.get("custom_packet_limit")
@@ -169,14 +170,6 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.sensor._synchronized = True
 
         self.sensor.activate()
-
-        # Malformed RX packets should be dropped.
-        raw_packet = {
-            "id": "rx",
-            "rf_data": "invalid"
-        }
-        self.sensor._receive(raw_packet)
-        self.assertEqual(self.sensor._data, {})
 
         # Valid RX packets should be processed. Store the frame ID
         # for the DB call test following this test.

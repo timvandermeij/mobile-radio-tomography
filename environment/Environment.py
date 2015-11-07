@@ -83,9 +83,9 @@ class Environment(object):
         self.packet_callbacks[action] = callback
 
     def receive_packet(self, packet):
-        action = packet.get("action")
-        if action in self.packet_callbacks:
-            callback = self.packet_callbacks[action]
+        specification = packet.get("specification")
+        if specification in self.packet_callbacks:
+            callback = self.packet_callbacks[specification]
             callback(packet)
 
     def get_objects(self):
