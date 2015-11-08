@@ -4,6 +4,7 @@ class Distance_Sensor(object):
     def __init__(self, environment, id, angle=0):
         self.environment = environment
         self.geometry = self.environment.get_geometry()
+        self.id = id
         self.angle = angle
 
     def get_distance(self):

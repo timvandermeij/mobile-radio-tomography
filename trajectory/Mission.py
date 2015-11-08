@@ -41,7 +41,7 @@ class Mission(object):
         elif msg_type == "SERVO_OUTPUT_RAW":
             fields = msg.get_fieldnames()
             for servo in self.environment.get_servos():
-                key = "servo{}_raw".format(servo.pin)
+                key = "servo{}_raw".format(servo.get_pin())
                 if key in fields:
                     servo.set_current_pwm(getattr(msg, key))
 
@@ -344,6 +344,10 @@ class Mission(object):
                 break
 
         if pin is None:
+            return
+
+        if self.is_mock:
+            servo.set_current_pwm(pwm)
             return
 
         # Create the DO_SET_SERVO command using command_long_encode()
