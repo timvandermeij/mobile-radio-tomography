@@ -36,6 +36,13 @@ class XBee_Packet(object):
 
         return None
 
+    def get_all(self):
+        """
+        Get all keys and values in the contents key-value store.
+        """
+
+        return self._contents
+
     def serialize(self):
         """
         Convert the contents object to a JSON string.

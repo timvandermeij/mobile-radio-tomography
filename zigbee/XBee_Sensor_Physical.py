@@ -7,6 +7,7 @@ import copy
 import Queue
 from xbee import ZigBee
 from XBee_Packet import XBee_Packet
+from XBee_Custom_Packet import XBee_Custom_Packet
 from XBee_Sensor import XBee_Sensor
 from XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from ..settings import Arguments
@@ -77,29 +78,31 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._sensor.halt()
         self._serial_connection.close()
 
-    def enqueue(self, packet):
+    def enqueue(self, packet, to=None):
         """
         Enqueue a custom packet to send to another XBee device.
-        Valid packets must be XBee_Packet objects and must contain
-        the ID of the destination XBee device.
         """
 
         if not isinstance(packet, XBee_Packet):
             raise TypeError("Only XBee_Packet objects can be enqueued")
 
-        packet.set("_type", "custom")
-        if packet.get("to_id") != None:
-            self._queue.put(packet)
+        if to != None:
+            self._queue.put({
+                "packet": packet,
+                "to": to
+            })
         else:
             # No destination ID has been provided, therefore we broadcast
             # the packet to all sensors in the network except for ourself
             # and the ground sensor.
-            for index in xrange(1, self.settings.get("number_of_sensors") + 1):
-                if index == self.id:
+            for to_id in xrange(1, self.settings.get("number_of_sensors") + 1):
+                if to_id == self.id:
                     continue
 
-                packet.set("to_id", index)
-                self._queue.put(copy.deepcopy(packet))
+                self._queue.put({
+                    "packet": copy.deepcopy(packet),
+                    "to": to_id
+                })
 
     def _join(self):
         """
@@ -193,11 +196,10 @@ class XBee_Sensor_Physical(XBee_Sensor):
                 break
 
             limit -= 1
-            packet = self._queue.get()
-            to_id = packet.get("to_id")
-            self._sensor.send("tx", dest_addr_long=self._sensors[to_id],
+            item = self._queue.get()
+            self._sensor.send("tx", dest_addr_long=self._sensors[item["to"]],
                               dest_addr="\xFF\xFE", frame_id="\x00",
-                              data=packet.serialize())
+                              data=item["packet"].serialize())
 
         # Send the sweep data to the ground sensor and clear the list
         # for the next round.
@@ -225,12 +227,10 @@ class XBee_Sensor_Physical(XBee_Sensor):
                 packet = XBee_Packet()
                 packet.unserialize(raw_packet["rf_data"])
             except:
-                # The raw packet is malformed, so drop it.
-                return
+                packet = XBee_Custom_Packet()
+                packet.unserialize(raw_packet["rf_data"])
 
-            if packet.get("_type") == "custom":
-                packet.unset("_type")
-                packet.unset("to_id")
+            if packet.get("specification") != None:
                 self._receive_callback(packet)
                 return
 
@@ -248,7 +248,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
                 return
 
             if self.id == 0:
-                print("[{}] Ground station received {}".format(time.time(), packet.serialize()))
+                print("[{}] Ground station received {}".format(time.time(), packet.get_all()))
                 return
 
             if self._verbose:
