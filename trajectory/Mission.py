@@ -53,17 +53,32 @@ class Mission(object):
         next_waypoint = self.vehicle.commands.next
         if next_waypoint <= 1:
             return None
-        mission_item = self.vehicle.commands[next_waypoint]
+        waypoint_location = self.get_waypoint(next_waypoint)
+        distance = self.environment.get_distance(waypoint_location)
+        return distance
+
+    def get_waypoint(self, waypoint, is_relative=True):
+        """
+        Retrieve the Location object corresponding to a waypoint command with ID `waypoint`.
+        """
+        mission_item = self.vehicle.commands[waypoint]
         lat = mission_item.x
         lon = mission_item.y
         alt = mission_item.z
-        waypoint_location = Location(lat, lon, alt, is_relative=True)
-        distance = self.environment.get_distance(waypoint_location)
-        return distance
+        waypoint_location = Location(lat, lon, alt, is_relative=is_relative)
+        return waypoint_location
 
     def setup(self):
         # Clear the current mission
         self.clear_mission()
+
+        # Older versions of dronekit do not have a home_location property, so 
+        # we need to retrieve it from the waypoint commands ourselves.
+        if hasattr(self.vehicle, "home_location"):
+            self.geometry.set_home_location(self.vehicle.home_location)
+        else:
+            home_location = self.get_waypoint(0, is_relative=False)
+            self.geometry.set_home_location(home_location)
 
         # Size in meters of one dimension of the part of the space that we are 
         # allowed to be in.

@@ -35,7 +35,6 @@ class Environment(object):
     def __init__(self, vehicle, geometry, arguments):
         self.vehicle = vehicle
         self.geometry = geometry
-        self.geometry.set_home_location(self.vehicle.home_location)
 
         self.arguments = arguments
         self.settings = self.arguments.get_settings("environment")
