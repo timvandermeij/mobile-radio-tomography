@@ -273,7 +273,7 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         if location is None:
             location = self.environment.get_location()
         if yaw is None:
-            yaw = self.environment.get_yaw()
+            yaw = self.environment.get_sensor_yaw(self.id)
         if pitch is None:
             pitch = self.environment.get_pitch()
 
