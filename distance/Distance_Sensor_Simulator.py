@@ -151,9 +151,9 @@ class Distance_Sensor_Simulator(Distance_Sensor):
 
     def get_projected_location(self, p, ignore_index):
         if ignore_index == 0:
-            return Location(p.lon, p.alt, 0)
+            return Location(p.lon, p.alt, 0, p.is_relative)
         elif ignore_index == 1:
-            return Location(p.lat, p.alt, 0)
+            return Location(p.lat, p.alt, 0, p.is_relative)
         else:
             # No need to ignore altitude here since it's ignored by default
             return p

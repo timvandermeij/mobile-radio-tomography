@@ -157,6 +157,7 @@ class Geometry(object):
         """
         # Based on http://rosettacode.org/wiki/Ray-casting_algorithm#Python but 
         # cleaned up logic and clarified somewhat
+        P, start = self.equalize(P, start)
         if start.lat > end.lat:
             # Swap start and end of segment
             start,end = end,start
