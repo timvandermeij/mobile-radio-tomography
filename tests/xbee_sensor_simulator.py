@@ -72,6 +72,12 @@ class TestXBeeSensorSimulator(unittest.TestCase):
             }
             self.sensor.enqueue(packet)
 
+        # Private packets should be refused.
+        with self.assertRaises(ValueError):
+            packet = XBee_Packet()
+            packet.set("specification", "rssi_broadcast")
+            self.sensor.enqueue(packet)
+
         # Packets that do not contain a destination should be broadcasted.
         # We subtract one because we do not send to ourself.
         packet = XBee_Packet()

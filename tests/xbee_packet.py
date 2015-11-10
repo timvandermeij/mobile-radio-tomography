@@ -13,10 +13,18 @@ class TestXBeePacket(unittest.TestCase):
         # The specifications dictionary must be set.
         self.assertIsInstance(self.packet._specifications, dict)
 
+        # The packet must be private by default.
+        self.assertTrue(self.packet._private)
+
     def test_set(self):
         # A given key and value should be present in the contents.
         self.packet.set("foo", "bar")
         self.assertEqual(self.packet._contents["foo"], "bar")
+
+        # When a specification is set, the private property must
+        # be updated.
+        self.packet.set("specification", "memory_map_chunk")
+        self.assertFalse(self.packet._private)
 
     def test_unset(self):
         # A given key should not be present in the contents.
@@ -85,3 +93,9 @@ class TestXBeePacket(unittest.TestCase):
             "latitude": 123456789.12,
             "longitude": 123496785.34
         })
+        self.assertFalse(self.packet._private)
+
+    def test_is_private(self):
+        # The private property should be returned.
+        private = self.is_private()
+        self.assertEqual(self.packet._private, private)
