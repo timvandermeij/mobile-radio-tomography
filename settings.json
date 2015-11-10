@@ -76,7 +76,8 @@
                     {
                         "name": "id",
                         "format": "B",
-                        "value": 1
+                        "value": 1,
+                        "private": false
                     },
                     {
                         "name": "latitude",
@@ -84,6 +85,86 @@
                     },
                     {
                         "name": "longitude",
+                        "format": "d"
+                    }
+                ],
+                "rssi_broadcast": [
+                    {
+                        "name": "id",
+                        "format": "B",
+                        "value": 2,
+                        "private": true
+                    },
+                    {
+                        "name": "latitude",
+                        "format": "d"
+                    },
+                    {
+                        "name": "longitude",
+                        "format": "d"
+                    },
+                    {
+                        "name": "sensor_id",
+                        "format": "B"
+                    },
+                    {
+                        "name": "timestamp",
+                        "format": "d"
+                    }
+                ],
+                "rssi_ground_station": [
+                    {
+                        "name": "id",
+                        "format": "B",
+                        "value": 3,
+                        "private": true
+                    },
+                    {
+                        "name": "from_latitude",
+                        "format": "d"
+                    },
+                    {
+                        "name": "from_longitude",
+                        "format": "d"
+                    },
+                    {
+                        "name": "to_latitude",
+                        "format": "d"
+                    },
+                    {
+                        "name": "to_longitude",
+                        "format": "d"
+                    },
+                    {
+                        "name": "rssi",
+                        "format": "B"
+                    }
+                ],
+                "ntp": [
+                    {
+                        "name": "id",
+                        "format": "B",
+                        "value": 4,
+                        "private": true
+                    },
+                    {
+                        "name": "sensor_id",
+                        "format": "B"
+                    },
+                    {
+                        "name": "timestamp_1",
+                        "format": "d"
+                    },
+                    {
+                        "name": "timestamp_2",
+                        "format": "d"
+                    },
+                    {
+                        "name": "timestamp_3",
+                        "format": "d"
+                    },
+                    {
+                        "name": "timestamp_4",
                         "format": "d"
                     }
                 ]

@@ -72,10 +72,18 @@ class TestXBeeSensorSimulator(unittest.TestCase):
             }
             self.sensor.enqueue(packet)
 
+        # Private packets should be refused.
+        with self.assertRaises(ValueError):
+            packet = XBee_Packet()
+            packet.set("specification", "rssi_broadcast")
+            self.sensor.enqueue(packet)
+
         # Packets that do not contain a destination should be broadcasted.
         # We subtract one because we do not send to ourself.
         packet = XBee_Packet()
-        packet.set("foo", "bar")
+        packet.set("specification", "memory_map_chunk")
+        packet.set("latitude", 123456789.12)
+        packet.set("longitude", 123459678.34)
         self.sensor.enqueue(packet)
         self.assertEqual(self.sensor._queue.qsize(),
                          self.settings.get("number_of_sensors") - 1)
@@ -83,7 +91,9 @@ class TestXBeeSensorSimulator(unittest.TestCase):
 
         # Valid packets should be enqueued.
         packet = XBee_Packet()
-        packet.set("foo", "bar")
+        packet.set("specification", "memory_map_chunk")
+        packet.set("latitude", 123456789.12)
+        packet.set("longitude", 123459678.34)
         self.sensor.enqueue(packet, to=2)
         self.assertEqual(self.sensor._queue.get(), {
             "packet": packet,
@@ -97,7 +107,9 @@ class TestXBeeSensorSimulator(unittest.TestCase):
 
         # If the queue contains packets, some of them must be sent.
         packet = XBee_Packet()
-        packet.set("foo", "bar")
+        packet.set("specification", "memory_map_chunk")
+        packet.set("latitude", 123456789.12)
+        packet.set("longitude", 123459678.34)
         self.sensor.enqueue(packet, to=2)
         queue_length_before = self.sensor._queue.qsize()
         self.sensor._send()
@@ -108,9 +120,12 @@ class TestXBeeSensorSimulator(unittest.TestCase):
     def test_receive(self):
         # Create a packet from sensor 2 to the current sensor.
         packet = XBee_Packet()
-        packet.set("_from_id", 2)
-        packet.set("_timestamp", time.time())
-        
+        packet.set("specification", "rssi_broadcast")
+        packet.set("latitude", 123456789.12)
+        packet.set("longitude", 123459678.34)
+        packet.set("sensor_id", 2)
+        packet.set("timestamp", time.time())
+
         # After receiving that packet, the next timestamp must be synchronized.
         # Note that we must make a copy as the receive method will change the packet!
         copied_packet = copy.deepcopy(packet)

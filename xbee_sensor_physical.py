@@ -3,7 +3,7 @@ import time
 import random
 from __init__ import __package__
 from settings import Arguments
-from zigbee.XBee_Custom_Packet import XBee_Custom_Packet
+from zigbee.XBee_Packet import XBee_Packet
 from zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
 
 def get_location():
@@ -34,7 +34,7 @@ def main(argv):
             # Enqueue a custom packet at a fixed interval.
             if sensor.id > 0 and time.time() > timestamp:
                 timestamp = time.time() + 8
-                packet = XBee_Custom_Packet()
+                packet = XBee_Packet()
                 packet.set("specification", "memory_map_chunk")
                 packet.set("latitude", 123456789.12)
                 packet.set("longitude", 123495678.34)

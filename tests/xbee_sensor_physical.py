@@ -3,8 +3,8 @@ import pty
 import os
 import serial
 import random
-import json
 import Queue
+import time
 from xbee import ZigBee
 from mock import patch
 from ..settings import Arguments
@@ -87,10 +87,18 @@ class TestXBeeSensorPhysical(unittest.TestCase):
             }
             self.sensor.enqueue(packet)
 
+        # Private packets should be refused.
+        with self.assertRaises(ValueError):
+            packet = XBee_Packet()
+            packet.set("specification", "rssi_broadcast")
+            self.sensor.enqueue(packet)
+
         # Packets that do not contain a destination should be broadcasted.
         # We subtract one because we do not send to ourself.
         packet = XBee_Packet()
-        packet.set("foo", "bar")
+        packet.set("specification", "memory_map_chunk")
+        packet.set("latitude", 123456789.12)
+        packet.set("longitude", 123459678.34)
         self.sensor.enqueue(packet)
         self.assertEqual(self.sensor._queue.qsize(),
                          self.settings.get("number_of_sensors") - 1)
@@ -98,7 +106,9 @@ class TestXBeeSensorPhysical(unittest.TestCase):
 
         # Valid packets should be enqueued.
         packet = XBee_Packet()
-        packet.set("foo", "bar")
+        packet.set("specification", "memory_map_chunk")
+        packet.set("latitude", 123456789.12)
+        packet.set("longitude", 123459678.34)
         self.sensor.enqueue(packet, to=2)
         self.assertEqual(self.sensor._queue.get(), {
             "packet": packet,
@@ -133,22 +143,27 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         # for transmitting the valid packet. After transmission, the packet
         # should be removed from the data object.
         mock_send.call_count = 0
-        valid = 42
         valid_packet = XBee_Packet()
-        valid_packet.set("_rssi", valid)
+        valid_packet.set("specification", "rssi_ground_station")
+        valid_packet.set("from_latitude", 123456789.12)
+        valid_packet.set("from_longitude", 123456789.12)
+        valid_packet.set("to_latitude", 123456789.12)
+        valid_packet.set("to_longitude", 123456789.12)
+        valid_packet.set("rssi", 56)
         self.sensor._data = {
-            16: XBee_Packet(),
             42: valid_packet
         }
         self.sensor._send()
         self.assertEqual(mock_send.call_count,
                          self.settings.get("number_of_sensors"))
-        self.assertNotIn(valid, self.sensor._data)
+        self.assertNotIn(42, self.sensor._data)
 
-        # If the queue contains packets, some of them must be sent.
+        # If the queue contains custom packets, some of them must be sent.
         mock_send.call_count = 0
         packet = XBee_Packet()
-        packet.set("foo", "bar")
+        packet.set("specification", "memory_map_chunk")
+        packet.set("latitude", 123456789.12)
+        packet.set("longitude", 123459678.34)
         self.sensor.enqueue(packet, to=2)
         queue_length_before = self.sensor._queue.qsize()
         self.sensor._send()
@@ -173,28 +188,28 @@ class TestXBeeSensorPhysical(unittest.TestCase):
 
         # Valid RX packets should be processed. Store the frame ID
         # for the DB call test following this test.
-        data = {
-            "_from_id": 2,
-            "_timestamp": 123456
-        }
+        packet = XBee_Packet()
+        packet.set("specification", "rssi_broadcast")
+        packet.set("latitude", 123456789.12)
+        packet.set("longitude", 123459678.34)
+        packet.set("sensor_id", 2)
+        packet.set("timestamp", time.time())
         raw_packet = {
             "id": "rx",
-            "rf_data": json.dumps(data)
+            "rf_data": packet.serialize()
         }
         self.sensor._receive(raw_packet)
         frame_id = None
         for key, value in self.sensor._data.iteritems():
             frame_id = key
 
-        # Check if the destination exists and if it consists only of floats.
+        # Check if the received packet is valid.
         original_packet = self.sensor._data[frame_id]
-        to_location = original_packet.get("_to")
-        self.assertTrue(to_location != None)
-        self.assertTrue(all(type(number) == float for number in to_location))
-
-        self.assertTrue(original_packet.get("_rssi") == None)
-        self.assertTrue(original_packet.get("_from_id") == None)
-        self.assertTrue(original_packet.get("_timestamp") == None)
+        self.assertNotEqual(original_packet.get("from_latitude"), None)
+        self.assertNotEqual(original_packet.get("from_longitude"), None)
+        self.assertNotEqual(original_packet.get("to_latitude"), None)
+        self.assertNotEqual(original_packet.get("to_longitude"), None)
+        self.assertEqual(original_packet.get("rssi"), None)
 
         # AT response DB packets should be processed. The parsed RSSI value
         # should be placed in the original packet in the data object.
@@ -205,7 +220,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
             "parameter": "\x4E"
         }
         self.sensor._receive(raw_packet)
-        self.assertEqual(self.sensor._data[frame_id].get("_rssi"), ord("\x4E"))
+        self.assertEqual(self.sensor._data[frame_id].get("rssi"), ord("\x4E"))
 
         # AT response SH packets should be processed.
         self.sensor._address_set = False
@@ -291,10 +306,12 @@ class TestXBeeSensorPhysical(unittest.TestCase):
     def test_ntp(self, mock_subprocess_call):
         # Prepare the NTP packet.
         packet = XBee_Packet()
-        packet.set("_t1", 100)
-        packet.set("_t2", 150)
-        packet.set("_t3", 160)
-        packet.set("_t4", 120)
+        packet.set("specification", "ntp")
+        packet.set("sensor_id", 1)
+        packet.set("timestamp_1", 100)
+        packet.set("timestamp_2", 150)
+        packet.set("timestamp_3", 160)
+        packet.set("timestamp_4", 120)
 
         # Perform the NTP algorithm.
         clock_offset = self.sensor._ntp(packet)
