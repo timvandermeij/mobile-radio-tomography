@@ -1,7 +1,7 @@
 import thread
 import time
 from droneapi.lib import Location
-from ..zigbee.XBee_Custom_Packet import XBee_Custom_Packet
+from ..zigbee.XBee_Packet import XBee_Packet
 
 class Monitor(object):
     """
@@ -88,7 +88,7 @@ class Monitor(object):
                     sensor.draw_current_edge(self.plot.get_plot(), self.memory_map, self.colors[i % len(self.colors)])
                 if xbee_sensor:
                     home_location = self.mission.get_home_location()
-                    packet = XBee_Custom_Packet()
+                    packet = XBee_Packet()
                     packet.set("specification", "memory_map_chunk")
                     packet.set("latitude", home_location.lat + location.lat)
                     packet.set("longitude", home_location.lon + location.lon)

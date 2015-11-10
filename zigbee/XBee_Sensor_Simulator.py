@@ -3,7 +3,7 @@ import socket
 import random
 import copy
 import Queue
-from XBee_Custom_Packet import XBee_Custom_Packet
+from XBee_Packet import XBee_Packet
 from XBee_Sensor import XBee_Sensor
 from XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from ..settings import Arguments
@@ -52,7 +52,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             return
 
         # Unserialize the data (byte-encoded string).
-        packet = XBee_Custom_Packet()
+        packet = XBee_Packet()
         packet.unserialize(data)
         self._receive(packet)
 
@@ -68,8 +68,8 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         Enqueue a custom packet to send to another XBee device.
         """
 
-        if not isinstance(packet, XBee_Custom_Packet):
-            raise TypeError("Only XBee_Custom_Packet objects can be enqueued")
+        if not isinstance(packet, XBee_Packet):
+            raise TypeError("Only XBee_Packet objects can be enqueued")
 
         if to != None:
             self._queue.put({
@@ -104,7 +104,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
                 continue
 
             location = self._location_callback()
-            packet = XBee_Custom_Packet()
+            packet = XBee_Packet()
             packet.set("specification", "rssi_broadcast")
             packet.set("latitude", location[0])
             packet.set("longitude", location[1])
@@ -152,7 +152,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
 
                 # Sanitize and complete the packet for the ground station.
                 location = self._location_callback()
-                ground_station_packet = XBee_Custom_Packet()
+                ground_station_packet = XBee_Packet()
                 ground_station_packet.set("specification", "rssi_ground_station")
                 ground_station_packet.set("from_latitude", packet.get("latitude"))
                 ground_station_packet.set("from_longitude", packet.get("longitude"))
