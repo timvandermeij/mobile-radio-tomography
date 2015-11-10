@@ -75,7 +75,6 @@ class XBee_Packet(object):
             raise KeyError("Unknown specification has been provided")
 
         specification = self._specifications[specification_name]
-        self._contents.pop("specification")
 
         # Verify that all fields in the specification have been provided.
         # Skip fields with a value (usually identifier fields) as in that

@@ -80,7 +80,6 @@ class TestXBeePacket(unittest.TestCase):
         self.packet.set("latitude", 123456789.12)
         self.packet.set("longitude", 123496785.34)
         packed_message = self.packet.serialize()
-        self.assertEqual(self.packet.get("specification"), None)
         self.assertEqual(packed_message, "\x01H\xe1zT4o\x9dA\xf6(\\E\xa5q\x9dA")
 
     def test_unserialize(self):

@@ -275,7 +275,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
             # Generate a frame ID to be able to match this packet and the
             # associated RSSI (DB command) request.
             frame_id = chr(random.randint(1, 255))
-            self._data[frame_id] = packet
+            self._data[frame_id] = ground_station_packet
 
             # Request the RSSI value for the received packet.
             self._sensor.send("at", command="DB", frame_id=frame_id)
