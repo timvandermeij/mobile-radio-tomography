@@ -71,6 +71,9 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         if not isinstance(packet, XBee_Packet):
             raise TypeError("Only XBee_Packet objects can be enqueued")
 
+        if packet.is_private():
+            raise ValueError("Private packets cannot be enqueued")
+
         if to != None:
             self._queue.put({
                 "packet": packet,
@@ -144,7 +147,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         Receive and process packets from all other sensors in the network.
         """
 
-        if not packet.get("private"):
+        if not packet.is_private():
             self._receive_callback(packet)
         else:
             if self.id > 0:

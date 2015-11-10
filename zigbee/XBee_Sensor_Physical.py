@@ -85,6 +85,9 @@ class XBee_Sensor_Physical(XBee_Sensor):
         if not isinstance(packet, XBee_Packet):
             raise TypeError("Only XBee_Packet objects can be enqueued")
 
+        if packet.is_private():
+            raise ValueError("Private packets cannot be enqueued")
+
         if to != None:
             self._queue.put({
                 "packet": packet,
@@ -233,7 +236,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
             packet = XBee_Packet()
             packet.unserialize(raw_packet["rf_data"])
 
-            if not packet.get("private"):
+            if not packet.is_private():
                 self._receive_callback(packet)
                 return
 

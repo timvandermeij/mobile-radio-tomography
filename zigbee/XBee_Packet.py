@@ -11,6 +11,7 @@ class XBee_Packet(object):
 
         settings = Settings("settings.json", "xbee_base")
         self._specifications = settings.get("specifications")
+        self._private = True
         self._contents = {}
 
     def set(self, key, value):
@@ -19,6 +20,9 @@ class XBee_Packet(object):
         """
 
         self._contents[key] = value
+        if key == "specification":
+            specification = self._specifications[value]
+            self._private = specification[0]["private"]
 
     def unset(self, key):
         """
@@ -127,7 +131,7 @@ class XBee_Packet(object):
         # can unpack the right part of the byte-encoded string. The offset
         # is used to continue from the last read part of the string.
         self._contents["specification"] = specification_name
-        self._contents["private"] = specification[0]["private"]
+        self._private = specification[0]["private"]
         for field in specification:
             if "value" in field:
                 continue
@@ -136,3 +140,11 @@ class XBee_Packet(object):
             format = field["format"]
             self._contents[name] = struct.unpack_from(format, contents, offset)[0]
             offset += struct.calcsize(format)
+
+    def is_private(self):
+        """
+        Return if the packet is private, indicating that it belongs to
+        internal code and cannot be enqueued.
+        """
+
+        return self._private
