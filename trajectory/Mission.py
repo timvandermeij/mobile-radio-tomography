@@ -682,10 +682,27 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
         return []
 
     def reconstruct(self, came_from, current):
-        total_path = [self.memory_map.get_location(*current)]
+        # The path from goal point `current` to the start (in reversed form) 
+        # containing waypoints that should be followed to get to the goal point
+        total_path = []
+        previous = current
+
+        # The current trend of the differences between the points
+        trend = None
         while current in came_from:
             current = came_from.pop(current)
-            total_path.append(self.memory_map.get_location(*current))
+
+            # Track the current trend of the point differences. If it is the 
+            # same kind of difference, then we may be able to skip this point 
+            # in our list of waypoints.
+            d = tuple(np.sign(current[i] - previous[i]) for i in [0,1])
+            if trend is None or (trend[0] != 0 and d[0] != trend[0]) or (trend[1] != 0 and d[1] != trend[1]):
+                trend = d
+                total_path.append(self.memory_map.get_location(*previous))
+            else:
+                trend = d
+
+            previous = current
 
         return list(reversed(total_path))
 
