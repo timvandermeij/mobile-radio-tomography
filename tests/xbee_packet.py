@@ -19,7 +19,7 @@ class TestXBeePacket(unittest.TestCase):
         # A given key should not be present in the contents.
         self.packet._contents["foo"] = "bar"
         self.packet.unset("foo")
-        self.assertFalse("foo" in self.packet._contents)
+        self.assertNotIn("foo", self.packet._contents)
 
         # Verify that unsetting a nonexistent key does not throw
         # a KeyError, but instead does nothing.
@@ -32,6 +32,15 @@ class TestXBeePacket(unittest.TestCase):
 
         # "None" should be returned for a nonexistent key.
         self.assertEqual(self.packet.get("quux"), None)
+
+    def test_get_all(self):
+        # All contents should be fetched.
+        self.packet._contents["foo"] = "bar"
+        self.packet._contents["baz"] = "quux"
+        self.assertEqual(self.packet.get_all(), {
+            "foo": "bar",
+            "baz": "quux"
+        })
 
     def test_serialize(self):
         # A JSON string of the contents dictionary should be returned.

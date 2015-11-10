@@ -4,6 +4,7 @@ import random
 import copy
 import Queue
 from XBee_Packet import XBee_Packet
+from XBee_Custom_Packet import XBee_Custom_Packet
 from XBee_Sensor import XBee_Sensor
 from XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from ..settings import Arguments
@@ -45,12 +46,22 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             self._next_timestamp = self.scheduler.get_next_timestamp()
             self._send()
 
+        # Check if there is data to be processed.
+        try:
+            data = self._socket.recv(self.settings.get("buffer_size"))
+        except socket.error:
+            return
+
+        # Unserialize the data. Assume that the data is JSON encoded (default)
+        # and otherwise fall back to handling byte-encoded custom packets.
         try:
             packet = XBee_Packet()
-            packet.unserialize(self._socket.recv(self.settings.get("buffer_size")))
-            self._receive(packet)
-        except socket.error:
-            pass
+            packet.unserialize(data)
+        except ValueError:
+            packet = XBee_Custom_Packet()
+            packet.unserialize(data)
+
+        self._receive(packet)
 
     def deactivate(self):
         """
@@ -59,29 +70,31 @@ class XBee_Sensor_Simulator(XBee_Sensor):
 
         self._socket.close()
 
-    def enqueue(self, packet):
+    def enqueue(self, packet, to=None):
         """
         Enqueue a custom packet to send to another XBee device.
-        Valid packets must be XBee_Packet objects and must contain
-        the ID of the destination XBee device.
         """
 
         if not isinstance(packet, XBee_Packet):
             raise TypeError("Only XBee_Packet objects can be enqueued")
 
-        packet.set("_type", "custom")
-        if packet.get("to_id") != None:
-            self._queue.put(packet)
+        if to != None:
+            self._queue.put({
+                "packet": packet,
+                "to": to
+            })
         else:
             # No destination ID has been provided, therefore we broadcast
             # the packet to all sensors in the network except for ourself
             # and the ground sensor.
-            for index in xrange(1, self.settings.get("number_of_sensors") + 1):
-                if index == self.id:
+            for to_id in xrange(1, self.settings.get("number_of_sensors") + 1):
+                if to_id == self.id:
                     continue
 
-                packet.set("to_id", index)
-                self._queue.put(copy.deepcopy(packet))
+                self._queue.put({
+                    "packet": copy.deepcopy(packet),
+                    "to": to_id
+                })
 
     def _send(self):
         """
@@ -114,11 +127,10 @@ class XBee_Sensor_Simulator(XBee_Sensor):
                 break
 
             limit -= 1
-            packet = self._queue.get()
-            to_id = packet.get("to_id")
-            self._socket.sendto(packet.serialize(), (ip, port + to_id))
+            item = self._queue.get()
+            self._socket.sendto(item["packet"].serialize(), (ip, port + item["to"]))
             if self.viewer:
-                self.viewer.draw_arrow(self.id, to_id, "green")
+                self.viewer.draw_arrow(self.id, item["to"], "green")
 
         # Send the sweep data to the ground sensor.
         for packet in self._data:
@@ -136,8 +148,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         Receive and process packets from all other sensors in the network.
         """
 
-        if packet.get("_type") == "custom":
-            packet.unset("_type")
+        if packet.get("specification") != None:
             self._receive_callback(packet)
         else:
             if self.id > 0:
@@ -150,4 +161,4 @@ class XBee_Sensor_Simulator(XBee_Sensor):
                 packet.unset("_timestamp")
                 self._data.append(packet)
             else:
-                print("> Ground station received {}".format(packet.serialize()))
+                print("> Ground station received {}".format(packet.get_all()))

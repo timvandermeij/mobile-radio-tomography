@@ -1,7 +1,7 @@
 import thread
 import time
 from droneapi.lib import Location
-from ..zigbee.XBee_Packet import XBee_Packet
+from ..zigbee.XBee_Custom_Packet import XBee_Custom_Packet
 
 class Monitor(object):
     """
@@ -37,7 +37,7 @@ class Monitor(object):
         return self.settings.get("viewer")
 
     def setup(self):
-        self.environment.add_packet_action("memory_map", self.add_memory_map)
+        self.environment.add_packet_action("memory_map_chunk", self.add_memory_map)
         self.memory_map = self.mission.get_memory_map()
 
         if self.settings.get("plot"):
@@ -88,10 +88,10 @@ class Monitor(object):
                     sensor.draw_current_edge(self.plot.get_plot(), self.memory_map, self.colors[i % len(self.colors)])
                 if xbee_sensor:
                     home_location = self.mission.get_home_location()
-                    packet = XBee_Packet()
-                    packet.set("action", "memory_map")
-                    packet.set("lat", home_location.lat + location.lat)
-                    packet.set("lon", home_location.lon + location.lon)
+                    packet = XBee_Custom_Packet()
+                    packet.set("specification", "memory_map_chunk")
+                    packet.set("latitude", home_location.lat + location.lat)
+                    packet.set("longitude", home_location.lon + location.lon)
                     xbee_sensor.enqueue(packet)
 
                 print("=== [!] Distance to object: {} m (yaw {}, pitch {}) ===".format(sensor_distance, yaw, pitch))
@@ -126,7 +126,7 @@ class Monitor(object):
         time.sleep(self.step_delay)
 
     def add_memory_map(self, packet):
-        loc = Location(packet.get("lat"), packet.get("lon"), 0.0, is_relative=False)
+        loc = Location(packet.get("latitude"), packet.get("longitude"), 0.0, is_relative=False)
         idx = self.memory_map.get_index(loc)
         print(loc.lat, loc.lon, idx)
         try:

@@ -321,16 +321,23 @@ class Viewer_Interactive(Viewer):
             self.is_mock = False
 
         self.sensors = self.environment.get_distance_sensors()
+
         self.camera_speed = self.settings.get("camera_speed") # meters/second
         self.rotate_speed = self.settings.get("rotate_speed") # degrees/second
 
+        self.current_object = -1
+        self.current_face = -1
+
     def _draw_polygon(self, face, i=-1, j=-1):
         if i != -1 and j != -1:
-            for sensor in self.sensors:
-                edge = sensor.get_current_edge()
-                if isinstance(edge, list) and edge[0] == i and edge[1] == j:
-                    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-                    break
+            if i == self.current_object and (self.current_face == -1 or j == self.current_face):
+                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+            else:
+                for sensor in self.sensors:
+                    edge = sensor.get_current_edge()
+                    if isinstance(edge, list) and edge[0] == i and edge[1] == j:
+                        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+                        break
 
         super(Viewer_Interactive, self)._draw_polygon(face, i, j)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
@@ -381,6 +388,17 @@ class Viewer_Interactive(Viewer):
             self._reset_camera()
         elif symbol == key.C: # reload objects and colors
             self._load_objects()
+        elif symbol == key.O: # select object
+            self.current_object = self.current_object + 1
+            self.current_face = -1
+            if self.current_object > len(self.objects):
+                self.current_object = -1
+            self._update_tracking()
+        elif symbol == key.P: # select plane
+            self.current_face = self.current_face + 1
+            if self.current_face > len(self.objects[self.current_object]):
+                self.current_face = -1
+            self._update_tracking()
         elif symbol == key.Q: # quit
             pyglet.app.exit()
             return
@@ -392,6 +410,11 @@ class Viewer_Interactive(Viewer):
         # time delta caused by delay for the first update.
         pyglet.clock.get_default().update_time()
         pyglet.clock.tick()
+
+    def _update_tracking(self):
+        for sensor in self.sensors:
+            sensor.current_object = self.current_object
+            sensor.current_face = self.current_face
 
     def on_key_release(self, symbol, modifiers):
         self._reset_movement()

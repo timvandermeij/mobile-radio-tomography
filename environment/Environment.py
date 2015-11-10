@@ -33,7 +33,6 @@ class Environment(object):
     def __init__(self, vehicle, geometry, arguments):
         self.vehicle = vehicle
         self.geometry = geometry
-        self.geometry.set_home_location(self.vehicle.home_location)
 
         self.arguments = arguments
         self.settings = self.arguments.get_settings("environment")
@@ -83,9 +82,9 @@ class Environment(object):
         self.packet_callbacks[action] = callback
 
     def receive_packet(self, packet):
-        action = packet.get("action")
-        if action in self.packet_callbacks:
-            callback = self.packet_callbacks[action]
+        specification = packet.get("specification")
+        if specification in self.packet_callbacks:
+            callback = self.packet_callbacks[specification]
             callback(packet)
 
     def get_objects(self):

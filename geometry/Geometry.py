@@ -1,5 +1,6 @@
 import sys
 import math
+import numpy as np
 from droneapi.lib import Location
 
 class Geometry(object):
@@ -184,7 +185,51 @@ class Geometry(object):
         """
         From a given list of `points` in a polygon (sorted on edge positions), generate a list of edges, which are tuples of two points of the line segment.
         """
+        if not points:
+            return []
+
         return zip(points, list(points[1:]) + [points[0]])
+
+    def get_plane_vector(self, points):
+        """
+        Calculate the plane equation from the given `points` that determine a face on the plane.
+        """
+        # Based on http://stackoverflow.com/a/24540938 expect with less typos 
+        # (see http://stackoverflow.com/a/25809052) and more numpy strength
+
+        # Point on the plane
+        p = points[0]
+        # Vectors from point that define plane direction
+        v1 = self.diff_location_meters(p, points[1])
+        v2 = self.diff_location_meters(p, points[2])
+
+        # Plane equation values. This is the normal vector of the plane.
+        # http://geomalgorithms.com/a04-_planes.html#Normal-Implicit-Equation
+        cp = np.cross(v1, v2)
+        d = -(cp[0] * p.lat + cp[1] * p.lon + cp[2] * p.alt)
+
+        return cp, d
+
+    def check_dot(self, dot):
+        """
+        Check whether a given dot product `dot` is large enough to be noticeable.
+        This is useful to check whether an intersection between vectors exists.
+        """
+        return abs(dot) > self.EPSILON
+
+    def get_intersection(self, face, cp, location, u, dot):
+        """
+        Finish calculating the intersection point of a line `u` from a given `location` and a plane `face`.
+        The plane has a vector `cp`, and the line has a dot product with the plane vector `dot`.
+        The returned values are the `factor`, is positive if and only if this is a positive ray intersection, and the intersection point `loc_point`.
+        """
+        # http://geomalgorithms.com/a05-_intersect-1.html#Line-Plane-Intersection
+        w = self.diff_location_meters(face[0], location)
+        nw_dot = np.dot(cp, w)
+        factor = -nw_dot / dot
+        u = u * factor
+        loc_point = self.get_location_meters(location, *u)
+        return factor, loc_point
 
 class Geometry_Spherical(Geometry):
     # Radius of "spherical" earth

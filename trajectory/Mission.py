@@ -38,20 +38,35 @@ class Mission(object):
         next_waypoint = self.vehicle.commands.next
         if next_waypoint <= 1:
             return None
-        mission_item = self.vehicle.commands[next_waypoint]
+        waypoint_location = self.get_waypoint(next_waypoint)
+        distance = self.environment.get_distance(waypoint_location)
+        return distance
+
+    def get_waypoint(self, waypoint, is_relative=True):
+        """
+        Retrieve the Location object corresponding to a waypoint command with ID `waypoint`.
+        """
+        mission_item = self.vehicle.commands[waypoint]
         lat = mission_item.x
         lon = mission_item.y
         alt = mission_item.z
-        waypoint_location = Location(lat, lon, alt, is_relative=True)
-        distance = self.environment.get_distance(waypoint_location)
-        return distance
+        waypoint_location = Location(lat, lon, alt, is_relative=is_relative)
+        return waypoint_location
 
     def setup(self):
         # Clear the current mission
         self.clear_mission()
 
-        # Size in meters of one dimension of the space that we are allowed to 
-        # be in.
+        # Older versions of dronekit do not have a home_location property, so 
+        # we need to retrieve it from the waypoint commands ourselves.
+        if hasattr(self.vehicle, "home_location"):
+            self.geometry.set_home_location(self.vehicle.home_location)
+        else:
+            home_location = self.get_waypoint(0, is_relative=False)
+            self.geometry.set_home_location(home_location)
+
+        # Size in meters of one dimension of the part of the space that we are 
+        # allowed to be in.
         self.size = self.settings.get("space_size")
         # The number of entries in the memory map per meter
         self.resolution = self.settings.get("resolution")
@@ -164,7 +179,7 @@ class Mission(object):
         """
         Actually start the mission after arming and flying off.
         """
-        raise NotImplemented("Must be implemented in child class")
+        raise NotImplementedError("Must be implemented in child class")
 
     def step(self):
         """
@@ -328,7 +343,7 @@ class Mission_Auto(Mission):
         return self._waypoints
 
     def get_points(self):
-        raise NotImplemented("Must be implemented in child class")
+        raise NotImplementedError("Must be implemented in child class")
 
     def add_commands(self):
         """
@@ -589,6 +604,10 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
                 self.next_waypoint = self.next_waypoint + 1
 
             self.current_point = self.current_point + 1
+            if self.current_point >= len(self.points):
+                print("Reached final point.")
+                return
+
             print("Next point: {i}: Location({p.lat}, {p.lon}, is_relative={p.is_relative})".format(i=self.current_point, p=self.points[self.current_point]))
 
             self.vehicle.commands.goto(self.points[self.current_point])
