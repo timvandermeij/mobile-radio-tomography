@@ -139,7 +139,36 @@
                         "name": "rssi",
                         "format": "B"
                     }
+                ],
+                "ntp": [
+                    {
+                        "name": "id",
+                        "format": "B",
+                        "value": 4,
+                        "private": true
+                    },
+                    {
+                        "name": "sensor_id",
+                        "format": "B"
+                    },
+                    {
+                        "name": "timestamp_1",
+                        "format": "d"
+                    },
+                    {
+                        "name": "timestamp_2",
+                        "format": "d"
+                    },
+                    {
+                        "name": "timestamp_3",
+                        "format": "d"
+                    },
+                    {
+                        "name": "timestamp_4",
+                        "format": "d"
+                    }
                 ]
+
             }
         }
     },

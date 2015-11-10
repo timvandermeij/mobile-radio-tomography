@@ -6,7 +6,6 @@ import random
 import copy
 import Queue
 from xbee import ZigBee
-from XBee_Packet import XBee_Packet
 from XBee_Custom_Packet import XBee_Custom_Packet
 from XBee_Sensor import XBee_Sensor
 from XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
@@ -83,8 +82,8 @@ class XBee_Sensor_Physical(XBee_Sensor):
         Enqueue a custom packet to send to another XBee device.
         """
 
-        if not isinstance(packet, XBee_Packet):
-            raise TypeError("Only XBee_Packet objects can be enqueued")
+        if not isinstance(packet, XBee_Custom_Packet):
+            raise TypeError("Only XBee_Custom_Packet objects can be enqueued")
 
         if to != None:
             self._queue.put({
@@ -130,10 +129,13 @@ class XBee_Sensor_Physical(XBee_Sensor):
             # sending messages. This avoids clock skew caused by the fact that
             # the Raspberry Pi devices do not have an onboard real time clock.
             while not self._synchronized:
-                packet = XBee_Packet()
-                packet.set("_type", "ntp")
-                packet.set("_from_id", self.id)
-                packet.set("_t1", time.time())
+                packet = XBee_Custom_Packet()
+                packet.set("specification", "ntp")
+                packet.set("sensor_id", self.id)
+                packet.set("timestamp_1", time.time())
+                packet.set("timestamp_2", 0)
+                packet.set("timestamp_3", 0)
+                packet.set("timestamp_4", 0)
 
                 # Send the NTP packet to the ground station.
                 self._sensor.send("tx", dest_addr_long=self._sensors[0],
@@ -152,8 +154,8 @@ class XBee_Sensor_Physical(XBee_Sensor):
         """
 
         # Calculate the clock offset.
-        a = packet.get("_t2") - packet.get("_t1")
-        b = packet.get("_t3") - packet.get("_t4")
+        a = packet.get("timestamp_2") - packet.get("timestamp_1")
+        b = packet.get("timestamp_3") - packet.get("timestamp_4")
         clock_offset = float(a + b) / 2
 
         # Apply the offset to the current clock to synchronize.
@@ -235,15 +237,15 @@ class XBee_Sensor_Physical(XBee_Sensor):
                 self._receive_callback(packet)
                 return
 
-            if packet.get("_type") == "ntp":
-                if packet.get("_t2") == None:
-                    packet.set("_t2", time.time())
-                    packet.set("_t3", time.time())
-                    self._sensor.send("tx", dest_addr_long=self._sensors[packet.get("_from_id")],
+            if packet.get("specification") == "ntp":
+                if packet.get("timestamp_2") == None:
+                    packet.set("timestamp_2", time.time())
+                    packet.set("timestamp_3", time.time())
+                    self._sensor.send("tx", dest_addr_long=self._sensors[packet.get("sensor_id")],
                                       dest_addr="\xFF\xFE", frame_id="\x00",
                                       data=packet.serialize())
                 else:
-                    packet.set("_t4", time.time())
+                    packet.set("timestamp_4", time.time())
                     self._ntp(packet)
 
                 return

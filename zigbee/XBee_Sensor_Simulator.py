@@ -3,7 +3,6 @@ import socket
 import random
 import copy
 import Queue
-from XBee_Packet import XBee_Packet
 from XBee_Custom_Packet import XBee_Custom_Packet
 from XBee_Sensor import XBee_Sensor
 from XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
@@ -69,8 +68,8 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         Enqueue a custom packet to send to another XBee device.
         """
 
-        if not isinstance(packet, XBee_Packet):
-            raise TypeError("Only XBee_Packet objects can be enqueued")
+        if not isinstance(packet, XBee_Custom_Packet):
+            raise TypeError("Only XBee_Custom_Packet objects can be enqueued")
 
         if to != None:
             self._queue.put({
