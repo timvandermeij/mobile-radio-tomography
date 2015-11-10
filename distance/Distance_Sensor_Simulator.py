@@ -1,5 +1,4 @@
 import sys
-import itertools
 import math
 import numpy as np
 from droneapi.lib import Location
@@ -27,27 +26,6 @@ class Distance_Sensor_Simulator(Distance_Sensor):
 
         self.current_object = -1
         self.current_face = -1
-
-    def point_inside_polygon(self, location, points, alt=True):
-        """
-        Detect objectively whether the vehicle has flown into an object.
-        """
-        # Simplification: if the point is above the mean altitude of all the 
-        # points, then do not consider it to be inside the polygon. We could 
-        # also perform interesting calculations here, but we won't have that 
-        # many objects of differing altitude anyway.
-        if alt:
-            avg_alt = float(sum([point.alt for point in points]))/len(points)
-            if avg_alt < location.alt - self.altitude_margin:
-                return False
-
-        edges = self.geometry.get_point_edges(points)
-        inside = False
-        for e in edges:
-            if self.geometry.ray_intersects_segment(location, e[0], e[1]):
-                inside = not inside
-
-        return inside
 
     def get_edge_distance(self, edge, location, yaw_angle, pitch_angle):
         """
@@ -149,77 +127,10 @@ class Distance_Sensor_Simulator(Distance_Sensor):
 
         return (sys.float_info.max, None)
 
-    def get_projected_location(self, p, ignore_index):
-        if ignore_index == 0:
-            return Location(p.lon, p.alt, 0)
-        elif ignore_index == 1:
-            return Location(p.lat, p.alt, 0)
-        else:
-            # No need to ignore altitude here since it's ignored by default
-            return p
-
     def get_plane_distance(self, face, location, yaw_angle, pitch_angle, verbose=False):
-        if len(face) < 3:
-            if verbose:
-                print("Face incomplete")
-
-            # Face incomplete
-            return (sys.float_info.max, None)
-
-        cp, d = self.geometry.get_plane_vector(face)
-
-        # 3D intersection point
-        # Based on http://stackoverflow.com/a/18543221
-
         # Another point on the line.
         p1 = self.geometry.get_location_angle(location, 1.0, yaw_angle, pitch_angle)
-
-        # Equation of the line
-        u = np.array(self.geometry.diff_location_meters(location, p1))
-        # Dot product between the line and the plane vector
-        nu_dot = np.dot(cp, u)
-        if not self.geometry.check_dot(nu_dot):
-            if verbose:
-                print("Dot product not good enough, no intersection: dot={}, u={}.".format(nu_dot, u))
-
-            # Dot product not good enough, usually caused by line and plane not 
-            # actually intersecting (line parallel to plane)
-            return (sys.float_info.max, None)
-
-        # Calculate the intersection point
-        factor, loc_point = self.geometry.get_intersection(face, cp, location, u, nu_dot)
-
-        if factor < 0:
-            if verbose:
-                print("Factor too small: {}".format(factor))
-
-            # The factor is too small, which means that the intersection point 
-            # is on the line extending in the other direction, which we need to 
-            # ignore as well.
-            return (sys.float_info.max, None)
-
-        # Point inside 3D polygon check
-        # http://geomalgorithms.com/a03-_inclusion.html#3D-Polygons
-        # Ignore the "least relevant coordinate" by moving the relevant 
-        # coordinates into lat and lon, since those are used by the 2D point 
-        # inside polygon algorithm, and this creates the largest projection of 
-        # the plane.
-        ignore_index = np.argmax(np.absolute(cp))
-
-        ignores = itertools.repeat(ignore_index, len(face))
-        projected_face = map(self.get_projected_location, face, ignores)
-
-        projected_loc = self.get_projected_location(loc_point, ignore_index)
-        if self.point_inside_polygon(projected_loc, projected_face, alt=False):
-            dist = self.geometry.get_distance_meters(location, loc_point)
-            return (dist, loc_point)
-
-        if verbose:
-            print("Point not actually inside polygon")
-
-        # The intersection point is not actually inside the polygon, but on the 
-        # plane extending from it. Thus there is no intersection.
-        return (sys.float_info.max, None)
+        return self.geometry.get_plane_distance(face, location, p1, verbose)
 
     def get_circle_distance(self, obj, location, yaw_angle):
         if obj['center'].alt >= location.alt - self.altitude_margin:
@@ -252,7 +163,7 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         elif isinstance(obj, tuple):
             # Single face with edges that are always perpendicular to our line 
             # of sight, from the ground up.
-            if self.point_inside_polygon(location, obj):
+            if self.geometry.point_inside_polygon(location, obj, altitude_margin=self.altitude_margin):
                 return (0, None)
 
             return self.get_face_distance(obj, location, yaw_angle, pitch_angle)

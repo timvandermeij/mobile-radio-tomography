@@ -148,6 +148,8 @@ class MockVehicle(object):
 
         self._home_location = Location(0.0, 0.0, 0.0, is_relative=False)
 
+        self._location_callback = None
+
     def _parse_command(self, cmd):
         # Only supported frame
         if cmd is None or cmd.frame != MAV_FRAME_GLOBAL_RELATIVE_ALT:
@@ -315,8 +317,19 @@ class MockVehicle(object):
         self._location = value
 
     def set_location(self, north, east, alt):
-        l = self._geometry.get_location_meters(self._location, north, east, alt)
-        self._location = l
+        new_location = self._geometry.get_location_meters(self._location, north, east, alt)
+        if self._location_callback is False:
+            raise RuntimeError("Recursion detected in set_location")
+        if self._location_callback is not None:
+            location_callback = self._location_callback
+            self._location_callback = False
+            location_callback(self._location, new_location)
+            self._location_callback = location_callback
+
+        self._location = new_location
+
+    def set_location_callback(self, location_callback):
+        self._location_callback = location_callback
 
     @property
     def attitude(self):

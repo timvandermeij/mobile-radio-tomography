@@ -18,6 +18,9 @@ class Environment_Simulator(Environment):
         if isinstance(self.vehicle, MockVehicle):
             self.vehicle.home_location = self.get_location(*translation)
             self.geometry.set_home_location(self.vehicle.home_location)
+            if scenefile is not None:
+                self.vehicle.set_location_callback(self.check_location)
+
         if scenefile is not None:
             loader = VRMLLoader(self, scenefile, translation)
             self.objects = loader.get_objects()
@@ -52,3 +55,9 @@ class Environment_Simulator(Environment):
 
     def get_objects(self):
         return self.objects
+
+    def check_location(self, location, new_location):
+        for obj in self.objects:
+            if isinstance(obj, list):
+                for face in obj:
+                    print(self.geometry.get_plane_distance(face, location, new_location, verbose=True))
