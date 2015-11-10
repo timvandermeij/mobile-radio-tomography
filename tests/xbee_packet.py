@@ -21,8 +21,14 @@ class TestXBeePacket(unittest.TestCase):
         self.packet.set("foo", "bar")
         self.assertEqual(self.packet._contents["foo"], "bar")
 
-        # When a specification is set, the private property must
-        # be updated.
+        # When an invalid specification is set, the private property
+        # must not be updated.
+        private = self.packet._private
+        self.packet.set("specification", "foo")
+        self.assertEqual(private, self.packet._private)
+
+        # When a valid specification is set, the private property
+        # must be updated.
         self.packet.set("specification", "memory_map_chunk")
         self.assertFalse(self.packet._private)
 
@@ -97,5 +103,5 @@ class TestXBeePacket(unittest.TestCase):
 
     def test_is_private(self):
         # The private property should be returned.
-        private = self.is_private()
+        private = self.packet.is_private()
         self.assertEqual(self.packet._private, private)

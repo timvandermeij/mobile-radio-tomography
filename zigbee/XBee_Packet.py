@@ -20,7 +20,7 @@ class XBee_Packet(object):
         """
 
         self._contents[key] = value
-        if key == "specification":
+        if key == "specification" and value in self._specifications:
             specification = self._specifications[value]
             self._private = specification[0]["private"]
 
