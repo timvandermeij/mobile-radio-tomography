@@ -35,6 +35,12 @@ class Memory_Map(object):
         """
         return self.size
 
+    def get_resolution(self):
+        """
+        Get the number of entries per meter in each dimension.
+        """
+        return self.resolution
+
     def get_index(self, loc):
         """
         Convert location coordinates to indices for a two-dimensional matrix.

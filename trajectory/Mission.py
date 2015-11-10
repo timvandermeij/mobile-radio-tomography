@@ -440,8 +440,6 @@ class Mission_Browse(Mission_Guided):
         self.send_global_velocity(0,0,0)
         self.vehicle.flush()
         self.set_yaw(self.yaw, relative=False, direction=1)
-        print("Velocity: {} m/s".format(self.vehicle.velocity))
-        print("Altitude: {} m".format(self.vehicle.location.alt))
         print("Yaw: {} Expected: {}".format(self.vehicle.attitude.yaw*180/math.pi, self.yaw))
 
         # When we're standing still, we rotate the vehicle to measure distances 
@@ -559,6 +557,7 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
         self.rotating = False
         self.start_yaw = self.yaw
         self.padding = self.settings.get("padding")
+        self.sensor_dist = sys.float_info.max
 
     def get_waypoints(self):
         return self.points
@@ -591,8 +590,10 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
                 self.start_yaw = self.vehicle.attitude.yaw
         elif self.rotating:
             # Keep track of whether we are rotating because of a goto command.
-            if self.geometry.check_angle(self.start_yaw, self.vehicle.attitude.yaw, math.pi/180):
+            if self.geometry.check_angle(self.start_yaw, self.vehicle.attitude.yaw, self.yaw_angle_step * math.pi/180):
                 self.rotating = False
+                if self.check_scan():
+                    return
             else:
                 self.start_yaw = self.vehicle.attitude.yaw
 
@@ -616,20 +617,30 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
         close = super(Mission_Pathfind, self).check_sensor_distance(sensor_distance, yaw, pitch)
         # Do not start scanning if we already are or if we are rotating because 
         # of a goto command.
-        if not self.browsing and not self.rotating and sensor_distance < 2 * self.padding + self.closeness:
+        self.sensor_dist = sensor_distance
+        if not self.browsing and not self.rotating:
+            self.check_scan()
+
+        return close
+
+    def check_scan(self):
+        if self.sensor_dist < 2 * self.padding + self.closeness:
             print("Start scanning due to closeness.")
             self.send_global_velocity(0,0,0)
             self.vehicle.flush()
             self.browsing = True
-            self.start_yaw = self.vehicle.attitude.yaw
+            self.start_yaw = self.yaw = self.vehicle.attitude.yaw
+            return True
 
-        return close
+        return False
 
     def astar(self, start, goal):
+        closeness = min(self.sensor_dist - self.padding, self.padding + self.closeness)
+        resolution = float(self.memory_map.get_resolution())
         size = self.memory_map.get_size()
         start_idx = self.memory_map.get_index(start)
         goal_idx = self.memory_map.get_index(goal)
-        nonzero = self.memory_map.get_nonzero_locations()
+        nonzero = self.memory_map.get_nonzero()
 
         evaluated = set()
         open_nodes = set([start_idx])
@@ -661,14 +672,14 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
 
                 try:
                     if self.memory_map.get(neighbor_idx) == 1:
-                        break
+                        continue
                 except KeyError:
+                    break
+
+                if self.too_close(neighbor_idx, nonzero, closeness, resolution):
                     continue
 
                 neighbor = self.memory_map.get_location(*neighbor_idx)
-                if self.too_close(neighbor, nonzero):
-                    continue
-
                 tentative_g = g[current_idx] + self.geometry.get_distance_meters(current, neighbor)
                 open_nodes.add(neighbor_idx)
                 if tentative_g >= g[neighbor_idx]:
@@ -712,10 +723,10 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
                 (y, x-1),             (y, x+1),
                 (y+1, x-1), (y+1, x), (y+1, x+1)]
 
-    def too_close(self, current, nonzero):
-        for loc in nonzero:
-            dist = self.geometry.get_distance_meters(current, loc)
-            if dist < self.padding + self.closeness:
+    def too_close(self, current, nonzero, closeness, resolution):
+        for idx in nonzero:
+            dist = math.sqrt(((current[0] - idx[0])/resolution)**2 + ((current[1] - idx[1])/resolution)**2)
+            if dist < closeness:
                 return True
 
         return False
