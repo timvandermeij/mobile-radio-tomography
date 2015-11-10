@@ -241,7 +241,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
                 return
 
             if packet.get("specification") == "ntp":
-                if packet.get("timestamp_2") == None:
+                if packet.get("timestamp_2") == 0:
                     packet.set("timestamp_2", time.time())
                     packet.set("timestamp_3", time.time())
                     self._sensor.send("tx", dest_addr_long=self._sensors[packet.get("sensor_id")],
