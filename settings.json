@@ -86,6 +86,56 @@
                         "name": "longitude",
                         "format": "d"
                     }
+                ],
+                "rssi_broadcast": [
+                    {
+                        "name": "id",
+                        "format": "B",
+                        "value": 2
+                    },
+                    {
+                        "name": "latitude",
+                        "format": "d"
+                    },
+                    {
+                        "name": "longitude",
+                        "format": "d"
+                    },
+                    {
+                        "name": "sensor_id",
+                        "format": "B"
+                    },
+                    {
+                        "name": "timestamp",
+                        "format": "d"
+                    }
+                ],
+                "rssi_ground_station": [
+                    {
+                        "name": "id",
+                        "format": "B",
+                        "value": 3
+                    },
+                    {
+                        "name": "from_latitude",
+                        "format": "d"
+                    },
+                    {
+                        "name": "from_longitude",
+                        "format": "d"
+                    },
+                    {
+                        "name": "to_latitude",
+                        "format": "d"
+                    },
+                    {
+                        "name": "to_longitude",
+                        "format": "d"
+                    },
+                    {
+                        "name": "rssi",
+                        "format": "B"
+                    }
                 ]
             }
         }
