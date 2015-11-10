@@ -172,10 +172,15 @@ class XBee_Sensor_Physical(XBee_Sensor):
         Send a packet to each other sensor in the network.
         """
 
-        packet = XBee_Packet()
-        packet.set("_from", self._location_callback())
-        packet.set("_from_id", self.id)
-        packet.set("_timestamp", time.time())
+        # Create and send the RSSI broadcast packets.
+        location = self._location_callback()
+        packet = XBee_Custom_Packet()
+        packet.set("specification", "rssi_broadcast")
+        packet.set("latitude", location[0])
+        packet.set("longitude", location[1])
+        packet.set("sensor_id", self.id)
+        packet.set("timestamp", time.time())
+
         for index in xrange(1, self._number_of_sensors + 1):
             if index == self.id:
                 continue
@@ -205,7 +210,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
         # for the next round.
         for frame_id in self._data.keys():
             packet = self._data[frame_id]
-            if packet.get("_rssi") == None:
+            if packet.get("rssi") == None:
                 continue
 
             self._sensor.send("tx", dest_addr_long=self._sensors[0],
@@ -223,14 +228,10 @@ class XBee_Sensor_Physical(XBee_Sensor):
         """
 
         if raw_packet["id"] == "rx":
-            try:
-                packet = XBee_Packet()
-                packet.unserialize(raw_packet["rf_data"])
-            except:
-                packet = XBee_Custom_Packet()
-                packet.unserialize(raw_packet["rf_data"])
+            packet = XBee_Custom_Packet()
+            packet.unserialize(raw_packet["rf_data"])
 
-            if packet.get("specification") != None:
+            if not packet.get("private"):
                 self._receive_callback(packet)
                 return
 
@@ -252,15 +253,19 @@ class XBee_Sensor_Physical(XBee_Sensor):
                 return
 
             if self._verbose:
-                print("<-- Received from sensor {}.".format(packet.get("_from_id")))
+                print("<-- Received from sensor {}.".format(packet.get("sensor_id")))
 
             # Synchronize the scheduler using the timestamp in the packet.
             self._next_timestamp = self.scheduler.synchronize(packet)
 
             # Sanitize and complete the packet for the ground station.
-            packet.set("_to", self._location_callback())
-            packet.unset("_from_id")
-            packet.unset("_timestamp")
+            location = self._location_callback()
+            ground_station_packet = XBee_Custom_Packet()
+            ground_station_packet.set("specification", "rssi_ground_station")
+            ground_station_packet.set("from_latitude", packet.get("latitude"))
+            ground_station_packet.set("from_longitude", packet.get("longitude"))
+            ground_station_packet.set("to_latitude", location[0])
+            ground_station_packet.set("to_longitude", location[1])
 
             # Generate a frame ID to be able to match this packet and the
             # associated RSSI (DB command) request.
@@ -274,7 +279,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
                 # RSSI value has been received. Update the original packet.
                 if raw_packet["frame_id"] in self._data:
                     original_packet = self._data[raw_packet["frame_id"]]
-                    original_packet.set("_rssi", ord(raw_packet["parameter"]))
+                    original_packet.set("rssi", ord(raw_packet["parameter"]))
             elif raw_packet["command"] == "SH":
                 # Serial number (high) has been received.
                 if self._address == None:
