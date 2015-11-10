@@ -54,7 +54,9 @@
     },
     "environment_viewer": {
         "name": "Environment 3D scene viewer",
-        "settings": {}
+        "settings": {
+            "max_points": 200
+        }
     },
     "environment_viewer_interactive": {
         "name": "Interactive environment 3D scene viewer",
