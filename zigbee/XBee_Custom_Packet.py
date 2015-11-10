@@ -97,6 +97,7 @@ class XBee_Custom_Packet(XBee_Packet):
         # can unpack the right part of the byte-encoded string. The offset
         # is used to continue from the last read part of the string.
         self._contents["specification"] = specification_name
+        self._contents["private"] = specification[0]["private"]
         for field in specification:
             if "value" in field:
                 continue

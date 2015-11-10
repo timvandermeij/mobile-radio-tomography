@@ -52,15 +52,9 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         except socket.error:
             return
 
-        # Unserialize the data. Assume that the data is JSON encoded (default)
-        # and otherwise fall back to handling byte-encoded custom packets.
-        try:
-            packet = XBee_Packet()
-            packet.unserialize(data)
-        except ValueError:
-            packet = XBee_Custom_Packet()
-            packet.unserialize(data)
-
+        # Unserialize the data (byte-encoded string).
+        packet = XBee_Custom_Packet()
+        packet.unserialize(data)
         self._receive(packet)
 
     def deactivate(self):
@@ -110,10 +104,13 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             if i == self.id:
                 continue
 
-            packet = XBee_Packet()
-            packet.set("_from", self._location_callback())
-            packet.set("_from_id", self.id)
-            packet.set("_timestamp", time.time())
+            location = self._location_callback()
+            packet = XBee_Custom_Packet()
+            packet.set("specification", "rssi_broadcast")
+            packet.set("latitude", location[0])
+            packet.set("longitude", location[1])
+            packet.set("sensor_id", self.id)
+            packet.set("timestamp", time.time())
             self._socket.sendto(packet.serialize(), (ip, port + i))
             if self.viewer:
                 self.viewer.draw_arrow(self.id, i)
@@ -148,17 +145,21 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         Receive and process packets from all other sensors in the network.
         """
 
-        if packet.get("specification") != None:
+        if not packet.get("private"):
             self._receive_callback(packet)
         else:
             if self.id > 0:
                 self._next_timestamp = self.scheduler.synchronize(packet)
 
                 # Sanitize and complete the packet for the ground station.
-                packet.set("_to", self._location_callback())
-                packet.set("_rssi", random.randint(0, 60))
-                packet.unset("_from_id")
-                packet.unset("_timestamp")
-                self._data.append(packet)
+                location = self._location_callback()
+                ground_station_packet = XBee_Custom_Packet()
+                ground_station_packet.set("specification", "rssi_ground_station")
+                ground_station_packet.set("from_latitude", packet.get("latitude"))
+                ground_station_packet.set("from_longitude", packet.get("longitude"))
+                ground_station_packet.set("to_latitude", location[0])
+                ground_station_packet.set("to_longitude", location[1])
+                ground_station_packet.set("rssi", random.randint(0, 60))
+                self._data.append(ground_station_packet)
             else:
                 print("> Ground station received {}".format(packet.get_all()))
