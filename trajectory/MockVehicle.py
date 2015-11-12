@@ -196,8 +196,7 @@ class MockVehicle(object):
             self._target_location = Location(lat, lon, alt, True)
 
         # Change yaw to go to new target location
-        dist = self._geometry.get_distance_meters(self._location, self._target_location)
-        if dist == 0.0:
+        if self._location.lat == self._target_location.lat and self._location.lon == self._target_location.lon:
             # Moving straight up/down does not require any angle change
             yaw = self._attitude._yaw
         else:
