@@ -322,13 +322,7 @@ class MockVehicle(object):
             self._location_callback = False
             try:
                 location_callback(self._location, value)
-            except Exception, e:
-                # Handle exceptions within the callback gracefully:
-                # Ensure that we do not get more exceptions from recursions or 
-                # other problems by unsetting the callback.
-                self._location_callback = None
-                raise e
-            else:
+            finally:
                 self._location_callback = location_callback
 
         self._location = value
@@ -338,6 +332,9 @@ class MockVehicle(object):
         new_location = self._geometry.get_location_meters(self._location, north, east, alt)
 
         self.location = new_location
+
+    def get_location_callback(self):
+        return self._location_callback
 
     def set_location_callback(self, location_callback):
         self._location_callback = location_callback
