@@ -342,6 +342,9 @@ class MockVehicle(object):
     def set_location_callback(self, location_callback):
         self._location_callback = location_callback
 
+    def unset_location_callback(self):
+        self._location_callback = None
+
     @property
     def attitude(self):
         self._update_location()

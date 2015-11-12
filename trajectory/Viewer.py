@@ -315,6 +315,7 @@ class Viewer_Interactive(Viewer):
         self.vehicle = self.environment.get_vehicle()
         if isinstance(self.vehicle, MockVehicle):
             self.is_mock = True
+            self.vehicle.unset_location_callback()
         else:
             self.is_mock = False
 
