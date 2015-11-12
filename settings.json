@@ -48,7 +48,8 @@
             "distance_sensors": [0.0],
             "xbee_type": "",
             "scenefile": null,
-            "translation": [0.0,0.0,0.0]
+            "translation": [0.0,0.0,0.0],
+            "location_check": false
         }
     },
     "environment_viewer": {

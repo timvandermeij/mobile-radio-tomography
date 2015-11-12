@@ -18,7 +18,7 @@ class Environment_Simulator(Environment):
         if isinstance(self.vehicle, MockVehicle):
             self.vehicle.home_location = self.get_location(*translation)
             self.geometry.set_home_location(self.vehicle.home_location)
-            if scenefile is not None:
+            if scenefile is not None and self.settings.get("location_check"):
                 self.vehicle.set_location_callback(self.check_location)
 
         if scenefile is not None:
