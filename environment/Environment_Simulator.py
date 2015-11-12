@@ -60,6 +60,6 @@ class Environment_Simulator(Environment):
         for obj in self.objects:
             if isinstance(obj, list):
                 for face in obj:
-                    cp, factor, loc_point = self.geometry.get_plane_intersection(face, location, new_location)
+                    factor, loc_point = self.geometry.get_plane_intersection(face, location, new_location)
                     if 0 <= factor <= 1:
                         raise RuntimeError("Flew through an object")

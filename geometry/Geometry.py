@@ -268,7 +268,7 @@ class Geometry(object):
                 print("Face incomplete")
 
             # Face incomplete
-            return (None, None, None)
+            return (None, None)
 
         cp, d = self.get_plane_vector(face)
 
@@ -285,24 +285,11 @@ class Geometry(object):
 
             # Dot product not good enough, usually caused by line and plane not 
             # actually intersecting (line parallel to plane)
-            return (None, None, None)
+            return (None, None)
 
         # Calculate the intersection point
         factor, loc_point = self.get_intersection(face, cp, location1, u, nu_dot)
-        return (cp, factor, loc_point)
 
-    def get_plane_distance(self, face, location1, location2, verbose=False):
-        cp, factor, loc_point = self.get_plane_intersection(face, location1, location2, verbose)
-        if factor is None:
-            return (sys.float_info.max, None)
-        elif factor <= 0:
-            if verbose:
-                print("Factor too small: {}".format(factor))
-
-            # The factor is too small, which means that the intersection point 
-            # is on the line extending in the other direction, which we need to 
-            # ignore as well.
-            return (sys.float_info.max, None)
 
         # Point inside 3D polygon check
         # http://geomalgorithms.com/a03-_inclusion.html#3D-Polygons
@@ -316,16 +303,31 @@ class Geometry(object):
         projected_face = map(self.get_projected_location, face, ignores)
 
         projected_loc = self.get_projected_location(loc_point, ignore_index)
-        if self.point_inside_polygon(projected_loc, projected_face, alt=False):
+        if not self.point_inside_polygon(projected_loc, projected_face, alt=False):
+            # The intersection point is not actually inside the polygon, but on 
+            # the plane extending from it. Thus there is no intersection.
+            if verbose:
+                print("Point not actually inside polygon")
+
+            return (None, None)
+
+        return (factor, loc_point)
+
+    def get_plane_distance(self, face, location1, location2, verbose=False):
+        factor, loc_point = self.get_plane_intersection(face, location1, location2, verbose)
+        if factor is None:
+            return (sys.float_info.max, None)
+        elif factor <= 0:
+            if verbose:
+                print("Factor too small: {}".format(factor))
+
+            # The factor is too small, which means that the intersection point 
+            # is on the line extending in the other direction, which we need to 
+            # ignore as well.
+            return (sys.float_info.max, None)
+        else:
             dist = self.get_distance_meters(location1, loc_point)
             return (dist, loc_point)
-
-        if verbose:
-            print("Point not actually inside polygon")
-
-        # The intersection point is not actually inside the polygon, but on the 
-        # plane extending from it. Thus there is no intersection.
-        return (sys.float_info.max, None)
 
 class Geometry_Spherical(Geometry):
     # Radius of "spherical" earth
