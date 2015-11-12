@@ -304,7 +304,6 @@ class MockVehicle(object):
         alt = vAlt * diff
 
         self.set_location(north, east, alt)
-        self._update_time = new_time
 
     @property
     def location(self):
@@ -313,20 +312,24 @@ class MockVehicle(object):
 
     @location.setter
     def location(self, value):
-        # No need to update since this forces a new location
-        self._location = value
+        # No need to call _update_location since this forces a new location
+        # However, let the location callback know about the change.
 
-    def set_location(self, north, east, alt):
-        new_location = self._geometry.get_location_meters(self._location, north, east, alt)
         if self._location_callback is False:
-            raise RuntimeError("Recursion detected in set_location")
+            raise RuntimeError("Recursion detected in location callback")
         if self._location_callback is not None:
             location_callback = self._location_callback
             self._location_callback = False
-            location_callback(self._location, new_location)
+            location_callback(self._location, value)
             self._location_callback = location_callback
 
-        self._location = new_location
+        self._location = value
+        self._update_time = time.time()
+
+    def set_location(self, north, east, alt):
+        new_location = self._geometry.get_location_meters(self._location, north, east, alt)
+
+        self.location = new_location
 
     def set_location_callback(self, location_callback):
         self._location_callback = location_callback
