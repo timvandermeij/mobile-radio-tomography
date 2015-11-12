@@ -262,13 +262,13 @@ class Geometry(object):
             # No need to ignore altitude here since it's ignored by default
             return p
 
-    def get_plane_distance(self, face, location1, location2, verbose=False):
+    def get_plane_intersection(self, face, location1, location2, verbose=False):
         if len(face) < 3:
             if verbose:
                 print("Face incomplete")
 
             # Face incomplete
-            return (sys.float_info.max, None)
+            return (None, None, None)
 
         cp, d = self.get_plane_vector(face)
 
@@ -285,12 +285,17 @@ class Geometry(object):
 
             # Dot product not good enough, usually caused by line and plane not 
             # actually intersecting (line parallel to plane)
-            return (sys.float_info.max, None)
+            return (None, None, None)
 
         # Calculate the intersection point
         factor, loc_point = self.get_intersection(face, cp, location1, u, nu_dot)
+        return (cp, factor, loc_point)
 
-        if factor < 0:
+    def get_plane_distance(self, face, location1, location2, verbose=False):
+        cp, factor, loc_point = self.get_plane_intersection(face, location1, location2, verbose)
+        if factor is None:
+            return (sys.float_info.max, None)
+        elif factor <= 0:
             if verbose:
                 print("Factor too small: {}".format(factor))
 

@@ -320,8 +320,16 @@ class MockVehicle(object):
         if self._location_callback is not None:
             location_callback = self._location_callback
             self._location_callback = False
-            location_callback(self._location, value)
-            self._location_callback = location_callback
+            try:
+                location_callback(self._location, value)
+            except Exception, e:
+                # Handle exceptions within the callback gracefully:
+                # Ensure that we do not get more exceptions from recursions or 
+                # other problems by unsetting the callback.
+                self._location_callback = None
+                raise e
+            else:
+                self._location_callback = location_callback
 
         self._location = value
         self._update_time = time.time()
