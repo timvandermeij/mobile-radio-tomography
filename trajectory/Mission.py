@@ -349,7 +349,7 @@ class Mission(object):
             return
 
         new_yaw = self._get_new_yaw(heading, relative)
-        yaw_angle = self.geometry.bearing_to_angle(new_yaw) * 180/math.pi
+        yaw_angle = self.geometry.bearing_to_angle(new_yaw - self.vehicle.attitude.yaw) * 180/math.pi
         pin = None
         pwm = None
         for servo in self.environment.get_servos():
@@ -359,6 +359,7 @@ class Mission(object):
                 break
 
         if pin is None:
+            self.set_yaw(heading, relative, direction)
             return
 
         if self.is_mock:
