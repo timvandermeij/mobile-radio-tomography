@@ -176,7 +176,8 @@
         "parent": "xbee_base",
         "settings": {
             "port": "/dev/ttyUSB0",
-            "pan_id": 2015
+            "pan_id": 2015,
+            "startup_delay": 1
         }
     },
     "xbee_sensor_simulator": {

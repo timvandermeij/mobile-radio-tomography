@@ -97,13 +97,13 @@ your user is not part of the `dialout` or `uucp` group.
 XBee configurator
 -----------------
 
-The XBee configurator is used to quickly prepare all XBee chips in the
-network. Start the configurator with `python2 xbee_configurator.py` to
+The XBee configurator is used to quickly prepare all XBee sensors in the
+network. Launch the configurator with `python2 xbee_configurator.py` to
 get started. You might need to adjust the settings for the `xbee_configurator`
 component in `settings.json`, for example to set the right port if the
-default port is not correct. After starting the tool, the instructions for
-configuring each sensor are displayed on the screen. The tool takes care of
-setting the PAN ID and the node ID for each sensor.
+default port is not correct (or use the command line options). After starting
+the tool, the instructions for configuring each sensor are displayed on the
+screen. The tool takes care of setting all required parameters.
 
 Vehicle mission
 ---------------
