@@ -1,5 +1,4 @@
 import sys
-import time
 from __init__ import __package__
 from settings import Arguments
 from zigbee.XBee_Configurator import XBee_Configurator
