@@ -193,12 +193,13 @@ performed:
 
 \begin{itemize}
     \item Make sure that the repository is cloned in
-          {\tt /home/alarm/drone-tomography}. If not, edit \\
-          {\tt raspberry-pi/drone-tomography.service} to set the correct path.
+          {\tt /home/alarm/unmanned-vehicle-tomography}. If not, edit
+          {\tt raspberry-pi/unmanned-vehicle-tomography.service} to set the
+          correct path.
     \item Become root: {\tt su}.
-    \item Place the file {\tt raspberry-pi/drone-tomography.service} in
+    \item Place the file {\tt raspberry-pi/unmanned-vehicle-tomography.service} in
           {\tt /etc/systemd/system}.
-    \item Run {\tt systemctl enable drone-tomography.service}.
+    \item Run {\tt systemctl enable unmanned-vehicle-tomography.service}.
     \item Reboot the device: {\tt reboot}. After rebooting, the physical
           XBee sensor should be running. Verify this by checking if the LEDs on
           the XBee sensor are blinking and if running {\tt screen -r sensor}

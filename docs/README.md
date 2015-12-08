@@ -1,6 +1,6 @@
-# Drone tomography documentation
+# Unmanned vehicle tomography documentation
 
-This directory contains additional documentation regarding the drone tomography 
-project. This includes installation instructions, references, progress reports 
-as well as other information regarding the project. Not all documents may be 
-completely relevant for setting up the toolchain.
+This directory contains additional documentation regarding the unmanned vehicle 
+tomography framework. This includes installation instructions, references and
+other information regarding the project. Not all documents may be completely
+relevant for setting up the framework.

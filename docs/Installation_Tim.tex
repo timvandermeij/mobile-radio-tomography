@@ -15,24 +15,24 @@
 
 \begin{document}
 
-\title{Working with the drone simulator}
+\title{Working with the vehicle simulator}
 \author{Tim van der Meij}
 \date{\today}
 
 \maketitle
 
 \section*{Introduction}
-The SITL (software in the loop) drone simulator allows us to run DroneKit Python scripts
-on a computer, i.e., without an actual drone. This document outlines the steps to successfully
+The SITL (software in the loop) vehicle simulator allows us to run DroneKit Python scripts
+on a computer, i.e., without an actual vehicle. This document outlines the steps to successfully
 install the SITL simulator with all requirements and run Python scripts. Note that the steps are
 suitable for any Linux distribution. Steps that have been altered for Arch Linux are indicated
 with \arch{}.
 
 \section*{Installing the simulator}
 \begin{itemize}
-    \item Create a folder in your home directory to store all drone software (referred to
-          as \emph{drone\_folder} from now on). Navigate to this folder: \\
-          {\tt cd $\sim$/\emph{drone\_folder}}
+    \item Create a folder in your home directory to store all vehicle software (referred to
+          as \emph{vehicle\_folder} from now on). Navigate to this folder: \\
+          {\tt cd $\sim$/\emph{vehicle\_folder}}
     \item Download ArduPilot: \\
           {\tt \$ git clone git://github.com/diydrones/ardupilot.git}
     \item Install {\tt pip} for Python 2 (note that Python 3 cannot be used!): \\
@@ -49,7 +49,7 @@ with \arch{}.
           {\tt \$ pip2 install --user scipy} \arch{}
     \item Edit {\tt $\sim$/.bashrc} by running {\tt vim $\sim$/.bashrc} to append the following fragment: \\\\
           {\tt \# Drone software} \\
-          {\tt export PATH=\$PATH:\$HOME/\emph{drone\_folder}/ardupilot/Tools/autotest} \\
+          {\tt export PATH=\$PATH:\$HOME/\emph{vehicle\_folder}/ardupilot/Tools/autotest} \\
           {\tt export PATH=/usr/lib/ccache:\$PATH} \\
           {\tt export PATH=\$PATH:\$HOME/.local/bin} \\\\
           The last line is required to be able to access {\tt mavproxy.py} directly.
@@ -64,7 +64,7 @@ Once you have written a Python script (located at \emph{script\_path}), you can 
 
 \begin{itemize}
     \item Start the simulator for a copter vehicle with a console and a map view: \\
-          {\tt \$ cd $\sim$/\emph{drone\_folder}/ardupilot/Tools/autotest} \\
+          {\tt \$ cd $\sim$/\emph{vehicle\_folder}/ardupilot/Tools/autotest} \\
           {\tt \$ sim\_vehicle.sh -v ArduCopter --console --map} \\
           If ArduCopter has not been compiled yet, this script will take care of that. Note that there is
           no need for the {\tt --aircraft} parameter from the original documentation.

@@ -3,7 +3,7 @@ import numpy as np
 
 class Memory_Map(object):
     """
-    A memory map of the environment that the drone keeps track of using measurements from the distance sensor.
+    A memory map of the environment that the vehicle keeps track of using measurements from the distance sensor.
     """
 
     def __init__(self, environment, memory_size, altitude):
