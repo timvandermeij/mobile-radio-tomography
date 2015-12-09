@@ -13,9 +13,10 @@ class Plot(object):
     """
     Plotter that can display an environment memory map.
     """
-    def __init__(self, environment, memory_map):
+    def __init__(self, environment, memory_map, interactive=True):
         self.environment = environment
         self.memory_map = memory_map
+        self.interactive = interactive
         self._setup()
 
     def _create_patch(self, obj):
@@ -57,8 +58,9 @@ class Plot(object):
         # threads/windows. One might have to press Ctrl-C and normal keys to 
         # make the program stop.
         self.plt.gca().set_aspect("equal", adjustable="box")
-        self.plt.ion()
-        self.plt.show()
+        if self.interactive:
+            self.plt.ion()
+            self.plt.show()
 
     def get_plot(self):
         return self.plt
@@ -70,8 +72,11 @@ class Plot(object):
         self._plot_vehicle_angle()
 
         self.plt.imshow(self.memory_map.get_map(), origin='lower')
-        self.plt.pause(sys.float_info.epsilon)
-        self.plt.cla()
+        if self.interactive:
+            self.plt.pause(sys.float_info.epsilon)
+            self.plt.cla()
+        else:
+            self.plt.show()
 
     def plot_lines(self, points):
         geometry = self.environment.get_geometry()
