@@ -262,6 +262,21 @@ class Geometry(object):
             # No need to ignore altitude here since it's ignored by default
             return p
 
+    def point_inside_plane(self, face, cp, location):
+        # Point inside 3D polygon check
+        # http://geomalgorithms.com/a03-_inclusion.html#3D-Polygons
+        # Ignore the "least relevant coordinate" by moving the relevant 
+        # coordinates into lat and lon, since those are used by the 2D point 
+        # inside polygon algorithm, and this creates the largest projection of 
+        # the plane.
+        ignore_index = np.argmax(np.absolute(cp))
+
+        ignores = itertools.repeat(ignore_index, len(face))
+        projected_face = map(self.get_projected_location, face, ignores)
+
+        projected_loc = self.get_projected_location(location, ignore_index)
+        return self.point_inside_polygon(projected_loc, projected_face, alt=False)
+
     def get_plane_intersection(self, face, location1, location2, verbose=False):
         if len(face) < 3:
             if verbose:
@@ -290,20 +305,7 @@ class Geometry(object):
         # Calculate the intersection point
         factor, loc_point = self.get_intersection(face, cp, location1, u, nu_dot)
 
-
-        # Point inside 3D polygon check
-        # http://geomalgorithms.com/a03-_inclusion.html#3D-Polygons
-        # Ignore the "least relevant coordinate" by moving the relevant 
-        # coordinates into lat and lon, since those are used by the 2D point 
-        # inside polygon algorithm, and this creates the largest projection of 
-        # the plane.
-        ignore_index = np.argmax(np.absolute(cp))
-
-        ignores = itertools.repeat(ignore_index, len(face))
-        projected_face = map(self.get_projected_location, face, ignores)
-
-        projected_loc = self.get_projected_location(loc_point, ignore_index)
-        if not self.point_inside_polygon(projected_loc, projected_face, alt=False):
+        if not self.point_inside_plane(face, cp, loc_point):
             # The intersection point is not actually inside the polygon, but on 
             # the plane extending from it. Thus there is no intersection.
             if verbose:
