@@ -148,6 +148,8 @@ class MockVehicle(object):
 
         self._home_location = Location(0.0, 0.0, 0.0, is_relative=False)
 
+        self._location_callback = None
+
     def _parse_command(self, cmd):
         # Only supported frame
         if cmd is None or cmd.frame != MAV_FRAME_GLOBAL_RELATIVE_ALT:
@@ -302,7 +304,6 @@ class MockVehicle(object):
         alt = vAlt * diff
 
         self.set_location(north, east, alt)
-        self._update_time = new_time
 
     @property
     def location(self):
@@ -311,12 +312,35 @@ class MockVehicle(object):
 
     @location.setter
     def location(self, value):
-        # No need to update since this forces a new location
+        # No need to call _update_location since this forces a new location
+        # However, let the location callback know about the change.
+
+        if self._location_callback is False:
+            raise RuntimeError("Recursion detected in location callback")
+        if self._location_callback is not None:
+            location_callback = self._location_callback
+            self._location_callback = False
+            try:
+                location_callback(self._location, value)
+            finally:
+                self._location_callback = location_callback
+
         self._location = value
+        self._update_time = time.time()
 
     def set_location(self, north, east, alt):
-        l = self._geometry.get_location_meters(self._location, north, east, alt)
-        self._location = l
+        new_location = self._geometry.get_location_meters(self._location, north, east, alt)
+
+        self.location = new_location
+
+    def get_location_callback(self):
+        return self._location_callback
+
+    def set_location_callback(self, location_callback):
+        self._location_callback = location_callback
+
+    def unset_location_callback(self):
+        self._location_callback = None
 
     @property
     def attitude(self):

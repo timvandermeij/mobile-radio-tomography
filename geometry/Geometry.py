@@ -1,5 +1,6 @@
 import sys
 import math
+import itertools
 import numpy as np
 from droneapi.lib import Location
 
@@ -190,6 +191,27 @@ class Geometry(object):
 
         return zip(points, list(points[1:]) + [points[0]])
 
+    def point_inside_polygon(self, location, points, alt=True, altitude_margin=0):
+        """
+        Detect objectively whether a `location` is inside an object polygon with points `points`. If `alt` is True, then the points are considered to be upper points of a three-dimensional object extending up to it.
+        """
+        # Simplification: if the point is above the mean altitude of all the 
+        # points, then do not consider it to be inside the polygon. We could 
+        # also perform interesting calculations here, but we won't have that 
+        # many objects of differing altitude anyway.
+        if alt:
+            avg_alt = float(sum([point.alt for point in points]))/len(points)
+            if avg_alt < location.alt - altitude_margin:
+                return False
+
+        edges = self.get_point_edges(points)
+        inside = False
+        for e in edges:
+            if self.ray_intersects_segment(location, e[0], e[1]):
+                inside = not inside
+
+        return inside
+
     def get_plane_vector(self, points):
         """
         Calculate the plane equation from the given `points` that determine a face on the plane.
@@ -230,6 +252,84 @@ class Geometry(object):
         u = u * factor
         loc_point = self.get_location_meters(location, *u)
         return factor, loc_point
+
+    def get_projected_location(self, p, ignore_index):
+        if ignore_index == 0:
+            return Location(p.lon, p.alt, 0)
+        elif ignore_index == 1:
+            return Location(p.lat, p.alt, 0)
+        else:
+            # No need to ignore altitude here since it's ignored by default
+            return p
+
+    def point_inside_plane(self, face, cp, location):
+        # Point inside 3D polygon check
+        # http://geomalgorithms.com/a03-_inclusion.html#3D-Polygons
+        # Ignore the "least relevant coordinate" by moving the relevant 
+        # coordinates into lat and lon, since those are used by the 2D point 
+        # inside polygon algorithm, and this creates the largest projection of 
+        # the plane.
+        ignore_index = np.argmax(np.absolute(cp))
+
+        ignores = itertools.repeat(ignore_index, len(face))
+        projected_face = map(self.get_projected_location, face, ignores)
+
+        projected_loc = self.get_projected_location(location, ignore_index)
+        return self.point_inside_polygon(projected_loc, projected_face, alt=False)
+
+    def get_plane_intersection(self, face, location1, location2, verbose=False):
+        if len(face) < 3:
+            if verbose:
+                print("Face incomplete")
+
+            # Face incomplete
+            return (None, None)
+
+        cp, d = self.get_plane_vector(face)
+
+        # 3D intersection point
+        # Based on http://stackoverflow.com/a/18543221
+
+        # Equation of the line
+        u = np.array(self.diff_location_meters(location1, location2))
+        # Dot product between the line and the plane vector
+        nu_dot = np.dot(cp, u)
+        if not self.check_dot(nu_dot):
+            if verbose:
+                print("Dot product not good enough, no intersection: dot={}, u={}.".format(nu_dot, u))
+
+            # Dot product not good enough, usually caused by line and plane not 
+            # actually intersecting (line parallel to plane)
+            return (None, None)
+
+        # Calculate the intersection point
+        factor, loc_point = self.get_intersection(face, cp, location1, u, nu_dot)
+
+        if not self.point_inside_plane(face, cp, loc_point):
+            # The intersection point is not actually inside the polygon, but on 
+            # the plane extending from it. Thus there is no intersection.
+            if verbose:
+                print("Point not actually inside polygon")
+
+            return (None, None)
+
+        return (factor, loc_point)
+
+    def get_plane_distance(self, face, location1, location2, verbose=False):
+        factor, loc_point = self.get_plane_intersection(face, location1, location2, verbose)
+        if factor is None:
+            return (sys.float_info.max, None)
+        elif factor <= 0:
+            if verbose:
+                print("Factor too small: {}".format(factor))
+
+            # The factor is too small, which means that the intersection point 
+            # is on the line extending in the other direction, which we need to 
+            # ignore as well.
+            return (sys.float_info.max, None)
+        else:
+            dist = self.get_distance_meters(location1, loc_point)
+            return (dist, loc_point)
 
 class Geometry_Spherical(Geometry):
     # Radius of "spherical" earth

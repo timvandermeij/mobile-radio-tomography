@@ -172,6 +172,15 @@ class Viewer(object):
         # Movement (translation change)
         self.strafe = Vector(0.0, 0.0, 0.0)
 
+    def get_update_location(self, dt):
+        strafe_look = dt * self.strafe.z * self.look
+        strafe_up = dt * self.strafe.y * self.up
+        strafe_right = dt * self.strafe.x * self.right
+
+        move = strafe_look + strafe_up + strafe_right
+
+        return self.environment.get_location(move.z, move.x, move.y)
+
     def update(self, dt):
         """
         Update the current location and rotation of the camera.
@@ -180,13 +189,7 @@ class Viewer(object):
         The given `dt` indicates the time in seconds that has passed since the last call to `update`. It can also be `0.0` to skip movement and rotation changes, or `1.0` to do exactly one step of them.
         """
 
-        strafe_look = dt * self.strafe.z * self.look
-        strafe_up = dt * self.strafe.y * self.up
-        strafe_right = dt * self.strafe.x * self.right
-
-        move = strafe_look + strafe_up + strafe_right
-
-        location = self.environment.get_location(move.z, move.x, move.y)
+        location = self.get_update_location(dt)
         self.pos.z, self.pos.x, self.pos.y = self.geometry.diff_location_meters(self.initial_location, location)
 
         # Now perform any rotation changes
@@ -195,7 +198,6 @@ class Viewer(object):
         self.rotation.z = (self.rotation.z + dt * self.orient.z) % 360
 
         self._update_camera()
-        return location
 
     def _rotate_2D(self, angle, M):
         """
@@ -341,10 +343,16 @@ class Viewer_Interactive(Viewer):
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 
     def update(self, dt):
-        location = super(Viewer_Interactive, self).update(dt)
+        location = self.get_update_location(dt)
         if self.is_mock:
-            self.vehicle.location = location
+            try:
+                self.vehicle.location = location
+            except RuntimeError:
+                return
 
+        super(Viewer_Interactive, self).update(dt)
+
+        if self.is_mock:
             pitch = math.asin(-self.look.y)
             yaw = math.atan2(self.look.x, self.look.z)
             self.vehicle.attitude = MockAttitude(pitch, yaw, 0.0)
@@ -397,6 +405,13 @@ class Viewer_Interactive(Viewer):
             if self.current_face > len(self.objects[self.current_object]):
                 self.current_face = -1
             self._update_tracking()
+        elif symbol == key.F: # toggle flying through objects
+            if self.vehicle.get_location_callback():
+                self.vehicle.unset_location_callback()
+                print("Enabled flying through objects")
+            else:
+                self.vehicle.set_location_callback(self.environment.check_location)
+                print("Disabled flying through objects")
         elif symbol == key.Q: # quit
             pyglet.app.exit()
             return
