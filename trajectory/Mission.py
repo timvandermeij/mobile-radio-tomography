@@ -68,7 +68,19 @@ class Mission(object):
         # Size in meters of one dimension of the part of the space that we are 
         # allowed to be in.
         self.size = self.settings.get("space_size")
+        # The number of entries in the memory map per meter
+        self.resolution = self.settings.get("resolution")
+
+        # The space around the vehicle's center (where the distance sensor is) 
+        # that we do not want to have other objects in. This is used for 
+        # additional padding in certain calculations.
+        self.padding = self.settings.get("padding")
+
+        # Operating altitude in meters
         self.altitude = self.settings.get("altitude")
+
+        # Speed of the vehicle in meters per second when moving to a location 
+        # given in a (goto) command.
         self.speed = self.settings.get("speed")
 
         # Margin in meters at which we are too close to an object
@@ -79,8 +91,10 @@ class Mission(object):
         # Create a memory map for the vehicle to track where it has seen 
         # objects. This can later be used to find the target object or to fly 
         # around obstacles without colliding.
-        memory_size = self.get_space_size()
-        self.memory_map = Memory_Map(self.environment, memory_size, self.altitude)
+        # The size is the number of entries in each dimension. We add some 
+        # padding to allow for deviations.
+        memory_size = (self.size + self.padding)*2
+        self.memory_map = Memory_Map(self.environment, memory_size, self.resolution, self.altitude)
 
     def display(self):
         """
@@ -201,7 +215,7 @@ class Mission(object):
         return True
 
     def get_space_size(self):
-        return self.size * 4
+        return self.size
 
     def get_memory_map(self):
         return self.memory_map
@@ -404,10 +418,10 @@ class Mission_Square(Mission_Auto):
         This method returns the points relative to the current location at the same altitude.
         """
         points = []
-        points.append(self.environment.get_location(self.size, -self.size))
-        points.append(self.environment.get_location(self.size, self.size))
-        points.append(self.environment.get_location(-self.size, self.size))
-        points.append(self.environment.get_location(-self.size, -self.size))
+        points.append(self.environment.get_location(self.size/2, -self.size/2))
+        points.append(self.environment.get_location(self.size/2, self.size/2))
+        points.append(self.environment.get_location(-self.size/2, self.size/2))
+        points.append(self.environment.get_location(-self.size/2, -self.size/2))
         points.append(points[0])
         return points
 
@@ -426,8 +440,6 @@ class Mission_Browse(Mission_Guided):
         self.send_global_velocity(0,0,0)
         self.vehicle.flush()
         self.set_yaw(self.yaw, relative=False, direction=1)
-        print("Velocity: {} m/s".format(self.vehicle.velocity))
-        print("Altitude: {} m".format(self.vehicle.location.alt))
         print("Yaw: {} Expected: {}".format(self.vehicle.attitude.yaw*180/math.pi, self.yaw))
 
         # When we're standing still, we rotate the vehicle to measure distances 
@@ -444,9 +456,6 @@ class Mission_Search(Mission_Browse):
         self.dists = np.zeros(self.dists_size)
         self.dists_done = np.zeros(self.dists_size, dtype=bool)
 
-        # The space around the distance sensor that we do not want to have 
-        # other objects in.
-        self.padding = self.settings.get("padding")
         self.yaw_margin = 5.0 * math.pi/180
 
     def step(self):
@@ -548,6 +557,7 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
         self.rotating = False
         self.start_yaw = self.yaw
         self.padding = self.settings.get("padding")
+        self.sensor_dist = sys.float_info.max
 
     def get_waypoints(self):
         return self.points
@@ -580,8 +590,10 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
                 self.start_yaw = self.vehicle.attitude.yaw
         elif self.rotating:
             # Keep track of whether we are rotating because of a goto command.
-            if self.geometry.check_angle(self.start_yaw, self.vehicle.attitude.yaw, math.pi/180):
+            if self.geometry.check_angle(self.start_yaw, self.vehicle.attitude.yaw, self.yaw_angle_step * math.pi/180):
                 self.rotating = False
+                if self.check_scan():
+                    return
             else:
                 self.start_yaw = self.vehicle.attitude.yaw
 
@@ -605,20 +617,30 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
         close = super(Mission_Pathfind, self).check_sensor_distance(sensor_distance, yaw, pitch)
         # Do not start scanning if we already are or if we are rotating because 
         # of a goto command.
-        if not self.browsing and not self.rotating and sensor_distance < 2 * self.padding + self.closeness:
+        self.sensor_dist = sensor_distance
+        if not self.browsing and not self.rotating:
+            self.check_scan()
+
+        return close
+
+    def check_scan(self):
+        if self.sensor_dist < 2 * self.padding + self.closeness:
             print("Start scanning due to closeness.")
             self.send_global_velocity(0,0,0)
             self.vehicle.flush()
             self.browsing = True
-            self.start_yaw = self.vehicle.attitude.yaw
+            self.start_yaw = self.yaw = self.vehicle.attitude.yaw
+            return True
 
-        return close
+        return False
 
     def astar(self, start, goal):
-        size = self.memory_map.size
+        closeness = min(self.sensor_dist - self.padding, self.padding + self.closeness)
+        resolution = float(self.memory_map.get_resolution())
+        size = self.memory_map.get_size()
         start_idx = self.memory_map.get_index(start)
         goal_idx = self.memory_map.get_index(goal)
-        nonzero = self.memory_map.get_nonzero_locations()
+        nonzero = self.memory_map.get_nonzero()
 
         evaluated = set()
         open_nodes = set([start_idx])
@@ -650,14 +672,14 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
 
                 try:
                     if self.memory_map.get(neighbor_idx) == 1:
-                        break
+                        continue
                 except KeyError:
+                    break
+
+                if self.too_close(neighbor_idx, nonzero, closeness, resolution):
                     continue
 
                 neighbor = self.memory_map.get_location(*neighbor_idx)
-                if self.too_close(neighbor, nonzero):
-                    continue
-
                 tentative_g = g[current_idx] + self.geometry.get_distance_meters(current, neighbor)
                 open_nodes.add(neighbor_idx)
                 if tentative_g >= g[neighbor_idx]:
@@ -671,10 +693,27 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
         return []
 
     def reconstruct(self, came_from, current):
-        total_path = [self.memory_map.get_location(*current)]
+        # The path from goal point `current` to the start (in reversed form) 
+        # containing waypoints that should be followed to get to the goal point
+        total_path = []
+        previous = current
+
+        # The current trend of the differences between the points
+        trend = None
         while current in came_from:
             current = came_from.pop(current)
-            total_path.append(self.memory_map.get_location(*current))
+
+            # Track the current trend of the point differences. If it is the 
+            # same kind of difference, then we may be able to skip this point 
+            # in our list of waypoints.
+            d = tuple(np.sign(current[i] - previous[i]) for i in [0,1])
+            if trend is None or (trend[0] != 0 and d[0] != trend[0]) or (trend[1] != 0 and d[1] != trend[1]):
+                trend = d
+                total_path.append(self.memory_map.get_location(*previous))
+            else:
+                trend = d
+
+            previous = current
 
         return list(reversed(total_path))
 
@@ -684,10 +723,10 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
                 (y, x-1),             (y, x+1),
                 (y+1, x-1), (y+1, x), (y+1, x+1)]
 
-    def too_close(self, current, nonzero):
-        for loc in nonzero:
-            dist = self.geometry.get_distance_meters(current, loc)
-            if dist < self.padding + self.closeness:
+    def too_close(self, current, nonzero, closeness, resolution):
+        for idx in nonzero:
+            dist = math.sqrt(((current[0] - idx[0])/resolution)**2 + ((current[1] - idx[1])/resolution)**2)
+            if dist < closeness:
                 return True
 
         return False

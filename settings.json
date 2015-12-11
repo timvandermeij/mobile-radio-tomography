@@ -27,7 +27,8 @@
             "altitude": 4.0,
             "padding": 4.0,
             "speed": 2.5,
-            "space_size": 50.0,
+            "space_size": 100.0,
+            "resolution": 1,
             "yaw_step": 10.0,
             "vehicle_simulation": true,
             "mission_class": "Mission_Square",
@@ -54,7 +55,9 @@
     },
     "environment_viewer": {
         "name": "Environment 3D scene viewer",
-        "settings": {}
+        "settings": {
+            "max_points": 200
+        }
     },
     "environment_viewer_interactive": {
         "name": "Interactive environment 3D scene viewer",

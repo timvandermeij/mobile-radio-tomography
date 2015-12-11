@@ -46,7 +46,6 @@ class Plot(object):
         self.plot_polygons = p
         self.arrow_options = {
             "arrowstyle": "->",
-            "color": "red",
             "linewidth": 2,
             "alpha": 0.5
         }
@@ -80,6 +79,7 @@ class Plot(object):
 
     def plot_lines(self, points):
         geometry = self.environment.get_geometry()
+        self.arrow_options["color"] = "white"
         for edge in geometry.get_point_edges(points):
             start_idx = self.memory_map.get_xy_index(edge[0])
             end_idx = self.memory_map.get_xy_index(edge[1])
@@ -96,6 +96,7 @@ class Plot(object):
         else:
             angle_idx = (vehicle_idx[0] + math.cos(angle) * arrow_length, vehicle_idx[1] + math.sin(angle) * arrow_length)
 
+        self.arrow_options["color"] = "red"
         self.plt.annotate("", angle_idx, vehicle_idx, arrowprops=self.arrow_options)
 
     def close(self):

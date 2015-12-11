@@ -1,3 +1,4 @@
+from collections import deque
 import math
 import numpy as np
 
@@ -98,8 +99,9 @@ class Viewer(object):
         Initialize the simulated objects from the environment for drawing.
         We convert the objects to GL standards and give each object a color.
         """
-        self.points = []
-        self.quadrics = []
+        max_points = self.settings.get("max_points")
+        self.points = deque(maxlen=max_points)
+        self.quadrics = deque(maxlen=max_points)
         self.colors = []
         self.objects = []
         for obj in self.environment.get_objects():
