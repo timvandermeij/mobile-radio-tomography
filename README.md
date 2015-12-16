@@ -1,11 +1,11 @@
-[![Build status](https://travis-ci.org/timvandermeij/drone-tomography.svg)](https://travis-ci.org/timvandermeij/drone-tomography)
+[![Build status](https://travis-ci.org/timvandermeij/unmanned-vehicle-tomography.svg)](https://travis-ci.org/timvandermeij/unmanned-vehicle-tomography)
 
-The drone tomography toolchain contains tools to perform radio tomography
-using XBee chips mounted on drones. The goal of this work is to be able
-to map an object in 3D using collected radio tomography data. This work is
-the result of a research project performed by Tim van der Meij (@timvandermeij)
-and Leon Helwerda (@lhelwerd) in collaboration with Leiden University and
-CWI Amsterdam, both based in the Netherlands.
+The unmanned vehicle tomography framework contains tools to perform radio tomographic
+imaging using XBee chips mounted on unmanned vehicles such as rover cars or drones.
+The goal of this work is to map an object in 3D using signal strength measurements.
+This framework is the result of research projects performed by Tim van der Meij
+(@timvandermeij) and Leon Helwerda (@lhelwerd) in collaboration with Leiden University
+and CWI Amsterdam, both based in the Netherlands.
 
 Prerequisites
 =============
@@ -85,8 +85,8 @@ Cloning the repository
 The first step is to clone the repository to obtain a local copy of the 
 code. Open a terminal and run the following commands.
 
-    $ git clone https://github.com/timvandermeij/drone-tomography.git
-    $ cd drone-tomography
+    $ git clone https://github.com/timvandermeij/unmanned-vehicle-tomography.git
+    $ cd unmanned-vehicle-tomography
 
 Running the tools
 =================
@@ -97,13 +97,13 @@ your user is not part of the `dialout` or `uucp` group.
 XBee configurator
 -----------------
 
-The XBee configurator is used to quickly prepare all XBee chips in the
-network. Start the configurator with `python2 xbee_configurator.py` to
+The XBee configurator is used to quickly prepare all XBee sensors in the
+network. Launch the configurator with `python2 xbee_configurator.py` to
 get started. You might need to adjust the settings for the `xbee_configurator`
 component in `settings.json`, for example to set the right port if the
-default port is not correct. After starting the tool, the instructions for
-configuring each sensor are displayed on the screen. The tool takes care of
-setting the PAN ID and the node ID for each sensor.
+default port is not correct (or use the command line options). After starting
+the tool, the instructions for configuring each sensor are displayed on the
+screen. The tool takes care of setting all required parameters.
 
 Vehicle mission
 ---------------
@@ -184,14 +184,16 @@ different pin numbers when connecting the HC-SR04 sensor to the Raspberry Pi.
 Running the unit tests
 ======================
 
-The drone tomography toolchain contains unit tests to ensure that all
-components behave the way we expect them to behave and therefore to reduce
-the risk of introducing regressions during development. The unit tests
-have to be executed from the root folder using the following command:
+The framework contains unit tests to ensure that all components behave the
+way we expect them to behave and therefore to reduce the risk of introducing
+regressions during development. The unit tests have to be executed from the
+root folder using the following command:
 
     $ python2 -m unittest discover -s tests -p "*.py" -t ..
 
-The result of running all unit tests should be "OK" in the terminal. This command is executed automatically by Travis CI for each pull request or push to a branch.
+The result of running all unit tests should be "OK" in the terminal. This
+command is executed automatically by Travis CI for each pull request or push
+to a branch.
 
 License
 =======

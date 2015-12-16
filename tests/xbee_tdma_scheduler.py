@@ -49,12 +49,15 @@ class TestXBeeTDMAScheduler(unittest.TestCase):
         # for one slot, defined as the total sweep time divided by the number
         # of sensors in the network.
         packet = XBee_Packet()
-        packet.set("_from_id", 1)
-        packet.set("_timestamp", time.time())
+        packet.set("specification", "rssi_broadcast")
+        packet.set("latitude", 123456789.12)
+        packet.set("longitude", 123459678.34)
+        packet.set("sensor_id", 1)
+        packet.set("timestamp", time.time())
 
         calculated = self.scheduler.synchronize(packet)
         slot_time = float(self.sweep_delay) / self.number_of_sensors
-        correct = packet.get("_timestamp") + ((self.id - packet.get("_from_id")) * slot_time)
+        correct = packet.get("timestamp") + ((self.id - packet.get("sensor_id")) * slot_time)
         self.assertAlmostEqual(calculated, correct, delta=0.1)
 
         # If the received packet is from a sensor with a higher ID than the
@@ -68,11 +71,14 @@ class TestXBeeTDMAScheduler(unittest.TestCase):
         # We then need to add 2 - 1 = 1 slot for sensor 1 and then sensor 2 is
         # allowed to start.
         packet = XBee_Packet()
-        packet.set("_from_id", 6)
-        packet.set("_timestamp", time.time())
+        packet.set("specification", "rssi_broadcast")
+        packet.set("latitude", 123456789.12)
+        packet.set("longitude", 123459678.34)
+        packet.set("sensor_id", 6)
+        packet.set("timestamp", time.time())
 
         calculated = self.scheduler.synchronize(packet)
         slot_time = float(self.sweep_delay) / self.number_of_sensors
-        completed_round = (self.number_of_sensors - packet.get("_from_id") + 1) * slot_time
-        correct = packet.get("_timestamp") + completed_round + ((self.id - 1) * slot_time)
+        completed_round = (self.number_of_sensors - packet.get("sensor_id") + 1) * slot_time
+        correct = packet.get("timestamp") + completed_round + ((self.id - 1) * slot_time)
         self.assertAlmostEqual(calculated, correct, delta=0.1)

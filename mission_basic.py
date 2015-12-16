@@ -85,6 +85,8 @@ def main(argv):
                 ok = monitor.step()
                 if ok:
                     monitor.sleep()
+    except RuntimeError, e:
+        print(e)
     except Exception, e:
         # Handle exceptions gracefully by attempting to stop the program 
         # ourselves. Unfortunately KeyboardInterrupts are not passed to us when 

@@ -1,11 +1,12 @@
 from xbee import ZigBee
 import serial
+import time
 from ..settings import Arguments, Settings
 
 class XBee_Configurator(object):
     STATUS_OK = "\x00"
 
-    def __init__(self, sensor_id, settings):
+    def __init__(self, settings):
         """
         Open a serial connection to the XBee chip.
         """
@@ -17,10 +18,10 @@ class XBee_Configurator(object):
         else:
             raise ValueError("'settings' must be an instance of Settings or Arguments")
 
-        self.id = sensor_id
         self._serial_connection = serial.Serial(self.settings.get("port"),
                                                 self.settings.get("baud_rate"))
         self._sensor = ZigBee(self._serial_connection)
+        time.sleep(self.settings.get("startup_delay"))
 
     def __del__(self):
         """
@@ -54,9 +55,8 @@ class XBee_Configurator(object):
             int(value, 16)
         except ValueError:
             value = "".join(char.encode("hex").upper() for char in value)
-            value = value.lstrip("0")
 
-        return value
+        return int(value)
 
     def get(self, command):
         """

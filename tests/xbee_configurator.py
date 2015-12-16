@@ -9,18 +9,15 @@ from xbee import ZigBee
 
 class TestXBeeConfigurator(unittest.TestCase):
     def setUp(self):
-        self.id = 2
-
         # Create a virtual serial port.
         master, slave = pty.openpty()
         self.port = os.ttyname(slave)
 
         self.arguments = Arguments("settings.json", ["--port={}".format(self.port)])
         self.settings = self.arguments.get_settings("xbee_configurator")
-        self.configurator = XBee_Configurator(self.id, self.arguments)
+        self.configurator = XBee_Configurator(self.arguments)
 
     def test_initialization(self):
-        self.assertEqual(self.configurator.id, self.id)
         self.assertIsInstance(self.configurator._serial_connection, serial.Serial)
         self.assertEqual(self.configurator._serial_connection.port, self.port)
         self.assertEqual(self.configurator._serial_connection.baudrate,
@@ -44,15 +41,15 @@ class TestXBeeConfigurator(unittest.TestCase):
             self.configurator._encode_value(boolean)
 
     def test_decode_value(self):
-        # Strings with escape characters should be decoded.
+        # Escape characters should be decoded.
         value = "\x01"
         calculated = self.configurator._decode_value(value)
-        self.assertEqual(calculated, "1")
+        self.assertEqual(calculated, 1)
 
-        # Strings without escape characters should not be altered.
+        # Other characters should remain the same.
         value = "2"
         calculated = self.configurator._decode_value(value)
-        self.assertEqual(calculated, "2")
+        self.assertEqual(calculated, int(value))
 
     @patch("xbee.ZigBee.wait_read_frame")
     def test_get(self, mock_wait_read_frame):

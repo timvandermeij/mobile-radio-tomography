@@ -27,7 +27,8 @@
             "altitude": 4.0,
             "padding": 4.0,
             "speed": 2.5,
-            "space_size": 50.0,
+            "space_size": 100.0,
+            "resolution": 1,
             "yaw_step": 10.0,
             "vehicle_simulation": true,
             "mission_class": "Mission_Browse",
@@ -55,12 +56,15 @@
             ],
             "xbee_type": "",
             "scenefile": null,
-            "translation": [0.0,0.0,0.0]
+            "translation": [0.0,0.0,0.0],
+            "location_check": false
         }
     },
     "environment_viewer": {
         "name": "Environment 3D scene viewer",
-        "settings": {}
+        "settings": {
+            "max_points": 200
+        }
     },
     "environment_viewer_interactive": {
         "name": "Interactive environment 3D scene viewer",
@@ -83,7 +87,8 @@
                     {
                         "name": "id",
                         "format": "B",
-                        "value": 1
+                        "value": 1,
+                        "private": false
                     },
                     {
                         "name": "latitude",
@@ -91,6 +96,86 @@
                     },
                     {
                         "name": "longitude",
+                        "format": "d"
+                    }
+                ],
+                "rssi_broadcast": [
+                    {
+                        "name": "id",
+                        "format": "B",
+                        "value": 2,
+                        "private": true
+                    },
+                    {
+                        "name": "latitude",
+                        "format": "d"
+                    },
+                    {
+                        "name": "longitude",
+                        "format": "d"
+                    },
+                    {
+                        "name": "sensor_id",
+                        "format": "B"
+                    },
+                    {
+                        "name": "timestamp",
+                        "format": "d"
+                    }
+                ],
+                "rssi_ground_station": [
+                    {
+                        "name": "id",
+                        "format": "B",
+                        "value": 3,
+                        "private": true
+                    },
+                    {
+                        "name": "from_latitude",
+                        "format": "d"
+                    },
+                    {
+                        "name": "from_longitude",
+                        "format": "d"
+                    },
+                    {
+                        "name": "to_latitude",
+                        "format": "d"
+                    },
+                    {
+                        "name": "to_longitude",
+                        "format": "d"
+                    },
+                    {
+                        "name": "rssi",
+                        "format": "B"
+                    }
+                ],
+                "ntp": [
+                    {
+                        "name": "id",
+                        "format": "B",
+                        "value": 4,
+                        "private": true
+                    },
+                    {
+                        "name": "sensor_id",
+                        "format": "B"
+                    },
+                    {
+                        "name": "timestamp_1",
+                        "format": "d"
+                    },
+                    {
+                        "name": "timestamp_2",
+                        "format": "d"
+                    },
+                    {
+                        "name": "timestamp_3",
+                        "format": "d"
+                    },
+                    {
+                        "name": "timestamp_4",
                         "format": "d"
                     }
                 ]
@@ -102,7 +187,8 @@
         "parent": "xbee_base",
         "settings": {
             "port": "/dev/ttyUSB0",
-            "pan_id": 2015
+            "pan_id": 2015,
+            "startup_delay": 1
         }
     },
     "xbee_sensor_simulator": {

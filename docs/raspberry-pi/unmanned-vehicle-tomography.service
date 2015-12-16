@@ -1,0 +1,11 @@
+[Unit]
+Description=Unmanned vehicle tomography
+
+[Service]
+Type=forking
+User=root
+ExecStart=/usr/bin/screen -dmS sensor /home/alarm/unmanned-vehicle-tomography/raspberry-pi-start.sh
+ExecStop=/usr/bin/screen -S sensor -X quit
+
+[Install]
+WantedBy=multi-user.target
