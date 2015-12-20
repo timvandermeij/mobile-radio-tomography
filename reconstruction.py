@@ -2,6 +2,7 @@ import numpy as np
 from __init__ import __package__
 from reconstruction.Weight_Matrix import Weight_Matrix
 from reconstruction.Reconstructor import Reconstructor
+from reconstruction.Viewer import Viewer
 
 def main():
     size = (4,4)
@@ -17,7 +18,9 @@ def main():
     ])
     reconstructor = Reconstructor(weight_matrix.create())
     pixels = reconstructor.execute(rssi)
-    print(pixels)
+
+    viewer = Viewer(pixels, size)
+    viewer.show()
 
 if __name__ == "__main__":
     main()
