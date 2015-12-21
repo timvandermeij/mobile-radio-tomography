@@ -63,7 +63,10 @@ class Monitor(object):
         # Put our current location on the map for visualization. Of course, 
         # this location is also "safe" since we are flying there.
         vehicle_idx = self.memory_map.get_index(self.environment.get_location())
-        self.memory_map.set(vehicle_idx, -1)
+        try:
+            self.memory_map.set(vehicle_idx, -1)
+        except KeyError:
+            print('Warning: Outside of memory map')
 
         self.mission.step()
 
@@ -111,7 +114,10 @@ class Monitor(object):
 
         # Remove the vehicle from the current location. We set it to "safe" 
         # since there is no object here.
-        self.memory_map.set(vehicle_idx, 0)
+        try:
+            self.memory_map.set(vehicle_idx, 0)
+        except:
+            pass
 
         return True
 
