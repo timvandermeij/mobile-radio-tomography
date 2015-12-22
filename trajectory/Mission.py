@@ -73,14 +73,6 @@ class Mission(object):
         # Clear the current mission
         self.clear_mission()
 
-        # Older versions of dronekit do not have a home_location property, so 
-        # we need to retrieve it from the waypoint commands ourselves.
-        if hasattr(self.vehicle, "home_location"):
-            self.geometry.set_home_location(self.vehicle.home_location)
-        else:
-            home_location = self.get_waypoint(0, is_relative=False)
-            self.geometry.set_home_location(home_location)
-
         # Size in meters of one dimension of the part of the space that we are 
         # allowed to be in.
         self.size = self.settings.get("space_size")
@@ -125,7 +117,7 @@ class Mission(object):
         """
         Clear the current mission.
         """
-        cmds = self.vehicle.commands
+        print('Clearing mission and redownloading default mission...')
         self.vehicle.commands.clear()
         self.vehicle.flush()
 
@@ -139,10 +131,24 @@ class Mission(object):
         """
         Download the current mission from the vehicle.
         """
-        cmds = self.vehicle.commands
-        cmds.download()
+        self.vehicle.commands.download()
         # Wait until download is complete.
-        cmds.wait_valid()
+        self.check_mission()
+
+    def check_mission(self):
+        self.vehicle.commands.wait_valid()
+        num_commands = self.vehicle.commands.count
+        print("{} commands in the mission!".format(num_commands))
+
+        # Older versions of dronekit do not have a home_location property, so 
+        # we need to retrieve it from the waypoint commands ourselves.
+        if hasattr(self.vehicle, "home_location"):
+            home_location = self.vehicle.home_location
+        else:
+            home_location = self.get_waypoint(0, is_relative=False)
+
+        print("Home location: {home.lat}, {home.lon}, {home.alt}".format(home=home_location))
+        self.geometry.set_home_location(home_location)
 
     def get_commands(self):
         return self.vehicle.commands
@@ -208,7 +214,7 @@ class Mission(object):
         """
         Perform any calculations for the current vehicle state.
         """
-        pass
+        print("Location: {v.lat}, {v.lon}, {v.alt}".format(v=self.vehicle.location))
 
     def check_sensor_distance(self, sensor_distance, yaw, pitch):
         """
@@ -417,7 +423,10 @@ class Mission_Auto(Mission):
         # a home location command, whether it is real or not, and for non-Rover 
         # vehicles we add a takeoff command that we need not display either.
         self._first_waypoint = 2
+
+    def arm_and_takeoff(self):
         self.add_commands()
+        super(Mission_Auto, self).arm_and_takeoff()
 
     def get_waypoints(self):
         if self._waypoints is None:
@@ -452,14 +461,14 @@ class Mission_Auto(Mission):
         for point in points:
             cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point.lat, point.lon, self.altitude))
 
-        # Send commands to vehicle.
+        # Send commands to vehicle and update.
         self.vehicle.flush()
+        self.check_mission()
 
     def display(self):
         # Make sure that mission being sent is displayed on console cleanly
         time.sleep(self.settings.get("mission_delay"))
-        num_commands = self.vehicle.commands.count
-        print("{} commands in the mission!".format(num_commands))
+        self.check_mission()
 
     def start(self):
         # Set mode to AUTO to start mission

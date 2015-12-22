@@ -67,6 +67,7 @@ def main(argv):
 
     # As of ArduCopter 3.3 it is possible to take off using a mission item.
     mission.arm_and_takeoff()
+    mission.display()
 
     print("Starting mission")
     mission.start()
