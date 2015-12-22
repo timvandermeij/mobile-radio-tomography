@@ -524,7 +524,8 @@ class Mission_Square(Mission_Auto):
 class Mission_Forward(Mission_Auto):
     def get_points(self):
         points = []
-        points.append(self.environment.get_location(0.5, 0))
+        points.append(self.environment.get_location(0.25, 0))
+        points.append(self.environment.get_location(0, 0))
         return points
 
 class Mission_Browse(Mission_Guided):
