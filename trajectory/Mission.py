@@ -432,7 +432,10 @@ class Mission_Auto(Mission):
         cmds = self.vehicle.commands
         # Add MAV_CMD_NAV_TAKEOFF command. This is ignored if the vehicle is 
         # already in the air.
-        cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, 0, self.altitude))
+        if self.is_rover:
+            self.altitude = 0.0
+        else:
+            cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, 0, self.altitude))
 
         # Add the MAV_CMD_NAV_WAYPOINT commands.
         points = self.get_waypoints()
