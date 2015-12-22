@@ -33,7 +33,7 @@
             "vehicle_simulation": true,
             "mission_class": "Mission_Browse",
             "geometry_class": "Geometry_Spherical",
-            "gps": true,
+            "gps": true
         }
     },
     "mission_monitor": {
