@@ -51,9 +51,10 @@ class Mission(object):
         It returns `None` for the first waypoint (Home location).
         """
         next_waypoint = self.vehicle.commands.next
-        if next_waypoint <= 1:
+        if next_waypoint == 0:
             return None
-        waypoint_location = self.get_waypoint(next_waypoint)
+
+        waypoint_location = self.get_waypoint(next_waypoint, is_relative=False)
         distance = self.environment.get_distance(waypoint_location)
         return distance
 
@@ -411,6 +412,11 @@ class Mission_Auto(Mission):
     def setup(self):
         super(Mission_Auto, self).setup()
         self._waypoints = None
+        # Number of waypoints to skip in the commands list; the index of the 
+        # first waypoint of our mission. The commands list always contains 
+        # a home location command, whether it is real or not, and for non-Rover 
+        # vehicles we add a takeoff command that we need not display either.
+        self._first_waypoint = 2
         self.add_commands()
 
     def get_waypoints(self):
@@ -437,6 +443,7 @@ class Mission_Auto(Mission):
         # already in the air.
         if self.is_rover:
             self.altitude = 0.0
+            self._first_waypoint = 1
         else:
             cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, 0, self.altitude))
 
@@ -462,7 +469,7 @@ class Mission_Auto(Mission):
     def check_waypoint(self):
         next_waypoint = self.vehicle.commands.next
         distance = self.distance_to_current_waypoint()
-        if next_waypoint > 1:
+        if next_waypoint >= self._first_waypoint:
             if distance < self.farness:
                 print("Distance to waypoint ({}): {} m".format(next_waypoint, distance))
                 if distance < self.closeness:
