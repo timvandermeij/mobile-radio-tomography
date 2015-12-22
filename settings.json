@@ -32,7 +32,8 @@
             "yaw_step": 10.0,
             "vehicle_simulation": true,
             "mission_class": "Mission_Browse",
-            "geometry_class": "Geometry_Spherical"
+            "geometry_class": "Geometry_Spherical",
+            "gps": true,
         }
     },
     "mission_monitor": {

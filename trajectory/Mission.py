@@ -103,6 +103,9 @@ class Mission(object):
         # Distance in meters above which we are uninterested in objects
         self.farness = self.settings.get("farness")
 
+        # Whether to use GPS and thus also wait for a GPS fix before arming.
+        self.use_gps = self.settings.get("gps")
+
         # Create a memory map for the vehicle to track where it has seen 
         # objects. This can later be used to find the target object or to fly 
         # around obstacles without colliding.
@@ -158,7 +161,7 @@ class Mission(object):
         while self.vehicle.mode.name == "INITIALISING":
             print("Waiting for vehicle to initialise...")
             time.sleep(1)
-        while self.vehicle.gps_0.fix_type < 2:
+        while self.use_gps and self.vehicle.gps_0.fix_type < 2:
             print("Waiting for GPS...: {}".format(self.vehicle.gps_0.fix_type))
             time.sleep(1)
 
