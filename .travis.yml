@@ -2,7 +2,7 @@ language: python
 python:
   - "2.7"
 install:
-  - pip install pyserial
+  - pip install "pyserial==2.7"
   - pip install xbee
   - pip install pymavlink
   - pip install mavproxy
