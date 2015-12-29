@@ -43,7 +43,7 @@ class Setup(object):
                 raise ValueError("Dronekit only works with spherical geometry")
 
             # Connect to the vehicle autopilot to get the vehicle API object
-            self.vehicle = dronekit.connect(connect, baud=self.settings.get("baud_rate"))
+            self.vehicle = dronekit.connect(connect, baud=self.settings.get("mavlink_baud_rate"))
 
             # Wait until location has been filled
             self.wait = True

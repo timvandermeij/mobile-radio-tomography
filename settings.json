@@ -31,7 +31,7 @@
             "resolution": 1,
             "yaw_step": 10.0,
             "connect": "",
-            "baud_rate": 115200,
+            "mavlink_baud_rate": 115200,
             "vehicle_simulation": true,
             "mission_class": "Mission_Browse",
             "geometry_class": "Geometry_Spherical",
