@@ -4,7 +4,7 @@ import math
 
 import numpy as np
 
-from droneapi.lib import VehicleMode, Location, Command
+from dronekit import VehicleMode, Command, LocationGlobalRelative, LocationLocal
 from pymavlink import mavutil
 
 from ..geometry.Geometry import Geometry_Spherical
@@ -18,23 +18,22 @@ class Mission(object):
     Actual missions should be implemented as a subclass.
     """
 
-    def __init__(self, api, environment, settings):
-        self.api = api
+    def __init__(self, environment, settings):
         self.environment = environment
         self.vehicle = self.environment.get_vehicle()
         if isinstance(self.vehicle, MockVehicle):
             self.is_mock = True
         else:
             self.is_mock = False
-            self.vehicle.set_mavlink_callback(self.get_packet)
+            self.vehicle.add_message_listener('*', self.get_packet)
 
+        self.vehicle.parameters['ARMING_CHECK'] = 0
         self.is_rover = False
         self.geometry = self.environment.get_geometry()
         self.settings = settings
         self.memory_map = None
 
-    def get_packet(self, msg):
-        msg_type = msg.get_type()
+    def get_packet(self, vehicle, msg_type, msg):
         if msg_type == "HEARTBEAT":
             if msg.type == mavutil.mavlink.MAV_TYPE_GROUND_ROVER:
                 self.is_rover = True
@@ -51,22 +50,31 @@ class Mission(object):
         It returns `None` for the first waypoint (Home location).
         """
         next_waypoint = self.vehicle.commands.next
-        if next_waypoint == 0:
+        waypoint_location = self.get_waypoint(next_waypoint)
+        if waypoint_location is None:
             return None
 
-        waypoint_location = self.get_waypoint(next_waypoint, is_relative=False)
         distance = self.environment.get_distance(waypoint_location)
         return distance
 
-    def get_waypoint(self, waypoint, is_relative=True):
+    def get_waypoint(self, waypoint):
         """
         Retrieve the Location object corresponding to a waypoint command with ID `waypoint`.
         """
-        mission_item = self.vehicle.commands[waypoint]
+        if waypoint == 0:
+            return None
+
+        mission_item = self.vehicle.commands[waypoint-1]
+        if mission_item.command != mavutil.mavlink.MAV_CMD_NAV_WAYPOINT:
+            return None
+
         lat = mission_item.x
         lon = mission_item.y
         alt = mission_item.z
-        waypoint_location = Location(lat, lon, alt, is_relative=is_relative)
+        if isinstance(self.geometry, Geometry_Spherical):
+            waypoint_location = LocationGlobalRelative(lat, lon, alt)
+        else:
+            waypoint_location = LocationLocal(lat, lon, -alt)
         return waypoint_location
 
     def setup(self):
@@ -136,19 +144,14 @@ class Mission(object):
         self.check_mission()
 
     def check_mission(self):
-        self.vehicle.commands.wait_valid()
+        self.vehicle.commands.wait_ready()
         num_commands = self.vehicle.commands.count
         print("{} commands in the mission!".format(num_commands))
 
-        # Older versions of dronekit do not have a home_location property, so 
-        # we need to retrieve it from the waypoint commands ourselves.
-        if hasattr(self.vehicle, "home_location"):
-            home_location = self.vehicle.home_location
-        else:
-            home_location = self.get_waypoint(0, is_relative=False)
-
-        print("Home location: {home.lat}, {home.lon}, {home.alt}".format(home=home_location))
-        self.geometry.set_home_location(home_location)
+        home_location = self.vehicle.home_location
+        if home_location is not None:
+            print("Home location: {}".format(home_location))
+            self.geometry.set_home_location(home_location)
 
     def get_commands(self):
         return self.vehicle.commands
@@ -171,6 +174,9 @@ class Mission(object):
         while self.use_gps and self.vehicle.gps_0.fix_type < 2:
             print("Waiting for GPS...: {}".format(self.vehicle.gps_0.fix_type))
             time.sleep(1)
+        while not self.use_gps and not self.vehicle.ekf_ok:
+            print("Waiting for EKF...")
+            time.sleep(1)
 
         if self.is_rover:
             # Rover is already armed and does not need to take off.
@@ -180,29 +186,28 @@ class Mission(object):
         # Copter should arm in GUIDED mode
         self.vehicle.mode = VehicleMode("GUIDED")
         self.vehicle.armed = True
-        self.vehicle.flush()
 
-        while not self.vehicle.armed and not self.api.exit:
+        while not self.vehicle.armed:
             print(" Waiting for arming...")
             time.sleep(1)
 
         # Take off to target altitude
         print("Taking off!")
-        self.vehicle.commands.takeoff(self.altitude)
+        self.vehicle.simple_takeoff(self.altitude)
         self.set_speed(self.speed)
         self.vehicle.flush()
 
         # Wait until the vehicle reaches a safe height before processing the 
         # goto (otherwise the command after Vehicle.commands.takeoff will 
         # execute immediately).
+        # Allow it to fly to just below target, in case of undershoot.
         altitude_undershoot = self.settings.get("altitude_undershoot")
-        while not self.api.exit:
-            print(" Altitude: {} m".format(self.vehicle.location.alt))
-            # Just below target, in case of undershoot.
-            if self.vehicle.location.alt >= self.altitude * altitude_undershoot:
-                print("Reached target altitude")
-                break
+        alt = self.altitude * altitude_undershoot
+        while self.vehicle.location.global_relative_frame.alt < alt:
+            print("Altitude: {} m".format(self.vehicle.location.global_relative_frame.alt))
             time.sleep(1)
+
+        print("Reached target altitude")
 
     def start(self):
         """
@@ -214,7 +219,7 @@ class Mission(object):
         """
         Perform any calculations for the current vehicle state.
         """
-        print("Location: {v.lat}, {v.lon}, {v.alt}".format(v=self.vehicle.location))
+        print("Location: {}".format(self.vehicle.location.global_relative_frame))
 
     def check_sensor_distance(self, sensor_distance, yaw, pitch):
         """
@@ -419,10 +424,9 @@ class Mission_Auto(Mission):
         super(Mission_Auto, self).setup()
         self._waypoints = None
         # Number of waypoints to skip in the commands list; the index of the 
-        # first waypoint of our mission. The commands list always contains 
-        # a home location command, whether it is real or not, and for non-Rover 
-        # vehicles we add a takeoff command that we need not display either.
-        self._first_waypoint = 2
+        # first waypoint of our mission. For non-Rover vehicles, we add 
+        # a takeoff command to the list that we need not display.
+        self._first_waypoint = 1
 
     def arm_and_takeoff(self):
         self.add_commands()
@@ -452,17 +456,23 @@ class Mission_Auto(Mission):
         # already in the air.
         if self.is_rover:
             self.altitude = 0.0
-            self._first_waypoint = 1
+            self._first_waypoint = 0
         else:
             cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, 0, self.altitude))
 
         # Add the MAV_CMD_NAV_WAYPOINT commands.
         points = self.get_waypoints()
         for point in points:
-            cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, point.lat, point.lon, self.altitude))
+            # Handle non-spherical geometries
+            if isinstance(point, LocationLocal):
+                lat, lon = point.north, point.east
+            else:
+                lat, lon = point.lat, point.lon
+
+            cmds.add(Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, lat, lon, self.altitude))
 
         # Send commands to vehicle and update.
-        self.vehicle.flush()
+        self.vehicle.commands.upload()
         self.check_mission()
 
     def display(self):
@@ -544,7 +554,7 @@ class Mission_Browse(Mission_Guided):
         self.vehicle.flush()
         self.set_sensor_yaw(self.yaw, relative=False, direction=1)
         print("Velocity: {} m/s".format(self.vehicle.velocity))
-        print("Altitude: {} m".format(self.vehicle.location.alt))
+        print("Altitude: {} m".format(self.vehicle.location.global_relative_frame.alt))
         print("Yaw: {} Expected: {}".format(self.vehicle.attitude.yaw*180/math.pi, self.yaw))
 
         # When we're standing still, we rotate the vehicle to measure distances 
@@ -629,7 +639,7 @@ class Mission_Search(Mission_Browse):
 
                 self.set_yaw(self.yaw * 180/math.pi, relative=False)
                 self.set_speed(self.speed)
-                self.vehicle.commands.goto(self.geometry.get_location_angle(current_location, self.move_distance, angle))
+                self.vehicle.simple_goto(self.geometry.get_location_angle(current_location, self.move_distance, angle))
 
     def check_sensor_distance(self, sensor_distance, yaw, pitch):
         close = super(Mission_Search, self).check_sensor_distance(sensor_distance, yaw, pitch)
@@ -683,14 +693,14 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
             if self.geometry.check_angle(self.start_yaw, self.yaw, self.yaw_angle_step * math.pi/180):
                 self.browsing = False
 
-                points = self.astar(self.vehicle.location, self.points[self.next_waypoint])
+                points = self.astar(self.vehicle.location.global_relative_frame, self.points[self.next_waypoint])
                 if not points:
                     raise RuntimeError("Could not find a suitable path to the next waypoint.")
 
                 self.points[self.current_point:self.next_waypoint] = points
                 self.next_waypoint = self.current_point + len(points)
                 self.set_speed(self.speed)
-                self.vehicle.commands.goto(self.points[self.current_point])
+                self.vehicle.simple_goto(self.points[self.current_point])
                 self.rotating = True
                 self.start_yaw = self.vehicle.attitude.yaw
         elif self.rotating:
@@ -714,9 +724,9 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
                 print("Reached final point.")
                 return
 
-            print("Next point: {i}: Location({p.lat}, {p.lon}, is_relative={p.is_relative})".format(i=self.current_point, p=self.points[self.current_point]))
+            print("Next point ({}): {}".format(self.current_point, self.points[self.current_point]))
 
-            self.vehicle.commands.goto(self.points[self.current_point])
+            self.vehicle.simple_goto(self.points[self.current_point])
 
     def check_sensor_distance(self, sensor_distance, yaw, pitch):
         close = super(Mission_Pathfind, self).check_sensor_distance(sensor_distance, yaw, pitch)

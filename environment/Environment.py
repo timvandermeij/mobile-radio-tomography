@@ -5,6 +5,8 @@ from ..trajectory.Servo import Servo
 from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
 from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 
+from dronekit import LocationLocal
+
 class Environment(object):
     """
     Environment class for interfacing the vehicle with various sensors and positioning information.
@@ -106,14 +108,14 @@ class Environment(object):
         Retrieve the location of the vehicle, or a point relative to the location of the vehicle given in meters.
         """
 
-        if north == 0 and east == 0 and alt == 0:
-            return self.vehicle.location
-
         return self.geometry.get_location_meters(self.vehicle.location, north, east, alt)
 
     def get_raw_location(self):
         location = self.get_location()
-        return (location.lat, location.lon)
+        if isinstance(location, LocationLocal):
+            return (location.north, location.east)
+        else:
+            return (location.lat, location.lon)
 
     def get_distance(self, location):
         """

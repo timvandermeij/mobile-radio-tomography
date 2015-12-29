@@ -39,7 +39,7 @@ different installation procedures.
     * pexpect
     * pymavlink
     * mavproxy
-    * droneapi
+    * dronekit
   * Environment simulation:
     * PyOpenGL
     * simpleparse
@@ -71,10 +71,6 @@ different installation procedures.
   Then, add the following line to your `~/.bashrc`:
 
       export PATH=$PATH:$HOME/ardupilot/Tools/autotest
-
-  Finally, create a file `~/.mavinit.src` with the following line:
-
-      module load droneapi.module.api
 
 For all commands in this file, replace `python2` with `python` if your
 operating system does not need to distinguish between Python 2 and Python 3.
@@ -111,11 +107,14 @@ Vehicle mission
 The trajectory mission sets up an unmanned aerial vehicle (UAV) and directs it
 to move and rotate within its environment. The script supports various mission
 types and simulation modes. You can run it using the ArduPilot simulator with
-the following command:
+the following commands:
 
     $ sim_vehicle.sh -v ArduCopter --map
-    [...wait until the simulator is set up, after "GPS lock at 0 meters"...]
-    STABILIZE> script mission.scr
+
+One can also use different vehicle types, such as APMrover2 for a ground rover.
+Then start the mission script using the following command in another terminal:
+
+    $ python2 mission_basic.py --connect 127.0.0.1:14550
 
 This starts the mission with default settings from `settings.json`. The
 ArduPilot simulator provides an overhead map showing the copter's position.

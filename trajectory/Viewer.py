@@ -174,14 +174,17 @@ class Viewer(object):
         # Movement (translation change)
         self.strafe = Vector(0.0, 0.0, 0.0)
 
-    def get_update_location(self, dt):
+    def get_update_diff(self, dt):
         strafe_look = dt * self.strafe.z * self.look
         strafe_up = dt * self.strafe.y * self.up
         strafe_right = dt * self.strafe.x * self.right
 
         move = strafe_look + strafe_up + strafe_right
 
-        return self.environment.get_location(move.z, move.x, move.y)
+        return (move.z, move.x, move.y)
+
+    def get_update_location(self, dt):
+        return self.environment.get_location(*self.get_update_diff(dt))
 
     def update(self, dt):
         """
@@ -191,8 +194,7 @@ class Viewer(object):
         The given `dt` indicates the time in seconds that has passed since the last call to `update`. It can also be `0.0` to skip movement and rotation changes, or `1.0` to do exactly one step of them.
         """
 
-        location = self.get_update_location(dt)
-        self.pos.z, self.pos.x, self.pos.y = self.geometry.diff_location_meters(self.initial_location, location)
+        self.pos.z, self.pos.x, self.pos.y = self.geometry.diff_location_meters(self.initial_location, self.environment.get_location())
 
         # Now perform any rotation changes
         self.rotation.x = (self.rotation.x + dt * self.orient.x) % 360
@@ -345,10 +347,10 @@ class Viewer_Interactive(Viewer):
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 
     def update(self, dt):
-        location = self.get_update_location(dt)
+        north, east, alt = self.get_update_diff(dt)
         if self.is_mock:
             try:
-                self.vehicle.location = location
+                self.vehicle.set_location(north, east, alt)
             except RuntimeError:
                 return
 
@@ -365,7 +367,7 @@ class Viewer_Interactive(Viewer):
             yaw = sensor.get_angle()
             pitch = sensor.get_pitch()
             sensor_distance = sensor.get_distance()
-            loc = self.geometry.get_location_angle(location, sensor_distance, yaw, pitch)
+            loc = self.geometry.get_location_angle(self.vehicle.location, sensor_distance, yaw, pitch)
             self.add_point(loc)
             print("Sensor {} distance: {} m (yaw {}, pitch {})".format(i, sensor_distance, yaw, pitch))
             i = i + 1

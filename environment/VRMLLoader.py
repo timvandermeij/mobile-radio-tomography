@@ -1,6 +1,5 @@
 import numpy as np
 from vrml.vrml97 import basenodes, nodetypes, parser, parseprocessor
-from droneapi.lib import Location
 
 class VRMLLoader(object):
     """
@@ -13,11 +12,11 @@ class VRMLLoader(object):
         self.filename = filename
 
         if translation is None:
-            translation = Location(0.0, 0.0, 0.0)
-        elif isinstance(translation, list):
-            translation = Location(*translation)
+            translation = (0.0, 0.0, 0.0)
+        elif len(translation) != 3:
+            raise ValueError("Translation must be a 3-component offset")
 
-        self.translation = translation
+        self.translation = tuple(translation)
 
         vrml_parser = parser.Parser(parser.grammar, "vrmlFile")
         processor = parseprocessor.ParseProcessor(baseURI=self.filename)
@@ -79,11 +78,12 @@ class VRMLLoader(object):
                 # VRML geometry notation is in (x,z,y) where y is the vertical 
                 # axis (using GL notation here). We have to convert it to 
                 # (z,x,y) since the z/x are related to distances on the ground 
-                # lat/lon, respectively, and y is still the altitude.
-                lat = point[1] + self.translation.lat
-                lon = point[0] - self.translation.lon
-                alt = point[2] + self.translation.alt
-                loc = self.environment.get_location(lat, lon, alt)
+                # in north and east directions, respectively, and y is still 
+                # the altitude.
+                north = point[1] + self.translation[0]
+                east = point[0] - self.translation[1]
+                alt = point[2] + self.translation[2]
+                loc = self.environment.get_location(north, east, alt)
                 face.append(loc)
 
         if len(face) > 0:
