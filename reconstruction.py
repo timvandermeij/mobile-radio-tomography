@@ -1,7 +1,7 @@
 import numpy as np
 from __init__ import __package__
 from reconstruction.Weight_Matrix import Weight_Matrix
-from reconstruction.Reconstructor import Reconstructor
+from reconstruction.Least_Squares_Reconstructor import Least_Squares_Reconstructor
 from reconstruction.Viewer import Viewer
 
 def main():
@@ -16,7 +16,7 @@ def main():
         -46, -37, -38,
         -44, -39, -37
     ])
-    reconstructor = Reconstructor(weight_matrix.create())
+    reconstructor = Least_Squares_Reconstructor(weight_matrix.create())
     pixels = reconstructor.execute(rssi)
 
     viewer = Viewer(pixels, size)
