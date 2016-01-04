@@ -64,7 +64,8 @@ class Signal_Strength_File_Reader(object):
         """
 
         if self._sweep_id < len(self._sweeps):
+            sweep = self._sweeps[self._sweep_id]
             self._sweep_id += 1
-            return self._sweeps[self._sweep_id]
+            return sweep
 
         return None
