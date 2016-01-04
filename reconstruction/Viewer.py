@@ -14,5 +14,5 @@ class Viewer(object):
         Display a heat map of the pixel intensities.
         """
 
-        plt.imshow(self.pixels, origin='lower', cmap='inferno', interpolation='none')
+        plt.imshow(self.pixels, origin='lower', cmap='Greys', interpolation='none')
         plt.show()
