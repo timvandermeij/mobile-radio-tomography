@@ -16,13 +16,13 @@ def main():
     distance_lambda = 0.2
     weight_matrix = Weight_Matrix(size, positions, distance_lambda)
 
-    walking = Signal_Strength_File_Reader('walking.csv', len(positions))
-    walking_rssi = walking.read()
-    reconstructor = Least_Squares_Reconstructor(weight_matrix.create())
-    pixels = reconstructor.execute(walking_rssi)
-
-    viewer = Viewer(pixels, size)
-    viewer.show()
+    data = Signal_Strength_File_Reader('walking.csv', len(positions))
+    while True:
+        sweep = data.get_sweep()
+        reconstructor = Least_Squares_Reconstructor(weight_matrix.create())
+        pixels = reconstructor.execute(sweep)
+        viewer = Viewer(pixels, size)
+        viewer.show()
 
 if __name__ == "__main__":
     main()
