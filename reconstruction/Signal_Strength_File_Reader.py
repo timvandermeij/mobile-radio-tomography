@@ -18,15 +18,17 @@ class Signal_Strength_File_Reader(object):
 
         lines = []
         processed_lines = 0
+        reading = False
 
         with open(self._filename, 'r') as csv_file:
             reader = csv.reader(csv_file)
             for sweep in reader:
                 # Scan until we find the first line for node 0.
-                if int(sweep[0]) != 0:
+                if int(sweep[0]) != 0 and not reading:
                     continue
 
                 # Read one entire sweep.
+                reading = True
                 if processed_lines < self._number_of_sensors - 1:
                     line = []
                     for index, value in enumerate(sweep):
@@ -41,4 +43,8 @@ class Signal_Strength_File_Reader(object):
                 else:
                     break
 
+        # In the matrix, a column contains the RSSI values from a source ID to
+        # all destination IDs. Therefore we want the final column vector to consist
+        # of all columns of the matrix below each other. By taking the transpose
+        # of the matrix and reshaping it, we obtain this column vector.
         return np.array(lines).T.reshape(-1, 1)
