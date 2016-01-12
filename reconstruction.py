@@ -17,8 +17,7 @@ def main(argv):
         (21,12), (21,9), (21,6), (21,3), (21,0), (18,0), (15,0), (12,0), (9,0),
         (6,0), (2,0)
     ]
-    distance_lambda = 0.2
-    weight_matrix = Weight_Matrix(size, positions, distance_lambda)
+    weight_matrix = Weight_Matrix(arguments, size, positions)
 
     viewer = Viewer(arguments, size)
     viewer.show()

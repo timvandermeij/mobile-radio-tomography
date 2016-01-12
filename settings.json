@@ -75,6 +75,12 @@
             "interpolation": "hamming"
         }
     },
+    "reconstruction_weight_matrix": {
+        "name": "Reconstruction weight matrix",
+        "settings": {
+            "distance_lambda": 0.2
+        }
+    },
     "xbee_base": {
         "name": "XBee base",
         "settings": {

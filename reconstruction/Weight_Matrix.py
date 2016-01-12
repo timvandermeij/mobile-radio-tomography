@@ -1,15 +1,21 @@
 import itertools
 import numpy as np
+from ..settings import Arguments, Settings
 
 class Weight_Matrix(object):
-    def __init__(self, size, positions, distance_lambda):
+    def __init__(self, settings, size, positions):
         """
         Initialize the weight matrix object.
         """
 
+        if isinstance(settings, Arguments):
+            settings = settings.get_settings("reconstruction_weight_matrix")
+        elif not isinstance(settings, Settings):
+            raise ValueError("'settings' must be an instance of Settings or Arguments")
+
         self._size = size
         self._positions = positions
-        self._lambda = distance_lambda
+        self._lambda = settings.get("distance_lambda")
 
     def create(self):
         """
