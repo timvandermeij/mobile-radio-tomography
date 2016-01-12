@@ -18,6 +18,7 @@ def main(argv):
         (6,0), (2,0)
     ]
     weight_matrix = Weight_Matrix(arguments, size, positions)
+    reconstructor = Least_Squares_Reconstructor(weight_matrix.create())
 
     viewer = Viewer(arguments, size)
     viewer.show()
@@ -25,12 +26,10 @@ def main(argv):
     arguments.check_help()
 
     data = Signal_Strength_File_Reader('walking.csv', len(positions))
-    sweep = data.get_sweep()
-    while sweep is not None:
-        reconstructor = Least_Squares_Reconstructor(weight_matrix.create())
+    for _ in range(data.size()):
+        sweep = data.get_sweep()
         pixels = reconstructor.execute(sweep)
         viewer.update(pixels)
-        sweep = data.get_sweep()
 
 if __name__ == "__main__":
     main(sys.argv[1:])

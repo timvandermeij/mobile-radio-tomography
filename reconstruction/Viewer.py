@@ -32,6 +32,7 @@ class Viewer(object):
         Update the viewer with new pixel data.
         """
 
+        plt.clf()
         self._plot = plt.imshow(np.array(pixels).reshape(self._size), origin='lower',
                                cmap=self._cmap, interpolation=self._interpolation)
         plt.pause(sys.float_info.epsilon)

@@ -69,3 +69,10 @@ class Signal_Strength_File_Reader(object):
             return sweep
 
         return None
+
+    def size(self):
+        """
+        Get the size of the buffer, i.e., the number of sweeps in the file.
+        """
+
+        return len(self._sweeps)
