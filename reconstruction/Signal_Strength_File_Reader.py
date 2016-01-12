@@ -24,7 +24,7 @@ class Signal_Strength_File_Reader(object):
         lines = []
         processed_lines = 0
 
-        with open(self._filename, 'r') as csv_file:
+        with open(self._filename, "r") as csv_file:
             reader = csv.reader(csv_file)
             for line in reader:
                 # Scan until we find the first line for node 0.

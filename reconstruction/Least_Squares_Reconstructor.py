@@ -6,7 +6,7 @@ class Least_Squares_Reconstructor(object):
         Initialize the least-squares reconstructor object.
         """
 
-        self.weight_matrix = weight_matrix
+        self._weight_matrix = weight_matrix
 
     def execute(self, rssi_values):
         """
@@ -17,6 +17,6 @@ class Least_Squares_Reconstructor(object):
         pixels of the reconstructed image.
         """
 
-        A = self.weight_matrix
+        A = self._weight_matrix
         b = rssi_values
         return np.linalg.lstsq(A, b)[0]

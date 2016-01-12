@@ -68,6 +68,13 @@
             "rotate_speed": 90.0
         }
     },
+    "reconstruction": {
+        "name": "Reconstruction",
+        "settings": {
+            "cmap": "Greys",
+            "interpolation": "hamming"
+        }
+    },
     "xbee_base": {
         "name": "XBee base",
         "settings": {

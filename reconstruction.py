@@ -1,11 +1,17 @@
+import sys
 import numpy as np
 from __init__ import __package__
+from settings import Arguments
 from reconstruction.Signal_Strength_File_Reader import Signal_Strength_File_Reader
 from reconstruction.Weight_Matrix import Weight_Matrix
 from reconstruction.Least_Squares_Reconstructor import Least_Squares_Reconstructor
 from reconstruction.Viewer import Viewer
 
-def main():
+def main(argv):
+    arguments = Arguments("settings.json", argv)
+    settings = arguments.get_settings("reconstruction")
+    arguments.check_help()
+
     size = (21,21)
     positions = [
         (0,0), (0,3), (0,6), (0,9), (0,12), (0,15), (0,18), (0,21), (3,21),
@@ -17,7 +23,7 @@ def main():
     weight_matrix = Weight_Matrix(size, positions, distance_lambda)
 
     data = Signal_Strength_File_Reader('walking.csv', len(positions))
-    viewer = Viewer(size)
+    viewer = Viewer(arguments, size)
     viewer.show()
 
     sweep = data.get_sweep()
@@ -28,4 +34,4 @@ def main():
         sweep = data.get_sweep()
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
