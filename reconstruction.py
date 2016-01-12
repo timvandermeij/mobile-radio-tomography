@@ -9,8 +9,6 @@ from reconstruction.Viewer import Viewer
 
 def main(argv):
     arguments = Arguments("settings.json", argv)
-    settings = arguments.get_settings("reconstruction")
-    arguments.check_help()
 
     size = (21,21)
     positions = [
@@ -22,10 +20,12 @@ def main(argv):
     distance_lambda = 0.2
     weight_matrix = Weight_Matrix(size, positions, distance_lambda)
 
-    data = Signal_Strength_File_Reader('walking.csv', len(positions))
     viewer = Viewer(arguments, size)
     viewer.show()
 
+    arguments.check_help()
+
+    data = Signal_Strength_File_Reader('walking.csv', len(positions))
     sweep = data.get_sweep()
     while sweep is not None:
         reconstructor = Least_Squares_Reconstructor(weight_matrix.create())

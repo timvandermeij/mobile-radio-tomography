@@ -1,18 +1,18 @@
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
-from ..settings import Arguments
+from ..settings import Arguments, Settings
 
 class Viewer(object):
-    def __init__(self, arguments, size):
+    def __init__(self, settings, size):
         """
         Initialize the viewer object.
         """
 
-        if isinstance(arguments, Arguments):
-            settings = arguments.get_settings("reconstruction")
-        else:
-            raise ValueError("'settings' must be an instance of Arguments")
+        if isinstance(settings, Arguments):
+            settings = settings.get_settings("reconstruction_viewer")
+        elif not isinstance(settings, Settings):
+            raise ValueError("'settings' must be an instance of Settings or Arguments")
 
         self._interpolation = settings.get('interpolation')
         self._cmap = settings.get('cmap')

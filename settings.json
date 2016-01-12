@@ -68,8 +68,8 @@
             "rotate_speed": 90.0
         }
     },
-    "reconstruction": {
-        "name": "Reconstruction",
+    "reconstruction_viewer": {
+        "name": "Reconstruction viewer",
         "settings": {
             "cmap": "Greys",
             "interpolation": "hamming"
