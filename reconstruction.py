@@ -4,7 +4,7 @@ from __init__ import __package__
 from settings import Arguments
 from reconstruction.Signal_Strength_File_Reader import Signal_Strength_File_Reader
 from reconstruction.Weight_Matrix import Weight_Matrix
-from reconstruction.SVD_Reconstructor import SVD_Reconstructor
+from reconstruction.Truncated_SVD_Reconstructor import Truncated_SVD_Reconstructor
 from reconstruction.Viewer import Viewer
 
 def main(argv):
@@ -18,7 +18,7 @@ def main(argv):
         (6,0), (2,0)
     ]
     weight_matrix = Weight_Matrix(arguments, size, positions)
-    reconstructor = SVD_Reconstructor(weight_matrix.create())
+    reconstructor = Truncated_SVD_Reconstructor(weight_matrix.create())
 
     viewer = Viewer(arguments, size)
     viewer.show()
