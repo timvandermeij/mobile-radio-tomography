@@ -23,17 +23,20 @@ class Signal_Strength_File_Reader(object):
         scanning = True
         lines = []
         processed_lines = 0
+        last_sensor_id = -1
 
         with open(self._filename, "r") as csv_file:
             reader = csv.reader(csv_file)
             for line in reader:
-                # Scan until we find the first line for node 0.
-                if scanning and int(line[0]) != 0:
+                sensor_id = int(line[0])
+
+                # Scan until we find the first line for sensor 0.
+                if scanning and sensor_id != 0:
                     continue
                 elif scanning:
                     scanning = False
 
-                if processed_lines >= self._number_of_sensors - 1:
+                if processed_lines >= self._number_of_sensors:
                     # The sweep is complete. Save it and continue with the next one.
                     # In the matrix, a column contains the RSSI values from a source ID to
                     # all destination IDs. Therefore we want the final column vector to consist
@@ -43,19 +46,33 @@ class Signal_Strength_File_Reader(object):
                     self._sweeps.append(sweep)
                     lines = []
                     processed_lines = 0
+                    last_sensor_id = -1
 
-                if processed_lines < self._number_of_sensors - 1:
-                    # Read all sweeps in the file.
+                if processed_lines < self._number_of_sensors:
+                    # Ignore sweeps with missing data.
+                    if sensor_id != last_sensor_id + 1:
+                        scanning = True
+                        lines = []
+                        processed_lines = 0
+                        last_sensor_id = -1
+                        continue
+
+                    # Read a line belonging to a sweep. The first number on a line is the ID of
+                    # the reporting sensor. The last three numbers represent the timestamp of
+                    # the measurement. We skip this data as we do not use it. Sensors cannot
+                    # transmit to themselves, so we also skip indices that represent that.
+                    min_index = 1
+                    max_index = self._number_of_sensors
+                    self_index = min_index + sensor_id
                     values = []
+
                     for index, value in enumerate(line):
-                        # The first number is the ID of the reporting sensor.
-                        # The last three numbers represent the timestamp of the
-                        # measurement. We skip this data as we do not use it.
-                        if index > 0 and index <= self._number_of_sensors:
+                        if index >= min_index and index <= max_index and index != self_index:
                             values.append(int(value))
 
                     lines.append(values)
                     processed_lines += 1
+                    last_sensor_id = sensor_id
 
     def get_sweep(self):
         """
