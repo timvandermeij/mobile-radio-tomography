@@ -18,7 +18,7 @@ def main(argv):
         (6,0), (2,0)
     ]
     weight_matrix = Weight_Matrix(arguments, size, positions)
-    reconstructor = Truncated_SVD_Reconstructor(weight_matrix.create())
+    reconstructor = Truncated_SVD_Reconstructor(arguments, weight_matrix.create())
 
     viewer = Viewer(arguments, size)
     viewer.show()

@@ -81,6 +81,12 @@
             "distance_lambda": 0.2
         }
     },
+    "reconstruction_truncated_svd_reconstructor": {
+        "name": "Reconstruction truncated SVD reconstructor",
+        "settings": {
+            "singular_values": 100
+        }
+    },
     "xbee_base": {
         "name": "XBee base",
         "settings": {

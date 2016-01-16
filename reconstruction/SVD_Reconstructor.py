@@ -1,7 +1,7 @@
 import numpy as np
 
 class SVD_Reconstructor(object):
-    def __init__(self, weight_matrix):
+    def __init__(self, settings, weight_matrix):
         """
         Initialize the SVD reconstructor object.
         """

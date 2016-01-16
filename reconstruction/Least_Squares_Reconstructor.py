@@ -1,7 +1,7 @@
 import numpy as np
 
 class Least_Squares_Reconstructor(object):
-    def __init__(self, weight_matrix):
+    def __init__(self, settings, weight_matrix):
         """
         Initialize the least-squares reconstructor object.
         """
