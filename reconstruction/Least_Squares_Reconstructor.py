@@ -1,12 +1,13 @@
 import numpy as np
+from Reconstructor import Reconstructor
 
-class Least_Squares_Reconstructor(object):
+class Least_Squares_Reconstructor(Reconstructor):
     def __init__(self, settings, weight_matrix):
         """
         Initialize the least-squares reconstructor object.
         """
 
-        self._weight_matrix = weight_matrix
+        super(Least_Squares_Reconstructor, self).__init__(weight_matrix)
 
     def execute(self, rssi_values):
         """

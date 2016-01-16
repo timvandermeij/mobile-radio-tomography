@@ -1,12 +1,13 @@
 import numpy as np
+from Reconstructor import Reconstructor
 
-class SVD_Reconstructor(object):
+class SVD_Reconstructor(Reconstructor):
     def __init__(self, settings, weight_matrix):
         """
         Initialize the SVD reconstructor object.
         """
 
-        self._weight_matrix = weight_matrix
+        super(SVD_Reconstructor, self).__init__(weight_matrix)
 
     def execute(self, rssi_values):
         """
