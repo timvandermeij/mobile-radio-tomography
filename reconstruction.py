@@ -26,9 +26,16 @@ def main(argv):
     arguments.check_help()
 
     data = Signal_Strength_File_Reader('walking.csv', len(positions))
+    previous_sweep = None
     for _ in range(data.size()):
         sweep = data.get_sweep()
-        pixels = reconstructor.execute(sweep)
+        if previous_sweep is not None:
+            # Generally successive sweeps are very similar. Subtracting the previous
+            # sweep from the current sweep makes differences stand out more.
+            pixels = reconstructor.execute(sweep - previous_sweep)
+        else:
+            pixels = reconstructor.execute(sweep)
+        previous_sweep = sweep
         viewer.update(pixels)
 
 if __name__ == "__main__":

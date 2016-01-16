@@ -38,11 +38,18 @@ class Signal_Strength_File_Reader(object):
 
                 if processed_lines >= self._number_of_sensors:
                     # The sweep is complete. Save it and continue with the next one.
-                    # In the matrix, a column contains the RSSI values from a source ID to
+                    # In the data matrix, a column contains the RSSI values from a source ID to
                     # all destination IDs. Therefore we want the final column vector to consist
-                    # of all columns of the matrix below each other. By taking the transpose
-                    # of the matrix and reshaping it, we obtain this column vector.
-                    sweep = np.array(lines).T.reshape(-1, 1)
+                    # of all columns of the matrix below each other. We select each column,
+                    # remove the RSSI value corresponding to the sensor transmitting to itself
+                    # (which is not possible) and append the column to the sweep list.
+                    data = np.array(lines)
+                    sweep = []
+                    for index in range(self._number_of_sensors):
+                        column = data[:,index].tolist()
+                        del column[index]
+                        sweep.append(column)
+                    sweep = np.array(sweep).reshape(-1, 1)
                     self._sweeps.append(sweep)
                     lines = []
                     processed_lines = 0
@@ -59,15 +66,10 @@ class Signal_Strength_File_Reader(object):
 
                     # Read a line belonging to a sweep. The first number on a line is the ID of
                     # the reporting sensor. The last three numbers represent the timestamp of
-                    # the measurement. We skip this data as we do not use it. Sensors cannot
-                    # transmit to themselves, so we also skip indices that represent that.
-                    min_index = 1
-                    max_index = self._number_of_sensors
-                    self_index = min_index + sensor_id
+                    # the measurement. We skip this data as we do not use it.
                     values = []
-
                     for index, value in enumerate(line):
-                        if index >= min_index and index <= max_index and index != self_index:
+                        if index >= 1 and index <= self._number_of_sensors:
                             values.append(int(value))
 
                     lines.append(values)

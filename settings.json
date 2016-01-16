@@ -71,7 +71,7 @@
     "reconstruction_viewer": {
         "name": "Reconstruction viewer",
         "settings": {
-            "cmap": "Greys",
+            "cmap": "pink",
             "interpolation": "hamming"
         }
     },
@@ -84,7 +84,7 @@
     "reconstruction_truncated_svd_reconstructor": {
         "name": "Reconstruction truncated SVD reconstructor",
         "settings": {
-            "singular_values": 100
+            "singular_values": 75
         }
     },
     "xbee_base": {
