@@ -1,6 +1,6 @@
-# Unmanned vehicle tomography documentation
+# Documentation
 
-This directory contains additional documentation regarding the unmanned vehicle 
-tomography framework. This includes installation instructions, references and
-other information regarding the project. Not all documents may be completely
-relevant for setting up the framework.
+This directory contains additional documentation regarding for the framework.
+This includes installation instructions, references and other information
+about the project. Not all documents may be directly relevant for setting up
+the framework.

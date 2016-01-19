@@ -1,6 +1,6 @@
-[![Build status](https://travis-ci.org/timvandermeij/unmanned-vehicle-tomography.svg)](https://travis-ci.org/timvandermeij/unmanned-vehicle-tomography)
+[![Build status](https://travis-ci.org/timvandermeij/mobile-radio-tomography.svg)](https://travis-ci.org/timvandermeij/mobile-radio-tomography)
 
-The unmanned vehicle tomography framework contains tools to perform radio tomographic
+The mobile radio tomography framework contains tools to perform mobile radio tomographic
 imaging using XBee chips mounted on unmanned vehicles such as rover cars or drones.
 The goal of this work is to map an object in 3D using signal strength measurements.
 This framework is the result of research projects performed by Tim van der Meij
@@ -10,8 +10,8 @@ and CWI Amsterdam, both based in the Netherlands.
 Prerequisites
 =============
 
-In order to use the toolchain you need to have the following software
-installed on your system. The toolchain has been developed for Linux, but
+In order to use the framework you need to have the following software
+installed on your system. The framework has been developed for Linux, but
 can be made to work on Windows or any other operating system since all
 prerequisites are also available for those systems, perhaps with slightly
 different installation procedures.
@@ -85,8 +85,8 @@ Cloning the repository
 The first step is to clone the repository to obtain a local copy of the 
 code. Open a terminal and run the following commands.
 
-    $ git clone https://github.com/timvandermeij/unmanned-vehicle-tomography.git
-    $ cd unmanned-vehicle-tomography
+    $ git clone https://github.com/timvandermeij/mobile-radio-tomography.git
+    $ cd mobile-radio-tomography
 
 Running the tools
 =================
@@ -198,5 +198,5 @@ to a branch.
 License
 =======
 
-The toolchain is licensed under a GPL v3 license. Refer to the `LICENSE`
+The framework is licensed under a GPL v3 license. Refer to the `LICENSE`
 file for more information.
