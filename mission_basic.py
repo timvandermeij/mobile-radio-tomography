@@ -55,7 +55,7 @@ class Setup(object):
                     print('Waiting for location update...')
 
         simulation = self.settings.get("vehicle_simulation")
-        if not simulation and isinstance(vehicle, MockVehicle):
+        if not simulation and isinstance(self.vehicle, MockVehicle):
             print("Warning: Using mock vehicle while not in simulation. This may be useful for testing the distance sensor but might indicate an incorrect setting in other cases.")
 
         if simulation:
