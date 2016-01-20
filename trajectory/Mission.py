@@ -217,7 +217,7 @@ class Mission(object):
         Perform any calculations for the current vehicle state.
         """
         location = self.vehicle.location.global_relative_frame
-        if location.lat is None:
+        if location.lat is None or location.lat == 0.0:
             location = self.vehicle.location.local_frame
 
         print("Location: {}".format(location))
