@@ -46,12 +46,13 @@ class Setup(object):
             self.vehicle = dronekit.connect(connect, baud=self.settings.get("mavlink_baud_rate"))
 
             # Wait until location has been filled
-            self.wait = True
-            self.vehicle.add_attribute_listener('location.global_relative_frame', self.listen)
+            if self.settings.get("gps"):
+                self.wait = True
+                self.vehicle.add_attribute_listener('location.global_relative_frame', self.listen)
 
-            while self.wait:
-                time.sleep(1.0)
-                print('Waiting for location update...')
+                while self.wait:
+                    time.sleep(1.0)
+                    print('Waiting for location update...')
 
         simulation = self.settings.get("vehicle_simulation")
         if not simulation and isinstance(vehicle, MockVehicle):

@@ -219,7 +219,11 @@ class Mission(object):
         """
         Perform any calculations for the current vehicle state.
         """
-        print("Location: {}".format(self.vehicle.location.global_relative_frame))
+        location = self.vehicle.location.global_relative_frame
+        if location.lat is None:
+            location = self.vehicle.location.local_frame
+
+        print("Location: {}".format(location))
 
     def check_sensor_distance(self, sensor_distance, yaw, pitch):
         """
