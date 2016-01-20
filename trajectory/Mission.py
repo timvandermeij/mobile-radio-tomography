@@ -174,9 +174,6 @@ class Mission(object):
         while self.use_gps and self.vehicle.gps_0.fix_type < 2:
             print("Waiting for GPS...: {}".format(self.vehicle.gps_0.fix_type))
             time.sleep(1)
-        while not self.use_gps and not self.vehicle.ekf_ok:
-            print("Waiting for EKF...")
-            time.sleep(1)
 
         if self.is_rover:
             # Rover is already armed and does not need to take off.
