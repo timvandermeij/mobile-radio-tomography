@@ -8,6 +8,7 @@ from dronekit import VehicleMode, Command, LocationGlobalRelative, LocationLocal
 from pymavlink import mavutil
 
 from ..geometry.Geometry import Geometry_Spherical
+from ..location.Dead_Reckoning import Dead_Reckoning
 from Memory_Map import Memory_Map
 from MockVehicle import MockVehicle
 
@@ -32,6 +33,7 @@ class Mission(object):
         self.geometry = self.environment.get_geometry()
         self.settings = settings
         self.memory_map = None
+        self.dead_reckoning = Dead_Reckoning()
 
     def get_packet(self, vehicle, msg_type, msg):
         if msg_type == "HEARTBEAT":
@@ -43,6 +45,10 @@ class Mission(object):
                 key = "servo{}_raw".format(servo.get_pin())
                 if key in fields:
                     servo.set_current_pwm(getattr(msg, key))
+        elif msg_type == "LOCAL_POSITION_NED":
+            self.dead_reckoning.set_velocity(msg.vx, msg.vy)
+            print("MSG: {:.2f}, {:.2f}".format(msg.x, msg.y))
+            print("DR: {:.2f}, {:.2f}".format(*self.dead_reckoning.get()))
 
     def distance_to_current_waypoint(self):
         """
