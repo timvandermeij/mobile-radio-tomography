@@ -1,3 +1,4 @@
+import json
 import sys
 import numpy as np
 from __init__ import __package__
@@ -9,14 +10,15 @@ from reconstruction.Viewer import Viewer
 
 def main(argv):
     arguments = Arguments("settings.json", argv)
+    settings = arguments.get_settings("reconstruction")
 
-    size = (21,21)
-    positions = [
-        (0,0), (0,3), (0,6), (0,9), (0,12), (0,15), (0,18), (0,21), (3,21),
-        (6,21), (9,21), (12,21), (15,21), (18,21), (21,21), (21,18), (21,15),
-        (21,12), (21,9), (21,6), (21,3), (21,0), (18,0), (15,0), (12,0), (9,0),
-        (6,0), (2,0)
-    ]
+    # Read the reconstruction data file.
+    filename = settings.get("filename")
+    with open("reconstruction_data/{}.json".format(filename)) as data:
+        reconstruction_data = json.load(data)
+        size = reconstruction_data["size"]
+        positions = reconstruction_data["positions"]
+
     weight_matrix = Weight_Matrix(arguments, size, positions)
     reconstructor = Truncated_SVD_Reconstructor(arguments, weight_matrix.create())
 
@@ -25,7 +27,8 @@ def main(argv):
 
     arguments.check_help()
 
-    data = Signal_Strength_File_Reader('walking.csv', len(positions))
+    data = Signal_Strength_File_Reader("reconstruction_data/{}.csv".format(filename),
+                                       len(positions))
     previous_sweep = None
     for _ in range(data.size()):
         sweep = data.get_sweep()

@@ -68,6 +68,12 @@
             "rotate_speed": 90.0
         }
     },
+    "reconstruction": {
+        "name": "Reconstruction",
+        "settings": {
+            "filename": "walking"
+        }
+    },
     "reconstruction_viewer": {
         "name": "Reconstruction viewer",
         "settings": {
