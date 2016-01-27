@@ -46,7 +46,7 @@ class Arguments(object):
         Register argument specifications in the argument parser for the Settings group.
         """
 
-        group = self.parser.add_argument_group(group)
+        group = self.parser.add_argument_group("{} ({})".format(settings.name, group))
         for key, value in settings.get_all():
             kw = {
                 "dest": key,

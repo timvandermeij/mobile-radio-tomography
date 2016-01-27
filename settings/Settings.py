@@ -29,6 +29,7 @@ class Settings(object):
             raise KeyError("Component '{}' not found.".format(self.component_name))
 
         self.settings = settings[self.component_name]["settings"]
+        self.name = settings[self.component_name]["name"]
 
         if "parent" in settings[self.component_name]:
             if arguments is not None:

@@ -13,6 +13,10 @@ class TestSettings(unittest.TestCase):
         with self.assertRaises(KeyError):
             settings = Settings("tests/settings.json", "invalid")
 
+    def test_name(self):
+        settings = Settings("tests/settings.json", "foo")
+        self.assertEqual(settings.name, "Foo component")
+
     def test_existing_key(self):
         settings = Settings("tests/settings.json", "foo")
         self.assertEqual(settings.get("bar"), 2)

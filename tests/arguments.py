@@ -28,6 +28,7 @@ class TestArguments(unittest.TestCase):
 
     def test_check_help(self):
         arguments = Arguments("tests/settings.json", ['--help'])
+        settings = arguments.get_settings("foo")
 
         # Buffer help output so it doesn't mess up the test output and we can 
         # actually test whether it prints help.
@@ -40,6 +41,7 @@ class TestArguments(unittest.TestCase):
                     arguments.check_help()
 
         self.assertRegexpMatches(output.getvalue(), "--help")
+        self.assertRegexpMatches(output.getvalue(), r"Foo component \(foo\)")
 
     def test_nonexistent_settings(self):
         arguments = Arguments("tests/settings.json", ['--qux', '42'])
