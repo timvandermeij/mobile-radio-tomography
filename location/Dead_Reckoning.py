@@ -3,7 +3,7 @@ import numpy as np
 class Dead_Reckoning(object):
     def __init__(self):
         """
-        Initialize the dead reckoning object to an empty square.
+        Initialize the dead reckoning object.
         """
 
         self._position = (0, 0)
