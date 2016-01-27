@@ -33,6 +33,8 @@ class Dead_Reckoning(object):
         x = self._position[0] + (vx + self._last_vx)/2 * dt
         y = self._position[1] + (vy + self._last_vy)/2 * dt
         self._position = (x, y)
+        self._last_vx = vx
+        self._last_vy = vy
         self._last_time = cur_time
 
     def set(self, distance, angle=0):
