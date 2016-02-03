@@ -9,6 +9,7 @@ if displayless:
     matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
+from __init__ import __package__
 from planning import Reconstruction_Planning
 
 def do_plot(name):
@@ -44,12 +45,17 @@ def main(argv):
         print(usage)
         return
 
-    # TODO: Define problem and start algorithm
+    # TODO: Define problem
     problem = None
     print(usage)
     return
 
-    P, Objectives, Feasible = Reconstruction_Planning.evolve(problem, algo, mu, t_max, steps)
+    if algo == "NSGA":
+        evo = Reconstruction_Planning.NSGA(problem, mu, t_max, steps)
+    else:
+        evo = Reconstruction_Planning.SMS_EMOA(problem, mu, t_max, steps)
+
+    P, Objectives, Feasible = evo.evolve()
 
     # Print feasible solutions in a sorted manner.
     indices = [i for i in range(mu) if Feasible[i]]
