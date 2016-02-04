@@ -17,6 +17,13 @@ class Weight_Matrix(object):
         self._positions = positions
         self._lambda = settings.get("distance_lambda")
 
+    def set_positions(self, positions):
+        """
+        Change the sensor positons to another list of coordinates.
+        """
+
+        self._positions = positions
+
     def create(self):
         """
         Create a weight matrix for the reconstruction phase.

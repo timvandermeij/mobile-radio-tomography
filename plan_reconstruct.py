@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 
 from __init__ import __package__
 from planning import Reconstruction_Planning
+from settings import Arguments
 
 def do_plot(name):
     """
@@ -34,41 +35,34 @@ def do_plot(name):
 def main(argv):
     # Initialize, read parameters from input and set up problems
     stamp = int(time.time())
-    usage = "Usage: plan_reconstruct.py <problem> <algo> <mu> <t_max> <steps...>"
-    try:
-        p = argv[0].upper() if len(argv) > 0 else "RP"
-        algo = argv[1].upper() if len(argv) > 1 else "SMS-EMOA"
-        mu = int(argv[2]) if len(argv) > 2 else 15
-        t_max = int(argv[3]) if len(argv) > 3 else 100
-        steps = [float(s) for s in argv[4:]] if len(argv) > 4 else [0.5]
-    except:
-        print(usage)
-        return
 
-    # TODO: Define problem
-    problem = None
-    print(usage)
-    return
+    arguments = Arguments("settings.json", argv)
+    settings = arguments.get_settings("planning")
+    algo = settings.get("algorithm_class").upper().replace('-','_')
 
-    if algo == "NSGA":
-        evo = Reconstruction_Planning.NSGA(problem, mu, t_max, steps)
-    else:
-        evo = Reconstruction_Planning.SMS_EMOA(problem, mu, t_max, steps)
+    problem = Reconstruction_Planning.Reconstruction_Plan(arguments)
+
+    if algo not in Reconstruction_Planning.__dict__:
+        raise ValueError("Algorithm class '{}' does not exist".format(algo))
+
+    evo = Reconstruction_Planning.__dict__[algo](problem, arguments)
+
+    arguments.check_help()
 
     P, Objectives, Feasible = evo.evolve()
 
     # Print feasible solutions in a sorted manner.
-    indices = [i for i in range(mu) if Feasible[i]]
+    indices = [i for i in range(evo.mu) if Feasible[i]]
     indices = sorted(indices, key=lambda i: Objectives[i][0])
     if len(indices) == 0:
-        print("No feasible solutions found after {} iterations!".format(t_max))
+        print("No feasible solutions found after {} iterations!".format(evo.t_max))
     else:
         print("Search variables an objective values for feasible solutions:")
         for i in indices:
             print("{}. {}: {}".format(i, P[i], Objectives[i]))
 
     # Plot the pareto front between the two objectives.
-    title = "Pareto front for {} with {}, t={}".format(p, algo, t_max)
+    title = "Pareto front with {}, t={}".format(algo, evo.t_max)
     print(title)
     plt.clf()
     plt.title(title)

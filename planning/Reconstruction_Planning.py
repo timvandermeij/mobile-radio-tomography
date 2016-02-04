@@ -1,8 +1,12 @@
 # Evolutionary Multiobjective Optimization algorithms and problem sets
 
+import math
 import numpy as np
 from collections import OrderedDict
 import itertools
+
+from ..reconstruction.Weight_Matrix import Weight_Matrix
+from ..settings import Arguments
 
 class Problem(object):
     """
@@ -164,13 +168,78 @@ class Problem(object):
 
         return constraints
 
+class Reconstruction_Plan(Problem):
+    def __init__(self, arguments):
+        """
+        Initialize the reconstruction planning problem.
+
+        The number of measurements that we intend to make is a fixed parameter
+        and cannot be optimized by the current algorithm in one run.
+
+        The network size is defined in the same way as in the weight matrix
+        of the reconstruction problem itself.
+        """
+
+        if not isinstance(arguments, Arguments):
+            raise ValueError("'arguments' must be an instance of Arguments")
+
+        self.settings = arguments.get_settings("planning_problem")
+        N = self.settings.get("number_of_measurements")
+        network_size = self.settings.get("network_size")
+
+        # Variables:
+        # - y-distances of each measurement line y_1 .. y_n
+        #   domain: from -network_y to network_y (in meters)
+        # - angles of each measurement line compared to the x axis a_1 .. a_n
+        #   domain: from -math.pi to math.pi (in radians)
+        #   This corresponds to slopes.
+        domain = (
+            # Minimum values per variable
+            np.array([[-network_size[1]]*N, [-math.pi]*N]).flatten(),
+            # Maximum values per variable
+            np.array([[network_size[1]]*N, [math.pi]*N]).flatten()
+        )
+        super(Reconstruction_Plan, self).__init__(N, domain)
+
+        # Initial weight matrix object which is filled with current locations 
+        # during evaluations.
+        self.weight_matrix = Weight_Matrix(arguments, network_size, [])
+        self.matrix = None
+
+    def evaluate(self, points):
+        # TODO: Generate positions and create weight matrix
+        return super(Reconstruction_Plan, self).evaluate(points)
+
+    def get_objectives(self):
+        # TODO:
+        # - Matrix should have values filled as much as possible, so that lines
+        #   contribute a lot to the solution
+        # - Matrix should have values that are similar to each other, so that
+        #   locations are evenly measured
+        return []
+
+    def get_constraints(self):
+        constraints = super(Reconstruction_Plan, self).get_constraints()
+        # TODO:
+        # - Matrix must not have columns that have only zeroes, since the
+        #   a pixel in the image is not intersected by any line
+        # - Variables should not be in such a way that a pair of positions do
+        #   not intersect with the network
+        return constraints
+
 class Algorithm(object):
-    def __init__(self, problem, mu, t_max, steps):
+    def __init__(self, problem, arguments):
+        if not isinstance(arguments, Arguments):
+            raise ValueError("'arguments' must be an instance of Arguments")
+
         self.problem = problem
-        self.mu = mu
-        self.t_max = t_max
+        self.settings = arguments.get_settings("planning_algorithm")
+        self.mu = self.settings.get("population_size")
+        self.t_max = self.settings.get("iteration_limit")
+
         # Make steps as long as necessary, and convert to numpy array for easy 
         # per-component application.
+        steps = self.settings.get("step_size")
         dim = self.problem.dim
         self.steps = np.array((steps * ((dim / len(steps)) + 1))[:dim])
 
@@ -179,8 +248,8 @@ class Algorithm(object):
         Perform the evolutionary algorithm and find solutions.
         """
 
-        print("Settings: Problem {}, Algo {}, mu={}, t_max={}".format(self.problem.__class__.__name__, self.__class__.__name__, mu, t_max))
-        print("Steps: {}".format(steps))
+        print("Settings: Problem {}, Algo {}, mu={}, t_max={}".format(self.problem.__class__.__name__, self.__class__.__name__, self.mu, self.t_max))
+        print("Steps: {}".format(self.steps))
 
         # For our initial population of size mu, generate random vectors with 
         # values in a feasible interval using domain specification.
