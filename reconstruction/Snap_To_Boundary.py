@@ -1,3 +1,4 @@
+from collections import namedtuple
 import math
 
 class Snap_To_Boundary(object):
