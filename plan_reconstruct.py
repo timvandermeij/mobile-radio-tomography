@@ -10,7 +10,8 @@ if displayless:
 import matplotlib.pyplot as plt
 
 from __init__ import __package__
-from planning import Reconstruction_Planning
+from planning.Problem import Reconstruction_Plan
+from planning import Algorithm
 from settings import Arguments
 
 def do_plot(name):
@@ -40,12 +41,12 @@ def main(argv):
     settings = arguments.get_settings("planning")
     algo = settings.get("algorithm_class").upper().replace('-','_')
 
-    problem = Reconstruction_Planning.Reconstruction_Plan(arguments)
+    problem = Reconstruction_Plan(arguments)
 
-    if algo not in Reconstruction_Planning.__dict__:
+    if algo not in Algorithm.__dict__:
         raise ValueError("Algorithm class '{}' does not exist".format(algo))
 
-    evo = Reconstruction_Planning.__dict__[algo](problem, arguments)
+    evo = Algorithm.__dict__[algo](problem, arguments)
 
     arguments.check_help()
 
