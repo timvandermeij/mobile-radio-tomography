@@ -5,6 +5,7 @@ import numpy as np
 from collections import OrderedDict
 import itertools
 
+from ..reconstruction.Snap_To_Boundary import Snap_To_Boundary
 from ..reconstruction.Weight_Matrix import Weight_Matrix
 from ..settings import Arguments
 
@@ -85,12 +86,23 @@ class Problem(object):
         Feasible = [True for _ in points]
         Objectives = [[] for _ in points]
         for idx, x in enumerate(points):
-            for constraint in self.constraints:
-                Feasible[idx] = Feasible[idx] and constraint(x)
-
-            Objectives[idx] = [objective(x) for objective in self.objectives]
+            Feasible[idx], Objectives[idx] = self.evaluate_point(x)
 
         return Feasible, Objectives
+
+    def evaluate_point(self, point):
+        """
+        Evaluate a single individual. a vector containing variable values.
+
+        This checks whether this vector is feasible according to all of the
+        problem constraints, and calculates the objective function values for
+        the vector. These two evaluations are returned, where the feasibility
+        is a boolean and the objectives are a list of function values.
+        """
+        Feasible = all(constraint(point) for constraint in self.constraints)
+        Objective = [objective(point) for objective in self.objectives]
+
+        return Feasible, Objective
 
     def mutate(self, point, steps):
         """
@@ -188,43 +200,83 @@ class Reconstruction_Plan(Problem):
         network_size = self.settings.get("network_size")
 
         # Variables:
-        # - y-distances of each measurement line y_1 .. y_n
-        #   domain: from -network_y to network_y (in meters)
+        # - distances from the origin of each measurement line y_1 .. y_n
+        #   domain: from -network_y**2 to network_y**2 (in meters)
         # - angles of each measurement line compared to the x axis a_1 .. a_n
-        #   domain: from -math.pi to math.pi (in radians)
+        #   domain: from 0.0 to math.pi (in radians)
         #   This corresponds to slopes.
         domain = (
             # Minimum values per variable
-            np.array([[-network_size[1]]*N, [-math.pi]*N]).flatten(),
+            np.array([[-network_size[1]**2]*N, [0.0]*N]).flatten(),
             # Maximum values per variable
-            np.array([[network_size[1]]*N, [math.pi]*N]).flatten()
+            np.array([[network_size[1]**2]*N, [math.pi]*N]).flatten()
         )
-        super(Reconstruction_Plan, self).__init__(N, domain)
+        super(Reconstruction_Plan, self).__init__(N*2, domain)
 
         # Initial weight matrix object which is filled with current locations 
         # during evaluations.
         self.weight_matrix = Weight_Matrix(arguments, network_size, [])
         self.matrix = None
+        self.snapper = Snap_To_Boundary([0, 0], *network_size)
+        self.unsnappable = False
 
-    def evaluate(self, points):
-        # TODO: Generate positions and create weight matrix
-        return super(Reconstruction_Plan, self).evaluate(points)
+        self.N = N
+        self.network_size = network_size
+
+    def generate_positions(self, offset, angle):
+        if angle == math.pi/2:
+            return [[offset, 0], [offset, self.network_size[1]]]
+        if angle < math.pi/2:
+            beta = math.pi/2 - angle
+        else:
+            beta = angle - math.pi/2
+
+        a = math.tan(angle)
+        b = offset / math.sin(beta)
+        return [[0, b], [self.network_size[0], a*self.network_size[0]+b]]
+
+    def evaluate_point(self, point):
+        self.unsnappable = False
+
+        # Generate positions, check snappability and create weight matrix
+        positions = []
+        for i in range(self.N):
+            sensor_points = self.generate_positions(point[i], point[i+self.N])
+            snapped_points = self.snapper.execute(*sensor_points)
+            if snapped_points is None:
+                print("Unsnappable: {}, {}".format(*sensor_points))
+                self.unsnappable = True
+            else:
+                positions.extend([[p.x, p.y] for p in snapped_points])
+
+        self.weight_matrix.set_positions(positions)
+        self.matrix = self.weight_matrix.create(full=False)
+        if all(self.matrix.any(axis=0)):
+            print(self.matrix)
+
+        return super(Reconstruction_Plan, self).evaluate_point(point)
 
     def get_objectives(self):
-        # TODO:
-        # - Matrix should have values filled as much as possible, so that lines
-        #   contribute a lot to the solution
-        # - Matrix should have values that are similar to each other, so that
-        #   locations are evenly measured
-        return []
+        return [
+            # Matrix should have values filled as much as possible, so that 
+            # lines contribute a lot to the solution
+            lambda x: -self.matrix.sum(),
+            lambda x: -self.matrix.any(axis=0).sum(),
+            # Matrix should have values that are similar to each other in the 
+            # columns, so that pixels are evenly measured by links
+            #lambda x: np.var(self.matrix, axis=0).mean()
+        ]
 
     def get_constraints(self):
         constraints = super(Reconstruction_Plan, self).get_constraints()
-        # TODO:
-        # - Matrix must not have columns that have only zeroes, since the
-        #   a pixel in the image is not intersected by any line
-        # - Variables should not be in such a way that a pair of positions do
-        #   not intersect with the network
+        constraints.extend([
+            # Variables should not be in such a way that a pair of positions do 
+            # not intersect with the network
+            lambda x: not self.unsnappable#,
+            # Matrix must not have columns that have only zeroes, since then 
+            # a pixel in the image is not intersected by any line
+            #lambda x: np.all(self.matrix.any(axis=0))
+        ])
         return constraints
 
 class Algorithm(object):

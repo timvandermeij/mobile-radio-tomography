@@ -24,7 +24,7 @@ class Weight_Matrix(object):
 
         self._positions = positions
 
-    def create(self):
+    def create(self, full=True):
         """
         Create a weight matrix for the reconstruction phase.
 
@@ -40,8 +40,13 @@ class Weight_Matrix(object):
         # and destination sensors are used, so there are no self links.
         sensor_count = len(self._positions)
         sensors = range(sensor_count)
-        link_count = (sensor_count ** 2) - sensor_count
-        links = list(itertools.permutations(sensors, 2))
+        if full:
+            link_count = (sensor_count ** 2) - sensor_count
+            links = list(itertools.permutations(sensors, 2))
+        else:
+            link_count = sensor_count / 2
+            links = [sensors[i:i+2] for i in range(0, sensor_count, 2)]
+
         width, height = self._size
 
         # Create a mesh grid for the space covered by the sensors.
