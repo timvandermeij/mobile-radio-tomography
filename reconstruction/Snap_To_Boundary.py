@@ -81,9 +81,9 @@ class Snap_To_Boundary(object):
             return []
 
         # Calculate the angle of the triangle.
-        delta_x = abs(end.x - start.x)
-        delta_y = abs(end.y - start.y)
-        angle = math.atan2(delta_y, delta_x)
+        delta_x = end.x - start.x
+        delta_y = end.y - start.y
+        angle = math.atan2(abs(delta_y), abs(delta_x))
 
         # Snap the start and end points to the boundaries of the network.
         snapped_points = []
@@ -93,23 +93,35 @@ class Snap_To_Boundary(object):
                     # Snap to left boundary.
                     adjacent_side = abs(self._origin.x - point.x)
                     opposite_side = math.tan(angle) * adjacent_side
-                    snapped_point = Point(point.x + adjacent_side, point.y + opposite_side)
+                    if delta_y < 0:
+                        snapped_point = Point(point.x + adjacent_side, point.y + opposite_side)
+                    else:
+                        snapped_point = Point(point.x + adjacent_side, point.y - opposite_side)
                 else:
                     # Snap to right boundary.
                     adjacent_side = abs((self._origin.x + self._width) - point.x)
                     opposite_side = math.tan(angle) * adjacent_side
-                    snapped_point = Point(point.x - adjacent_side, point.y - opposite_side)
+                    if delta_y < 0:
+                        snapped_point = Point(point.x - adjacent_side, point.y - opposite_side)
+                    else:
+                        snapped_point = Point(point.x - adjacent_side, point.y + opposite_side)
             else:
                 if point.y <= self._origin.y:
                     # Snap to bottom boundary.
-                    adjacent_side = abs(self._origin.y - point.y)
-                    opposite_side = math.tan(angle) * adjacent_side
-                    snapped_point = Point(point.y + adjacent_side, point.x - opposite_side)
+                    opposite_side = abs(self._origin.y - point.y)
+                    adjacent_side = opposite_side / float(math.tan(angle))
+                    if delta_y < 0:
+                        snapped_point = Point(point.x + adjacent_side, point.y + opposite_side)
+                    else:
+                        snapped_point = Point(point.x - adjacent_side, point.y + opposite_side)
                 else:
                     # Snap to top boundary.
-                    adjacent_side = abs((self._origin.y + self._height) - point.y)
-                    opposite_side = math.tan(angle) * adjacent_side
-                    snapped_point = Point(point.y - adjacent_side, point.x + opposite_side)
+                    opposite_side = abs((self._origin.y + self._height) - point.y)
+                    adjacent_side = opposite_side / float(math.tan(angle))
+                    if delta_y < 0:
+                        snapped_point = Point(point.x - adjacent_side, point.y - opposite_side)
+                    else:
+                        snapped_point = Point(point.x + adjacent_side, point.y - opposite_side)
 
             snapped_points.append(snapped_point)
 
