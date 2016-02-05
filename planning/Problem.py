@@ -197,15 +197,16 @@ class Reconstruction_Plan(Problem):
 
         # Variables:
         # - distances from the origin of each measurement line y_1 .. y_n
-        #   domain: from -network_y**2 to network_y**2 (in meters)
+        #   domain: from -net_d to net_d (in meters)
         # - angles of each measurement line compared to the x axis a_1 .. a_n
         #   domain: from 0.0 to math.pi (in radians)
         #   This corresponds to slopes.
+        net_d = math.sqrt(network_size[0]**2 + network_size[1]**2)
         domain = (
             # Minimum values per variable
-            np.array([[-network_size[1]**2]*N, [0.0]*N]).flatten(),
+            np.array([[-net_d]*N, [0.0]*N]).flatten(),
             # Maximum values per variable
-            np.array([[network_size[1]**2]*N, [math.pi]*N]).flatten()
+            np.array([[net_d]*N, [math.pi]*N]).flatten()
         )
         super(Reconstruction_Plan, self).__init__(N*2, domain)
 
@@ -231,8 +232,8 @@ class Reconstruction_Plan(Problem):
         b = offset / math.sin(beta)
         return [[0, b], [self.network_size[0], a*self.network_size[0]+b]]
 
-    def evaluate_point(self, point):
-        self.unsnappable = False
+    def get_positions(self, point):
+        unsnappable = False
 
         # Generate positions, check snappability and create weight matrix
         positions = []
@@ -241,9 +242,14 @@ class Reconstruction_Plan(Problem):
             snapped_points = self.snapper.execute(*sensor_points)
             if snapped_points is None:
                 print("Unsnappable: {}, {}".format(*sensor_points))
-                self.unsnappable = True
+                unsnappable = True
             else:
                 positions.extend([[p.x, p.y] for p in snapped_points])
+
+        return positions, unsnappable
+
+    def evaluate_point(self, point):
+        positions, self.unsnappable = self.get_positions(point)
 
         self.weight_matrix.set_positions(positions)
         self.matrix = self.weight_matrix.create(full=False)
