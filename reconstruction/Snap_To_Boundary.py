@@ -18,15 +18,11 @@ class Snap_To_Boundary(object):
         self._width = width
         self._height = height
 
-    def execute(self, start, end):
+    def _is_outside(self, start, end):
         """
-        Perform the snap to boundary algorithm.
+        Check if the start and end points of a line are outside the network.
         """
 
-        start = Point(start[0], start[1])
-        end = Point(end[0], end[1])
-
-        # Ensure that the start and end points are not inside the network.
         start_in_network = (start.x > self._origin.x and
                             start.x < self._origin.x + self._width and
                             start.y > self._origin.y and
@@ -35,8 +31,59 @@ class Snap_To_Boundary(object):
                           end.x < self._origin.x + self._width and
                           end.y > self._origin.y and
                           end.y < self._origin.y + self._height)
-        if start_in_network or end_in_network:
-            return None
+        return not (start_in_network or end_in_network)
+
+    def _is_intersecting(self, start, end):
+        """
+        Check if a line, defined by its start and end points, is intersecting
+        at least one of the four boundaries of the network.
+        """
+
+        # Compose the line equation y = ax + b.
+        a = abs(end.y - start.y) / float(abs(end.x - start.x))
+        b = end.y - (a * end.x)
+
+        # Check if the line intersects the left boundary.
+        x = self._origin.x
+        y = (a * x) + b
+        if y >= self._origin.y and y <= self._origin.y + self._height:
+            return True
+
+        # Check if the line intersects the right boundary.
+        x = self._origin.x + self._width
+        y = (a * x) + b
+        if y >= self._origin.y and y <= self._origin.y + self._height:
+            return True
+
+        # Check if the line intersects the top boundary.
+        y = self._origin.y + self._height
+        x = (y - b) / float(a)
+        if x >= self._origin.x and x <= self._origin.x + self._width:
+            return True
+
+        # Check if the line intersects the bottom boundary.
+        y = self._origin.y
+        x = (y - b) / float(a)
+        if x >= self._origin.x and x <= self._origin.x + self._width:
+            return True
+
+        return False
+
+    def execute(self, start, end):
+        """
+        Perform the snap to boundary algorithm.
+        """
+
+        start = Point(start[0], start[1])
+        end = Point(end[0], end[1])
+
+        # Ensure that the start and end points are outside the network.
+        if not self._is_outside(start, end):
+            return []
+
+        # Ensure that the line intersects at least one boundary of the network.
+        if not self._is_intersecting(start, end):
+            return []
 
         # Calculate the angle of the triangle.
         delta_x = abs(end.x - start.x)
