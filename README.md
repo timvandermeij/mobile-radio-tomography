@@ -181,6 +181,23 @@ to receive continuous measurements from the distance sensor. Change the pin
 numbers for the trigger and echo pins in `settings.json` if you have used
 different pin numbers when connecting the HC-SR04 sensor to the Raspberry Pi.
 
+Reconstruction and visualization
+--------------------------------
+
+The reconstruction and visualization components convert a dataset with signal
+strength measurements to a two-dimensional image per valid sweep. There are
+several reconstructors:
+
+* Least squares
+* SVD
+* Truncated SVD
+
+Execute `python2 reconstruction.py` in a terminal to execute the reconstruction
+and visualization components with the default file, reconstructor and other
+parameters. The `--help` argument will display which parameters you can tune
+for the reconstruction and visualization (for instance, the reconstructor and
+the interpolation method are customizable).
+
 Running the unit tests
 ======================
 
