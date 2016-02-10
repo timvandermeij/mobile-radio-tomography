@@ -34,6 +34,8 @@ class TestReconstructionSnapToBoundary(unittest.TestCase):
         self.assertEqual(self.snapper.execute([5, 1], [5, 7]), None)
 
     def test_is_on_boundary(self):
+        Point = namedtuple('Point', 'x y')
+
         # Points that are already on a boundary should not be snapped.
         expected = [Point(2, 6), Point(2, 2)]
         self.assertEqual(self.snapper.execute([2, 6], [2, 2]), expected)
