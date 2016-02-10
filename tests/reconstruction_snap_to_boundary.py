@@ -29,6 +29,10 @@ class TestReconstructionSnapToBoundary(unittest.TestCase):
         # Lines that intersect at least one boundary should be fine.
         self.assertNotEqual(self.snapper.execute([2, 1], [5, 3]), None)
 
+        # Horizontal and vertical lines should not cause a division by zero error.
+        self.assertEqual(self.snapper.execute([-1, 7], [5, 7]), None)
+        self.assertEqual(self.snapper.execute([5, 1], [5, 7]), None)
+
     def test_execute(self):
         Point = namedtuple('Point', 'x y')
 

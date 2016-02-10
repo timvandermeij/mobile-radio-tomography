@@ -33,33 +33,46 @@ class Snap_To_Boundary(object):
         at least one of the four boundaries of the network.
         """
 
-        # Compose the line equation y = ax + b.
-        a = (end.y - start.y) / float(end.x - start.x)
-        b = end.y - (a * end.x)
+        x = y = a = b = None
+        if end.x - start.x == 0:
+            # Vertical line, so only check intersection with the top and
+            # bottom boundary.
+            x = start.x
+        elif end.y - start.y == 0:
+            # Horizontal line, so only check intersection with the left
+            # and right boundary.
+            y = start.y
+        else:
+            # Other line, so check intersection with all boundaries using
+            # the line equation y = ax + b.
+            a = (end.y - start.y) / float(end.x - start.x)
+            b = end.y - (a * end.x)
 
-        # Check if the line intersects the left boundary.
-        x = self._origin.x
-        y = (a * x) + b
-        if y >= self._origin.y and y <= self._origin.y + self._height:
-            return True
+        if y is not None or (a is not None and b is not None):
+            # Check if the line intersects the left boundary.
+            x_left = self._origin.x
+            y_left = (a * x_left) + b if y is None else y
+            if y_left >= self._origin.y and y_left <= self._origin.y + self._height:
+                return True
 
-        # Check if the line intersects the right boundary.
-        x = self._origin.x + self._width
-        y = (a * x) + b
-        if y >= self._origin.y and y <= self._origin.y + self._height:
-            return True
+            # Check if the line intersects the right boundary.
+            x_right = self._origin.x + self._width
+            y_right = (a * x_right) + b if y is None else y
+            if y_right >= self._origin.y and y_right <= self._origin.y + self._height:
+                return True
 
-        # Check if the line intersects the top boundary.
-        y = self._origin.y + self._height
-        x = (y - b) / float(a)
-        if x >= self._origin.x and x <= self._origin.x + self._width:
-            return True
+        if x is not None or (a is not None and b is not None):
+            # Check if the line intersects the top boundary.
+            y_top = self._origin.y + self._height
+            x_top = (y_top - b) / float(a) if x is None else x
+            if x_top >= self._origin.x and x_top <= self._origin.x + self._width:
+                return True
 
-        # Check if the line intersects the bottom boundary.
-        y = self._origin.y
-        x = (y - b) / float(a)
-        if x >= self._origin.x and x <= self._origin.x + self._width:
-            return True
+            # Check if the line intersects the bottom boundary.
+            y_bottom = self._origin.y
+            x_bottom = (y_bottom - b) / float(a) if x is None else x
+            if x_bottom >= self._origin.x and x_bottom <= self._origin.x + self._width:
+                return True
 
         return False
 
