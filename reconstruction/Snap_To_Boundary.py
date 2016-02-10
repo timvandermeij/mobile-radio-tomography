@@ -76,6 +76,23 @@ class Snap_To_Boundary(object):
 
         return False
 
+    def _is_on_boundary(self, point):
+        """
+        Check if a given point is positioned on a boundary.
+        """
+
+        point_on_horizontal_boundary = (
+            point.x >= self._origin.x and
+            point.x <= self._origin.x + self._width and
+            (point.y == self._origin.y or point.y == self._origin.y + self._height)
+        )
+        point_on_vertical_boundary = (
+            point.y >= self._origin.y and
+            point.y <= self._origin.y + self._height and
+            (point.x == self._origin.x or point.x == self._origin.x + self._width)
+        )
+        return (point_on_horizontal_boundary or point_on_vertical_boundary)
+
     def execute(self, start, end):
         """
         Perform the snap to boundary algorithm.
@@ -101,6 +118,11 @@ class Snap_To_Boundary(object):
         # Snap the start and end points to the boundaries of the network.
         snapped_points = []
         for point in [start, end]:
+            # There is no need to snap start or end points that are already on a boundary.
+            if self._is_on_boundary(point):
+                snapped_points.append(point)
+                continue
+
             if point.y >= self._origin.y and point.y <= self._origin.y + self._height:
                 if point.x <= self._origin.x:
                     # Snap to left boundary.
