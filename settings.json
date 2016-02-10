@@ -92,7 +92,8 @@
     "reconstruction": {
         "name": "Reconstruction",
         "settings": {
-            "filename": "walking"
+            "filename": "walking",
+            "reconstructor": "truncated-svd"
         }
     },
     "reconstruction_viewer": {

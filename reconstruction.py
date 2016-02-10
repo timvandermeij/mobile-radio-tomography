@@ -5,12 +5,27 @@ from __init__ import __package__
 from settings import Arguments
 from reconstruction.Signal_Strength_File_Reader import Signal_Strength_File_Reader
 from reconstruction.Weight_Matrix import Weight_Matrix
+from reconstruction.Least_Squares_Reconstructor import Least_Squares_Reconstructor
+from reconstruction.SVD_Reconstructor import SVD_Reconstructor
 from reconstruction.Truncated_SVD_Reconstructor import Truncated_SVD_Reconstructor
 from reconstruction.Viewer import Viewer
 
 def main(argv):
     arguments = Arguments("settings.json", argv)
     settings = arguments.get_settings("reconstruction")
+
+    # Set the reconstructor class.
+    reconstructors = {
+        "least-squares": Least_Squares_Reconstructor,
+        "svd": SVD_Reconstructor,
+        "truncated-svd": Truncated_SVD_Reconstructor
+    }
+    reconstructor = settings.get("reconstructor")
+    if reconstructor not in reconstructors:
+        print("Unknown reconstructor '{}'".format(reconstructor))
+        sys.exit(1)
+
+    reconstructor_class = reconstructors[reconstructor]
 
     # Read the reconstruction data file.
     filename = settings.get("filename")
@@ -20,7 +35,7 @@ def main(argv):
         positions = reconstruction_data["positions"]
 
     weight_matrix = Weight_Matrix(arguments, size, positions)
-    reconstructor = Truncated_SVD_Reconstructor(arguments, weight_matrix.create())
+    reconstructor = reconstructor_class(arguments, weight_matrix.create())
 
     viewer = Viewer(arguments, size)
     viewer.show()
