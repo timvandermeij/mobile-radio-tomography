@@ -51,3 +51,11 @@ class TestReconstructionSnapToBoundary(unittest.TestCase):
         # Top and bottom boundary, increasing line (positive delta y).
         expected = [Point(17/6.0, 2), Point(13/6.0, 6)]
         self.assertEqual(self.snapper.execute([3, 1], [2, 7]), expected)
+
+        # Horizontal lines should be handled properly.
+        expected = [Point(0, 4), Point(4, 4)]
+        self.assertEqual(self.snapper.execute([-1, 4], [5, 4]), expected)
+
+        # Vertical lines should be handled properly.
+        expected = [Point(2, 2), Point(2, 6)]
+        self.assertEqual(self.snapper.execute([2, 1], [2, 7]), expected)
