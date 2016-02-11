@@ -36,7 +36,7 @@ def main(argv):
     viewer.show()
 
     # Create the weight matrix.
-    weight_matrix = Weight_Matrix(arguments, reader.get_size())
+    weight_matrix = Weight_Matrix(arguments, reader.get_origin(), reader.get_size())
     arguments.check_help()
 
     # Execute the reconstruction and visualization.

@@ -1,8 +1,9 @@
 import numpy as np
+from Snap_To_Boundary import Snap_To_Boundary
 from ..settings import Arguments, Settings
 
 class Weight_Matrix(object):
-    def __init__(self, settings, size):
+    def __init__(self, settings, origin, size):
         """
         Initialize the weight matrix object.
         """
@@ -14,9 +15,11 @@ class Weight_Matrix(object):
 
         self._lambda = settings.get("distance_lambda")
 
+        self._origin = origin
         self._width, self._height = size
         self._matrix = np.empty((0, self._width * self._height))
         self._sensors = []
+        self._snapper = Snap_To_Boundary(self._origin, self._width, self._height)
 
     def update(self, packet):
         """
@@ -31,9 +34,12 @@ class Weight_Matrix(object):
           by Alyssa Milburn
         """
 
-        # Get the index of the source sensor. Add it to the list if it does not exist.
-        # TODO: snap to boundary
+        # Snap the source and destination points to the boundaries of the network.
         source = (packet.get("from_latitude"), packet.get("from_longitude"))
+        destination = (packet.get("to_latitude"), packet.get("to_longitude"))
+        source, destination = self._snapper.execute(source, destination)
+
+        # Get the index of the source sensor. Add it to the list if it does not exist.
         try:
             source_index = self._sensors.index(source)
         except ValueError:
@@ -41,8 +47,6 @@ class Weight_Matrix(object):
             source_index = len(self._sensors) - 1
 
         # Get the index of the destination sensor. Add it to the list if it does not exist.
-        # TODO: snap to boundary
-        destination = (packet.get("to_latitude"), packet.get("to_longitude"))
         try:
             destination_index = self._sensors.index(destination)
         except ValueError:

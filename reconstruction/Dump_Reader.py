@@ -10,6 +10,7 @@ class Dump_Reader(object):
 
         self._filename = filename
 
+        self._origin = [0, 0]
         self._size = [0, 0]
         self._packets = Queue.Queue()
 
@@ -26,9 +27,11 @@ class Dump_Reader(object):
 
         with open(self._filename, "r") as dump:
             data = json.load(dump)
+            origin = data["origin"]
             size = data["size"]
             packets = data["packets"]
 
+            self._origin = origin
             self._size = size
             for packet in packets:
                 xbee_packet = XBee_Packet()
@@ -39,6 +42,13 @@ class Dump_Reader(object):
                 xbee_packet.set("to_longitude", packet[3])
                 xbee_packet.set("rssi", packet[4])
                 self._packets.put(xbee_packet)
+
+    def get_origin(self):
+        """
+        Get the origin of the network.
+        """
+
+        return self._origin
 
     def get_size(self):
         """
