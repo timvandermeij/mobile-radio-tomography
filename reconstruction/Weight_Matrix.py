@@ -80,8 +80,6 @@ class Weight_Matrix(object):
         row = (1.0 / np.sqrt(length)) * weight
         self._matrix = np.vstack([self._matrix, row])
 
-        # TODO: remove old data after a while?
-
     def check(self):
         """
         Check if the weight matrix is complete, i.e., if the columns of the
