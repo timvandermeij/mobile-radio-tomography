@@ -71,7 +71,7 @@
     "reconstruction": {
         "name": "Reconstruction",
         "settings": {
-            "filename": "walking",
+            "filename": "static",
             "reconstructor": "truncated-svd"
         }
     },
