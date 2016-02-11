@@ -63,7 +63,6 @@ class Weight_Matrix(object):
 
         # Calculate the distance from each sensor to each pixel on
         # the grid using the Pythagorean theorem.
-        # TODO: optimize
         distances = np.empty((len(self._sensors), self._width * self._height))
         for index, sensor in enumerate(self._sensors):
             distance = np.sqrt((gridX - sensor[0]) ** 2 + (gridY - sensor[1]) ** 2)
