@@ -17,7 +17,6 @@ class Weight_Matrix(object):
         self._width, self._height = size
         self._matrix = np.empty((0, self._width * self._height))
         self._sensors = []
-        self._links = []
 
     def update(self, packet):
         """
@@ -50,11 +49,6 @@ class Weight_Matrix(object):
             self._sensors.append(destination)
             destination_index = len(self._sensors) - 1
 
-        # Add the link to the link list.
-        # TODO: do we need to keep this?
-        link = (source_index, destination_index)
-        self._links.append(link)
-
         # Create a mesh grid for the space covered by the sensors.
         # This represents a pixel grid that we use to find out which
         # pixels are intersected by a link.
@@ -79,11 +73,8 @@ class Weight_Matrix(object):
         # signal strength of a link. Pixels that have no influence have a weight of
         # zero. A higher weight implies a higher influence on the signal strength.
         # Pixels of short links have a higher weight than those of longer links.
-        source_id, destination_id = link
-        source = self._sensors[source_id]
-        destination = self._sensors[destination_id]
         length = np.sqrt((destination[0] - source[0]) ** 2 + (destination[1] - source[1]) ** 2)
-        weight = (distances[source_id] + distances[destination_id] < length + self._lambda)
+        weight = (distances[source_index] + distances[destination_index] < length + self._lambda)
         row = (1.0 / np.sqrt(length)) * weight
         self._matrix = np.vstack([self._matrix, row])
 
