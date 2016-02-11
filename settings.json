@@ -72,7 +72,8 @@
         "name": "Reconstruction",
         "settings": {
             "filename": "static",
-            "reconstructor": "truncated-svd"
+            "reconstructor": "truncated-svd",
+            "pause_time": 0.75
         }
     },
     "reconstruction_viewer": {
@@ -85,13 +86,13 @@
     "reconstruction_weight_matrix": {
         "name": "Reconstruction weight matrix",
         "settings": {
-            "distance_lambda": 0.2
+            "distance_lambda": 0.6
         }
     },
     "reconstruction_truncated_svd_reconstructor": {
         "name": "Reconstruction truncated SVD reconstructor",
         "settings": {
-            "singular_values": 75
+            "singular_values": 6
         }
     },
     "xbee_base": {

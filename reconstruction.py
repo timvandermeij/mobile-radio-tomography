@@ -1,4 +1,5 @@
 import sys
+import time
 from __init__ import __package__
 from settings import Arguments
 from reconstruction.Dump_Reader import Dump_Reader
@@ -39,23 +40,15 @@ def main(argv):
     arguments.check_help()
 
     # Execute the reconstruction and visualization.
-    previous_rssi = None
     rssi = []
     while reader.count_packets() > 0:
         packet = reader.get_packet()
         rssi.append(packet.get("rssi"))
         weight_matrix.update(packet)
         if weight_matrix.check():
-            if previous_rssi is not None:
-                # Generally successive images are very similar. Subtracting the previous
-                # values from the current values makes the differences stand out more.
-                pixels = reconstructor.execute(weight_matrix.output(), rssi - previous_rssi)
-            else:
-                pixels = reconstructor.execute(weight_matrix.output(), rssi)
-
-            previous_rssi = rssi
-            rssi = []
+            pixels = reconstructor.execute(weight_matrix.output(), rssi)
             viewer.update(pixels)
+            time.sleep(settings.get("pause_time"))
 
 if __name__ == "__main__":
     main(sys.argv[1:])
