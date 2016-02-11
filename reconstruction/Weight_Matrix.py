@@ -52,7 +52,6 @@ class Weight_Matrix(object):
         # Create a mesh grid for the space covered by the sensors.
         # This represents a pixel grid that we use to find out which
         # pixels are intersected by a link.
-        # TODO: optimize
         coordinatesX, coordinatesY = zip(*self._sensors)
         x = np.linspace(min(coordinatesX), max(coordinatesX), self._width)
         y = np.linspace(min(coordinatesY), max(coordinatesY), self._height)
