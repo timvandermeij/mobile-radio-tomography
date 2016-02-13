@@ -1,6 +1,7 @@
 import math
 import numpy as np
 
+from ..geometry.Geometry import Geometry
 from ..reconstruction.Snap_To_Boundary import Snap_To_Boundary
 from ..reconstruction.Weight_Matrix import Weight_Matrix
 from ..settings import Arguments
@@ -205,14 +206,16 @@ class Reconstruction_Plan(Problem):
         # - angles of each measurement line compared to the x axis a_1 .. a_n
         #   domain: from 0.0 to math.pi (in radians)
         #   This corresponds to slopes.
-        net_d = math.sqrt(network_size[0]**2 + network_size[1]**2)
+        net_d = math.sqrt((network_size[0])**2 + (network_size[1])**2)
         domain = (
             # Minimum values per variable
-            np.array([[-net_d]*N, [0.0]*N]).flatten(),
+            np.array([[-network_size[1]]*N, [0.0]*N, [0]*N]).flatten(),
             # Maximum values per variable
-            np.array([[net_d]*N, [math.pi]*N]).flatten()
+            np.array([[net_d]*N, [math.pi]*N, [1]*N]).flatten(),
+            # Whether variables are boolean or real
+            np.array([[False]*N, [False]*N, [True]*N]).flatten()
         )
-        super(Reconstruction_Plan, self).__init__(N*2, domain)
+        super(Reconstruction_Plan, self).__init__(N*3, domain)
 
         # Initial weight matrix object which is filled with current locations 
         # during evaluations.
@@ -238,15 +241,18 @@ class Reconstruction_Plan(Problem):
 
         return super(Reconstruction_Plan, self).format_steps(steps)
 
-    def generate_positions(self, offset, angle):
-        if angle == math.pi/2:
+    def generate_positions(self, offset, angle, cardinal=False):
+        if angle == math.pi/2 or (cardinal and self.geometry.check_angle(angle, math.pi/2, math.pi/8)):
             return [[offset, 0], [offset, self.network_size[1]]]
         if angle < math.pi/2:
             beta = math.pi/2 - angle
         else:
             beta = angle - math.pi/2
 
-        a = math.tan(angle)
+        if cardinal and self.geometry.check_angle(angle, 0.0, math.pi/8):
+            a = 0.0
+        else:
+            a = math.tan(angle)
         b = offset / math.sin(beta)
         return [[0, b], [self.network_size[0], a*self.network_size[0]+b]]
 
@@ -256,7 +262,7 @@ class Reconstruction_Plan(Problem):
         # Generate positions, check snappability and create weight matrix
         positions = []
         for i in range(self.N):
-            sensor_points = self.generate_positions(point[i], point[i+self.N])
+            sensor_points = self.generate_positions(point[i], point[i+self.N], point[i+2*self.N])
             snapped_points = self.snapper.execute(*sensor_points)
             if snapped_points is None:
                 unsnappable += 1
