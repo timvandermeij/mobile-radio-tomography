@@ -17,6 +17,7 @@ class Algorithm(object):
         self.settings = arguments.get_settings("planning_algorithm")
         self.mu = self.settings.get("population_size")
         self.t_max = self.settings.get("iteration_limit")
+        self.t_debug = self.settings.get("iteration_debug")
 
         # Make steps as long as necessary, and convert to numpy array for easy 
         # per-component application.
@@ -41,8 +42,13 @@ class Algorithm(object):
 
         # For t = 1, 2, ..., t_max
         for t in xrange(1, self.t_max+1):
-            if t % 10000 == 0:
+            if t % self.t_debug == 0:
                 print("Iteration {}".format(t))
+                scores = list(sorted((i for i in range(self.mu) if Feasible[i]), key=lambda i: Objectives[i]))
+                if scores:
+                    idx = scores[len(scores)/2]
+                    print("Current knee point objectives: {}".format(Objectives[idx]))
+                print("Infeasible count: {}".format(self.mu - sum(Feasible)))
 
             # Select random index s of the mu points
             s = np.random.randint(self.mu)
