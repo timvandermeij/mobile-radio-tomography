@@ -55,34 +55,39 @@ def main(argv):
     # Print feasible solutions in a sorted manner.
     indices = [i for i in range(evo.mu) if Feasible[i]]
     indices = sorted(indices, key=lambda i: Objectives[i][0])
+    R = evo.sort_nondominated(Objectives)
+
     if len(indices) == 0:
         print("No feasible solutions found after {} iterations!".format(evo.t_max))
     else:
         print("Search variables an objective values for feasible solutions:")
         c = 0
         for i in indices:
-            print("{}. {}: {}".format(i, P[i], Objectives[i]))
-            positions, unsnappable = problem.get_positions(P[i])
-            if not unsnappable:
-                print(positions)
-                plt.clf()
-                plt.title("Planned sensor positions for solution #{} (index {}, f1 = {})".format(c+1, i, Objectives[i][0]))
-                plt.xlabel("x coordinate")
-                plt.ylabel("y coordinate")
-                plt.xlim([-0.1, problem.network_size[0]+0.1])
-                plt.ylim([-0.1, problem.network_size[1]+0.1])
-                plt.xticks(range(problem.network_size[0]+1))
-                plt.yticks(range(problem.network_size[1]+1))
-                plt.grid()
-                lines = []
-                for p in range(0,problem.N*2,2):
-                    lines.extend([(positions[p][0], positions[p+1][0]), (positions[p][1], positions[p+1][1]), 'b-'])
-
-                plt.plot(*lines)
-                plt.plot([positions[p][0] for p in range(problem.N*2)], [positions[p][1] for p in range(problem.N*2)], 'ro')
-                do_plot("display-{}-{}.eps".format(stamp, c))
-
             c += 1
+            if not Feasible[i]:
+                continue
+            if len(indices) == evo.mu and i not in R[0]:
+                continue
+
+            positions, unsnappable = problem.get_positions(P[i])
+            print("{}. {} ({})".format(i, Objectives[i], unsnappable))
+
+            plt.clf()
+            plt.title("Planned sensor positions for solution #{}/{} (index {}, f1 = {})".format(c, len(R[0]), i, Objectives[i][0]))
+            plt.xlabel("x coordinate")
+            plt.ylabel("y coordinate")
+            plt.xlim([-0.1, problem.network_size[0]+0.1])
+            plt.ylim([-0.1, problem.network_size[1]+0.1])
+            plt.xticks(range(problem.network_size[0]+1))
+            plt.yticks(range(problem.network_size[1]+1))
+            plt.grid()
+            lines = []
+            for p in range(0,len(positions),2):
+                lines.extend([(positions[p][0], positions[p+1][0]), (positions[p][1], positions[p+1][1]), 'b-'])
+
+            plt.plot(*lines)
+            plt.plot([positions[p][0] for p in range(len(positions))], [positions[p][1] for p in range(len(positions))], 'ro')
+            do_plot("display-{}-{}.eps".format(stamp, c))
 
     # Plot the pareto front between the two objectives.
     title = "Pareto front with {}, t={}".format(algo, evo.t_max)
@@ -91,9 +96,10 @@ def main(argv):
     plt.title(title)
     plt.xlabel("Objective 1")
     plt.ylabel("Objective 2")
-    o1 = [Objectives[i][0] for i in indices]
-    o2 = [Objectives[i][1] for i in indices]
-    plt.plot(o1, o2, marker='o')
+    for Rk in R:
+        o1 = [Objectives[i][0] for i in Rk]
+        o2 = [Objectives[i][1] for i in Rk]
+        plt.plot(o1, o2, marker='o', linestyle='-' if all(Feasible[i] for i in Rk) else '--')
 
     do_plot("front-{}.eps".format(stamp))
 
