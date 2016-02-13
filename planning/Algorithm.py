@@ -35,7 +35,6 @@ class Algorithm(object):
         # For our initial population of size mu, generate random vectors with 
         # values in a feasible interval using domain specification.
         P = [self.problem.get_random_vector() for _ in range(self.mu)]
-        #print("Initial population: {}".format(P))
 
         # Evaluate objectives and constraints for points in the population.
         Feasible, Objectives = self.problem.evaluate(P)
@@ -51,15 +50,12 @@ class Algorithm(object):
             # with a normal distributed random number generator. This is done 
             # on each component using numpy broadcasting.
             x_new = self.problem.mutate(P[s], self.steps)
-            #print("Mutated {} into {}".format(P[s], x_new))
 
             # Evaluate objectives and constraints for x_new
             NewFeasible, NewObjectives = self.problem.evaluate([x_new])
             P.append(x_new)
             Feasible.append(NewFeasible[0])
             Objectives.append(NewObjectives[0])
-            #print(Feasible)
-            #print(Objectives)
 
             # Track which points are dominated or infeasible. We track the 
             # indices from the points list.
@@ -140,7 +136,7 @@ class Algorithm(object):
         # next group after one go? They are all nondominated anyway and 
         # probably do not use them for anything else.
         while len(P) > 0:
-            Rk, todelete = KLP(P, Objectives)
+            Rk, todelete = self.KLP(P, Objectives)
             R.append(Rk)
             # Need to delete in reverse order so that the subsequent indexes 
             # are still correct.

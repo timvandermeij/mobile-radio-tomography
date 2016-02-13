@@ -241,7 +241,6 @@ class Reconstruction_Plan(Problem):
             sensor_points = self.generate_positions(point[i], point[i+self.N])
             snapped_points = self.snapper.execute(*sensor_points)
             if snapped_points is None:
-                print("Unsnappable: {}, {}".format(*sensor_points))
                 unsnappable = True
             else:
                 positions.extend([[p.x, p.y] for p in snapped_points])
@@ -253,8 +252,6 @@ class Reconstruction_Plan(Problem):
 
         self.weight_matrix.set_positions(positions)
         self.matrix = self.weight_matrix.create(full=False)
-        if all(self.matrix.any(axis=0)):
-            print(self.matrix)
 
         return super(Reconstruction_Plan, self).evaluate_point(point)
 
