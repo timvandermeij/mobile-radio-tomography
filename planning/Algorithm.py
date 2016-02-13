@@ -21,9 +21,7 @@ class Algorithm(object):
 
         # Make steps as long as necessary, and convert to numpy array for easy 
         # per-component application.
-        steps = self.settings.get("step_size")
-        dim = self.problem.dim
-        self.steps = np.array((steps * ((dim / len(steps)) + 1))[:dim])
+        self.steps = self.problem.format_steps(self.settings.get("step_size"))
 
     def evolve(self):
         """

@@ -47,6 +47,10 @@ class Problem(object):
         self.objectives = self.get_objectives()
         self.constraints = self.get_constraints()
 
+    def format_steps(self, steps):
+        dim = self.dim
+        return np.array((steps * ((dim / len(steps)) + 1))[:dim])
+
     def get_random_vector(self):
         """
         Create a vector of the dimension length with random values.
@@ -215,10 +219,24 @@ class Reconstruction_Plan(Problem):
         self.weight_matrix = Weight_Matrix(arguments, network_size, [])
         self.matrix = None
         self.snapper = Snap_To_Boundary([0, 0], *network_size)
-        self.unsnappable = False
+        self.unsnappable = 0
+        self.distances = None
 
         self.N = N
         self.network_size = network_size
+
+        self.nonintersecting_min = (network_size[0] * network_size[1]) * self.settings.get("nonintersecting_rate")
+        self.unsnappable_max = self.N * self.settings.get("unsnappable_rate")
+
+        self.geometry = Geometry()
+
+    def format_steps(self, steps):
+        if len(steps) == 2:
+            return np.array([steps[0]] * self.N + [steps[1]] * self.N + [0.5]*self.N)
+        if len(steps) == 3:
+            return np.array([steps[0]] * self.N + [steps[1]] * self.N + [steps[2]]*self.N)
+
+        return super(Reconstruction_Plan, self).format_steps(steps)
 
     def generate_positions(self, offset, angle):
         if angle == math.pi/2:
@@ -233,7 +251,7 @@ class Reconstruction_Plan(Problem):
         return [[0, b], [self.network_size[0], a*self.network_size[0]+b]]
 
     def get_positions(self, point):
-        unsnappable = False
+        unsnappable = 0
 
         # Generate positions, check snappability and create weight matrix
         positions = []
@@ -241,7 +259,7 @@ class Reconstruction_Plan(Problem):
             sensor_points = self.generate_positions(point[i], point[i+self.N])
             snapped_points = self.snapper.execute(*sensor_points)
             if snapped_points is None:
-                unsnappable = True
+                unsnappable += 1
             else:
                 positions.extend([[p.x, p.y] for p in snapped_points])
 
@@ -250,6 +268,7 @@ class Reconstruction_Plan(Problem):
     def evaluate_point(self, point):
         positions, self.unsnappable = self.get_positions(point)
 
+        self.distances = np.array([(positions[p][0]-positions[p+1][0])**2+(positions[p][1]-positions[p+1][1])**2 for p in range(0, len(positions), 2)])
         self.weight_matrix.set_positions(positions)
         self.matrix = self.weight_matrix.create(full=False)
 
@@ -257,10 +276,13 @@ class Reconstruction_Plan(Problem):
 
     def get_objectives(self):
         return [
-            # Matrix should have values filled as much as possible, so that 
-            # lines contribute a lot to the solution
-            lambda x: -self.matrix.sum(),
-            lambda x: -self.matrix.any(axis=0).sum(),
+            # Matrix should have many columns (pixels) that have multiple links 
+            # (measurements) intersecting that pixel.
+            lambda x: -np.sum(np.sum(self.matrix > 0, axis=0) >= 2),
+            # The distances of the links should be minimized, since a longer 
+            # link is weaker and thus contributes less clearly to a solution of 
+            # the reconstruction.
+            lambda x: self.distances.sum()
             # Matrix should have values that are similar to each other in the 
             # columns, so that pixels are evenly measured by links
             #lambda x: np.var(self.matrix, axis=0).mean()
@@ -269,11 +291,18 @@ class Reconstruction_Plan(Problem):
     def get_constraints(self):
         constraints = super(Reconstruction_Plan, self).get_constraints()
         constraints.extend([
+            # Matrix must not have too many columns that have only zeroes, 
+            # since then a pixel in the image is not intersected by any line. 
+            # This is mostly a baseline to push the evolutionary algorithm in 
+            # the right direction, since we also have an objective to make them 
+            # intersect more often.
+            lambda x: self.matrix.any(axis=0).sum() > self.nonintersecting_min,
             # Variables should not be in such a way that a pair of positions do 
-            # not intersect with the network
-            lambda x: not self.unsnappable#,
-            # Matrix must not have columns that have only zeroes, since then 
-            # a pixel in the image is not intersected by any line
-            #lambda x: np.all(self.matrix.any(axis=0))
+            # not intersect with the network. At least it should not happen too 
+            # often, otherwise the mission is useless. It can be useful to 
+            # allow a number of them, since then we can have missions that 
+            # solve the problem with fewer measurements than the fixed 
+            # parameter.
+            lambda x: self.unsnappable < self.unsnappable_max
         ])
         return constraints
