@@ -18,6 +18,7 @@ class Weight_Matrix(object):
         self._origin = origin
         self._width, self._height = size
         self._matrix = np.empty((0, self._width * self._height))
+        self._distances = np.empty((0, self._width * self._height))
         self._sensors = []
         self._snapper = Snap_To_Boundary(self._origin, self._width, self._height)
 
@@ -47,10 +48,12 @@ class Weight_Matrix(object):
         source, destination = self._snapper.execute(source, destination)
 
         # Get the index of the source sensor. Add it to the list if it does not exist.
+        new_sensors = []
         try:
             source_index = self._sensors.index(source)
         except ValueError:
             self._sensors.append(source)
+            new_sensors.append(source)
             source_index = len(self._sensors) - 1
 
         # Get the index of the destination sensor. Add it to the list if it does not exist.
@@ -58,14 +61,14 @@ class Weight_Matrix(object):
             destination_index = self._sensors.index(destination)
         except ValueError:
             self._sensors.append(destination)
+            new_sensors.append(destination)
             destination_index = len(self._sensors) - 1
 
-        # Calculate the distance from each sensor to each center of a pixel on the
-        # grid using the Pythagorean theorem.
-        distances = np.empty((len(self._sensors), self._width * self._height))
-        for index, sensor in enumerate(self._sensors):
+        # Calculate the distance from a sensor to each center of a pixel on the
+        # grid using the Pythagorean theorem. Do this only for new sensors.
+        for sensor in new_sensors:
             distance = np.sqrt((self._gridX - sensor[0]) ** 2 + (self._gridY - sensor[1]) ** 2)
-            distances[index] = distance.flatten()
+            self._distances = np.vstack([self._distances, distance.flatten()])
 
         # Update the weight matrix by adding a row for the new link. We use the
         # Pythagorean theorem for calculation of the link's length. The weight matrix
@@ -75,7 +78,7 @@ class Weight_Matrix(object):
         # zero. A higher weight implies a higher influence on the signal strength.
         # Pixels of short links have a higher weight than those of longer links.
         length = np.sqrt((destination[0] - source[0]) ** 2 + (destination[1] - source[1]) ** 2)
-        weight = (distances[source_index] + distances[destination_index] < length + self._lambda)
+        weight = (self._distances[source_index] + self._distances[destination_index] < length + self._lambda)
         row = (1.0 / np.sqrt(length)) * weight
         self._matrix = np.vstack([self._matrix, row])
 
