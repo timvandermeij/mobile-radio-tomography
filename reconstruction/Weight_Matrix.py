@@ -21,6 +21,13 @@ class Weight_Matrix(object):
         self._sensors = []
         self._snapper = Snap_To_Boundary(self._origin, self._width, self._height)
 
+        # Create a grid for the space covered by the network. This represents a pixel
+        # grid that we use to determine which pixels are intersected by a link. The
+        # value 0.5 is used to obtain the center of each pixel.
+        x = np.linspace(0.5, self._width - 0.5, self._width)
+        y = np.linspace(0.5, self._height - 0.5, self._height)
+        self._gridX, self._gridY = np.meshgrid(x, y)
+
     def update(self, packet):
         """
         Update the weight matrix with a packet. Each update adds a new
@@ -53,18 +60,11 @@ class Weight_Matrix(object):
             self._sensors.append(destination)
             destination_index = len(self._sensors) - 1
 
-        # Create a grid for the space covered by the network. This represents a pixel
-        # grid that we use to determine which pixels are intersected by a link. The value
-        # 0.5 is used to obtain the center of each pixel.
-        x = np.linspace(0.5, self._width - 0.5, self._width)
-        y = np.linspace(0.5, self._height - 0.5, self._height)
-        gridX, gridY = np.meshgrid(x, y)
-
         # Calculate the distance from each sensor to each center of a pixel on the
         # grid using the Pythagorean theorem.
         distances = np.empty((len(self._sensors), self._width * self._height))
         for index, sensor in enumerate(self._sensors):
-            distance = np.sqrt((gridX - sensor[0]) ** 2 + (gridY - sensor[1]) ** 2)
+            distance = np.sqrt((self._gridX - sensor[0]) ** 2 + (self._gridY - sensor[1]) ** 2)
             distances[index] = distance.flatten()
 
         # Update the weight matrix by adding a row for the new link. We use the
