@@ -45,7 +45,12 @@ class Weight_Matrix(object):
         # Snap the source and destination points to the boundaries of the network.
         source = (packet.get("from_latitude"), packet.get("from_longitude"))
         destination = (packet.get("to_latitude"), packet.get("to_longitude"))
-        source, destination = self._snapper.execute(source, destination)
+        snapped_points = self._snapper.execute(source, destination)
+        if snapped_points is None:
+            # If the points cannot be snapped, ignore the measurement.
+            return
+
+        source, destination = snapped_points
 
         # Get the index of the source sensor. Add it to the list if it does not exist.
         new_sensors = []
