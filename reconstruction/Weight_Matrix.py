@@ -31,7 +31,8 @@ class Weight_Matrix(object):
     def update(self, packet):
         """
         Update the weight matrix with a packet. Each update adds a new
-        row to the weight matrix.
+        row to the weight matrix. This method returns whether or not
+        the update was successful.
 
         Refer to the following papers for the principles or code
         that this method is based on:
@@ -47,7 +48,7 @@ class Weight_Matrix(object):
         snapped_points = self._snapper.execute(source, destination)
         if snapped_points is None:
             # If the points cannot be snapped, ignore the measurement.
-            return
+            return False
 
         source, destination = snapped_points
 
@@ -85,6 +86,8 @@ class Weight_Matrix(object):
         weight = (self._distances[source_index] + self._distances[destination_index] < length + self._lambda)
         row = (1.0 / np.sqrt(length)) * weight
         self._matrix = np.vstack([self._matrix, row])
+
+        return True
 
     def check(self):
         """
