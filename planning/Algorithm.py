@@ -1,6 +1,7 @@
 import numpy as np
 from collections import OrderedDict
 import itertools
+import time
 
 from ..settings import Arguments
 
@@ -30,6 +31,7 @@ class Algorithm(object):
 
         print("Settings: Problem {}, Algo {}, mu={}, t_max={}".format(self.problem.__class__.__name__, self.__class__.__name__, self.mu, self.t_max))
         print("Steps: {}".format(self.steps))
+        start_time = time.time()
 
         # For our initial population of size mu, generate random vectors with 
         # values in a feasible interval using domain specification.
@@ -41,7 +43,8 @@ class Algorithm(object):
         # For t = 1, 2, ..., t_max
         for t in xrange(1, self.t_max+1):
             if t % self.t_debug == 0:
-                print("Iteration {}".format(t))
+                cur_time = time.time() - start_time
+                print("Iteration {} ({} sec, {} it/s)".format(t, cur_time, t/float(cur_time)))
                 scores = list(sorted((i for i in range(self.mu) if Feasible[i]), key=lambda i: Objectives[i]))
                 if scores:
                     idx = scores[len(scores)/2]
@@ -69,7 +72,7 @@ class Algorithm(object):
             # the nondominated solutions. This differs from the original 
             # implementation, hopefully this is a good decision.
             if len(Delete) == 0:
-                R = self.sort_nondominated(Objectives)
+                R = self.sort_nondominated(Objectives, all_layers=False)
                 Delete = list(itertools.chain(*[Rk.keys() for Rk in R[1:]]))
 
             if len(Delete) > 0:
@@ -121,7 +124,7 @@ class Algorithm(object):
 
         return T, todelete
 
-    def sort_nondominated(self, Objectives):
+    def sort_nondominated(self, Objectives, all_layers=True):
         """
         Sort a list of objective values for individuals into groups of
         nondominated and dominated solutions.
@@ -136,12 +139,14 @@ class Algorithm(object):
         # the points.
         P = sorted(range(len(Objectives)), key=lambda i: Objectives[i][0], reverse=False)
         R = []
-        # TODO: Speed up sorting by just putting all the other solutions in the 
-        # next group after one go? They are all nondominated anyway and 
-        # probably do not use them for anything else.
-        while len(P) > 0:
+        first_layer = True
+        # Speed up sorting by just putting all the other solutions in the next 
+        # group after one go. They are all nondominated anyway and probably do 
+        # not use them for anything else.
+        while len(P) > 0 and (all_layers or first_layer):
             Rk, todelete = self.KLP(P, Objectives)
             R.append(Rk)
+            first_layer = False
             # Need to delete in reverse order so that the subsequent indexes 
             # are still correct.
             for idx in reversed(todelete):
@@ -164,7 +169,7 @@ class NSGA(Algorithm):
         close to others are more useful to keep.
         """
 
-        C = [0 for _ in Rk.items()]
+        C = np.zeros(len(Rk))
         i = 0
         for idx in Rk.keys():
             for j in xrange(len(Rk[idx])):
@@ -172,7 +177,7 @@ class NSGA(Algorithm):
                 keys = sorted(Rk.keys(), key=lambda i: Rk[i][j])
                 # Location of the index idx in the sorted keys
                 v = keys.index(idx)
-                l = Rk[keys[v-1]][j] if v > 0 else -np.inf
+                l = Rk[keys[v-1]][j] if v > 0 else np.NINF
                 u = Rk[keys[v+1]][j] if v < len(Rk)-1 else np.inf
                 C[i] += 2 * (u - l)
 
@@ -198,9 +203,9 @@ class SMS_EMOA(Algorithm):
         # 2D only.
         # Sort by first coordinate
         X = sorted(Rk.keys(), key=lambda i: Rk[i][0])
-        C = [0 for _ in X]
+        C = np.zeros(len(X))
         for i, idx in enumerate(X):
-            l = Rk[X[i-1]][1] if i > 0 else -np.inf
+            l = Rk[X[i-1]][1] if i > 0 else np.NINF
             u = Rk[X[i+1]][0] if i < len(Rk)-1 else np.inf
             C[i] = (Rk[idx][1] - l) * (u - Rk[idx][0])
 

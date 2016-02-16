@@ -101,7 +101,10 @@ class Problem(object):
         is a boolean and the objectives are a list of function values.
         """
         Feasible = all(constraint(point) for constraint in self.constraints)
-        Objective = [objective(point) for objective in self.objectives]
+        if Feasible:
+            Objective = [float(objective(point)) for objective in self.objectives]
+        else:
+            Objective = [np.inf for objective in self.objectives]
 
         return Feasible, Objective
 

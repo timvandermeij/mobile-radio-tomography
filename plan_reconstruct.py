@@ -97,9 +97,9 @@ def main(argv):
     plt.xlabel("Objective 1")
     plt.ylabel("Objective 2")
     for Rk in R:
-        o1 = [Objectives[i][0] for i in Rk]
-        o2 = [Objectives[i][1] for i in Rk]
-        plt.plot(o1, o2, marker='o', linestyle='-' if all(Feasible[i] for i in Rk) else '--')
+        o1 = [Objectives[i][0] for i in Rk if Feasible[i]]
+        o2 = [Objectives[i][1] for i in Rk if Feasible[i]]
+        plt.plot(o1, o2, marker='o')
 
     do_plot("front-{}.eps".format(stamp))
 
