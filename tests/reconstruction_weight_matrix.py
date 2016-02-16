@@ -1,12 +1,11 @@
 import unittest
-import numpy as np
 from ..reconstruction.Weight_Matrix import Weight_Matrix
 from ..settings.Arguments import Arguments
 
 class TestReconstructionWeightMatrix(unittest.TestCase):
     def setUp(self):
-        origin = [0,0]
-        size = [4,4]
+        origin = [0, 0]
+        size = [4, 4]
         self.arguments = Arguments("settings.json", [])
         self.weight_matrix = Weight_Matrix(self.arguments, origin, size)
 
