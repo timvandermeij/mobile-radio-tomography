@@ -1,10 +1,10 @@
 class Reconstructor(object):
-    def __init__(self, weight_matrix):
+    def __init__(self, settings):
         """
         Initialize the reconstructor object.
         """
 
-        self._weight_matrix = weight_matrix
+        self._settings = settings
 
     def execute(self):
-        raise NotImplementedError("Subclasses must implement execute(rssi_values)")
+        raise NotImplementedError("Subclasses must implement execute(weight_matrix, rssi)")

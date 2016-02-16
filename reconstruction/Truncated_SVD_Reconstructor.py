@@ -5,12 +5,12 @@ from Reconstructor import Reconstructor
 from ..settings import Arguments, Settings
 
 class Truncated_SVD_Reconstructor(Reconstructor):
-    def __init__(self, settings, weight_matrix):
+    def __init__(self, settings):
         """
         Initialize the truncated SVD reconstructor object.
         """
 
-        super(Truncated_SVD_Reconstructor, self).__init__(weight_matrix)
+        super(Truncated_SVD_Reconstructor, self).__init__(settings)
 
         if isinstance(settings, Arguments):
             settings = settings.get_settings("reconstruction_truncated_svd_reconstructor")
@@ -19,7 +19,7 @@ class Truncated_SVD_Reconstructor(Reconstructor):
 
         self._singular_values = settings.get("singular_values")
 
-    def execute(self, rssi_values):
+    def execute(self, weight_matrix, rssi):
         """
         Perform the singular value decomposition algorithm. We aim to solve
         `Ax = b` where `A` is the weight matrix and `b` is a column vector
@@ -29,8 +29,8 @@ class Truncated_SVD_Reconstructor(Reconstructor):
         singular values.
         """
 
-        A = self._weight_matrix
-        b = rssi_values
+        A = weight_matrix
+        b = rssi
         U, S, Vt = sp.sparse.linalg.svds(A, self._singular_values)
         A_inv = np.dot(np.dot(Vt.T, np.diag(np.reciprocal(S))), U.T)
         return np.dot(A_inv, b)
