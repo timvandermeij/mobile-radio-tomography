@@ -49,22 +49,22 @@ class Weight_Matrix(object):
 
         source, destination = snapped_points
 
-        # Get the index of the source sensor. Add it to the list if it does not exist.
+        # Get the index of the source sensor. Add it if it does not exist.
         new_sensors = []
         try:
-            source_index = self._sensors.index(source)
-        except ValueError:
-            self._sensors.append(source)
+            source_index = self._sensors[source]
+        except KeyError:
+            source_index = len(self._sensors)
+            self._sensors[source] = source_index
             new_sensors.append(source)
-            source_index = len(self._sensors) - 1
 
-        # Get the index of the destination sensor. Add it to the list if it does not exist.
+        # Get the index of the destination sensor. Add it if it does not exist.
         try:
-            destination_index = self._sensors.index(destination)
-        except ValueError:
-            self._sensors.append(destination)
+            destination_index = self._sensors[destination]
+        except KeyError:
+            destination_index = len(self._sensors)
+            self._sensors[destination] = destination_index
             new_sensors.append(destination)
-            destination_index = len(self._sensors) - 1
 
         # Calculate the distance from a sensor to each center of a pixel on the
         # grid using the Pythagorean theorem. Do this only for new sensors.
@@ -111,4 +111,4 @@ class Weight_Matrix(object):
 
         self._matrix = np.empty((0, self._width * self._height))
         self._distances = np.empty((0, self._width * self._height))
-        self._sensors = []
+        self._sensors = {}
