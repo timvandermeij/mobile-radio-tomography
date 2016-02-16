@@ -1,13 +1,14 @@
 from collections import namedtuple
 import math
 
+Point = namedtuple('Point', 'x y')
+
 class Snap_To_Boundary(object):
     def __init__(self, origin, width, height):
         """
         Initialize the snap to boundary object.
         """
 
-        Point = namedtuple('Point', 'x y')
         self._origin = Point(origin[0], origin[1])
         self._width = width
         self._height = height
@@ -98,7 +99,6 @@ class Snap_To_Boundary(object):
         Perform the snap to boundary algorithm.
         """
 
-        Point = namedtuple('Point', 'x y')
         start = Point(start[0], start[1])
         end = Point(end[0], end[1])
 
