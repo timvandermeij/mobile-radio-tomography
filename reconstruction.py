@@ -1,9 +1,8 @@
-import json
 import sys
-import numpy as np
+import time
 from __init__ import __package__
 from settings import Arguments
-from reconstruction.Signal_Strength_File_Reader import Signal_Strength_File_Reader
+from reconstruction.Dump_Reader import Dump_Reader
 from reconstruction.Weight_Matrix import Weight_Matrix
 from reconstruction.Least_Squares_Reconstructor import Least_Squares_Reconstructor
 from reconstruction.SVD_Reconstructor import SVD_Reconstructor
@@ -14,7 +13,11 @@ def main(argv):
     arguments = Arguments("settings.json", argv)
     settings = arguments.get_settings("reconstruction")
 
-    # Set the reconstructor class.
+    # Create the reader.
+    filename = settings.get("filename")
+    reader = Dump_Reader("reconstruction_data/{}.json".format(filename))
+
+    # Create the reconstructor.
     reconstructors = {
         "least-squares": Least_Squares_Reconstructor,
         "svd": SVD_Reconstructor,
@@ -26,35 +29,28 @@ def main(argv):
         sys.exit(1)
 
     reconstructor_class = reconstructors[reconstructor]
+    reconstructor = reconstructor_class(arguments)
 
-    # Read the reconstruction data file.
-    filename = settings.get("filename")
-    with open("reconstruction_data/{}.json".format(filename)) as data:
-        reconstruction_data = json.load(data)
-        size = reconstruction_data["size"]
-        positions = reconstruction_data["positions"]
-
-    weight_matrix = Weight_Matrix(arguments, size, positions)
-    reconstructor = reconstructor_class(arguments, weight_matrix.create())
-
-    viewer = Viewer(arguments, size)
+    # Create the viewer.
+    viewer = Viewer(arguments, reader.get_size())
     viewer.show()
 
+    # Create the weight matrix.
+    weight_matrix = Weight_Matrix(arguments, reader.get_origin(), reader.get_size())
     arguments.check_help()
 
-    data = Signal_Strength_File_Reader("reconstruction_data/{}.csv".format(filename),
-                                       len(positions))
-    previous_sweep = None
-    for _ in range(data.size()):
-        sweep = data.get_sweep()
-        if previous_sweep is not None:
-            # Generally successive sweeps are very similar. Subtracting the previous
-            # sweep from the current sweep makes differences stand out more.
-            pixels = reconstructor.execute(sweep - previous_sweep)
-        else:
-            pixels = reconstructor.execute(sweep)
-        previous_sweep = sweep
-        viewer.update(pixels)
+    # Execute the reconstruction and visualization.
+    rssi = []
+    while reader.count_packets() > 0:
+        packet = reader.get_packet()
+        rssi.append(packet.get("rssi"))
+        source = (packet.get("from_latitude"), packet.get("from_longitude"))
+        destination = (packet.get("to_latitude"), packet.get("to_longitude"))
+        weight_matrix.update(source, destination)
+        if weight_matrix.check():
+            pixels = reconstructor.execute(weight_matrix.output(), rssi)
+            viewer.update(pixels)
+            time.sleep(settings.get("pause_time"))
 
 if __name__ == "__main__":
     main(sys.argv[1:])
