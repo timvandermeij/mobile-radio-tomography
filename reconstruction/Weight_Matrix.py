@@ -17,9 +17,6 @@ class Weight_Matrix(object):
 
         self._origin = origin
         self._width, self._height = size
-        self._matrix = np.empty((0, self._width * self._height))
-        self._distances = np.empty((0, self._width * self._height))
-        self._sensors = []
         self._snapper = Snap_To_Boundary(self._origin, self._width, self._height)
 
         # Create a grid for the space covered by the network. This represents a pixel
@@ -28,6 +25,8 @@ class Weight_Matrix(object):
         x = np.linspace(0.5, self._width - 0.5, self._width)
         y = np.linspace(0.5, self._height - 0.5, self._height)
         self._gridX, self._gridY = np.meshgrid(x, y)
+
+        self.reset()
 
     def update(self, packet):
         """
@@ -104,3 +103,12 @@ class Weight_Matrix(object):
             raise ValueError("The weight matrix contains columns with only zeros.")
 
         return self._matrix
+
+    def reset(self):
+        """
+        Reset the weight matrix object to its default state.
+        """
+
+        self._matrix = np.empty((0, self._width * self._height))
+        self._distances = np.empty((0, self._width * self._height))
+        self._sensors = []
