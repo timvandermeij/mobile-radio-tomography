@@ -44,7 +44,9 @@ def main(argv):
     while reader.count_packets() > 0:
         packet = reader.get_packet()
         rssi.append(packet.get("rssi"))
-        weight_matrix.update(packet)
+        source = (packet.get("from_latitude"), packet.get("from_longitude"))
+        destination = (packet.get("to_latitude"), packet.get("to_longitude"))
+        weight_matrix.update(source, destination)
         if weight_matrix.check():
             pixels = reconstructor.execute(weight_matrix.output(), rssi)
             viewer.update(pixels)

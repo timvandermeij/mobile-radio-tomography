@@ -28,11 +28,10 @@ class Weight_Matrix(object):
 
         self.reset()
 
-    def update(self, packet):
+    def update(self, source, destination):
         """
-        Update the weight matrix with a packet. Each update adds a new
-        row to the weight matrix. This method returns whether or not
-        the update was successful.
+        Update the weight matrix. Each update adds a new row to the matrix.
+        This method returns whether or not the update was successful.
 
         Refer to the following papers for the principles or code
         that this method is based on:
@@ -43,8 +42,6 @@ class Weight_Matrix(object):
         """
 
         # Snap the source and destination points to the boundaries of the network.
-        source = (packet.get("from_latitude"), packet.get("from_longitude"))
-        destination = (packet.get("to_latitude"), packet.get("to_longitude"))
         snapped_points = self._snapper.execute(source, destination)
         if snapped_points is None:
             # If the points cannot be snapped, ignore the measurement.
