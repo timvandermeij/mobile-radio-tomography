@@ -30,8 +30,11 @@ class Weight_Matrix(object):
 
     def update(self, source, destination):
         """
-        Update the weight matrix. Each update adds a new row to the matrix.
-        This method returns whether or not the update was successful.
+        Update the weight matrix with a measurement between a `source` and
+        `destination` sensor, both given as a tuple of coordinates.
+        Each successful update adds a new row to the matrix.
+        This method returns a list of coordinate tuples for the two sensors
+        in case the update was successful. Otherwise, `None` is returned.
 
         Refer to the following papers for the principles or code
         that this method is based on:
@@ -45,7 +48,7 @@ class Weight_Matrix(object):
         snapped_points = self._snapper.execute(source, destination)
         if snapped_points is None:
             # If the points cannot be snapped, ignore the measurement.
-            return False
+            return None
 
         source, destination = snapped_points
 
@@ -84,7 +87,7 @@ class Weight_Matrix(object):
         row = (1.0 / np.sqrt(length)) * weight
         self._matrix = np.vstack([self._matrix, row])
 
-        return True
+        return snapped_points
 
     def check(self):
         """
@@ -96,11 +99,8 @@ class Weight_Matrix(object):
 
     def output(self):
         """
-        Output the weight matrix only if it is complete.
+        Output the weight matrix.
         """
-
-        if not self.check():
-            raise ValueError("The weight matrix contains columns with only zeros.")
 
         return self._matrix
 
