@@ -88,8 +88,7 @@
         "settings": {
             "number_of_measurements": 20,
             "network_size": [64,64],
-            "unsnappable_rate": 0.5,
-            "nonintersecting_rate": 0.5
+            "unsnappable_rate": 0.5
         }
     },
     "reconstruction": {

@@ -229,7 +229,6 @@ class Reconstruction_Plan(Problem):
         self.N = N
         self.network_size = network_size
 
-        self.nonintersecting_min = (network_size[0] * network_size[1]) * self.settings.get("nonintersecting_rate")
         self.unsnappable_max = self.N * self.settings.get("unsnappable_rate")
 
         self.geometry = Geometry()

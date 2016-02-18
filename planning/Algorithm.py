@@ -31,7 +31,6 @@ class Algorithm(object):
 
         print("Settings: Problem {}, Algo {}, mu={}, t_max={}".format(self.problem.__class__.__name__, self.__class__.__name__, self.mu, self.t_max))
         print("Steps: {}".format(self.steps))
-        start_time = time.time()
 
         # For our initial population of size mu, generate random vectors with 
         # values in a feasible interval using domain specification.
@@ -39,6 +38,8 @@ class Algorithm(object):
 
         # Evaluate objectives and constraints for points in the population.
         Feasible, Objectives = self.problem.evaluate(P)
+
+        start_time = time.time()
 
         # For t = 1, 2, ..., t_max
         for t in xrange(1, self.t_max+1):
