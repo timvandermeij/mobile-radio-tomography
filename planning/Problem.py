@@ -2,7 +2,6 @@ import math
 import numpy as np
 
 from ..geometry.Geometry import Geometry
-from ..reconstruction.Snap_To_Boundary import Snap_To_Boundary
 from ..reconstruction.Weight_Matrix import Weight_Matrix
 from ..settings import Arguments
 
@@ -222,9 +221,8 @@ class Reconstruction_Plan(Problem):
 
         # Initial weight matrix object which is filled with current locations 
         # during evaluations.
-        self.weight_matrix = Weight_Matrix(arguments, network_size, [])
+        self.weight_matrix = Weight_Matrix(arguments, [0, 0], network_size)
         self.matrix = None
-        self.snapper = Snap_To_Boundary([0, 0], *network_size)
         self.unsnappable = 0
         self.distances = None
 
@@ -266,20 +264,20 @@ class Reconstruction_Plan(Problem):
         positions = []
         for i in range(self.N):
             sensor_points = self.generate_positions(point[i], point[i+self.N], point[i+2*self.N])
-            snapped_points = self.snapper.execute(*sensor_points)
+            snapped_points = self.weight_matrix.update(*sensor_points)
             if snapped_points is None:
                 unsnappable += 1
             else:
-                positions.extend([[p.x, p.y] for p in snapped_points])
+                positions.extend(snapped_points)
 
         return positions, unsnappable
 
     def evaluate_point(self, point):
+        self.weight_matrix.reset()
         positions, self.unsnappable = self.get_positions(point)
 
         self.distances = np.array([(positions[p][0]-positions[p+1][0])**2+(positions[p][1]-positions[p+1][1])**2 for p in range(0, len(positions), 2)])
-        self.weight_matrix.set_positions(positions)
-        self.matrix = self.weight_matrix.create(full=False)
+        self.matrix = self.weight_matrix.output()
 
         return super(Reconstruction_Plan, self).evaluate_point(point)
 
@@ -287,7 +285,7 @@ class Reconstruction_Plan(Problem):
         return [
             # Matrix should have many columns (pixels) that have multiple links 
             # (measurements) intersecting that pixel.
-            lambda x: -np.sum(np.sum(self.matrix > 0, axis=0) >= 2),
+            lambda x: -np.sum(np.sum(self.matrix > 0, axis=0)),
             # The distances of the links should be minimized, since a longer 
             # link is weaker and thus contributes less clearly to a solution of 
             # the reconstruction.
@@ -305,7 +303,7 @@ class Reconstruction_Plan(Problem):
             # This is mostly a baseline to push the evolutionary algorithm in 
             # the right direction, since we also have an objective to make them 
             # intersect more often.
-            lambda x: self.matrix.any(axis=0).sum() > self.nonintersecting_min,
+            lambda x: self.weight_matrix.check(),
             # Variables should not be in such a way that a pair of positions do 
             # not intersect with the network. At least it should not happen too 
             # often, otherwise the mission is useless. It can be useful to 
