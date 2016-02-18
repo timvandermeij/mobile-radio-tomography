@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import json
 
 import matplotlib
 # Make it possible to run matplotlib in SSH
@@ -32,6 +33,15 @@ def do_plot(name):
             # Somethimes things go wrong in the plot display (such as when 
             # clicking close button too fast), so ignore those errors.
             pass
+
+def do_data(name, data):
+    if displayless or 'SAVE_PATH' in os.environ:
+        path = os.environ['SAVE_PATH'] if 'SAVE_PATH' in os.environ else '.'
+        filename = "{}/{}.json".format(path, name)
+        with open(filename, 'wb') as f:
+            json.dump(data, f)
+    else:
+        print(data)
 
 def main(argv):
     # Initialize, read parameters from input and set up problems
@@ -71,6 +81,8 @@ def main(argv):
 
             positions, unsnappable = problem.get_positions(P[i])
             print("{}. {} ({})".format(i, Objectives[i], unsnappable))
+
+            do_data("positions-{}-{}".format(stamp, c), [(p[0], p[1]) for p in positions])
 
             plt.clf()
             plt.title("Planned sensor positions for solution #{}/{} (index {}, f1 = {})".format(c, len(R[0]), i, Objectives[i][0]))
