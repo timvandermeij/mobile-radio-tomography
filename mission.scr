@@ -1,8 +1,0 @@
-# Mission script for mission_basic.py
-# Run this after the ardupilot code is ready.
-# This is after it has stored default parameters.
-# We assume ardupilot is checked out in the same parent directory as this
-# repository. Run the simulator or pymavlink from this directory.
-param set ARMING_CHECK 0
-param load ../ardupilot/Tools/autotest/copter_params.parm
-api start mission_basic.py

@@ -1,9 +1,10 @@
 import math
 
 class Distance_Sensor(object):
-    def __init__(self, environment, angle=0):
+    def __init__(self, environment, id, angle=0):
         self.environment = environment
         self.geometry = self.environment.get_geometry()
+        self.id = id
         self.angle = angle
 
     def get_distance(self):
@@ -17,7 +18,7 @@ class Distance_Sensor(object):
         """
 
         if bearing is None:
-            bearing = self.environment.get_yaw()
+            bearing = self.environment.get_sensor_yaw(self.id)
 
         # Offset for the yaw being increasing clockwise and starting at 
         # 0 degrees when facing north rather than facing east.

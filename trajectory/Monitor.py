@@ -1,6 +1,6 @@
 import thread
 import time
-from droneapi.lib import Location
+from dronekit import LocationGlobalRelative
 from ..zigbee.XBee_Packet import XBee_Packet
 
 class Monitor(object):
@@ -10,8 +10,7 @@ class Monitor(object):
     Tracks sensors and mission actions in a stepwise fashion.
     """
 
-    def __init__(self, api, mission, environment):
-        self.api = api
+    def __init__(self, mission, environment):
         self.mission = mission
 
         self.environment = environment
@@ -57,13 +56,13 @@ class Monitor(object):
         Returns `Fase` if the loop should be halted.
         """
 
-        if self.api.exit:
-            return False
-
         # Put our current location on the map for visualization. Of course, 
         # this location is also "safe" since we are flying there.
         vehicle_idx = self.memory_map.get_index(self.environment.get_location())
-        self.memory_map.set(vehicle_idx, -1)
+        try:
+            self.memory_map.set(vehicle_idx, -1)
+        except KeyError:
+            print('Warning: Outside of memory map')
 
         self.mission.step()
 
@@ -87,11 +86,10 @@ class Monitor(object):
                     # checking if walls get visualized correctly.
                     sensor.draw_current_edge(self.plot.get_plot(), self.memory_map, self.colors[i % len(self.colors)])
                 if xbee_sensor:
-                    home_location = self.mission.get_home_location()
                     packet = XBee_Packet()
                     packet.set("specification", "memory_map_chunk")
-                    packet.set("latitude", home_location.lat + location.lat)
-                    packet.set("longitude", home_location.lon + location.lon)
+                    packet.set("latitude", location.lat)
+                    packet.set("longitude", location.lon)
                     xbee_sensor.enqueue(packet)
 
                 print("=== [!] Distance to object: {} m (yaw {}, pitch {}) ===".format(sensor_distance, yaw, pitch))
@@ -111,7 +109,10 @@ class Monitor(object):
 
         # Remove the vehicle from the current location. We set it to "safe" 
         # since there is no object here.
-        self.memory_map.set(vehicle_idx, 0)
+        try:
+            self.memory_map.set(vehicle_idx, 0)
+        except:
+            pass
 
         return True
 
@@ -126,9 +127,9 @@ class Monitor(object):
         time.sleep(self.step_delay)
 
     def add_memory_map(self, packet):
-        loc = Location(packet.get("latitude"), packet.get("longitude"), 0.0, is_relative=False)
+        loc = LocationGlobalRelative(packet.get("latitude"), packet.get("longitude"), 0.0)
         idx = self.memory_map.get_index(loc)
-        print(loc.lat, loc.lon, idx)
+        print("Received location {}, index {} from other vehicle".format(loc, idx))
         try:
             self.memory_map.set(idx, 1)
         except KeyError:

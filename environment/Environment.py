@@ -1,7 +1,11 @@
+import math
 from ..geometry import Geometry
 from ..trajectory.MockVehicle import MockVehicle
+from ..trajectory.Servo import Servo
 from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
 from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
+
+from dronekit import LocationLocal
 
 class Environment(object):
     """
@@ -38,6 +42,12 @@ class Environment(object):
         self.settings = self.arguments.get_settings("environment")
         self._distance_sensors = None
 
+        # Servo pins of the flight controller for distance sensor rotation
+        self._servos = []
+        for servo in self.settings.get("servo_pins"):
+            pwm = servo["pwm"] if "pwm" in servo else None
+            self._servos.append(Servo(servo["pin"], servo["angles"], pwm))
+
         self._xbee_sensor = None
         self.packet_callbacks = {}
         self._setup_xbee_sensor()
@@ -70,10 +80,13 @@ class Environment(object):
             else:
                 angles = list(self.settings.get("distance_sensors"))
                 self._distance_sensors = [
-                    self._sensor_class(self, angle) for angle in angles
+                    self._sensor_class(self, i, angles[i]) for i in range(len(angles))
                 ]
 
         return self._distance_sensors
+
+    def get_servos(self):
+        return self._servos
 
     def get_xbee_sensor(self):
         return self._xbee_sensor
@@ -95,14 +108,14 @@ class Environment(object):
         Retrieve the location of the vehicle, or a point relative to the location of the vehicle given in meters.
         """
 
-        if north == 0 and east == 0 and alt == 0:
-            return self.vehicle.location
-
         return self.geometry.get_location_meters(self.vehicle.location, north, east, alt)
 
     def get_raw_location(self):
         location = self.get_location()
-        return (location.lat, location.lon)
+        if isinstance(location, LocationLocal):
+            return (location.north, location.east)
+        else:
+            return (location.lat, location.lon)
 
     def get_distance(self, location):
         """
@@ -115,6 +128,20 @@ class Environment(object):
         Get the yaw bearing of the vehicle.
         """
         return self.vehicle.attitude.yaw
+
+    def get_sensor_yaw(self, id=0):
+        """
+        Get the relative yaw of the given sensor.
+
+        In case servos are used, this calculates the current servo angle.
+
+        This method is meant to be used by `Distance_Sensor` objects only, and does not include the fixed (starting) angle of the sensor itself. The angle may not be within a constrained range.
+        """
+        yaw = self.get_yaw()
+        if id < len(self._servos):
+            yaw = yaw + self._servos[id].get_angle() * math.pi/180
+
+        return yaw
 
     def get_angle(self):
         """

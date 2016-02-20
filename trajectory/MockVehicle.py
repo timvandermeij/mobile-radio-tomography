@@ -1,7 +1,9 @@
 import math
 import time
-from droneapi.lib import Location
+from dronekit import Locations, LocationLocal, LocationGlobal, LocationGlobalRelative
 from collections import namedtuple
+
+from ..geometry.Geometry import Geometry_Spherical
 
 # Constants used in commands according to mavutil
 MAV_FRAME_GLOBAL_RELATIVE_ALT = 3
@@ -12,11 +14,14 @@ MAV_CMD_NAV_TAKEOFF = 22
 VehicleMode = namedtuple('VehicleMode',['name'])
 GPSInfo = namedtuple('GPSInfo',['eph', 'epv', 'fix_type', 'sattelites_visible'])
 
+GlobalMessage = namedtuple('Message',['lat', 'lon', 'relative_alt', 'alt'])
+LocalMessage = namedtuple('Message',['x', 'y', 'z'])
+
 class CommandSequence(object):
     def __init__(self, vehicle):
         self._vehicle = vehicle
-        self._next = 0
-        self._commands = [None] # Dummy "home location" command
+        self._next = 1
+        self._commands = []
 
     def takeoff(self, altitude):
         if self._vehicle.mode.name == "GUIDED" and self._vehicle.armed:
@@ -44,7 +49,7 @@ class CommandSequence(object):
         self._vehicle._target_location = None
 
     def clear(self):
-        self._commands = [None]
+        self._commands = []
 
     def __getitem__(self, key):
         return self._commands[key]
@@ -52,7 +57,10 @@ class CommandSequence(object):
     def download(self):
         pass
 
-    def wait_valid(self):
+    def upload(self):
+        pass
+
+    def wait_ready(self):
         pass
 
 class MockAttitude(object):
@@ -113,10 +121,13 @@ class MockVehicle(object):
         # Whether the vehicle has taken off. Affects commands interface.
         self._takeoff = False
 
-        # The current (updated-on-request) location of the vehicle.
-        self._location = Location(0.0, 0.0, 0.0, is_relative=True)
-        # The target location parsed from commands.
+        # The current location of the vehicle. Eventually follows the 
+        # updated-on-request global relative frame of the vehicle locations.
+        self._location = LocationGlobalRelative(0.0, 0.0, 0.0)
+
+        # The target location parsed from commands or a takeoff call.
         self._target_location = None
+        self._target_command = False
 
         # The last time the vehicle location was updated.
         self._update_time = time.time()
@@ -145,10 +156,16 @@ class MockVehicle(object):
         self.gps_0 = GPSInfo(0.0, 0.0, 3, 0)
 
         self.commands = CommandSequence(self)
+        self.parameters = {}
 
-        self._home_location = Location(0.0, 0.0, 0.0, is_relative=False)
+        self._home_location = LocationGlobal(0.0, 0.0, 0.0)
 
         self._location_callback = None
+        self._updating = False
+
+        self._message_listeners = {}
+        self._locations = Locations(self)
+        self.set_location(0.0, 0.0, 0.0)
 
     def _parse_command(self, cmd):
         # Only supported frame
@@ -157,12 +174,12 @@ class MockVehicle(object):
             return
 
         if cmd.command == MAV_CMD_NAV_WAYPOINT:
-            self._set_target_location(lat=cmd.x, lon=cmd.y, alt=cmd.z)
+            self._set_target_location(lat=cmd.x, lon=cmd.y, alt=cmd.z, cmd=True)
         elif cmd.command == MAV_CMD_NAV_TAKEOFF:
             if self._takeoff:
                 self.commands._next = self.commands._next + 1
             else:
-                self._set_target_location(alt=cmd.z, takeoff=True)
+                self._set_target_location(alt=cmd.z, takeoff=True, cmd=True)
 
     def set_target_attitude(self, pitch=None, yaw=None, roll=None, yaw_direction=0):
         if pitch is None:
@@ -179,7 +196,7 @@ class MockVehicle(object):
             yaw_direction = -1 * self._geometry.get_direction(self._attitude._yaw, yaw)
         self._yaw_direction = yaw_direction
 
-    def _set_target_location(self, location=None, lat=None, lon=None, alt=None, takeoff=False):
+    def _set_target_location(self, location=None, lat=None, lon=None, alt=None, takeoff=False, cmd=False):
         if takeoff:
             self._takeoff = True
             self._update_time = time.time()
@@ -188,6 +205,7 @@ class MockVehicle(object):
 
         if location is not None:
             self._target_location = location
+            target_location = self._make_global_location(location)
         else:
             if lat is None:
                 lat = self._location.lat
@@ -195,17 +213,19 @@ class MockVehicle(object):
                 lon = self._location.lon
             if alt is None:
                 alt = self._location.alt
-            self._target_location = Location(lat, lon, alt, True)
+
+            target_location = LocationGlobalRelative(lat, lon, alt)
+            self._target_location = self._make_location(LocationGlobalRelative, lat, lon, alt)
 
         # Change yaw to go to new target location
-        dist = self._geometry.get_distance_meters(self._location, self._target_location)
-        if dist == 0.0:
+        if self._location.lat == target_location.lat and self._location.lon == target_location.lon:
             # Moving straight up/down does not require any angle change
             yaw = self._attitude._yaw
         else:
-            a = self._geometry.get_angle(self._location, self._target_location)
+            a = self._geometry.get_angle(self._locations, self._target_location)
             yaw = self._geometry.angle_to_bearing(a)
 
+        self._takeoff_command = cmd
         self.set_target_attitude(0.0, yaw, 0.0)
 
     def _change_attitude(self, field, delta):
@@ -274,11 +294,21 @@ class MockVehicle(object):
         if self._target_location is not None:
             if self._speed != 0.0:
                 # Move to location with given `speed`
-                dist = self._geometry.get_distance_meters(self._location, self._target_location)
-                dAlt = self._target_location.alt - self._location.alt
+                dist = self._geometry.get_distance_meters(self._locations, self._target_location)
+                if isinstance(self._geometry, Geometry_Spherical):
+                    dAlt = self._target_location.alt - self._location.alt
+                else:
+                    dAlt = -self._target_location.down - self._location.alt
+                    if dist != 0.0 and dist < diff * self._speed:
+                        self.set_location(self._target_location.north,
+                                          self._target_location.east,
+                                          -self._target_location.down)
+                        return
+
                 if dist != 0.0:
                     if dist < diff * self._speed:
-                        self._location = self._target_location
+                        self.location = self._target_location
+                        return
                     else:
                         vNorth, vEast, vAlt = self._handle_speed(dist, dAlt)
                 elif dAlt != 0.0:
@@ -289,8 +319,11 @@ class MockVehicle(object):
                 else:
                     # Reached target location.
                     print("Reached target location")
+                    if self._target_command:
+                        self.commands.next = self.commands.next + 1
+
                     self._target_location = None
-                    self.commands.next = self.commands.next + 1
+                    self._target_command = False
         elif self._mode.name == "AUTO" and self.commands.count > self.commands.next:
             cmd = self.commands[self.commands.next]
             self._parse_command(cmd)
@@ -307,31 +340,62 @@ class MockVehicle(object):
 
     @property
     def location(self):
-        self._update_location()
-        return self._location
+        if not self._updating:
+            self._update_location()
+        return self._locations
 
     @location.setter
     def location(self, value):
-        # No need to call _update_location since this forces a new location
-        # However, let the location callback know about the change.
+        self._updating = True
 
+        # We need both a "real" LocationGlobal object here for altitude 
+        # calculation and the message listener, as well as a location for the 
+        # update callback, which should be LocationGlobalRelative in this case.
+        value = self._make_global_location(value)
+        dalt = (value.alt - self._home_location.alt)
+
+        # No need to call _update_location since this forces a new location
+        # However, let the location callback and listeners know about the 
+        # change, but only if it would accept these kinds of locations.
+        if isinstance(self._geometry, Geometry_Spherical):
+            new_location = LocationGlobalRelative(value.lat, value.lon, dalt)
+            self._notify_location_callback(new_location)
+
+        msg = GlobalMessage(value.lat * 1.0e7, value.lon * 1.0e7, dalt * 1000, value.alt * 1000)
+        self.notify_message_listeners('GLOBAL_POSITION_INT', msg)
+        self._location = self._locations.global_relative_frame
+        self._updating = False
+        self._update_time = time.time()
+
+    def set_location(self, north, east, alt):
+        local_location = self._locations.local_frame
+        if local_location.north is None:
+            local_location = LocationLocal(0.0, 0.0, 0.0)
+
+        # First try to set the new location to let the location callback handle 
+        # the change.
+        new_location = self._geometry.get_location_meters(local_location, north, east, alt)
+        self.location = new_location
+        self._updating = True
+        self._notify_location_callback(new_location)
+
+        # Send a message to the message listeners
+        msg = LocalMessage(local_location.north + north,
+                           local_location.east + east,
+                           local_location.down - alt)
+        self.notify_message_listeners('LOCAL_POSITION_NED', msg)
+        self._updating = False
+
+    def _notify_location_callback(self, new_location):
         if self._location_callback is False:
             raise RuntimeError("Recursion detected in location callback")
         if self._location_callback is not None:
             location_callback = self._location_callback
             self._location_callback = False
             try:
-                location_callback(self._location, value)
+                location_callback(self._locations, new_location)
             finally:
                 self._location_callback = location_callback
-
-        self._location = value
-        self._update_time = time.time()
-
-    def set_location(self, north, east, alt):
-        new_location = self._geometry.get_location_meters(self._location, north, east, alt)
-
-        self.location = new_location
 
     def get_location_callback(self):
         return self._location_callback
@@ -341,6 +405,24 @@ class MockVehicle(object):
 
     def unset_location_callback(self):
         self._location_callback = None
+
+    def on_message(self, name):
+        def decorator(fn):
+            if name not in self._message_listeners:
+                self._message_listeners[name] = []
+            if fn not in self._message_listeners[name]:
+                self._message_listeners[name].append(fn)
+
+        return decorator
+
+    def notify_message_listeners(self, name, msg):
+        for fn in self._message_listeners.get(name, []):
+            fn(self, name, msg)
+        for fn in self._message_listeners.get('*', []):
+            fn(self, name, msg)
+
+    def notify_attribute_listeners(self, name, attr):
+        pass
 
     @property
     def attitude(self):
@@ -391,6 +473,12 @@ class MockVehicle(object):
         # Clear target location so new mode can give its own
         self._target_location = None
 
+    def simple_takeoff(self, altitude):
+        self.commands.takeoff(altitude)
+
+    def simple_goto(self, location):
+        self.commands.goto(location)
+
     @property
     def airspeed(self):
         return 0.0
@@ -401,15 +489,41 @@ class MockVehicle(object):
 
     @property
     def home_location(self):
-        return self._home_location
+        return self._make_location(LocationGlobal, self._home_location.lat, self._home_location.lon, self._home_location.alt)
 
     @home_location.setter
     def home_location(self, value):
-        self._home_location = Location(value.lat, value.lon, value.alt, is_relative=False)
+        self._home_location = self._make_global_location(value)
+        self._location = LocationGlobalRelative(self._home_location.lat,
+                                                self._home_location.lon,
+                                                0.0)
+
+    def _make_location(self, location_class, lat, lon, alt):
+        if isinstance(self._geometry, Geometry_Spherical):
+            return location_class(lat, lon, alt)
+        else:
+            return LocationLocal(lat - self._home_location.lat,
+                                 lon - self._home_location.lon,
+                                 self._home_location.alt - alt)
+
+    def _make_global_location(self, value):
+        if isinstance(value, LocationGlobal):
+            value = LocationGlobal(value.lat, value.lon, value.alt)
+        elif isinstance(value, LocationLocal):
+            if isinstance(self._geometry, Geometry_Spherical):
+                value = self._geometry.get_location_meters(self._home_location,
+                                                           value.north,
+                                                           value.east,
+                                                           -value.down)
+            else:
+                value = LocationGlobal(self._home_location.lat + value.north,
+                                       self._home_location.lon + value.east,
+                                       self._home_location.alt - value.down)
+        elif isinstance(value, LocationGlobalRelative):
+            value = LocationGlobal(value.lat, value.lon,
+                                   self._home_location.alt + value.alt)
+
+        return value
 
     def flush(self):
         pass
-
-class MockAPI(object):
-    def __init__(self):
-        self.exit = False

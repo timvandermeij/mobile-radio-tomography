@@ -30,9 +30,12 @@
             "space_size": 100.0,
             "resolution": 1,
             "yaw_step": 10.0,
+            "connect": "",
+            "mavlink_baud_rate": 115200,
             "vehicle_simulation": true,
-            "mission_class": "Mission_Square",
-            "geometry_class": "Geometry_Spherical"
+            "mission_class": "Mission_Browse",
+            "geometry_class": "Geometry_Spherical",
+            "gps": true
         }
     },
     "mission_monitor": {
@@ -47,6 +50,13 @@
         "name": "Vehicle environment",
         "settings": {
             "distance_sensors": [0.0],
+            "servo_pins": [
+                {
+                    "pin": 7,
+                    "angles": [0,360],
+                    "pwm": [1000,2000]
+                }
+            ],
             "xbee_type": "",
             "scenefile": null,
             "translation": [0.0,0.0,0.0],
