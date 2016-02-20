@@ -45,10 +45,6 @@ class Mission(object):
                 key = "servo{}_raw".format(servo.get_pin())
                 if key in fields:
                     servo.set_current_pwm(getattr(msg, key))
-        elif msg_type == "LOCAL_POSITION_NED":
-            self.dead_reckoning.set_velocity(msg.vx, msg.vy)
-            print("MSG: {:.2f}, {:.2f}".format(msg.x, msg.y))
-            print("DR: {:.2f}, {:.2f}".format(*self.dead_reckoning.get()))
 
     def distance_to_current_waypoint(self):
         """
@@ -222,11 +218,7 @@ class Mission(object):
         """
         Perform any calculations for the current vehicle state.
         """
-        location = self.vehicle.location.global_relative_frame
-        if location.lat is None or location.lat == 0.0:
-            location = self.vehicle.location.local_frame
-
-        print("Location: {}".format(location))
+        pass
 
     def check_sensor_distance(self, sensor_distance, yaw, pitch):
         """
@@ -560,9 +552,6 @@ class Mission_Browse(Mission_Guided):
         self.send_global_velocity(0,0,0)
         self.vehicle.flush()
         self.set_sensor_yaw(self.yaw, relative=False, direction=1)
-        print("Velocity: {} m/s".format(self.vehicle.velocity))
-        print("Altitude: {} m".format(self.vehicle.location.global_relative_frame.alt))
-        print("Yaw: {} Expected: {}".format(self.vehicle.attitude.yaw*180/math.pi, self.yaw))
 
         # When we're standing still, we rotate the vehicle to measure distances 
         # to objects.
