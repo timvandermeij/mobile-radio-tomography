@@ -74,7 +74,6 @@ class Geometry(object):
 
         raise TypeError("Base geometry can handle only local coordinates")
 
-
     def get_location_meters(self, original_location, north, east, alt=0):
         """
         Returns a Location object containing the latitude/longitude `north` and `east` (floating point) meters from the 
@@ -197,7 +196,7 @@ class Geometry(object):
         else:
             ang_out = sys.float_info.max
 
-        if abs(start.north - P.north) > self.EPSILON:
+        if abs(start.east - P.east) > self.EPSILON:
             ang_in = (P.north - start.north) / (P.east - start.east)
         else:
             ang_in = sys.float_info.max

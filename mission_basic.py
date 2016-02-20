@@ -13,7 +13,7 @@ import dronekit
 
 # Package imports
 # Ensure that we can import from the current directory as a package since 
-# running a python script directly does not define the correct package
+# running a Python script directly does not define the correct package
 from __init__ import __package__
 from settings import Arguments
 from trajectory import Mission

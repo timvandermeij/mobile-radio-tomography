@@ -42,10 +42,7 @@ class Servo(object):
         """
         Check whether the given `angle` is within this servo's constraints.
         """
-        if self.angles.min <= angle < self.angles.max:
-            return True
-
-        return False
+        return self.angles.min <= angle < self.angles.max
 
     def get_pin(self):
         """
