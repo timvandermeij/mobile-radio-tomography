@@ -90,6 +90,7 @@ def main(argv):
             plt.ylabel("y coordinate")
             plt.xlim([-0.1, problem.network_size[0]+0.1])
             plt.ylim([-0.1, problem.network_size[1]+0.1])
+            plt.gca().set_aspect('equal', adjustable='box')
             plt.xticks(range(problem.network_size[0]+1))
             plt.yticks(range(problem.network_size[1]+1))
             plt.grid()
