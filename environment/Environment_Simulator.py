@@ -1,7 +1,7 @@
 from Environment import Environment
 from VRMLLoader import VRMLLoader
 from ..distance.Distance_Sensor_Simulator import Distance_Sensor_Simulator
-from ..trajectory.MockVehicle import MockVehicle
+from ..vehicle.MockVehicle import MockVehicle
 
 class Environment_Simulator(Environment):
     """

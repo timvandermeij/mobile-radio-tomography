@@ -4,8 +4,8 @@ from __init__ import __package__
 from settings import Arguments
 from geometry import Geometry
 from environment import Environment
-from trajectory.MockVehicle import MockVehicle
 from trajectory.Viewer import Viewer_Interactive
+from vehicle.MockVehicle import MockVehicle
 
 def main(argv):
     arguments = Arguments("settings.json", argv)

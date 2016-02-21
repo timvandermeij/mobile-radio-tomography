@@ -1,7 +1,7 @@
 import math
 from ..geometry import Geometry
-from ..trajectory.MockVehicle import MockVehicle
 from ..trajectory.Servo import Servo
+from ..vehicle.MockVehicle import MockVehicle
 from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
 from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 
