@@ -20,8 +20,25 @@ class Vehicle(object):
     def __init__(self, arguments):
         self._home_location = None
         self._mode = VehicleMode("PLACEHOLDER")
+        self._armed = False
         self._servos = {}
         self._attribute_listeners = {}
+
+    def setup(self):
+        """
+        Set up preliminary backend requirements for the vehicle.
+        """
+
+        pass
+
+    @property
+    def use_simulation(self):
+        """
+        Check whether we want to use a simulated environment for this vehicle.
+        This can depend on settings or the Vehicle class itself.
+        """
+
+        raise NotImplementedError
 
     @property
     def home_location(self):
@@ -60,6 +77,14 @@ class Vehicle(object):
         The mode must be a `VehicleMode` object.
         """
         self._mode = value
+
+    @property
+    def armed(self):
+        return self._armed
+
+    @armed.setter
+    def armed(self, value):
+        self._armed = value
 
     def update_mission(self):
         """
@@ -116,6 +141,13 @@ class Vehicle(object):
 
         return None
 
+    def get_next_waypoint(self):
+        """
+        Get the current waypoint number.
+        """
+
+        return 0
+
     def set_next_waypoint(self, waypoint=-1):
         """
         Set the current waypoint that we wish to reach.
@@ -146,7 +178,14 @@ class Vehicle(object):
         Otherwise, the Vehicle object can ignore the parameters and end early.
         """
 
-        pass
+        self._armed = True
+
+    def simple_goto(self, location):
+        """
+        Set the target `location` of the vehicle to the given `Location` object.
+        """
+
+        raise NotImplementedError
 
     @property
     def location(self):
