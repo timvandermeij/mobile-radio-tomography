@@ -159,6 +159,14 @@ class Mission(object):
         return self.vehicle.commands
 
     def get_waypoints(self):
+        """
+        Retrieve a list of waypoints in this mission.
+        The waypoints are `Location` objects.
+
+        The list may be cached, and may be different from waypoints that are
+        currently stored in the vehicle.
+        """
+
         return []
 
     def get_home_location(self):
