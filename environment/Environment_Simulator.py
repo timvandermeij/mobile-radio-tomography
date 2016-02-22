@@ -13,15 +13,18 @@ class Environment_Simulator(Environment):
 
     def __init__(self, vehicle, geometry, arguments):
         super(Environment_Simulator, self).__init__(vehicle, geometry, arguments)
+        self.has_location_check = False
+        self.old_location = None
+
         scenefile = self.settings.get("scenefile")
         translation = self.settings.get("translation")
-        if isinstance(self.vehicle, Mock_Vehicle):
-            self.vehicle.home_location = self.get_location(*translation)
-            self.geometry.set_home_location(self.vehicle.home_location)
-            if scenefile is not None and self.settings.get("location_check"):
-                self.vehicle.set_location_callback(self.check_location)
+
+        self.vehicle.home_location = self.get_location(*translation)
 
         if scenefile is not None:
+            if self.settings.get("location_check"):
+                self.set_location_check()
+
             loader = VRMLLoader(self, scenefile, translation)
             self.objects = loader.get_objects()
             return
@@ -56,10 +59,22 @@ class Environment_Simulator(Environment):
     def get_objects(self):
         return self.objects
 
-    def check_location(self, location, new_location):
-        for obj in self.objects:
-            if isinstance(obj, list):
-                for face in obj:
-                    factor, loc_point = self.geometry.get_plane_intersection(face, location, new_location)
-                    if 0 <= factor <= 1:
-                        raise RuntimeError("Flew through an object")
+    def set_location_check(self):
+        self.vehicle.add_attribute_listener('location.local_frame', self.check_location)
+        self.has_location_check = True
+
+    def remove_location_check(self):
+        self.vehicle.remove_attribute_listener('location.local_frame', self.check_location)
+        self.has_location_check = False
+        self.old_location = None
+
+    def check_location(self, vehicle, attribute, new_location):
+        if self.old_location is not None:
+            for obj in self.objects:
+                if isinstance(obj, list):
+                    for face in obj:
+                        factor, loc_point = self.geometry.get_plane_intersection(face, self.old_location, new_location)
+                        if 0 <= factor <= 1:
+                            raise RuntimeError("Flew through an object")
+
+        self.old_location = new_location

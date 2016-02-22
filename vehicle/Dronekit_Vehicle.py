@@ -18,11 +18,18 @@ class Dronekit_Vehicle(dronekit.Vehicle, MAVLink_Vehicle):
         else:
             return super(Dronekit_Vehicle, cls).__new__(cls, arguments, *a)
 
-    def __init__(self, handler, *a):
+    def __init__(self, handler, geometry=None):
         if isinstance(handler, Arguments):
             self.settings = handler.get_settings("vehicle_dronekit")
+            self._geometry = geometry
         else:
             super(Dronekit_Vehicle, self).__init__(handler)
+
+            # Create home location listener
+            @self.on_message(['WAYPOINT', 'MISSION_ITEM'])
+            def listener(self, name, msg):
+                if not self._wp_loaded and msg.seq == 0:
+                    self.notify_attribute_listeners('home_location', self.home_location)
 
         self.wait = False
 
@@ -46,3 +53,9 @@ class Dronekit_Vehicle(dronekit.Vehicle, MAVLink_Vehicle):
     @property
     def use_simulation(self):
         return self.settings.get("vehicle_simulation")
+
+    @dronekit.Vehicle.home_location.setter
+    def home_location(self, pos):
+        home_location = self._make_global_location(pos)
+        dronekit.Vehicle.home_location.__set__(self, home_location)
+        self.notify_attribute_listeners('home_location', home_location)

@@ -74,6 +74,11 @@ class Environment(object):
         self.packet_callbacks = {}
         self._setup_xbee_sensor()
 
+        self.vehicle.add_attribute_listener('home_location', self.on_home_location)
+
+    def on_home_location(self, vehicle, attribute, home_location):
+        self.geometry.set_home_location(home_location)
+
     def _setup_xbee_sensor(self):
         xbee_type = self.settings.get("xbee_type")
         if xbee_type == "simulator":

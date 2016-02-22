@@ -117,7 +117,7 @@ class MockAttitude(object):
 
 class Mock_Vehicle(Vehicle):
     def __init__(self, arguments, geometry):
-        self._geometry = geometry
+        super(Mock_Vehicle, self).__init__(arguments, geometry)
 
         # Whether the vehicle has taken off. Affects commands interface.
         self._takeoff = False
@@ -351,6 +351,9 @@ class Mock_Vehicle(Vehicle):
 
     @location.setter
     def location(self, value):
+        if self._updating:
+            raise RuntimeError("Recursion detected in location update")
+
         self._updating = True
 
         # We need both a "real" LocationGlobal object here for altitude 
@@ -358,13 +361,6 @@ class Mock_Vehicle(Vehicle):
         # update callback, which should be LocationGlobalRelative in this case.
         value = self._make_global_location(value)
         dalt = (value.alt - self._home_location.alt)
-
-        # No need to call _update_location since this forces a new location
-        # However, let the location callback and listeners know about the 
-        # change, but only if it would accept these kinds of locations.
-        if isinstance(self._geometry, Geometry_Spherical):
-            new_location = LocationGlobalRelative(value.lat, value.lon, dalt)
-            self._notify_location_callback(new_location)
 
         msg = GlobalMessage(value.lat * 1.0e7, value.lon * 1.0e7, dalt * 1000, value.alt * 1000)
         self.notify_message_listeners('GLOBAL_POSITION_INT', msg)
@@ -382,7 +378,6 @@ class Mock_Vehicle(Vehicle):
         new_location = self._geometry.get_location_meters(local_location, north, east, alt)
         self.location = new_location
         self._updating = True
-        self._notify_location_callback(new_location)
 
         # Send a message to the message listeners
         msg = LocalMessage(local_location.north + north,
@@ -390,26 +385,6 @@ class Mock_Vehicle(Vehicle):
                            local_location.down - alt)
         self.notify_message_listeners('LOCAL_POSITION_NED', msg)
         self._updating = False
-
-    def _notify_location_callback(self, new_location):
-        if self._location_callback is False:
-            raise RuntimeError("Recursion detected in location callback")
-        if self._location_callback is not None:
-            location_callback = self._location_callback
-            self._location_callback = False
-            try:
-                location_callback(self._locations, new_location)
-            finally:
-                self._location_callback = location_callback
-
-    def get_location_callback(self):
-        return self._location_callback
-
-    def set_location_callback(self, location_callback):
-        self._location_callback = location_callback
-
-    def unset_location_callback(self):
-        self._location_callback = None
 
     def on_message(self, name):
         def decorator(fn):
@@ -425,9 +400,6 @@ class Mock_Vehicle(Vehicle):
             fn(self, name, msg)
         for fn in self._message_listeners.get('*', []):
             fn(self, name, msg)
-
-    def notify_attribute_listeners(self, name, attr):
-        pass
 
     @property
     def attitude(self):
@@ -510,25 +482,6 @@ class Mock_Vehicle(Vehicle):
             return LocationLocal(lat - self._home_location.lat,
                                  lon - self._home_location.lon,
                                  self._home_location.alt - alt)
-
-    def _make_global_location(self, value):
-        if isinstance(value, LocationGlobal):
-            value = LocationGlobal(value.lat, value.lon, value.alt)
-        elif isinstance(value, LocationLocal):
-            if isinstance(self._geometry, Geometry_Spherical):
-                value = self._geometry.get_location_meters(self._home_location,
-                                                           value.north,
-                                                           value.east,
-                                                           -value.down)
-            else:
-                value = LocationGlobal(self._home_location.lat + value.north,
-                                       self._home_location.lon + value.east,
-                                       self._home_location.alt - value.down)
-        elif isinstance(value, LocationGlobalRelative):
-            value = LocationGlobal(value.lat, value.lon,
-                                   self._home_location.alt + value.alt)
-
-        return value
 
     def flush(self):
         pass

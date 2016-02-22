@@ -1,6 +1,7 @@
 import copy
 import importlib
-from dronekit import VehicleMode
+from ..geometry.Geometry import Geometry_Spherical
+from dronekit import VehicleMode, LocationLocal, LocationGlobal, LocationGlobalRelative
 
 class Vehicle(object):
     """
@@ -23,6 +24,7 @@ class Vehicle(object):
         return module.__dict__[vehicle_class](arguments, geometry)
 
     def __init__(self, arguments, geometry):
+        self._geometry = geometry
         self._home_location = None
         self._mode = VehicleMode("PLACEHOLDER")
         self._armed = False
@@ -337,3 +339,34 @@ class Vehicle(object):
         """
         self._servos.update(servo_pwms)
         self.notify_attribute_listeners('servos', self._servos)
+
+    def _make_global_location(self, value):
+        """
+        Convert a `Location` object to a global location.
+        """
+
+        if isinstance(value, LocationGlobal):
+            value = LocationGlobal(value.lat, value.lon, value.alt)
+        elif isinstance(value, LocationLocal):
+            home_location = self._home_location
+            if home_location is None:
+                value = LocationGlobal(value.north, value.east, -value.down)
+            elif isinstance(self._geometry, Geometry_Spherical):
+                value = self._geometry.get_location_meters(home_location,
+                                                           value.north,
+                                                           value.east,
+                                                           -value.down)
+            else:
+                value = LocationGlobal(home_location.lat + value.north,
+                                       home_location.lon + value.east,
+                                       home_location.alt - value.down)
+        elif isinstance(value, LocationGlobalRelative):
+            home_location = self._home_location
+            if home_location is not None:
+                alt = home_location.alt
+            else:
+                alt = 0.0
+
+            value = LocationGlobal(value.lat, value.lon, alt + value.alt)
+
+        return value
