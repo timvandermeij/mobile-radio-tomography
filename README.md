@@ -114,7 +114,7 @@ the following commands:
 One can also use different vehicle types, such as APMrover2 for a ground rover.
 Then start the mission script using the following command in another terminal:
 
-    $ python2 mission_basic.py --connect 127.0.0.1:14550
+    $ python2 mission_basic.py --vehicle Dronekit_Vehicle
 
 This starts the mission with default settings from `settings.json`. The
 ArduPilot simulator provides an overhead map showing the copter's position.

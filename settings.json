@@ -30,12 +30,7 @@
             "space_size": 100.0,
             "resolution": 1,
             "yaw_step": 10.0,
-            "connect": "",
-            "mavlink_baud_rate": 115200,
-            "vehicle_simulation": true,
-            "mission_class": "Mission_Browse",
-            "geometry_class": "Geometry_Spherical",
-            "gps": true
+            "mission_class": "Mission_Browse"
         }
     },
     "mission_monitor": {
@@ -49,6 +44,7 @@
     "environment": {
         "name": "Vehicle environment",
         "settings": {
+            "geometry_class": "Geometry_Spherical",
             "distance_sensors": [0.0],
             "servo_pins": [
                 {
@@ -73,9 +69,23 @@
         "name": "Interactive environment 3D scene viewer",
         "parent": "environment_viewer",
         "settings": {
-            "geometry_class": "Geometry",
             "camera_speed": 5.0,
             "rotate_speed": 90.0
+        }
+    },
+    "vehicle": {
+        "name": "Vehicle interface",
+        "settings": {
+            "vehicle_class": "Mock_Vehicle"
+        }
+    },
+    "vehicle_dronekit": {
+        "name": "Dronekit vehicle backend",
+        "settings": {
+            "connect": "127.0.0.1:14550",
+            "mavlink_baud_rate": 115200,
+            "vehicle_simulation": true,
+            "gps": true
         }
     },
     "reconstruction": {

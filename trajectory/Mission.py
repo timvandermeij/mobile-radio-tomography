@@ -101,13 +101,13 @@ class Mission(object):
         # given in a (goto) command.
         self.speed = self.settings.get("speed")
 
+        # TODO: Remove by moving dependent code to Vehicle.
+        self.use_gps = False
+
         # Margin in meters at which we are too close to an object
         self.closeness = self.settings.get("closeness")
         # Distance in meters above which we are uninterested in objects
         self.farness = self.settings.get("farness")
-
-        # Whether to use GPS and thus also wait for a GPS fix before arming.
-        self.use_gps = self.settings.get("gps")
 
         # Create a memory map for the vehicle to track where it has seen 
         # objects. This can later be used to find the target object or to fly 

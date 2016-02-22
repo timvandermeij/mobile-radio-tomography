@@ -1,7 +1,7 @@
 import math
 from ..geometry import Geometry
 from ..trajectory.Servo import Servo
-from ..vehicle.Mock_Vehicle import Mock_Vehicle
+from ..vehicle.Vehicle import Vehicle
 from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
 from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 
@@ -15,19 +15,41 @@ class Environment(object):
     _sensor_class = None
 
     @classmethod
-    def setup(self, arguments, geometry_class="Geometry", vehicle=None, simulated=True):
+    def setup(self, arguments, geometry_class=None, vehicle=None, simulated=None):
         """
         Create an Environment object or simulated environment.
 
-        The returned object is an Enviromnent object or a subclass, loaded with the given `arguments` object. Optionally one can specify which `geometry_class` to use and what `vehicle` object to use. To use an environment with physical distance sensors, set `simulated` to `False`.
-        By default, the `vehicle` is a `Mock_Vehicle`.
-        For more control over simulated environment setup, use the normal constructors instead.
+        The returned object is an Enviromnent object or a subclass,
+        loaded with the given `arguments` object.
+        Optionally, one can specify which `geometry_class` to use and what
+        `vehicle` object to use. By default this depends on the settings for
+        `geometry_class` and `vehicle_class` in the `environment` and `vehicle`
+        components, respectively.
+        Finally, to use an environment with physical distance sensors,
+        set `simulated` to `False`. This is required if the vehicle does not
+        support simulation, which might depend on vehicle-specific settings.
+        For more control over simulated environment setup,
+        use the normal constructors instead, although those do not ensure that
+        the vehicle has the same geometry.
         """
+
+        if geometry_class is None:
+            settings = arguments.get_settings("environment")
+            geometry_class = settings.get("geometry_class")
+
         geometry = Geometry.__dict__[geometry_class]()
         if vehicle is None:
-            vehicle = Mock_Vehicle(geometry)
+            vehicle = Vehicle.create(arguments, geometry)
+
+        vehicle.setup()
+
+        if simulated is None:
+            simulated = vehicle.use_simulation
 
         if simulated:
+            if not vehicle.use_simulation:
+                raise ValueError("Vehicle '{}' does not support environment simulation, check vehicle type and settings".format(vehicle.__class__.__name__))
+
             from Environment_Simulator import Environment_Simulator
             return Environment_Simulator(vehicle, geometry, arguments)
 

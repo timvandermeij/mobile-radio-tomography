@@ -1,25 +1,22 @@
 """
 mission_basic.py: Basic mission operations for creating and monitoring missions.
 
-Documentation is provided at http://python.dronekit.io/examples/mission_basic.html
+Based on mission_basic.py in Dronekit, but supports other vehicle types as well.
+Documentation for the source is provided at http://python.dronekit.io/examples/mission_basic.html
 """
 
 import sys
 import os
 import traceback
-import time
-
-import dronekit
 
 # Package imports
 # Ensure that we can import from the current directory as a package since 
 # running a Python script directly does not define the correct package
 from __init__ import __package__
-from geometry import Geometry
+from environment.Environment import Environment
 from settings import Arguments
 from trajectory import Mission
 from trajectory.Monitor import Monitor
-from vehicle.Mock_Vehicle import Mock_Vehicle
 
 # Main mission program
 class Setup(object):
@@ -27,43 +24,8 @@ class Setup(object):
         self.arguments = arguments
         self.settings = self.arguments.get_settings("mission")
 
-        geometry_class = self.settings.get("geometry_class")
-        self.geometry = Geometry.__dict__[geometry_class]()
-
     def start(self):
-        connect = self.settings.get("connect")
-        if connect == "":
-            # Not connecting to a vehicle means we use our own simulation
-            self.vehicle = Mock_Vehicle(self.geometry)
-        else:
-            # We're running via builtins execfile or some other module, so 
-            # assume we use ArduPilot simulation/actual MAVProxy link to the 
-            # vehicle's flight controller.
-            if not isinstance(self.geometry, Geometry.Geometry_Spherical):
-                raise ValueError("Dronekit only works with spherical geometry")
-
-            # Connect to the vehicle autopilot to get the vehicle API object
-            self.vehicle = dronekit.connect(connect, baud=self.settings.get("mavlink_baud_rate"))
-
-            # Wait until location has been filled
-            if self.settings.get("gps"):
-                self.wait = True
-                self.vehicle.add_attribute_listener('location.global_relative_frame', self.listen)
-
-                while self.wait:
-                    time.sleep(1.0)
-                    print('Waiting for location update...')
-
-        simulation = self.settings.get("vehicle_simulation")
-        if not simulation and isinstance(self.vehicle, MockVehicle):
-            print("Warning: Using mock vehicle while not in simulation. This may be useful for testing the distance sensor but might indicate an incorrect setting in other cases.")
-
-        if simulation:
-            from environment.Environment_Simulator import Environment_Simulator
-            environment = Environment_Simulator(self.vehicle, self.geometry, self.arguments)
-        else:
-            from environment.Environment_Physical import Environment_Physical
-            environment = Environment_Physical(self.vehicle, self.geometry, self.arguments)
+        environment = Environment.setup(self.arguments)
 
         mission_class = self.settings.get("mission_class")
         mission = Mission.__dict__[mission_class](environment, self.settings)
@@ -107,10 +69,6 @@ class Setup(object):
 
         monitor.stop()
         mission.return_to_launch()
-
-    def listen(self, vehicle, attr_name, value):
-        vehicle.remove_attribute_listener('location.global_relative_frame', self.listen)
-        self.wait = False
 
 def main(argv):
     arguments = Arguments("settings.json", argv)

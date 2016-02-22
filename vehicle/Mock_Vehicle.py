@@ -4,6 +4,7 @@ from dronekit import Locations, LocationLocal, LocationGlobal, LocationGlobalRel
 from collections import namedtuple
 
 from ..geometry.Geometry import Geometry_Spherical
+from Vehicle import Vehicle
 
 # Constants used in commands according to mavutil
 MAV_FRAME_GLOBAL_RELATIVE_ALT = 3
@@ -114,8 +115,8 @@ class MockAttitude(object):
 
         return False
 
-class Mock_Vehicle(object):
-    def __init__(self, geometry):
+class Mock_Vehicle(Vehicle):
+    def __init__(self, arguments, geometry):
         self._geometry = geometry
 
         # Whether the vehicle has taken off. Affects commands interface.
@@ -166,6 +167,10 @@ class Mock_Vehicle(object):
         self._message_listeners = {}
         self._locations = Locations(self)
         self.set_location(0.0, 0.0, 0.0)
+
+    @property
+    def use_simulation(self):
+        return True
 
     def _parse_command(self, cmd):
         # Only supported frame

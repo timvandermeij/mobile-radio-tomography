@@ -1,4 +1,5 @@
 import copy
+import importlib
 from dronekit import VehicleMode
 
 class Vehicle(object):
@@ -7,7 +8,7 @@ class Vehicle(object):
     """
 
     @classmethod
-    def create(self, arguments):
+    def create(cls, arguments, geometry):
         """
         Create a Vehicle object from one of the subclass types.
 
@@ -15,9 +16,13 @@ class Vehicle(object):
         deduce settings from.
         """
 
-        raise ValueError("Unable to find appropriate Vehicle object")
+        settings = arguments.get_settings("vehicle")
+        vehicle_class = settings.get("vehicle_class")
 
-    def __init__(self, arguments):
+        module = importlib.import_module("..{}".format(vehicle_class), cls.__module__)
+        return module.__dict__[vehicle_class](arguments, geometry)
+
+    def __init__(self, arguments, geometry):
         self._home_location = None
         self._mode = VehicleMode("PLACEHOLDER")
         self._armed = False
