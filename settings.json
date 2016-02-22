@@ -17,6 +17,12 @@
             "speed_of_sound": 34320
         }
     },
+    "line_follower": {
+        "name": "Line follower",
+        "settings": {
+            "sensors": [29, 31, 32, 33, 35, 36]
+        }
+    },
     "mission": {
         "name": "Drone trajectory mission data",
         "settings": {
