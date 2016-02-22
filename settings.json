@@ -20,7 +20,7 @@
     "line_follower": {
         "name": "Line follower",
         "settings": {
-            "sensors": [29, 31, 32, 33, 35, 36]
+            "led_pins": [29, 31, 32, 33, 35, 36]
         }
     },
     "mission": {

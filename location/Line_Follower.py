@@ -45,7 +45,7 @@ class Line_Follower(object):
         self._callback = callback
         self._state = Line_Follower_State.AT_INTERSECTION
 
-        self._sensors = settings.get("sensors")
+        self._sensors = settings.get("led_pins")
         if len(self._sensors) != 6:
             raise ValueError("Exactly six sensors must be defined for the Zumo robot")
 

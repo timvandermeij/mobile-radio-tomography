@@ -52,7 +52,7 @@ class TestLocationLineFollower(unittest.TestCase):
         line_follower.gpio.setmode.assert_called_once_with(line_follower.gpio.BOARD)
 
         # The input pins have to be set.
-        sensors = self.settings.get("sensors")
+        sensors = self.settings.get("led_pins")
         line_follower.gpio.setup.assert_has_calls([
             call(sensor, line_follower.gpio.IN) for sensor in sensors
         ])
@@ -62,7 +62,7 @@ class TestLocationLineFollower(unittest.TestCase):
 
         mock_callback = MagicMock()
         line_follower = Line_Follower(self.location, self.direction, mock_callback, self.settings)
-        sensors = self.settings.get("sensors")
+        sensors = self.settings.get("led_pins")
         sensor_values = line_follower.read()
         
         self.assertIs(type(sensor_values), list)
