@@ -75,6 +75,13 @@ class Environment(object):
         self._setup_xbee_sensor()
 
         self.vehicle.add_attribute_listener('home_location', self.on_home_location)
+        self.vehicle.add_attribute_listener('servos', self.on_servos)
+
+    def on_servos(self, vehicle, attribute, servo_pwms):
+        for servo in self._servos:
+            pin = servo.get_pin()
+            if pin in servo_pwms:
+                servo.set_current_pwm(servo_pwms[pin])
 
     def on_home_location(self, vehicle, attribute, home_location):
         self.geometry.set_home_location(home_location)

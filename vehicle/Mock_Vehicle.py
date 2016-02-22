@@ -4,7 +4,7 @@ from dronekit import Locations, LocationLocal, LocationGlobal, LocationGlobalRel
 from collections import namedtuple
 
 from ..geometry.Geometry import Geometry_Spherical
-from Vehicle import Vehicle
+from MAVLink_Vehicle import MAVLink_Vehicle
 
 # Constants used in commands according to mavutil
 MAV_FRAME_GLOBAL_RELATIVE_ALT = 3
@@ -115,7 +115,7 @@ class MockAttitude(object):
 
         return False
 
-class Mock_Vehicle(Vehicle):
+class Mock_Vehicle(MAVLink_Vehicle):
     def __init__(self, arguments, geometry):
         super(Mock_Vehicle, self).__init__(arguments, geometry)
 
@@ -415,6 +415,16 @@ class Mock_Vehicle(Vehicle):
         value.vehicle = self
         self._attitude = value
 
+    def set_yaw(self, heading, relative=False, direction=1):
+        heading = heading * math.pi/180
+        if relative:
+            self.set_target_attitude(yaw=self.attitude.yaw + heading, yaw_direction=direction)
+        else:
+            self.set_target_attitude(yaw=heading, yaw_direction=direction)
+
+    def set_servo(self, servo, pwm):
+        servo.set_current_pwm(pwm)
+
     @property
     def speed(self):
         self._update_location()
@@ -449,6 +459,9 @@ class Mock_Vehicle(Vehicle):
         self._mode = value
         # Clear target location so new mode can give its own
         self._target_location = None
+
+    def arm_and_takeoff(self, altitude, speed):
+        self.vehicle.mode = VehicleMode("GUIDED")
 
     def simple_takeoff(self, altitude):
         self.commands.takeoff(altitude)

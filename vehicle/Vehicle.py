@@ -109,10 +109,11 @@ class Vehicle(object):
         Add a command to take off to a certain `altitude` in the mission.
 
         If the Vehicle backend does not support takeoff commands, this method
-        is a no-op.
+        is a no-op and should return `False` to indicate no command was added
+        to the list of waypoints.
         """
 
-        pass
+        return False
 
     def add_waypoint(self, location):
         """
@@ -173,19 +174,22 @@ class Vehicle(object):
 
         return 0
 
-    def arm_and_takeoff(self, altitude, speed):
+    def check_arming(self):
         """
         Perform final setup checks and make the vehicle ready to move.
 
         This can wait for final backend instantiation, perform necessary checks
         and finally arm the motors and put the vehicle in a controlled state.
-
-        If the vehicle can fly and has a certain operating altitude, this method
-        should let the vehicle take off to that `altitude` at the given `speed`.
-        Otherwise, the Vehicle object can ignore the parameters and end early.
         """
 
-        self._armed = True
+        return True
+
+    def simple_takeoff(self, altitude):
+        """
+        Take off to a certain altitude.
+        """
+
+        raise NotImplementedError
 
     def simple_goto(self, location):
         """
