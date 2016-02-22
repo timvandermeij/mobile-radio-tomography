@@ -1,7 +1,7 @@
 import math
 from ..geometry import Geometry
 from ..trajectory.Servo import Servo
-from ..vehicle.MockVehicle import MockVehicle
+from ..vehicle.Mock_Vehicle import Mock_Vehicle
 from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
 from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 
@@ -20,12 +20,12 @@ class Environment(object):
         Create an Environment object or simulated environment.
 
         The returned object is an Enviromnent object or a subclass, loaded with the given `arguments` object. Optionally one can specify which `geometry_class` to use and what `vehicle` object to use. To use an environment with physical distance sensors, set `simulated` to `False`.
-        By default, the `vehicle` is a `MockVehicle`.
+        By default, the `vehicle` is a `Mock_Vehicle`.
         For more control over simulated environment setup, use the normal constructors instead.
         """
         geometry = Geometry.__dict__[geometry_class]()
         if vehicle is None:
-            vehicle = MockVehicle(geometry)
+            vehicle = Mock_Vehicle(geometry)
 
         if simulated:
             from Environment_Simulator import Environment_Simulator

@@ -10,7 +10,7 @@ from pymavlink import mavutil
 from ..geometry.Geometry import Geometry_Spherical
 from ..location.Dead_Reckoning import Dead_Reckoning
 from Memory_Map import Memory_Map
-from MockVehicle import MockVehicle
+from ..vehicle.Mock_Vehicle import Mock_Vehicle
 
 class Mission(object):
     """
@@ -22,7 +22,7 @@ class Mission(object):
     def __init__(self, environment, settings):
         self.environment = environment
         self.vehicle = self.environment.get_vehicle()
-        if isinstance(self.vehicle, MockVehicle):
+        if isinstance(self.vehicle, Mock_Vehicle):
             self.is_mock = True
         else:
             self.is_mock = False

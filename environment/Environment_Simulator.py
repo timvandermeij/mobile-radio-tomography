@@ -1,7 +1,7 @@
 from Environment import Environment
 from VRMLLoader import VRMLLoader
 from ..distance.Distance_Sensor_Simulator import Distance_Sensor_Simulator
-from ..vehicle.MockVehicle import MockVehicle
+from ..vehicle.Mock_Vehicle import Mock_Vehicle
 
 class Environment_Simulator(Environment):
     """
@@ -15,7 +15,7 @@ class Environment_Simulator(Environment):
         super(Environment_Simulator, self).__init__(vehicle, geometry, arguments)
         scenefile = self.settings.get("scenefile")
         translation = self.settings.get("translation")
-        if isinstance(self.vehicle, MockVehicle):
+        if isinstance(self.vehicle, Mock_Vehicle):
             self.vehicle.home_location = self.get_location(*translation)
             self.geometry.set_home_location(self.vehicle.home_location)
             if scenefile is not None and self.settings.get("location_check"):

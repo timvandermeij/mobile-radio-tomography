@@ -19,7 +19,7 @@ from geometry import Geometry
 from settings import Arguments
 from trajectory import Mission
 from trajectory.Monitor import Monitor
-from vehicle.MockVehicle import MockVehicle
+from vehicle.Mock_Vehicle import Mock_Vehicle
 
 # Main mission program
 class Setup(object):
@@ -34,7 +34,7 @@ class Setup(object):
         connect = self.settings.get("connect")
         if connect == "":
             # Not connecting to a vehicle means we use our own simulation
-            self.vehicle = MockVehicle(self.geometry)
+            self.vehicle = Mock_Vehicle(self.geometry)
         else:
             # We're running via builtins execfile or some other module, so 
             # assume we use ArduPilot simulation/actual MAVProxy link to the 

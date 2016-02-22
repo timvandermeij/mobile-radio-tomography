@@ -6,7 +6,7 @@ import pyglet
 from pyglet.window import key
 from pyglet.gl import *
 
-from MockVehicle import MockVehicle, MockAttitude
+from ..vehicle.Mock_Vehicle import Mock_Vehicle, MockAttitude
 
 class Vector(np.ndarray):
     """
@@ -319,7 +319,7 @@ class Viewer_Interactive(Viewer):
     def __init__(self, environment, settings):
         super(Viewer_Interactive, self).__init__(environment, settings)
         self.vehicle = self.environment.get_vehicle()
-        if isinstance(self.vehicle, MockVehicle):
+        if isinstance(self.vehicle, Mock_Vehicle):
             self.is_mock = True
         else:
             self.is_mock = False

@@ -114,7 +114,7 @@ class MockAttitude(object):
 
         return False
 
-class MockVehicle(object):
+class Mock_Vehicle(object):
     def __init__(self, geometry):
         self._geometry = geometry
 
