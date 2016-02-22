@@ -263,7 +263,7 @@ class Geometry(object):
         # the edge's b1 is fixed, and calculate b2 instead.
 
         m2 = math.tan(yaw_angle)
-        b2 = location.lat - m2 * location.lon
+        b2 = location.north - m2 * location.east
 
         if end.east == start.east:
             # Prevent division by zero

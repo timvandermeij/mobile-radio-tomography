@@ -70,7 +70,7 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         return self.geometry.get_plane_distance(face, location, p1, verbose)
 
     def get_circle_distance(self, obj, location, yaw_angle):
-        center = self.geometry.get_location_local(obj)
+        center = self.geometry.get_location_local(obj['center'])
         location = self.geometry.get_location_local(location)
         if location.down > center.down - self.altitude_margin:
             # Find directional angle to the object's center.
