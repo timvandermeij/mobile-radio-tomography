@@ -90,8 +90,6 @@ class Mission(object):
         self.vehicle.update_mission()
 
     def check_mission(self):
-        self.vehicle.update_mission()
-
         print("{} commands in the mission!".format(self.vehicle.count_waypoints()))
 
         home_location = self.vehicle.home_location
@@ -309,6 +307,7 @@ class Mission_Auto(Mission):
             self.vehicle.add_waypoint(point)
 
         # Send commands to vehicle and update.
+        self.vehicle.update_mission()
         self.check_mission()
 
     def display(self):
