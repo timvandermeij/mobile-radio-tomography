@@ -45,7 +45,7 @@ class Vehicle(object):
         This can depend on settings or the Vehicle class itself.
         """
 
-        raise NotImplementedError
+        raise NotImplementedError("Subclasses must implement use_simulation property")
 
     @property
     def home_location(self):
@@ -186,17 +186,17 @@ class Vehicle(object):
 
     def simple_takeoff(self, altitude):
         """
-        Take off to a certain altitude.
+        Take off to a certain relative altitude in meters.
         """
 
-        raise NotImplementedError
+        raise NotImplementedError("Subclasses must implement simple_takeoff(altitude)")
 
     def simple_goto(self, location):
         """
         Set the target `location` of the vehicle to the given `Location` object.
         """
 
-        raise NotImplementedError
+        raise NotImplementedError("Subclasses must implement simple_goto(location)")
 
     @property
     def location(self):
@@ -206,7 +206,7 @@ class Vehicle(object):
         This property returns the location as a `Location` object.
         """
 
-        raise NotImplementedError
+        raise NotImplementedError("Subclasses must implement location property")
 
     @property
     def speed(self):
@@ -216,7 +216,7 @@ class Vehicle(object):
         If the speed cannot be retrieved, raise a `NotImplementedError`.
         """
 
-        raise NotImplementedError
+        raise NotImplementedError("Subclass does not implement speed property")
 
     @speed.setter
     def speed(self, value):
@@ -238,7 +238,7 @@ class Vehicle(object):
         If the velocity cannot be retrieved, raise a `NotImplementedError`.
         """
 
-        raise NotImplementedError
+        raise NotImplementedError("Subclass does not implement velocity property")
 
     @velocity.setter
     def velocity(self, value):
@@ -261,7 +261,7 @@ class Vehicle(object):
         If the attitude cannot be retrieved, raise a `NotImplementedError`.
         """
 
-        raise NotImplementedError
+        raise NotImplementedError("Subclass does not implement attitude property")
 
     def set_yaw(self, heading, relative=False, direction=1):
         """
@@ -295,7 +295,7 @@ class Vehicle(object):
         If the vehicle does not support servos, raise a `NotImplementedError`.
         """
 
-        raise NotImplementedError
+        raise NotImplementedError("Subclass does not implement set_servo(servo, pwm)")
 
     def add_attribute_listener(self, attribute, listener):
         """
