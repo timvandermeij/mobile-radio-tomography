@@ -43,7 +43,7 @@ class Line_Follower(object):
         self._location = location
         self._direction = direction
         self._callback = callback
-        self._state = Line_Follower_State.AT_INTERSECTION
+        self._state = Line_Follower_State.AT_LINE
 
         self._sensors = settings.get("led_pins")
         if len(self._sensors) != 6:
@@ -99,6 +99,11 @@ class Line_Follower(object):
         if line and not intersection:
             self._state = Line_Follower_State.AT_LINE
         elif line and intersection:
+            if self._state == Line_Follower_State.AT_INTERSECTION:
+                # Do not keep updating the location when the vehicle is
+                # waiting at an intersection.
+                return
+
             self._state = Line_Follower_State.AT_INTERSECTION
 
             # Update the location using the direction.
