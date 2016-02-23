@@ -11,7 +11,7 @@ class TestMemoryMap(LocationTestCase):
     def setUp(self):
         super(TestMemoryMap, self).setUp()
         self.arguments = Arguments("settings.json", [])
-        self.environment = Environment.setup(self.arguments, simulated=True)
+        self.environment = Environment.setup(self.arguments, geometry_class="Geometry", simulated=True)
         self.coord_delta = sys.float_info.epsilon * 10
     
     def test_init(self):
