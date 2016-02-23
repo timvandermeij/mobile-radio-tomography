@@ -128,7 +128,6 @@ class TestLocationLineFollower(unittest.TestCase):
         line_follower = Line_Follower(self.location, self.direction, mock_callback, self.settings)
         line_follower.update([1, 1, 1, 1])
         line_follower.update([1, 1, 1, 1])
-        new_location = (self.location[0], self.location[1] + 1)
         self.assertEqual(line_follower._location, new_location)
         self.assertEqual(line_follower._direction, self.direction)
         self.assertEqual(line_follower._state, Line_Follower_State.AT_INTERSECTION)
@@ -175,10 +174,9 @@ class TestLocationLineFollower(unittest.TestCase):
         # It should do nothing when the vehicle is not on a line and no other
         # lines are detected.
         line_follower = Line_Follower(self.location, self.direction, mock_callback, self.settings)
-        line_follower.set_direction(Line_Follower_Direction.RIGHT)
         line_follower.update([0, 0, 0, 0])
         self.assertEqual(line_follower._location, self.location)
-        self.assertEqual(line_follower._direction, Line_Follower_Direction.RIGHT)
+        self.assertEqual(line_follower._direction, Line_Follower_Direction.UP)
         self.assertEqual(line_follower._state, Line_Follower_State.AT_LINE)
         self.assertFalse(mock_callback.called)
         mock_callback.reset_mock()
@@ -186,20 +184,18 @@ class TestLocationLineFollower(unittest.TestCase):
         # It should do nothing when the vehicle is not on a line and both other
         # lines are detected.
         line_follower = Line_Follower(self.location, self.direction, mock_callback, self.settings)
-        line_follower.set_direction(Line_Follower_Direction.RIGHT)
         line_follower.update([1, 0, 0, 1])
         self.assertEqual(line_follower._location, self.location)
-        self.assertEqual(line_follower._direction, Line_Follower_Direction.RIGHT)
+        self.assertEqual(line_follower._direction, Line_Follower_Direction.UP)
         self.assertEqual(line_follower._state, Line_Follower_State.AT_LINE)
         self.assertFalse(mock_callback.called)
         mock_callback.reset_mock()
 
         # It should let the controller know when the vehicle diverged from the grid.
         line_follower = Line_Follower(self.location, self.direction, mock_callback, self.settings)
-        line_follower.set_direction(Line_Follower_Direction.RIGHT)
         line_follower.update([1, 0, 0, 0])
         self.assertEqual(line_follower._location, self.location)
-        self.assertEqual(line_follower._direction, Line_Follower_Direction.RIGHT)
+        self.assertEqual(line_follower._direction, Line_Follower_Direction.UP)
         self.assertEqual(line_follower._state, Line_Follower_State.AT_LINE)
         mock_callback.assert_has_calls([
             call("diverged", "left")
@@ -207,10 +203,9 @@ class TestLocationLineFollower(unittest.TestCase):
         mock_callback.reset_mock()
 
         line_follower = Line_Follower(self.location, self.direction, mock_callback, self.settings)
-        line_follower.set_direction(Line_Follower_Direction.RIGHT)
         line_follower.update([0, 0, 0, 1])
         self.assertEqual(line_follower._location, self.location)
-        self.assertEqual(line_follower._direction, Line_Follower_Direction.RIGHT)
+        self.assertEqual(line_follower._direction, Line_Follower_Direction.UP)
         self.assertEqual(line_follower._state, Line_Follower_State.AT_LINE)
         mock_callback.assert_has_calls([
             call("diverged", "right")
