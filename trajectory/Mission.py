@@ -4,7 +4,7 @@ import math
 
 import numpy as np
 
-from dronekit import VehicleMode, Command, LocationGlobalRelative, LocationLocal
+from dronekit import VehicleMode, LocationGlobalRelative, LocationLocal
 
 from ..geometry.Geometry import Geometry_Spherical
 from ..location.Dead_Reckoning import Dead_Reckoning
@@ -168,7 +168,7 @@ class Mission(object):
             sys.exit(1)
         elif sensor_distance < self.closeness:
             self.vehicle.mode = VehicleMode("GUIDED")
-            self.set_speed(0)
+            self.vehicle.speed = 0.0
             raise RuntimeError("Too close to the object ({} m), halting.".format(sensor_distance))
         elif sensor_distance < self.farness:
             return True
@@ -194,7 +194,7 @@ class Mission(object):
         """
         Move vehicle in direction based on specified velocity vectors.
 
-        This should be used in GUIDED mode. See `set_speed` for another command that works in AUTO mode.
+        This should be used in GUIDED mode. See `vehicle.speed` that works in AUTO mode.
         """
 
         self.vehicle.velocity = [velocity_x, velocity_y, velocity_z]
@@ -324,6 +324,10 @@ class Mission_Auto(Mission):
     def check_waypoint(self):
         next_waypoint = self.vehicle.get_next_waypoint()
         distance = self.distance_to_current_waypoint()
+        if distance is None:
+            print('No distance to waypoint known!')
+            return True
+
         if next_waypoint >= self._first_waypoint:
             if distance < self.farness:
                 print("Distance to waypoint ({}): {} m".format(next_waypoint, distance))
@@ -471,7 +475,7 @@ class Mission_Search(Mission_Browse):
                 self.dists_done = np.zeros(self.dists_size, dtype=bool)
 
                 self.set_yaw(self.yaw * 180/math.pi, relative=False)
-                self.set_speed(self.speed)
+                self.vehicle.speed = self.speed
                 self.vehicle.simple_goto(self.geometry.get_location_angle(current_location, self.move_distance, angle))
 
     def check_sensor_distance(self, sensor_distance, yaw, pitch):
@@ -532,7 +536,7 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
 
                 self.points[self.current_point:self.next_waypoint] = points
                 self.next_waypoint = self.current_point + len(points)
-                self.set_speed(self.speed)
+                self.vehicle.speed = self.speed
                 self.vehicle.simple_goto(self.points[self.current_point])
                 self.rotating = True
                 self.start_yaw = self.vehicle.attitude.yaw

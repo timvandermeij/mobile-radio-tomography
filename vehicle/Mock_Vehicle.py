@@ -53,7 +53,7 @@ class CommandSequence(object):
         self._commands = []
 
     def __getitem__(self, key):
-        return self._commands[key]
+        return self._commands[key+1]
 
     def download(self):
         pass
@@ -330,7 +330,7 @@ class Mock_Vehicle(MAVLink_Vehicle):
                     self._target_location = None
                     self._target_command = False
         elif self._mode.name == "AUTO" and self.commands.count > self.commands.next:
-            cmd = self.commands[self.commands.next]
+            cmd = self.commands[self.commands.next-1]
             self._parse_command(cmd)
         elif self._mode.name == "GUIDED":
             vNorth = self._velocity[0]
@@ -460,8 +460,10 @@ class Mock_Vehicle(MAVLink_Vehicle):
         # Clear target location so new mode can give its own
         self._target_location = None
 
-    def arm_and_takeoff(self, altitude, speed):
-        self.vehicle.mode = VehicleMode("GUIDED")
+    def check_arming(self):
+        self.mode = VehicleMode("GUIDED")
+
+        return True
 
     def simple_takeoff(self, altitude):
         self.commands.takeoff(altitude)

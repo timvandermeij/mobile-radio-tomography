@@ -1,6 +1,7 @@
-from dronekit import LocationLocal
+from dronekit import LocationLocal, LocationGlobalRelative, Command
 from pymavlink import mavutil
 from Vehicle import Vehicle
+from ..geometry.Geometry import Geometry_Spherical
 
 class MAVLink_Vehicle(Vehicle):
     """
@@ -30,12 +31,14 @@ class MAVLink_Vehicle(Vehicle):
         cmd = Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, 0, altitude)
         self.commands.add(cmd)
 
+        return True
+
     def add_waypoint(self, location):
         # Handle non-spherical geometries
-        if isinstance(point, LocationLocal):
-            lat, lon, alt = point.north, point.east, -point.down
+        if isinstance(location, LocationLocal):
+            lat, lon, alt = location.north, location.east, -location.down
         else:
-            lat, lon, alt = point.lat, point.lon, point.alt
+            lat, lon, alt = location.lat, location.lon, location.alt
 
         cmd = Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, lat, lon, alt)
         self.commands.add(cmd)
@@ -60,6 +63,7 @@ class MAVLink_Vehicle(Vehicle):
             waypoint_location = LocationGlobalRelative(lat, lon, alt)
         else:
             waypoint_location = LocationLocal(lat, lon, -alt)
+
         return waypoint_location
 
     def get_next_waypoint(self):
