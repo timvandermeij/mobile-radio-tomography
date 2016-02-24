@@ -32,8 +32,8 @@ class TestLocationLineFollowerRaspberryPi(unittest.TestCase):
         line_follower = Line_Follower_Raspberry_Pi(self.location, self.direction,
                                                    mock_callback, self.settings)
 
-        # Verify that the correct number of sensors is set.
-        self.assertEqual(len(line_follower._sensors), 6)
+        # Verify that the correct sensors are set.
+        self.assertEqual(line_follower._sensors, self.settings.get("led_pins"))
 
         # Warnings must be disabled.
         line_follower.gpio.setwarnings.assert_called_once_with(False)
