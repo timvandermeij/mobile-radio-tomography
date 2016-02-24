@@ -472,8 +472,7 @@ class Geometry_Spherical(Geometry):
     def equalize(self, location1, location2):
         if isinstance(location1, Locations):
             location1 = self.get_locations_frame(location1, location2)
-            return location1, location2
-        elif isinstance(location2, Locations):
+        if isinstance(location2, Locations):
             location2 = self.get_locations_frame(location2, location1)
 
         if type(location1) == type(location2):

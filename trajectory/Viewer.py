@@ -6,7 +6,8 @@ import pyglet
 from pyglet.window import key
 from pyglet.gl import *
 
-from MockVehicle import MockVehicle, MockAttitude
+from ..environment.Environment_Simulator import Environment_Simulator
+from ..vehicle.Mock_Vehicle import Mock_Vehicle, MockAttitude
 
 class Vector(np.ndarray):
     """
@@ -318,8 +319,11 @@ class Viewer(object):
 class Viewer_Interactive(Viewer):
     def __init__(self, environment, settings):
         super(Viewer_Interactive, self).__init__(environment, settings)
+        if not isinstance(environment, Environment_Simulator):
+            raise TypeError("`environment` must be an `Environment_Simulator`")
+
         self.vehicle = self.environment.get_vehicle()
-        if isinstance(self.vehicle, MockVehicle):
+        if isinstance(self.vehicle, Mock_Vehicle):
             self.is_mock = True
         else:
             self.is_mock = False
@@ -410,11 +414,11 @@ class Viewer_Interactive(Viewer):
                 self.current_face = -1
             self._update_tracking()
         elif symbol == key.F: # toggle flying through objects
-            if self.vehicle.get_location_callback():
-                self.vehicle.unset_location_callback()
+            if self.environment.has_location_check:
+                self.environment.remove_location_check()
                 print("Enabled flying through objects")
             else:
-                self.vehicle.set_location_callback(self.environment.check_location)
+                self.environment.set_location_check()
                 print("Disabled flying through objects")
         elif symbol == key.Q: # quit
             pyglet.app.exit()
