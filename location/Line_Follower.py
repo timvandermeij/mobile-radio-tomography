@@ -64,6 +64,12 @@ class Line_Follower(object):
         for sensor in self._sensors:
             self.gpio.setup(sensor, self.gpio.IN)
 
+    def activate(self):
+        raise NotImplementedError("Subclasses must implement activate()")
+
+    def deactivate(self):
+        raise NotImplementedError("Subclasses must implement deactivate()")
+
     def read(self):
         """
         Read the values of four of the six LEDs. We only read the two innermost
