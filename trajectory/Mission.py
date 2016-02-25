@@ -7,7 +7,6 @@ import numpy as np
 from dronekit import VehicleMode, LocationGlobalRelative, LocationLocal
 
 from ..geometry.Geometry import Geometry_Spherical
-from ..location.Dead_Reckoning import Dead_Reckoning
 from Memory_Map import Memory_Map
 from ..vehicle.Mock_Vehicle import Mock_Vehicle
 
@@ -25,7 +24,6 @@ class Mission(object):
         self.geometry = self.environment.get_geometry()
         self.settings = settings
         self.memory_map = None
-        self.dead_reckoning = Dead_Reckoning()
 
     def distance_to_current_waypoint(self):
         """

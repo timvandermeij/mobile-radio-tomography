@@ -17,6 +17,18 @@
             "speed_of_sound": 34320
         }
     },
+    "line_follower_raspberry_pi": {
+        "name": "Line follower (Raspberry Pi)",
+        "settings": {
+            "led_pins": [29, 31, 32, 33, 35, 36],
+            "emitter_pin": 37,
+            "write_delay": 0.0002,
+            "readable_leds": [0, 2, 3, 5],
+            "max_value": 1023,
+            "charge_delay": 0.00001,
+            "line_threshold": 300
+        }
+    },
     "mission": {
         "name": "Drone trajectory mission data",
         "settings": {
