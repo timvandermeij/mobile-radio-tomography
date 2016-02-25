@@ -47,6 +47,38 @@ class TestLocationLineFollowerRaspberryPi(unittest.TestCase):
             call(sensor, line_follower.gpio.IN) for sensor in sensors
         ])
 
+    def test_activate(self):
+        from ..location.Line_Follower_Raspberry_Pi import Line_Follower_Raspberry_Pi
+
+        mock_callback = MagicMock()
+        line_follower = Line_Follower_Raspberry_Pi(self.location, self.direction,
+                                                   mock_callback, self.settings)
+        emitter_pin = self.settings.get("emitter_pin")
+
+        line_follower.activate()
+        line_follower.gpio.setup.assert_has_calls([
+            call(emitter_pin, line_follower.gpio.OUT)
+        ])
+        line_follower.gpio.output.assert_has_calls([
+            call(emitter_pin, True)
+        ])
+
+    def test_deactivate(self):
+        from ..location.Line_Follower_Raspberry_Pi import Line_Follower_Raspberry_Pi
+
+        mock_callback = MagicMock()
+        line_follower = Line_Follower_Raspberry_Pi(self.location, self.direction,
+                                                   mock_callback, self.settings)
+        emitter_pin = self.settings.get("emitter_pin")
+
+        line_follower.deactivate()
+        line_follower.gpio.setup.assert_has_calls([
+            call(emitter_pin, line_follower.gpio.OUT)
+        ])
+        line_follower.gpio.output.assert_has_calls([
+            call(emitter_pin, False)
+        ])
+
     def test_read(self):
         from ..location.Line_Follower_Raspberry_Pi import Line_Follower_Raspberry_Pi
 

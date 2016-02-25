@@ -1,3 +1,4 @@
+import time
 import RPi.GPIO
 from Line_Follower import Line_Follower
 from ..settings import Arguments, Settings
@@ -22,6 +23,9 @@ class Line_Follower_Raspberry_Pi(Line_Follower):
         if len(self._sensors) != 6:
             raise ValueError("Exactly six sensors must be defined for the Zumo robot")
 
+        self._emitter_pin = settings.get("emitter_pin")
+        self._write_delay = settings.get("write_delay")
+
         # Initialize the RPi.GPIO module. Doing it this way instead of using
         # an alias during import allows unit tests to access it too.
         self.gpio = RPi.GPIO
@@ -38,12 +42,22 @@ class Line_Follower_Raspberry_Pi(Line_Follower):
             self.gpio.setup(sensor, self.gpio.IN)
 
     def activate(self):
-        # TODO: implement
-        pass
+        """
+        Activate the line follower by turning on its IR LEDs.
+        """
+
+        self.gpio.setup(self._emitter_pin, self.gpio.OUT)
+        self.gpio.output(self._emitter_pin, True)
+        time.sleep(self._write_delay)
 
     def deactivate(self):
-        # TODO: implement
-        pass
+        """
+        Deactivate the line follower by turning off its IR LEDs.
+        """
+
+        self.gpio.setup(self._emitter_pin, self.gpio.OUT)
+        self.gpio.output(self._emitter_pin, False)
+        time.sleep(self._write_delay)
 
     def read(self):
         """
@@ -52,6 +66,7 @@ class Line_Follower_Raspberry_Pi(Line_Follower):
         straight line and an intersection of lines.
         """
 
+        # TODO: extend
         sensor_values = []
         for sensor in [0, 2, 3, 5]:
             sensor_values.append(self.gpio.input(self._sensors[sensor]))
