@@ -15,7 +15,7 @@ class Line_Follower_Raspberry_Pi(Line_Follower):
         super(Line_Follower_Raspberry_Pi, self).__init__(location, direction, callback)
 
         if isinstance(settings, Arguments):
-            settings = settings.get_settings("line_follower")
+            settings = settings.get_settings("line_follower_raspberry_pi")
         elif not isinstance(settings, Settings):
             raise ValueError("'settings' must be an instance of Settings or Arguments")
 
@@ -25,6 +25,10 @@ class Line_Follower_Raspberry_Pi(Line_Follower):
 
         self._emitter_pin = settings.get("emitter_pin")
         self._write_delay = settings.get("write_delay")
+        self._readable_leds = settings.get("readable_leds")
+        self._max_value = settings.get("max_value")
+        self._charge_delay = settings.get("charge_delay")
+        self._line_threshold = settings.get("line_threshold")
 
         # Initialize the RPi.GPIO module. Doing it this way instead of using
         # an alias during import allows unit tests to access it too.
@@ -61,14 +65,49 @@ class Line_Follower_Raspberry_Pi(Line_Follower):
 
     def read(self):
         """
-        Read the values of four of the six LEDs. We only read the two innermost
-        and the two outermost LEDs to clearly make a distinction between a
-        straight line and an intersection of lines.
+        Read the values of the line follower's IR LEDs.
         """
 
-        # TODO: extend
+        # Initialize the sensor values with the maximum value
+        # returned by the A/D conversion. Drive the sensor lines
+        # high and charge them for a fixed amount of time.
         sensor_values = []
-        for sensor in [0, 2, 3, 5]:
-            sensor_values.append(self.gpio.input(self._sensors[sensor]))
+        for led in self._readable_leds:
+            sensor_values.append(self._max_value)
+            self.gpio.setup(self._sensors[led], self.gpio.OUT)
+            self.gpio.output(self._sensors[led], True)
+
+        time.sleep(self._charge_delay)
+
+        # Drive the sensor lines low and set them as inputs.
+        # Disable the internal pull-up resistors.
+        for led in self._readable_leds:
+            self.gpio.setup(self._sensors[led], self.gpio.IN)
+            self.gpio.output(self._sensors[led], False)
+
+        # Determine the values of the sensors. The documentation of
+        # the Zumo reflectance sensor array states that strong
+        # reflectance causes a low voltage decay time and weak
+        # reflectance causes a high voltage decay time. We have
+        # initialized the sensor values above with the maximum
+        # values, so we assume the weakest possible reflectance, i.e.,
+        # we assume that the vehicle is on a line and therefore that
+        # the measured signal is constantly high (because a black
+        # surface has a weak reflectance). When the signal does become
+        # low, we update the sensor value with the elapsed time since
+        # the start, which then is a measure of how reflective the
+        # surface is.
+        start_time = time.time()
+        while ((time.time() - start_time) * 1e6) < self._max_value:
+            elapsed_time = time.time() - start_time
+            for index, led in enumerate(self._readable_leds):
+                led_value = self.gpio.input(self._sensors[led])
+                if not led_value and elapsed_time < sensor_values[index]:
+                    sensor_values[index] = elapsed_time
+
+        # Convert the sensor values to binary. If the sensor value is
+        # above a threshold value, we say that the vehicle is above a line.
+        for sensor_value in sensor_values:
+            sensor_value = int(sensor_value > self._line_threshold)
 
         return sensor_values

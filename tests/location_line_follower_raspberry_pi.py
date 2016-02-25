@@ -20,7 +20,7 @@ class TestLocationLineFollowerRaspberryPi(unittest.TestCase):
         self.direction = Line_Follower_Direction.UP
         
         arguments = Arguments("settings.json", [])
-        self.settings = arguments.get_settings("line_follower")
+        self.settings = arguments.get_settings("line_follower_raspberry_pi")
 
     def tearDown(self):
         self.patcher.stop()
@@ -77,18 +77,4 @@ class TestLocationLineFollowerRaspberryPi(unittest.TestCase):
         ])
         line_follower.gpio.output.assert_has_calls([
             call(emitter_pin, False)
-        ])
-
-    def test_read(self):
-        from ..location.Line_Follower_Raspberry_Pi import Line_Follower_Raspberry_Pi
-
-        mock_callback = MagicMock()
-        line_follower = Line_Follower_Raspberry_Pi(self.location, self.direction,
-                                                   mock_callback, self.settings)
-        sensors = self.settings.get("led_pins")
-        sensor_values = line_follower.read()
-
-        self.assertIs(type(sensor_values), list)
-        line_follower.gpio.input.assert_has_calls([
-            call(sensor) for sensor in [sensors[0], sensors[2], sensors[3], sensors[5]]
         ])
