@@ -1,8 +1,9 @@
 # TODO: documentation
-# TODO: configuration
 # TODO: hardware and unit tests
 
+import os
 import lirc
+import shutil
 import thread
 import time
 from ..settings import Arguments, Settings
@@ -18,12 +19,46 @@ class Infrared_Sensor(object):
         elif not isinstance(settings, Settings):
             raise ValueError("'settings' must be an instance of Settings or Arguments")
 
+        self._remote = settings.get("remote")
         self._program = settings.get("program")
         self._buttons = settings.get("buttons")
         self._wait_delay = settings.get("wait_delay")
 
         self._active = False
         self._event_listeners = {}
+
+        self._configure()
+
+    def _configure(self):
+        """
+        Configure LIRC to work with the remote specified in the settings file.
+        """
+
+        # Check if LIRC is installed.
+        if not os.path.isdir("/etc/lirc"):
+            raise OSError("LIRC is not installed")
+
+        # Check if the `lircd.conf` file already exists.
+        remote_file = "{}.lircd.conf".format(self._remote)
+        if os.path.isfile("/etc/lirc/lircd.conf.d/{}".format(remote_file)):
+            return
+
+        # Check if the `lircd.conf` file is available in our remotes folder.
+        if not os.path.isfile("remotes/{}".format(remote_file)):
+            raise OSError("Remote file '{}' does not exist".format(remote_file))
+
+        # Check if the `lircrc` file is available in our remotes folder.
+        configuration_file = "{}.lircrc".format(self._remote)
+        if not os.path.isfile("remotes/{}".format(configuration_file)):
+            raise OSError("Configuration file '{}' does not exist".format(configuration_file))
+
+        # Copy the `lircd.conf` file for the remote to the LIRC directory.
+        # This way it will be loaded automatically when LIRC is started.
+        try:
+            shutil.copyfile("remotes/{}".format(remote_file),
+                            "/etc/lirc/lircd.conf.d/{}".format(remote_file))
+        except IOError:
+            raise OSError("Configuration directory is not writable. Run this as root.")
 
     def register(self, button, callback):
         """
@@ -45,7 +80,8 @@ class Infrared_Sensor(object):
         """
 
         self.active = True
-        lirc.init(self._program, blocking=False)
+        configuration_file = "remotes/{}.lircrc".format(self._remote)
+        lirc.init(self._program, configuration_file, blocking=False)
         thread.start_new_thread(self._loop, ())
 
     def _loop(self):

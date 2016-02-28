@@ -1,0 +1,11 @@
+begin
+    button = cd-play
+    prog = mobile-radio-tomography
+    config = start
+end
+
+begin
+    button = cd-stop
+    prog = mobile-radio-tomography
+    config = stop
+end

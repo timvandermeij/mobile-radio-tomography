@@ -20,6 +20,7 @@
     "infrared_sensor": {
         "name": "Infrared sensor",
         "settings": {
+            "remote": "Sony_RM-SRB5",
             "program": "mobile-radio-tomography",
             "buttons": ["start", "stop"],
             "wait_delay": 0.05
