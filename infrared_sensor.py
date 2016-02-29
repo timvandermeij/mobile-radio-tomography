@@ -17,10 +17,7 @@ def main():
     infrared_sensor.activate()
 
     while True:
-        try:
-            time.sleep(1)
-        except KeyboardInterrupt:
-            infrared_sensor.deactivate()
+        time.sleep(1)
 
 if __name__ == "__main__":
     main()
