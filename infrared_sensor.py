@@ -1,3 +1,4 @@
+import time
 from __init__ import __package__
 from settings import Settings
 from control.Infrared_Sensor import Infrared_Sensor
@@ -14,6 +15,12 @@ def main():
     infrared_sensor.register("start", start_callback)
     infrared_sensor.register("stop", stop_callback)
     infrared_sensor.activate()
+
+    while True:
+        try:
+            time.sleep(1)
+        except KeyboardInterrupt:
+            infrared_sensor.deactivate()
 
 if __name__ == "__main__":
     main()
