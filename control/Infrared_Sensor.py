@@ -4,6 +4,7 @@
 import os
 import lirc
 import shutil
+import sys
 import thread
 import time
 from ..settings import Arguments, Settings
