@@ -100,6 +100,18 @@
             "gps": true
         }
     },
+    "vehicle_robot": {
+        "name": "Robot vehicle",
+        "settings": {
+            "direction_pins": [16,18],
+            "speed_pins": [24,26],
+            "speed_pwms": [0, 255],
+            "speeds": [0, 0.60],
+            "line_follower_delay": 0.01,
+            "home_location": [0,0],
+            "home_direction": 1
+        }
+    },
     "reconstruction": {
         "name": "Reconstruction",
         "settings": {

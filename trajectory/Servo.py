@@ -21,28 +21,46 @@ class Interval(object):
 
 class Servo(object):
     """
-    Servo class that handles current measurements and performs calculations.
+    Servo class that handles current PWM measurements and performs calculations
+    to and from PWM values.
     """
 
-    def __init__(self, pin, angles, pwm=None):
+    def __init__(self, pin, values, pwm=None):
+        """
+        Initialize a servo to work on the given `pin` integer.
+
+        The given `values` is a tuple containing minimum and maximum values,
+        such as servo angles, camera distances or motor speeds depending on
+        the use of the servo. The `pwm` is a similar tuple for the PWM minimum
+        and maximum values. By default, `pwm` is set to an interval [1000,2000).
+        """
+
         self.pin = int(pin)
-        self.angles = Interval(angles)
+        # The values to be converted to and from PWMs, such as servo angles or 
+        # motor speeds.
+        self._values = Interval(values)
 
         if pwm is None:
             self.pwm = Interval(1000,2000)
         else:
             self.pwm = Interval(pwm)
 
-        self.pwm_factor = self.pwm.diff / float(self.angles.diff)
-        self.angle_factor = self.angles.diff / float(self.pwm.diff)
+        self._pwm_factor = self.pwm.diff / float(self._values.diff)
+        self._value_factor = self._values.diff / float(self.pwm.diff)
 
-        self.current_pwm = self.pwm.min
+        self._current_pwm = self.pwm.min
+
+    def check_value(self, value):
+        """
+        Check whether the given `value` is within the value constraints.
+        """
+        return self._values.min <= value < self._values.max
 
     def check_angle(self, angle):
         """
-        Check whether the given `angle` is within this servo's constraints.
+        Backward compatible method that is equal to `Servo.check_value`.
         """
-        return self.angles.min <= angle < self.angles.max
+        return self.check_value(angle)
 
     def get_pin(self):
         """
@@ -50,26 +68,32 @@ class Servo(object):
         """
         return self.pin
 
-    def get_pwm(self, angle=None):
+    def get_pwm(self, value=None):
         """
-        Get the PWM of a given `angle`, or the current PWM value if no angle is given.
+        Get the PWM of a given `value`, or the current PWM value if no value is given.
         """
-        if angle is None:
-            return self.current_pwm
+        if value is None:
+            return self._current_pwm
 
-        return self.pwm.min + self.pwm_factor * (angle - self.angles.min)
+        return self.pwm.min + self._pwm_factor * (value - self._values.min)
 
     def set_current_pwm(self, pwm):
         """
         Store the given `pwm` as the current PWM value.
         """
-        self.current_pwm = pwm
+        self._current_pwm = pwm
+
+    def get_value(self, pwm=None):
+        """
+        Calculate the value belonging to a given `pwm`, or the current PWM if none is given.
+        """
+        if pwm is None:
+            pwm = self._current_pwm
+
+        return self._values.min + self._value_factor * (pwm - self.pwm.min)
 
     def get_angle(self, pwm=None):
         """
-        Calculate the angle belonging to a given `pwm`, or the current PWM if none is given.
+        Backward compatibility method for `Sensor.get_value`.
         """
-        if pwm is None:
-            pwm = self.current_pwm
-
-        return self.angles.min + self.angle_factor * (pwm - self.pwm.min)
+        return self.get_value(pwm)
