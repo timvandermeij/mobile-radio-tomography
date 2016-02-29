@@ -34,6 +34,9 @@ class Infrared_Sensor(object):
         Configure LIRC to work with the remote specified in the settings file.
         """
 
+        module = self.__class__.__module__
+        base_path = os.path.dirname(sys.modules[module].__file__)
+
         # Check if LIRC is installed.
         if not os.path.isdir("/etc/lirc"):
             raise OSError("LIRC is not installed")
@@ -44,18 +47,18 @@ class Infrared_Sensor(object):
             return
 
         # Check if the `lircd.conf` file is available in our remotes folder.
-        if not os.path.isfile("remotes/{}".format(remote_file)):
+        if not os.path.isfile("{}/remotes/{}".format(base_path, remote_file)):
             raise OSError("Remote file '{}' does not exist".format(remote_file))
 
         # Check if the `lircrc` file is available in our remotes folder.
         configuration_file = "{}.lircrc".format(self._remote)
-        if not os.path.isfile("remotes/{}".format(configuration_file)):
+        if not os.path.isfile("{}/remotes/{}".format(base_path, configuration_file)):
             raise OSError("Configuration file '{}' does not exist".format(configuration_file))
 
         # Copy the `lircd.conf` file for the remote to the LIRC directory.
         # This way it will be loaded automatically when LIRC is started.
         try:
-            shutil.copyfile("remotes/{}".format(remote_file),
+            shutil.copyfile("{}/remotes/{}".format(base_path, remote_file),
                             "/etc/lirc/lircd.conf.d/{}".format(remote_file))
         except IOError:
             raise OSError("Configuration directory is not writable. Run this as root.")
