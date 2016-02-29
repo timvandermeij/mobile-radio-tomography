@@ -25,6 +25,9 @@ class Infrared_Sensor(object):
         self._buttons = settings.get("buttons")
         self._wait_delay = settings.get("wait_delay")
 
+        module = self.__class__.__module__
+        self._base_path = os.path.dirname(sys.modules[module].__file__)
+
         self._active = False
         self._event_listeners = {}
 
@@ -48,18 +51,18 @@ class Infrared_Sensor(object):
             return
 
         # Check if the `lircd.conf` file is available in our remotes folder.
-        if not os.path.isfile("{}/remotes/{}".format(base_path, remote_file)):
+        if not os.path.isfile("{}/remotes/{}".format(self._base_path, remote_file)):
             raise OSError("Remote file '{}' does not exist".format(remote_file))
 
         # Check if the `lircrc` file is available in our remotes folder.
         configuration_file = "{}.lircrc".format(self._remote)
-        if not os.path.isfile("{}/remotes/{}".format(base_path, configuration_file)):
+        if not os.path.isfile("{}/remotes/{}".format(self._base_path, configuration_file)):
             raise OSError("Configuration file '{}' does not exist".format(configuration_file))
 
         # Copy the `lircd.conf` file for the remote to the LIRC directory.
         # This way it will be loaded automatically when LIRC is started.
         try:
-            shutil.copyfile("{}/remotes/{}".format(base_path, remote_file),
+            shutil.copyfile("{}/remotes/{}".format(self._base_path, remote_file),
                             "/etc/lirc/lircd.conf.d/{}".format(remote_file))
         except IOError:
             raise OSError("Configuration directory is not writable. Run this as root.")
@@ -84,7 +87,7 @@ class Infrared_Sensor(object):
         """
 
         self.active = True
-        configuration_file = "remotes/{}.lircrc".format(self._remote)
+        configuration_file = "{}/remotes/{}.lircrc".format(self._base_path, self._remote)
         lirc.init(self._program, configuration_file, blocking=False)
         thread.start_new_thread(self._loop, ())
 
