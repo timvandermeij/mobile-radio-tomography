@@ -1,6 +1,3 @@
-# TODO: documentation
-# TODO: hardware and unit tests
-
 import os
 import lirc
 import shutil
