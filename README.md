@@ -35,6 +35,7 @@ different installation procedures.
     * RPi.GPIO
     * RPIO
     * xbee
+    * python-lirc
   * Vehicle trajectory mission interfaces:
     * lxml
     * pexpect
@@ -180,6 +181,22 @@ Raspberry Pi. Start the tool with `python2 distance_sensor_physical.py`
 to receive continuous measurements from the distance sensor. Change the pin
 numbers for the trigger and echo pins in `settings.json` if you have used
 different pin numbers when connecting the HC-SR04 sensor to the Raspberry Pi.
+
+Infrared sensor
+---------------
+
+We assume that you have setup a Raspberry Pi with Arch Linux ARM and
+that you have connected the TSOP38238 sensor. Make sure that LIRC is setup
+correctly on the device (refer to the `docs` folder for more information on
+this). This tool must be run on the Raspberry Pi. Start the tool with
+`python2 infrared_sensor.py` and use a Sony RM-SRB5 remote. Press the play
+and stop buttons on the remote and verify that the callback functions are
+triggered.
+
+You can change the remote that you wish to use. To do so, create or download
+the `lircd.conf` file and place it in the `control/remotes` folder. Then
+create a `lircrc` file using the same remote name there to bind the buttons
+to the events. Finally change the remote name in the settings file.
 
 Reconstruction and visualization
 --------------------------------

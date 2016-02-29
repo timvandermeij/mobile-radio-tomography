@@ -17,6 +17,15 @@
             "speed_of_sound": 34320
         }
     },
+    "infrared_sensor": {
+        "name": "Infrared sensor",
+        "settings": {
+            "remote": "Sony_RM-SRB5",
+            "program": "mobile-radio-tomography",
+            "buttons": ["start", "stop"],
+            "wait_delay": 0.05
+        }
+    },
     "line_follower_raspberry_pi": {
         "name": "Line follower (Raspberry Pi)",
         "settings": {

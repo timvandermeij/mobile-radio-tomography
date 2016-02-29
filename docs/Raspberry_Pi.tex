@@ -124,7 +124,9 @@ over.
           {\tt static domain\_name\_servers=10.42.0.1 8.8.8.8}
 
           This is for the first Raspberry Pi. For the second device, change
-          10.42.0.10 to 10.42.0.11.
+          10.42.0.10 to 10.42.0.11. If after this change you cannot SSH into 
+          the device, run {\tt nmap -sP 10.42.0.0/24} on your computer to 
+          determine which IP address was assigned to the device.
     \item Edit {\tt /boot/cmdline.txt} to remove the recently added IP part.
           After that, reboot the Raspberry Pi device.
     \item On your laptop, edit the old link-local connection. Change the type 
