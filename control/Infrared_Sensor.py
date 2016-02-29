@@ -83,7 +83,7 @@ class Infrared_Sensor(object):
         Activate the infrared sensor.
         """
 
-        self.active = True
+        self._active = True
         configuration_file = "{}/remotes/{}.lircrc".format(self._base_path, self._remote)
         lirc.init(self._program, configuration_file, blocking=False)
         thread.start_new_thread(self._loop, ())
@@ -93,7 +93,7 @@ class Infrared_Sensor(object):
         Execute the sensor loop. This runs in a separate thread.
         """
 
-        while self.active:
+        while self._active:
             data = lirc.nextcode()
             if len(data) == 1:
                 button = data[0]
