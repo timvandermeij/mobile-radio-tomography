@@ -33,6 +33,7 @@ different installation procedures.
   * Physical sensor/communication interfaces:
     * pyserial (you may need to use `pip install --user "pyserial==2.7"`)
     * RPi.GPIO
+    * RPIO
     * xbee
   * Vehicle trajectory mission interfaces:
     * lxml
