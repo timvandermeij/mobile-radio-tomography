@@ -107,7 +107,6 @@ class Line_Follower_Raspberry_Pi(Line_Follower):
 
         # Convert the sensor values to binary. If the sensor value is
         # above a threshold value, we say that the vehicle is above a line.
-        for sensor_value in sensor_values:
-            sensor_value = int(sensor_value > self._line_threshold)
+        sensor_values = [int(sensor_value > self._line_threshold) for sensor_value in sensor_values]
 
         return sensor_values
