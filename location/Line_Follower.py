@@ -1,8 +1,13 @@
 class Line_Follower_Direction(object):
-    UP = 1
+    """
+    Enumeration of possible directions of the line follower.
+
+    The cardinal directions are enumerated clockwise starting from up.
+    """
+    UP = 0
+    RIGHT = 1
     DOWN = 2
     LEFT = 3
-    RIGHT = 4
 
 class Line_Follower_State(object):
     AT_LINE = 1
@@ -25,11 +30,8 @@ class Line_Follower(object):
         if not isinstance(location, tuple):
             raise ValueError("Location must be a tuple")
 
-        if type(direction) != int or not 1 <= direction <= 4:
-            raise ValueError("Direction must be one of the defined types")
-
         self._location = location
-        self._direction = direction
+        self.set_direction(direction)
         self._callback = callback
         self._state = Line_Follower_State.AT_LINE
 
@@ -98,12 +100,22 @@ class Line_Follower(object):
             is_line_right = (intersection == Line_Follower_Bit_Mask.LINE_RIGHT)
             self._callback("diverged", "left" if is_line_left else "right")
 
+    def set_state(self, state):
+        """
+        Set the state of the line follower.
+        """
+
+        if type(state) != int or not 1 <= state <= 2:
+            raise ValueError("Direction must be one of the defined types")
+
+        self._state = state
+
     def set_direction(self, direction):
         """
         Set the direction of the vehicle.
         """
 
-        if type(direction) != int or not 1 <= direction <= 4:
+        if type(direction) != int or not 0 <= direction <= 3:
             raise ValueError("Direction must be one of the defined types")
 
         self._direction = direction

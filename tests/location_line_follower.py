@@ -170,7 +170,21 @@ class TestLocationLineFollower(unittest.TestCase):
         ])
         mock_callback.reset_mock()
 
-    def test_set_location(self):
+    def test_set_state(self):
+        from ..location.Line_Follower import Line_Follower, Line_Follower_State
+
+        mock_callback = MagicMock()
+        line_follower = Line_Follower(self.location, self.direction, mock_callback)
+
+        # Direction must be one of the defined types.
+        with self.assertRaises(ValueError):
+            line_follower.set_state("intersection")
+
+        # A valid direction must be set.
+        line_follower.set_direction(Line_Follower_State.AT_LINE)
+        self.assertEqual(line_follower._state, Line_Follower_State.AT_LINE)
+
+    def test_set_direction(self):
         from ..location.Line_Follower import Line_Follower, Line_Follower_Direction
 
         mock_callback = MagicMock()
