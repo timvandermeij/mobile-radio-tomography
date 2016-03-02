@@ -275,8 +275,7 @@
             "ntp_delay": 3,
             "response_delay": 0.5,
             "startup_delay": 1,
-            "synchronize": false,
-            "verbose": false
+            "synchronize": false
         }
     },
     "xbee_tdma_scheduler": {
