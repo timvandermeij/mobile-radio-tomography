@@ -61,6 +61,9 @@ class Robot_Vehicle(Vehicle):
         # The delay of the sensor reading loop in the line follower thread.
         self._line_follower_delay = self.settings.get("line_follower_delay")
 
+        # The delay of the robot vehicle state loop.
+        self._loop_delay = self.settings.get("vehicle_delay")
+
         self._waypoints = []
         self._current_waypoint = 0
 
@@ -102,6 +105,13 @@ class Robot_Vehicle(Vehicle):
 
                     self._direction = self._state.current_direction
                     self._line_follower.set_direction(self._direction)
+            elif self._state.name == "intersection":
+                if self._location == self.get_waypoint():
+                    # TODO: Figure out what to do after seeing an intersection 
+                    # (measurements, moving to next intersection, or turning).
+                    self._state = Robot_State("line")
+
+            time.sleep(self._loop_delay)
 
     def _line_follower_loop(self):
         while self._running:
@@ -164,10 +174,18 @@ class Robot_Vehicle(Vehicle):
 
     @armed.setter
     def armed(self, value):
-        self._running = value
-        if self._running:
-            thread.start_new_thread(self._line_follower_loop, ())
-            thread.start_new_thread(self._state_loop, ())
+        if value:
+            self.activate()
+        else:
+            self.deactivate()
+
+    def activate(self):
+        self._running = True
+        thread.start_new_thread(self._line_follower_loop, ())
+        thread.start_new_thread(self._state_loop, ())
+
+    def deactivate(self):
+        self._running = False
 
     def add_waypoint(self, location):
         if isinstance(location, LocationLocal):
