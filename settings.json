@@ -273,7 +273,7 @@
                 "\\x00\\x13\\xa2\\x00@\\xe6n\\xb9"
             ],
             "ntp_delay": 3,
-            "response_delay": 0.5,
+            "response_delay": 0.3,
             "startup_delay": 1,
             "synchronize": false
         }
@@ -282,7 +282,7 @@
         "name": "XBee TDMA scheduler",
         "parent": "xbee_base",
         "settings": {
-            "sweep_delay": 1
+            "sweep_delay": 0.4
         }
     },
     "xbee_viewer": {
