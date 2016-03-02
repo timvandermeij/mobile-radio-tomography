@@ -23,6 +23,7 @@ def receive_packet(packet):
 def main(argv):
     arguments = Arguments("settings.json", argv)
     settings = arguments.get_settings("xbee_sensor_physical")
+    loop_delay = settings.get("loop_delay")
 
     sensor = XBee_Sensor_Physical(arguments, get_location, receive_packet)
 
@@ -41,7 +42,7 @@ def main(argv):
                 sensor.enqueue(packet)
 
             sensor.activate()
-            time.sleep(settings.get("loop_delay"))
+            time.sleep(loop_delay)
         except KeyboardInterrupt:
             sensor.deactivate()
             break
