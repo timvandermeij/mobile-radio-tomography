@@ -39,7 +39,7 @@ class Robot_Vehicle(Vehicle):
         # The home location coordinates of the robot. The robot should be 
         # placed at the intersection corresponding to these coordinates to 
         # begin with.
-        self._home_location = settings.get("home_location")
+        self._home_location = tuple(settings.get("home_location"))
         self._location = self._home_location
         # The starting direction of the robot. The robot should be aligned with 
         # this direction to begin with.
