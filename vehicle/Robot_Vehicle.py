@@ -1,9 +1,6 @@
-import RPIO
-import RPi.GPIO
 from dronekit import LocationLocal, LocationGlobal, Attitude
 from Vehicle import Vehicle
 from ..location.Line_Follower import Line_Follower_Direction, Line_Follower_State
-from ..location.Line_Follower_Raspberry_Pi import Line_Follower_Raspberry_Pi
 
 class Robot_State(object):
     def __init__(self, name):
@@ -24,45 +21,39 @@ class Robot_State_Rotate(Robot_State):
         self.current_direction = current_direction
 
 class Robot_Vehicle(Vehicle):
-    _line_follower_class = Line_Follower_Raspberry_Pi
+    """
+    Base class for vehicles that work (semi)directly with a line following robot
+    to determine its location and state.
+    """
+
+    _line_follower_class = None
 
     def __init__(self, arguments, geometry):
         super(Robot_Vehicle, self).__init__(arguments, geometry)
 
-        self.settings = arguments.get_settings("vehicle_robot")
-
-        # Motor direction pins (LOW = forward, HIGH = backward)
-        self._direction_pins = self.settings.get("direction_pins")
-        # Motor speed pins (PWM values)
-        self._speed_pins = self.settings.get("speed_pins")
-
-        # PWM range for both motors (minimum and maximum values)
-        self._speed_pwms = self.settings.get("speed_pwms")
-        # Speed range for both motors in m/s
-        self._speeds = self.settings.get("speeds")
+        settings = arguments.get_settings("vehicle_robot")
 
         # Speed difference in m/s to adjust when we diverge from a line.
-        self._diverged_speed = self.settings.get("diverged_speed")
-
-        # Servo objects corresponding to the speed PWM pins of both motors.
-        # First item is left motor, second item is right motor.
-        self._speed_servos = []
+        self._diverged_speed = settings.get("diverged_speed")
 
         # The home location coordinates of the robot. The robot should be 
         # placed at the intersection corresponding to these coordinates to 
         # begin with.
-        self._home_location = self.settings.get("home_location")
+        self._home_location = settings.get("home_location")
         self._location = self._home_location
         # The starting direction of the robot. The robot should be aligned with 
         # this direction to begin with.
-        self._direction = self.settings.get("home_direction")
+        self._direction = settings.get("home_direction")
+
+        if self._line_follower_class is None:
+            raise NotImplementedError("Subclasses must provide a `_line_follower_class` property")
 
         self._line_follower = self._line_follower_class(self._home_location, self._direction, self.line_follower_callback, arguments)
         # The delay of the sensor reading loop in the line follower thread.
-        self._line_follower_delay = self.settings.get("line_follower_delay")
+        self._line_follower_delay = settings.get("line_follower_delay")
 
         # The delay of the robot vehicle state loop.
-        self._loop_delay = self.settings.get("vehicle_delay")
+        self._loop_delay = settings.get("vehicle_delay")
 
         self._waypoints = []
         self._current_waypoint = 0
@@ -74,23 +65,6 @@ class Robot_Vehicle(Vehicle):
         # - rotate: The robot is rotating at an intersection. See
         #   Robot_State_Rotate
         self._state = Robot_State("intersection")
-
-    def setup(self):
-        # Initialize the RPi.GPIO module. Doing it this way instead of using
-        # an alias during import allows unit tests to access it too.
-        self.gpio = RPi.GPIO
-
-        # Disable warnings about pins being in use.
-        self.gpio.setwarnings(False)
-
-        # Use board numbering which corresponds to the pin numbers on the
-        # P1 header of the board.
-        self.gpio.setmode(self.gpio.BOARD)
-
-        for pin in self._direction_pins:
-            self.gpio.setup(pin, self.gpio.OUT)
-
-        self._speed_servos = [Servo(pin, self._speeds, self._speed_pwms) for pin in self._speed_pins]
 
     def _state_loop(self):
         while self._running:
@@ -143,9 +117,7 @@ class Robot_Vehicle(Vehicle):
                 self.set_speeds(speed - speed_difference, speed + speed_difference)
 
     def set_speeds(left_speed, right_speed):
-        for i, speed in [(0, left_speed), (1, right_speed)]:
-            pwm = self._speed_servos[i].get_pwm(speed)
-            self.set_servo(self._speed_servos[i], pwm)
+        raise NotImplementedError("Subclasses must implement `set_speeds(left, right)`")
 
     @property
     def use_simulation(self):
@@ -227,22 +199,6 @@ class Robot_Vehicle(Vehicle):
     def location(self):
         return LocationLocal(self._location[0], self._location[1], 0.0)
 
-    @property
-    def speed(self):
-        # Take the maximum speed for now; in any event that they are different, 
-        # we would not have any accurate speed ratings for now.
-        return max(servo.get_value() for servo in self._speed_servos)
-
-    @speed.setter
-    def speed(self, value):
-        if self._running:
-            for servo in self._speed_servos:
-                pwm = servo.get_pwm(value)
-                self.set_servo(servo, pwm)
-
-    # TODO: Implement velocity. This would need to be based on the current 
-    # direction/attitude and the speeds of both motors...
-
     def _get_yaw(self):
         # TODO: Perhaps we want a more precise attitude... gyroscope?
         if isinstance(self._state, Robot_State_Rotate):
@@ -287,7 +243,3 @@ class Robot_Vehicle(Vehicle):
 
         self._state = Robot_State_Rotate(rotate_direction, target_direction, self._direction)
         self._line_follower.set_state(Line_Follower_State.AT_INTERSECTION)
-
-    def set_servo(self, servo, pwm):
-        RPIO.PWM.set_servo(servo.pin, pwm)
-        servo.set_current_pwm(pwm)
