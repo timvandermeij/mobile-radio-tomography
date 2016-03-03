@@ -7,12 +7,14 @@
 
 // Settings
 unsigned char sensorPins[] = { 4, A3, 11, A0, A2, 5 };
-int maxValue = 1023;
-int loopDelay = 100; // ms
+int maxValue = 1023; // maximum value read in the reflectance sensor
+int loopDelay = 100; // sleep delay in ms for each serial/sensor loop
 
+// Environmental defines
 #define LED_PIN 13
 #define SERIAL_INPUT 80
 
+// Objects used in multiple functions
 ZumoBuzzer buzzer;
 ZumoReflectanceSensorArray reflectanceSensors(sensorPins, sizeof(sensorPins), maxValue);
 ZumoMotors motors;
@@ -59,5 +61,5 @@ void loop() {
   }
   Serial.print('\n');
   digitalWrite(13, LOW);
-  delay(1000);
+  delay(loopDelay);
 }
