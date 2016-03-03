@@ -36,6 +36,9 @@ class Robot_Vehicle(Vehicle):
         # Speed difference in m/s to adjust when we diverge from a line.
         self._diverged_speed = settings.get("diverged_speed")
 
+        # Speed in m/s to use when we rotate on an intersection.
+        self._rotate_speed = settings.get("rotate_speed")
+
         # The home location coordinates of the robot. The robot should be 
         # placed at the intersection corresponding to these coordinates to 
         # begin with.
@@ -102,6 +105,9 @@ class Robot_Vehicle(Vehicle):
         elif event == "diverged":
             direction = -1 if data == "left" else 1
             if isinstance(self._state, Robot_State_Rotate):
+                # Keep line follower in intersection state while the vehicle 
+                # rotates on an intersection.
+                self._line_follower.set_state(Line_Follower_State.AT_INTERSECTION)
                 if direction == self._state.rotate_direction:
                     # We are rotating on an intersection to move to our next 
                     # direction, thus track whether we found a new line. Only 
@@ -116,8 +122,8 @@ class Robot_Vehicle(Vehicle):
                 speed_difference = direction * self._diverged_speed
                 self.set_speeds(speed - speed_difference, speed + speed_difference)
 
-    def set_speeds(left_speed, right_speed):
-        raise NotImplementedError("Subclasses must implement `set_speeds(left, right)`")
+    def set_speeds(left_speed, right_speed, left_forward=True, right_forward=True):
+        raise NotImplementedError("Subclasses must implement `set_speeds` method")
 
     @property
     def use_simulation(self):
@@ -127,6 +133,14 @@ class Robot_Vehicle(Vehicle):
     @property
     def home_location(self):
         return LocationGlobal(0.0, 0.0, 0.0)
+
+    @home_location.setter
+    def home_location(self, value):
+        if isinstance(value, LocationLocal):
+            self._home_location = (value.north, value.east)
+        else:
+            print("Warning: Using non-local locations")
+            self._home_location = (value.lat, value.lon)
 
     @property
     def mode(self):
@@ -229,6 +243,7 @@ class Robot_Vehicle(Vehicle):
         if self._state.name != "intersection":
             # We can only rotate on an intersection where we can see all 
             # cardinal lines.
+            print("Warning: Cannot change yaw while not on intersection")
             return
 
         if relative:
@@ -242,4 +257,10 @@ class Robot_Vehicle(Vehicle):
             rotate_direction = int(math.copysign(1, target_direction-self._direction))
 
         self._state = Robot_State_Rotate(rotate_direction, target_direction, self._direction)
+        # Keep line follower in intersection state.
         self._line_follower.set_state(Line_Follower_State.AT_INTERSECTION)
+
+        # Start turning the vehicle at turning speed. If we want to rotate 
+        # clockwise, the left motor goes forward and the right motor backward, 
+        # while counterclockwise is the other way around.
+        self.set_speed(self._turning_speed, self._turning_speed, rotate_direction == 1, rotate_direction == -1)

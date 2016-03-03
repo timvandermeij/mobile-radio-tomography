@@ -113,6 +113,7 @@
         "name": "Base robot vehicle",
         "settings": {
             "diverged_speed": 0.30,
+            "rotate_speed": 0.30,
             "vehicle_delay": 0.05,
             "line_follower_delay": 0.01,
             "home_location": [0,0],
