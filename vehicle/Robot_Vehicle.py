@@ -33,6 +33,8 @@ class Robot_Vehicle(Vehicle):
 
         settings = arguments.get_settings("vehicle_robot")
 
+        self._move_speed = 0.0
+
         # Speed difference in m/s to adjust when we diverge from a line.
         self._diverged_speed = settings.get("diverged_speed")
         # Time in seconds to keep adjusted speed when we diverge from a line.
@@ -133,7 +135,7 @@ class Robot_Vehicle(Vehicle):
             else:
                 # We went off the line, so steer the motors such that the robot 
                 # gets back to the line.
-                speed = self.speed
+                speed = self._move_speed
                 speed_difference = direction * self._diverged_speed
                 self.set_speeds(speed - speed_difference, speed + speed_difference)
                 self._last_diverged_time = time.time()
@@ -228,6 +230,16 @@ class Robot_Vehicle(Vehicle):
     @property
     def location(self):
         return LocationLocal(self._location[0], self._location[1], 0.0)
+
+    @property
+    def speed(self):
+        return self._move_speed
+
+    @speed.setter
+    def speed(self, value):
+        self._move_speed = value
+        if self._running and self._state.name == "move":
+            self.set_speeds(value, value)
 
     def _get_yaw(self):
         # TODO: Perhaps we want a more precise attitude... gyroscope?

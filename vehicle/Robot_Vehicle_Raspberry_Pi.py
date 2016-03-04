@@ -55,22 +55,6 @@ class Robot_Vehicle_Raspberry_Pi(Robot_Vehicle):
             # LOW value is forward, HIGH is backward.
             self.gpio.output(self._direction_pins[i], not forward)
 
-    @property
-    def speed(self):
-        # Take the maximum speed for now; in any event that they are different, 
-        # we would not have any accurate speed ratings for now.
-        return max(servo.get_value() for servo in self._speed_servos)
-
-    @speed.setter
-    def speed(self, value):
-        if self._running:
-            for servo in self._speed_servos:
-                pwm = servo.get_pwm(value)
-                self.set_servo(servo, pwm)
-
-    # TODO: Implement velocity. This would need to be based on the current 
-    # direction/attitude and the speeds of both motors...
-
     def set_servo(self, servo, pwm):
         RPIO.PWM.set_servo(servo.pin, pwm)
         servo.set_current_pwm(pwm)
