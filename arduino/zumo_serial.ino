@@ -7,8 +7,9 @@
 
 // Settings
 unsigned char sensorPins[] = { 4, A3, 11, A0, A2, 5 };
-int maxValue = 1023; // maximum value read in the reflectance sensor
-int loopDelay = 100; // sleep delay in ms for each serial/sensor loop
+int maxValue = 1023; // Maximum value read in the reflectance sensor
+int loopDelay = 100; // Sleep delay in ms for each serial/sensor loop
+int baudRate = 9600; // Bits per second to transfer over the serial connection
 
 // Environmental defines
 #define LED_PIN 13
@@ -24,8 +25,8 @@ void setup() {
   // Play a little welcome song
   buzzer.play(">f32>>d32");
 
-  // initialize serial communication at 9600 bits per second:
-  Serial.begin(9600);
+  // Initialize serial communication
+  Serial.begin(baudRate);
 
   // Initialize the reflectance sensors module
   reflectanceSensors.init();
@@ -37,7 +38,9 @@ void setup() {
 }
 
 void loop() {
-  digitalWrite(13, HIGH);
+  digitalWrite(LED_PIN, HIGH);
+
+  // Echo serial input
   if (Serial.available()) {
     char input[SERIAL_INPUT];
     Serial.readBytesUntil('\n', input, SERIAL_INPUT);
@@ -52,6 +55,8 @@ void loop() {
     }
     Serial.println(" PONG");
   }
+
+  // Produce serial output for the raw reflectance sensor values
   unsigned int sensors[6];
   int i;
   reflectanceSensors.read(sensors);
@@ -60,6 +65,6 @@ void loop() {
     Serial.print(' ');
   }
   Serial.print('\n');
-  digitalWrite(13, LOW);
+  digitalWrite(LED_PIN, LOW);
   delay(loopDelay);
 }
