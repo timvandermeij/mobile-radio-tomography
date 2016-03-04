@@ -35,6 +35,9 @@ class Robot_Vehicle(Vehicle):
 
         # Speed difference in m/s to adjust when we diverge from a line.
         self._diverged_speed = settings.get("diverged_speed")
+        # Time in seconds to keep adjusted speed when we diverge from a line.
+        self._diverged_time = settings.get("diverged_time")
+        self._last_diverged_time = None
 
         # Speed in m/s to use when we rotate on an intersection.
         self._rotate_speed = settings.get("rotate_speed")
@@ -71,8 +74,6 @@ class Robot_Vehicle(Vehicle):
 
     def _state_loop(self):
         while self._running:
-            # TODO: Handle moving away from an intersection after we are done 
-            # there.
             if isinstance(self._state, Robot_State_Rotate):
                 if self._state.current_direction == self._state.target_direction:
                     # When we are done rotating, stand still again before 
@@ -82,11 +83,25 @@ class Robot_Vehicle(Vehicle):
 
                     self._direction = self._state.current_direction
                     self._line_follower.set_direction(self._direction)
+            elif self._state.name == "move":
+                if self._last_diverged_time is not None:
+                    diff = time.time() - self._last_diverged_time
+                    if diff >= self._diverged_time:
+                        self.set_speeds(self.speed, self.speed)
+                        self._last_diverged_time = None
             elif self._state.name == "intersection":
                 if self._location == self.get_waypoint():
-                    # TODO: Figure out what to do after seeing an intersection 
-                    # (measurements, moving to next intersection, or turning).
-                    self._state = Robot_State("line")
+                    # We reached the current waypoint.
+                    if self._mode.name == "AUTO":
+                        # In AUTO mode, immediately try to move to the next 
+                        # waypoint, or rotate in the right direction.
+                        self._move_waypoint()
+                        if self._state.name == "move":
+                            self._current_waypoint += 1
+                else:
+                    # We reached an intersection. Check whether we need to 
+                    # rotate here, and otherwise move away from it again.
+                    self._move_waypoint()
 
             time.sleep(self._loop_delay)
 
@@ -121,6 +136,7 @@ class Robot_Vehicle(Vehicle):
                 speed = self.speed
                 speed_difference = direction * self._diverged_speed
                 self.set_speeds(speed - speed_difference, speed + speed_difference)
+                self._last_diverged_time = time.time()
 
     def set_speeds(left_speed, right_speed, left_forward=True, right_forward=True):
         raise NotImplementedError("Subclasses must implement `set_speeds` method")
@@ -264,3 +280,42 @@ class Robot_Vehicle(Vehicle):
         # clockwise, the left motor goes forward and the right motor backward, 
         # while counterclockwise is the other way around.
         self.set_speed(self._turning_speed, self._turning_speed, rotate_direction == 1, rotate_direction == -1)
+
+    def _move_waypoint(self):
+        if self._current_waypoint + 1 >= len(self._waypoints):
+            return
+
+        next_waypoint = self._waypoints[self._current_waypoint+1]
+        next_direction = self._next_direction(next_waypoint)
+        if next_direction == self._direction:
+            # Start moving in the given direction
+            self._state = State("move")
+            self.set_speeds(self.speed, self.speed)
+        else:
+            self._set_direction(next_direction)
+
+    def _next_direction(self, waypoint):
+        up = waypoint[0] - self._location[0]
+        right = waypoint[1] - self._location[1]
+        if (
+            (self._direction == Line_Follower_Direction.UP and up > 0) or
+            (self._direction == Line_Follower_Direction.RIGHT and right > 0) or
+            (self._direction == Line_Follower_Direction.DOWN and up < 0) or
+            (self._direction == Line_Follower_Direction.LEFT and right < 0)
+        ):
+            return self._direction
+
+        if right == 0 or self._direction == Line_Follower_Direction.RIGHT or self._direction == Line_Follower_Direction.LEFT:
+            if up > 0:
+                return Line_Follower_Direction.UP
+            if up < 0:
+                return Line_Follower_Direction.DOWN
+        else:
+            if right > 0:
+                return Line_Follower_Direction.RIGHT
+            if right < 0:
+                return Line_Follower_Direction.LEFT
+
+        # No need to change direction if the difference is 0 for both cardinal 
+        # directions.
+        return self._direction
