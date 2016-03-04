@@ -41,10 +41,6 @@ class Line_Follower_Raspberry_Pi(Line_Follower):
         # P1 header of the board.
         self.gpio.setmode(self.gpio.BOARD)
 
-        # Configure the input pins.
-        for sensor in self._sensors:
-            self.gpio.setup(sensor, self.gpio.IN)
-
     def activate(self):
         """
         Activate the line follower by turning on its IR LEDs.
@@ -82,8 +78,8 @@ class Line_Follower_Raspberry_Pi(Line_Follower):
         # Drive the sensor lines low and set them as inputs.
         # Disable the internal pull-up resistors.
         for led in self._readable_leds:
+            self.gpio.setup(self._sensors[led], self.gpio.IN, pull_up_down=self.gpio.PUD_DOWN)
             self.gpio.setup(self._sensors[led], self.gpio.IN)
-            self.gpio.output(self._sensors[led], False)
 
         # Determine the values of the sensors. The documentation of
         # the Zumo reflectance sensor array states that strong
@@ -99,7 +95,7 @@ class Line_Follower_Raspberry_Pi(Line_Follower):
         # surface is.
         start_time = time.time()
         while ((time.time() - start_time) * 1e6) < self._max_value:
-            elapsed_time = time.time() - start_time
+            elapsed_time = (time.time() - start_time) * 1e6
             for index, led in enumerate(self._readable_leds):
                 led_value = self.gpio.input(self._sensors[led])
                 if not led_value and elapsed_time < sensor_values[index]:
@@ -107,7 +103,6 @@ class Line_Follower_Raspberry_Pi(Line_Follower):
 
         # Convert the sensor values to binary. If the sensor value is
         # above a threshold value, we say that the vehicle is above a line.
-        for sensor_value in sensor_values:
-            sensor_value = int(sensor_value > self._line_threshold)
+        sensor_values = [int(sensor_value > self._line_threshold) for sensor_value in sensor_values]
 
         return sensor_values

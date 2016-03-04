@@ -39,7 +39,6 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._address = None
         self._data = {}
         self._queue = Queue.Queue()
-        self._verbose = self.settings.get("verbose")
 
         # Prepare the packet and sensor data.
         self._custom_packet_limit = self.settings.get("custom_packet_limit")
@@ -55,7 +54,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
         """
 
         # Lazily initialize the serial connection and ZigBee object.
-        if self._serial_connection == None and self._sensor == None:
+        if self._serial_connection is None and self._sensor is None:
             self._serial_connection = serial.Serial(self.settings.get("port"),
                                                     self.settings.get("baud_rate"))
             self._sensor = ZigBee(self._serial_connection, callback=self._receive)
@@ -194,9 +193,6 @@ class XBee_Sensor_Physical(XBee_Sensor):
                               dest_addr="\xFF\xFE", frame_id="\x00",
                               data=packet.serialize())
 
-            if self._verbose:
-                print("--> Sending to sensor {}.".format(index))
-
         # Send custom packets to their destination. Since the time slots are
         # limited in length, so is the number of custom packets we transfer
         # in each sweep.
@@ -223,9 +219,6 @@ class XBee_Sensor_Physical(XBee_Sensor):
                               data=packet.serialize())
 
             self._data.pop(frame_id)
-
-            if self._verbose:
-                print("--> Sending to ground station.")
 
     def _receive(self, raw_packet):
         """
@@ -256,9 +249,6 @@ class XBee_Sensor_Physical(XBee_Sensor):
             if self.id == 0:
                 print("[{}] Ground station received {}".format(time.time(), packet.get_all()))
                 return
-
-            if self._verbose:
-                print("<-- Received from sensor {}.".format(packet.get("sensor_id")))
 
             # Synchronize the scheduler using the timestamp in the packet.
             self._next_timestamp = self.scheduler.synchronize(packet)

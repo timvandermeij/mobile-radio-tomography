@@ -26,16 +26,31 @@
             "wait_delay": 0.05
         }
     },
+    "line_follower_base": {
+        "name": "Line follower base",
+        "settings": {
+            "readable_leds": [0, 2, 3, 5],
+            "line_threshold": 300,
+            "line_follower_module": "Line_Follower_Arduino"
+        }
+    },
     "line_follower_raspberry_pi": {
         "name": "Line follower (Raspberry Pi)",
+        "parent": "line_follower_base",
         "settings": {
             "led_pins": [29, 31, 32, 33, 35, 36],
             "emitter_pin": 37,
             "write_delay": 0.0002,
-            "readable_leds": [0, 2, 3, 5],
             "max_value": 1023,
-            "charge_delay": 0.00001,
-            "line_threshold": 300
+            "charge_delay": 0.00001
+        }
+    },
+    "line_follower_arduino": {
+        "name": "Line follower (Arduino)",
+        "parent": "line_follower_base",
+        "settings": {
+            "serial_device": "/dev/ttyUSB1",
+            "serial_baud_rate": 9600
         }
     },
     "mission": {
@@ -293,17 +308,16 @@
                 "\\x00\\x13\\xa2\\x00@\\xe6n\\xb9"
             ],
             "ntp_delay": 3,
-            "response_delay": 0.5,
+            "response_delay": 0.3,
             "startup_delay": 1,
-            "synchronize": false,
-            "verbose": false
+            "synchronize": false
         }
     },
     "xbee_tdma_scheduler": {
         "name": "XBee TDMA scheduler",
         "parent": "xbee_base",
         "settings": {
-            "sweep_delay": 1
+            "sweep_delay": 0.4
         }
     },
     "xbee_viewer": {

@@ -41,12 +41,6 @@ class TestLocationLineFollowerRaspberryPi(unittest.TestCase):
         # Board numbering has to be used.
         line_follower.gpio.setmode.assert_called_once_with(line_follower.gpio.BOARD)
 
-        # The input pins have to be set.
-        sensors = self.settings.get("led_pins")
-        line_follower.gpio.setup.assert_has_calls([
-            call(sensor, line_follower.gpio.IN) for sensor in sensors
-        ])
-
     def test_activate(self):
         from ..location.Line_Follower_Raspberry_Pi import Line_Follower_Raspberry_Pi
 
