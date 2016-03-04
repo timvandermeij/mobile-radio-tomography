@@ -30,7 +30,8 @@
         "name": "Line follower base",
         "settings": {
             "readable_leds": [0, 2, 3, 5],
-            "line_threshold": 300
+            "line_threshold": 300,
+            "line_follower_module": "Line_Follower_Arduino"
         }
     },
     "line_follower_raspberry_pi": {
