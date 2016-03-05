@@ -1,6 +1,6 @@
 try:
     import RPIO
-except RuntimeError:
+except SystemError:
     RPIO = None
 
 from Robot_Vehicle import Robot_Vehicle
