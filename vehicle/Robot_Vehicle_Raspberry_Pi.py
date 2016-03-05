@@ -2,6 +2,7 @@ import RPIO
 import RPi.GPIO
 from Robot_Vehicle import Robot_Vehicle
 from ..location.Line_Follower_Raspberry_Pi import Line_Follower_Raspberry_Pi
+from ..trajectory.Servo import Servo
 
 class Robot_Vehicle_Raspberry_Pi(Robot_Vehicle):
     """
@@ -42,6 +43,9 @@ class Robot_Vehicle_Raspberry_Pi(Robot_Vehicle):
         self.gpio.setmode(self.gpio.BOARD)
 
         for pin in self._direction_pins:
+            self.gpio.setup(pin, self.gpio.OUT)
+
+        for pin in self._speed_pins:
             self.gpio.setup(pin, self.gpio.OUT)
 
         self._speed_servos = [Servo(pin, self._speeds, self._speed_pwms) for pin in self._speed_pins]

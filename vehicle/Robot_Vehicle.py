@@ -238,7 +238,7 @@ class Robot_Vehicle(Vehicle):
     @speed.setter
     def speed(self, value):
         self._move_speed = value
-        if self._running and self._state.name == "move":
+        if self._running and self._state.name == "move" and self._last_diverged_time is None:
             self.set_speeds(value, value)
 
     def _get_yaw(self):
