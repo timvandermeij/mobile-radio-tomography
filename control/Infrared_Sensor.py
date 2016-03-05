@@ -109,7 +109,7 @@ class Infrared_Sensor(Threadable):
 
                 time.sleep(self._wait_delay)
         except:
-            super(Infrared_Sensor, self).destroy()
+            super(Infrared_Sensor, self).interrupt()
 
     def deactivate(self):
         """

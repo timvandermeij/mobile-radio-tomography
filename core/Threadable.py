@@ -1,3 +1,5 @@
+import thread
+
 class Threadable(object):
     def __init__(self, name, thread_manager):
         """
@@ -21,10 +23,9 @@ class Threadable(object):
 
         self.thread_manager.unregister(self.name)
 
-    def destroy(self):
+    def interrupt(self):
         """
-        Destroy the main thread and all other threads when
-        an interrupt/exception occurs.
+        Interrupt the main thread.
         """
 
-        self.thread_manager.destroy()
+        thread.interrupt_main()
