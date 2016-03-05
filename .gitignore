@@ -24,5 +24,4 @@ __pycache__/
 *.parm
 *.tlog
 *.raw
-logs/
 terrain/
