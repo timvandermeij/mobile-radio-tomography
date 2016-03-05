@@ -19,7 +19,8 @@ class XBee_Configurator(object):
             raise ValueError("'settings' must be an instance of Settings or Arguments")
 
         self._serial_connection = serial.Serial(self.settings.get("port"),
-                                                self.settings.get("baud_rate"))
+                                                self.settings.get("baud_rate"),
+                                                rtscts=True, dsrdtr=True)
         self._sensor = ZigBee(self._serial_connection)
         time.sleep(self.settings.get("startup_delay"))
 
