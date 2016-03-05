@@ -56,7 +56,8 @@ class XBee_Sensor_Physical(XBee_Sensor):
         # Lazily initialize the serial connection and ZigBee object.
         if self._serial_connection is None and self._sensor is None:
             self._serial_connection = serial.Serial(self.settings.get("port"),
-                                                    self.settings.get("baud_rate"))
+                                                    self.settings.get("baud_rate"),
+                                                    rtscts=True, dsrdtr=True)
             self._sensor = ZigBee(self._serial_connection, callback=self._receive)
             time.sleep(self.settings.get("startup_delay"))
             self._join()
