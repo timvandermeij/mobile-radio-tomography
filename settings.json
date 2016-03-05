@@ -145,6 +145,13 @@
             "speeds": [0, 0.60]
         }
     },
+    "vehicle_robot_arduino": {
+        "name": "Robot vehicle connected through an Arduino with a serial connection",
+        "settings": {
+            "speed_pwms": [-400, 400],
+            "speeds": [-0.60, 0.60]
+        }
+    },
     "reconstruction": {
         "name": "Reconstruction",
         "settings": {

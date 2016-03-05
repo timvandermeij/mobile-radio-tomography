@@ -24,6 +24,9 @@ class Line_Follower_Arduino(Line_Follower):
         self._serial_connection = serial.Serial(self._device, self._baud_rate, timeout=None)
         self._serial_connection.reset_input_buffer()
 
+    def get_serial_connection(self):
+        return self._serial_connection
+
     def activate(self):
         """
         Activate the line follower by turning on its IR LEDs.
