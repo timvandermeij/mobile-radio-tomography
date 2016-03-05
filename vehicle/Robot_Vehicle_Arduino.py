@@ -1,3 +1,8 @@
+try:
+    import RPIO
+except RuntimeError:
+    RPIO = None
+
 from Robot_Vehicle import Robot_Vehicle
 from ..location.Line_Follower_Arduino import Line_Follower_Arduino
 from ..trajectory.Servo import Servo
@@ -28,7 +33,11 @@ class Robot_Vehicle_Arduino(Robot_Vehicle):
     def setup(self):
         self._serial_connection.reset_output_buffer()
 
-    def set_speeds(left_speed, right_speed, left_forward=True, right_forward=True):
+    @property
+    def use_simulation(self):
+        return RPIO is None
+
+    def set_speeds(self, left_speed, right_speed, left_forward=True, right_forward=True):
         output = ""
         for i, speed, forward in [(0, left_speed, left_forward), (1, right_speed, right_forward)]:
             if not forward:
@@ -36,6 +45,12 @@ class Robot_Vehicle_Arduino(Robot_Vehicle):
 
             pwm = self._speed_servos[i].get_pwm(speed)
             self._speed_servos[i].set_current_pwm(pwm)
-            output += "{} ".format(pwm)
+            output += "{} ".format(int(pwm))
 
-        self._serial_connection.write("{}\n".format(output.strip())
+        self._serial_connection.write("{}\n".format(output.strip()))
+
+    def set_servo(self, servo, pwm):
+        if RPIO is not None:
+            RPIO.PWM.set_servo(servo.pin, pwm)
+
+        servo.set_current_pwm(pwm)

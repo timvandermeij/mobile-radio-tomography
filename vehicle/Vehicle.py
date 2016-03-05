@@ -187,9 +187,14 @@ class Vehicle(object):
     def simple_takeoff(self, altitude):
         """
         Take off to a certain relative altitude in meters.
+
+        If the Vehicle backend does not support taking off, this method
+        is a no-op and should return `False` to indicate that it is not taking
+        off. Otherwise, return `True` so that the caller can check whether it
+        reached the specified altitude.
         """
 
-        raise NotImplementedError("Subclasses must implement simple_takeoff(altitude)")
+        return False
 
     def simple_goto(self, location):
         """

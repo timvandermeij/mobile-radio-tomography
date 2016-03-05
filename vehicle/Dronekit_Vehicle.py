@@ -94,6 +94,13 @@ class Dronekit_Vehicle(dronekit.Vehicle, MAVLink_Vehicle):
 
         return super(Dronekit_Vehicle, self).add_takeoff(altitude)
 
+    def simple_takeoff(self, altitude):
+        if self.is_rover:
+            return False
+
+        super(Dronekit_Vehicle, self).simple_takeoff(altitude)
+        return True
+
     @property
     def speed(self):
         return self._speed

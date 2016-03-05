@@ -1,3 +1,6 @@
+import math
+import thread
+import time
 from dronekit import LocationLocal, LocationGlobal, Attitude
 from Vehicle import Vehicle
 from ..location.Line_Follower import Line_Follower_Direction, Line_Follower_State
@@ -73,6 +76,7 @@ class Robot_Vehicle(Vehicle):
         # - rotate: The robot is rotating at an intersection. See
         #   Robot_State_Rotate
         self._state = Robot_State("intersection")
+        self._line_follower.set_state(Line_Follower_State.AT_INTERSECTION)
 
     def _state_loop(self):
         while self._running:
@@ -112,7 +116,7 @@ class Robot_Vehicle(Vehicle):
             self._line_follower.activate()
             sensor_values = self._line_follower.read()
             self._line_follower.update(sensor_values)
-            self._line_follower.deactive()
+            self._line_follower.deactivate()
             time.sleep(self._line_follower_delay)
 
     def line_follower_callback(self, event, data):
@@ -268,19 +272,22 @@ class Robot_Vehicle(Vehicle):
         return Attitude(0.0, 0.0, yaw)
 
     def set_yaw(self, heading, relative=False, direction=1):
-        if self._state.name != "intersection":
+        if self._state.name != "intersection" and not isinstance(self._state, Robot_State_Rotate):
             # We can only rotate on an intersection where we can see all 
             # cardinal lines.
-            print("Warning: Cannot change yaw while not on intersection")
             return
 
         if relative:
             heading = self._get_yaw() + heading
 
         target_direction = int(round(2*heading/math.pi)) % 4
+
         self._set_direction(target_direction, direction)
 
     def _set_direction(self, target_direction, rotate_direction=0):
+        if target_direction == self._direction:
+            return
+
         if rotate_direction == 0:
             rotate_direction = int(math.copysign(1, target_direction-self._direction))
 
@@ -291,7 +298,7 @@ class Robot_Vehicle(Vehicle):
         # Start turning the vehicle at turning speed. If we want to rotate 
         # clockwise, the left motor goes forward and the right motor backward, 
         # while counterclockwise is the other way around.
-        self.set_speed(self._turning_speed, self._turning_speed, rotate_direction == 1, rotate_direction == -1)
+        self.set_speeds(self._rotate_speed, self._rotate_speed, rotate_direction == 1, rotate_direction == -1)
 
     def _move_waypoint(self):
         if self._current_waypoint + 1 >= len(self._waypoints):

@@ -126,8 +126,11 @@ class Mission(object):
 
         # Take off to target altitude
         print("Taking off!")
-        self.vehicle.simple_takeoff(self.altitude)
+        taking_off = self.vehicle.simple_takeoff(self.altitude)
         self.vehicle.speed = self.speed
+
+        if not taking_off:
+            return
 
         # Wait until the vehicle reaches a safe height before processing the 
         # goto (otherwise the command after Vehicle.commands.takeoff will 
@@ -316,7 +319,6 @@ class Mission_Auto(Mission):
     def start(self):
         # Set mode to AUTO to start mission
         self.vehicle.mode = VehicleMode("AUTO")
-        self.vehicle.flush()
 
     def check_waypoint(self):
         next_waypoint = self.vehicle.get_next_waypoint()
@@ -350,7 +352,6 @@ class Mission_Guided(Mission):
         # Set mode to GUIDED. In fact the arming should already have done this, 
         # but it is good to do it here as well.
         self.vehicle.mode = VehicleMode("GUIDED")
-        self.vehicle.flush()
 
 # Actual mission implementations
 
@@ -388,7 +389,6 @@ class Mission_Browse(Mission_Guided):
     def step(self):
         # We stand still and change the angle to look around.
         self.send_global_velocity(0,0,0)
-        self.vehicle.flush()
         self.set_sensor_yaw(self.yaw, relative=False, direction=1)
 
         # When we're standing still, we rotate the vehicle to measure distances 
@@ -576,7 +576,6 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
         if self.sensor_dist < 2 * self.padding + self.closeness:
             print("Start scanning due to closeness.")
             self.send_global_velocity(0,0,0)
-            self.vehicle.flush()
             self.browsing = True
             self.start_yaw = self.yaw = self.vehicle.attitude.yaw
             return True
