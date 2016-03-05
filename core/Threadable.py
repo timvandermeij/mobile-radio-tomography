@@ -6,27 +6,27 @@ class Threadable(object):
         Initialize the threadable object.
         """
 
-        self.name = name
-        self.thread_manager = thread_manager
+        self._name = name
+        self._thread_manager = thread_manager
 
     def activate(self):
         """
         Activate the threadable object.
         """
 
-        self.thread_manager.register(self.name, self)
+        self._thread_manager.register(self._name, self)
 
     def deactivate(self):
         """
         Deactivate the threadable object.
         """
 
-        self.thread_manager.unregister(self.name)
+        self._thread_manager.unregister(self._name)
 
     def interrupt(self):
         """
         Interrupt the main thread.
         """
 
-        self.thread_manager.log("'{}' thread".format(self.name))
+        self._thread_manager.log("'{}' thread".format(self._name))
         thread.interrupt_main()

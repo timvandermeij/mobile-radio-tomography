@@ -7,24 +7,24 @@ class Thread_Manager(object):
         Initialize the thread manager.
         """
 
-        self.threads = {}
+        self._threads = {}
 
     def register(self, name, thread):
         """
         Register a thread.
         """
 
-        self.threads[name] = thread
+        self._threads[name] = thread
 
     def unregister(self, name):
         """
         Unregister a thread.
         """
 
-        if name not in self.threads:
+        if name not in self._threads:
             return
 
-        del self.threads[name]
+        del self._threads[name]
 
     def destroy(self):
         """
@@ -32,7 +32,7 @@ class Thread_Manager(object):
         """
 
         self.log("main thread")
-        for name, thread in self.threads.items():
+        for name, thread in self._threads.items():
             thread.deactivate()
 
     def log(self, source):
