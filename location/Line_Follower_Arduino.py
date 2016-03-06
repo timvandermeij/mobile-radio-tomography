@@ -21,7 +21,9 @@ class Line_Follower_Arduino(Line_Follower):
         self._line_threshold = settings.get("line_threshold")
 
         # Initialize the serial connection.
-        self._serial_connection = serial.Serial(self._device, self._baud_rate, timeout=None)
+        self._serial_connection = serial.Serial(self._device, self._baud_rate,
+                                                rtscts=True, dsrdtr=True,
+                                                timeout=None)
         self._serial_connection.reset_input_buffer()
 
     def get_serial_connection(self):
