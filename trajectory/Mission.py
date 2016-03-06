@@ -1,3 +1,4 @@
+import itertools
 import sys
 import time
 import math
@@ -9,6 +10,7 @@ from dronekit import VehicleMode, LocationGlobalRelative, LocationLocal
 from ..geometry.Geometry import Geometry_Spherical
 from Memory_Map import Memory_Map
 from ..vehicle.Mock_Vehicle import Mock_Vehicle
+from ..vehicle.Robot_Vehicle import Robot_Vehicle
 
 class Mission(object):
     """
@@ -681,3 +683,106 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
 
     def cost(self, start, goal):
         return self.geometry.get_distance_meters(start, goal)
+
+class Mission_Cycle(Mission_Guided):
+    def setup(self):
+        super(Mission_Guided, self).setup()
+
+        if not isinstance(self.vehicle, Robot_Vehicle):
+            raise ValueError("Mission_Cycle only works with robot vehicles")
+
+        self.done = False
+        self.current_waypoint = None
+
+        wpzip = itertools.izip_longest
+        size = self.size - 1
+
+        location = self.vehicle.location
+        if location.north == 0 and location.east == 0:
+            self.id = 0
+            self.waypoints = itertools.chain(
+                # 0
+                wpzip(xrange(1, self.size), [], fillvalue=0),
+                # 1
+                itertools.chain(
+                    wpzip(xrange(size - 1, 0, -1), [], fillvalue=0),
+                    wpzip([], xrange(1, self.size), fillvalue=0)
+                ),
+                # 2
+                wpzip([], xrange(size - 1, 0, -1), fillvalue=0),
+                # 3
+                itertools.chain(
+                    wpzip([], xrange(1, self.size), fillvalue=0),
+                    wpzip(xrange(1, self.size), [], fillvalue=size)
+                ),
+                # 4
+                wpzip(xrange(size - 1, 0, -1), [], fillvalue=size),
+                # 5
+                itertools.chain(
+                    wpzip(xrange(1, self.size), [], fillvalue=size),
+                    wpzip([], xrange(size - 1, 0, -1), fillvalue=size)
+                ),
+                # 6
+                wpzip([], xrange(1, self.size), fillvalue=size),
+                # 7
+                itertools.chain(
+                    wpzip([], xrange(size - 1, 0, -1), fillvalue=size),
+                    wpzip(xrange(size - 1, 0, -1), [], fillvalue=0)
+                )
+            )
+        elif location.north == 0 and location.east == size:
+            self.id = 1
+            self.waypoints = itertools.chain(
+                # 0
+                wpzip(xrange(1, self.size), [], fillvalue=size),
+                # 1
+                wpzip(
+                    itertools.repeat(size, size * 2),
+                    itertools.repeat(size, size * 2)
+                ),
+                # 2
+                wpzip([], xrange(size - 1, 0, -1), fillvalue=size),
+                # 3
+                wpzip(
+                    itertools.repeat(size, size * 2),
+                    itertools.repeat(0, size * 2)
+                ),
+                # 4
+                wpzip(xrange(size - 1, 0, -1), fillvalue=size),
+                # 5
+                wpzip(
+                    itertools.repeat(0, size * 2),
+                    itertools.repeat(0, size * 2)
+                ),
+                # 6
+                wpzip(xrange([], xrange(1, self.size), fillvalue=0)),
+                # 7
+                wpzip(
+                    itertools.repeat(0, size * 2),
+                    itertools.repeat(size, size * 2)
+                )
+            )
+        else:
+            raise ValueError("Vehicle is incorrectly positioned at ({},{}), must be at (0,0) or (0,{})".format(location.north, location.east, size))
+
+    def step(self):
+        if self.done:
+            return
+
+        location = self.vehicle.location
+        if location.north == self.current_waypoint[0] and location.east == self.current_waypoint[1]:
+            # TODO: Delay to perform measurements (add correct location bit)
+            self.next_waypoint()
+
+    def check_waypoint(self):
+        return not self.done
+
+    def next_waypoint(self):
+        try:
+            waypoint = self.waypoints.next()
+        except StopIteration:
+            self.done = True
+            return
+
+        self.current_waypoint = waypoint
+        self.vehicle.simple_goto(LocationLocal(waypoint[0], waypoint[1], 0.0))
