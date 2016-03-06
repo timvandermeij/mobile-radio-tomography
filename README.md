@@ -24,14 +24,14 @@ different installation procedures.
   Ensure that you have the correct version of `pip` with `pip --version` or use
   `pip2` instead.
 
-  Use `pip install --user <package>` to install each of the following packages,
-  sorted by purpose:
+  Use `pip install --user <package>` to install or upgrade each of the 
+  following packages, sorted by purpose:
   * General packages:
     * matplotlib
     * NumPy
     * scipy
   * Physical sensor/communication interfaces:
-    * pyserial (you may need to use `pip install --user "pyserial==2.7"`)
+    * pyserial
     * RPi.GPIO
     * RPIO
     * xbee

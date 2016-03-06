@@ -4,13 +4,16 @@ import shutil
 import sys
 import thread
 import time
+from ..core.Threadable import Threadable
 from ..settings import Arguments, Settings
 
-class Infrared_Sensor(object):
-    def __init__(self, settings):
+class Infrared_Sensor(Threadable):
+    def __init__(self, settings, thread_manager):
         """
         Initialize the infrared sensor object.
         """
+
+        super(Infrared_Sensor, self).__init__("infrared_sensor", thread_manager)
 
         if isinstance(settings, Arguments):
             settings = settings.get_settings("infrared_sensor")
@@ -83,6 +86,8 @@ class Infrared_Sensor(object):
         Activate the infrared sensor.
         """
 
+        super(Infrared_Sensor, self).activate()
+
         self._active = True
         configuration_file = "{}/remotes/{}.lircrc".format(self._base_path, self._remote)
         lirc.init(self._program, configuration_file, blocking=False)
@@ -93,20 +98,25 @@ class Infrared_Sensor(object):
         Execute the sensor loop. This runs in a separate thread.
         """
 
-        while self._active:
-            data = lirc.nextcode()
-            if len(data) == 1:
-                button = data[0]
-                if button in self._event_listeners:
-                    callback = self._event_listeners[button]
-                    callback()
+        try:
+            while self._active:
+                data = lirc.nextcode()
+                if len(data) == 1:
+                    button = data[0]
+                    if button in self._event_listeners:
+                        callback = self._event_listeners[button]
+                        callback()
 
-            time.sleep(self._wait_delay)
+                time.sleep(self._wait_delay)
+        except:
+            super(Infrared_Sensor, self).interrupt()
 
     def deactivate(self):
         """
         Deactivate the infrared sensor.
         """
+
+        super(Infrared_Sensor, self).deactivate()
 
         self._active = False
         lirc.deinit()
