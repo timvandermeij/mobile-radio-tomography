@@ -1,6 +1,6 @@
 try:
     import RPIO
-except ImportError, SystemError:
+except (ImportError, SystemError):
     RPIO = None
 
 from Robot_Vehicle import Robot_Vehicle

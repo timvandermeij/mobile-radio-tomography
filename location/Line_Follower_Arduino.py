@@ -54,8 +54,8 @@ class Line_Follower_Arduino(Line_Follower):
         # over the serial connection, so this should be run in a separate thread.
         raw_sensor_values = None
         while raw_sensor_values is None:
-            line = self._serial_connection.readline()
             try:
+                line = self._serial_connection.readline()
                 raw_sensor_values = [float(sensor_value) for sensor_value in line.lstrip('\0').rstrip().split(' ')]
             except:
                 # Ignore lines that we cannot parse.
