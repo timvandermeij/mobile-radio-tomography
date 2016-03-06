@@ -750,14 +750,14 @@ class Mission_Cycle(Mission_Guided):
                     itertools.repeat(0, size * 2)
                 ),
                 # 4
-                wpzip(xrange(size - 1, -1, -1), fillvalue=size),
+                wpzip(xrange(size - 1, -1, -1), [], fillvalue=0),
                 # 5
                 wpzip(
                     itertools.repeat(0, size * 2),
                     itertools.repeat(0, size * 2)
                 ),
                 # 6
-                wpzip(xrange([], xrange(1, grid_size), fillvalue=0)),
+                wpzip([], xrange(1, grid_size), fillvalue=0),
                 # 7
                 wpzip(
                     itertools.repeat(0, size * 2),
@@ -771,10 +771,15 @@ class Mission_Cycle(Mission_Guided):
         if self.done:
             return
 
-        location = self.vehicle.location
-        if location.north == self.current_waypoint[0] and location.east == self.current_waypoint[1]:
-            # TODO: Delay to perform measurements (add correct location bit)
+        if self.current_waypoint is None:
             self.next_waypoint()
+        else:
+            location = self.vehicle.location
+            wp = self.current_waypoint
+            if location.north == wp[0] and location.east == wp[1]:
+                # TODO: Delay to perform measurements. We need to synchronize 
+                # the robots so that they measure at the "correct" location.
+                self.next_waypoint()
 
     def check_waypoint(self):
         return not self.done
