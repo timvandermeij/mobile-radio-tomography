@@ -133,7 +133,7 @@
             "vehicle_delay": 0.05,
             "line_follower_delay": 0.01,
             "home_location": [0,0],
-            "home_direction": 1
+            "home_direction": 0
         }
     },
     "vehicle_robot_raspberry_pi": {

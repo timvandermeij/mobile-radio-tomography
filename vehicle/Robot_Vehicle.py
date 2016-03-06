@@ -67,7 +67,7 @@ class Robot_Vehicle(Vehicle):
         self._loop_delay = settings.get("vehicle_delay")
 
         self._waypoints = []
-        self._current_waypoint = 0
+        self._current_waypoint = -1
 
         # Whether the robot is currently armed and driving around.
         self._running = False
@@ -80,36 +80,36 @@ class Robot_Vehicle(Vehicle):
 
     def _state_loop(self):
         while self._running:
-            if isinstance(self._state, Robot_State_Rotate):
-                if self._state.current_direction == self._state.target_direction:
-                    # When we are done rotating, stand still again before 
-                    # determining our next moves.
-                    self._state = Robot_State("intersection")
-                    self.set_speeds(0, 0)
-
-                    self._direction = self._state.current_direction
-                    self._line_follower.set_direction(self._direction)
-            elif self._state.name == "move":
-                if self._last_diverged_time is not None:
-                    diff = time.time() - self._last_diverged_time
-                    if diff >= self._diverged_time:
-                        self.set_speeds(self.speed, self.speed)
-                        self._last_diverged_time = None
-            elif self._state.name == "intersection":
-                if self._location == self.get_waypoint():
-                    # We reached the current waypoint.
-                    if self._mode.name == "AUTO":
-                        # In AUTO mode, immediately try to move to the next 
-                        # waypoint, or rotate in the right direction.
-                        self._move_waypoint()
-                        if self._state.name == "move":
-                            self._current_waypoint += 1
-                else:
-                    # We reached an intersection. Check whether we need to 
-                    # rotate here, and otherwise move away from it again.
-                    self._move_waypoint()
-
+            self._check_state()
             time.sleep(self._loop_delay)
+
+    def _check_state(self):
+        if isinstance(self._state, Robot_State_Rotate):
+            if self._state.current_direction == self._state.target_direction:
+                # When we are done rotating, stand still again before 
+                # determining our next moves.
+                self._state = Robot_State("intersection")
+                self.set_speeds(0, 0)
+
+                self._direction = self._state.current_direction
+                self._line_follower.set_direction(self._direction)
+        elif self._state.name == "move":
+            if self._last_diverged_time is not None:
+                diff = time.time() - self._last_diverged_time
+                if diff >= self._diverged_time:
+                    self.set_speeds(self.speed, self.speed)
+                    self._last_diverged_time = None
+        elif self._state.name == "intersection":
+            if self._location == self.get_waypoint():
+                # We reached the current waypoint.
+                if self._mode.name == "AUTO":
+                    # In AUTO mode, immediately try to move to the next 
+                    # waypoint, or rotate in the right direction.
+                    self._move_waypoint()
+            else:
+                # We reached an intersection. Check whether we need to rotate 
+                # here, and otherwise move away from it again.
+                self._move_waypoint()
 
     def _line_follower_loop(self):
         while self._running:
@@ -209,7 +209,7 @@ class Robot_Vehicle(Vehicle):
         if waypoint == -1:
             waypoint = self._current_waypoint
 
-        if waypoint >= len(self._waypoints):
+        if waypoint >= len(self._waypoints) or waypoint < 0:
             return None
 
         wp = self._waypoints[waypoint]
@@ -229,6 +229,7 @@ class Robot_Vehicle(Vehicle):
 
     def simple_goto(self, location):
         self._waypoints = []
+        self._current_waypoint = -1
         self.add_waypoint(location)
 
     @property
@@ -308,7 +309,8 @@ class Robot_Vehicle(Vehicle):
         next_direction = self._next_direction(next_waypoint)
         if next_direction == self._direction:
             # Start moving in the given direction
-            self._state = State("move")
+            self._state = Robot_State("move")
+            self._current_waypoint += 1
             self.set_speeds(self.speed, self.speed)
         else:
             self._set_direction(next_direction)
