@@ -1,20 +1,18 @@
 [![Build status](https://travis-ci.org/timvandermeij/mobile-radio-tomography.svg)](https://travis-ci.org/timvandermeij/mobile-radio-tomography)
 
-The mobile radio tomography framework contains tools to perform mobile radio tomographic
-imaging using XBee chips mounted on unmanned vehicles such as rover cars or drones.
-The goal of this work is to map an object in 3D using signal strength measurements.
-This framework is the result of research projects performed by Tim van der Meij
-(@timvandermeij) and Leon Helwerda (@lhelwerd) in collaboration with Leiden University
-and CWI Amsterdam, both based in the Netherlands.
+The mobile radio tomography framework provides tools for performing mobile radio
+tomographic imaging using XBee chips mounted on unmanned vehicles such as rover cars
+or drones. This framework is the result of research projects and master theses by
+Tim van der Meij (@timvandermeij) and Leon Helwerda (@lhelwerd) in collaboration with
+Leiden University and CWI Amsterdam, both located in the Netherlands.
 
 Prerequisites
 =============
 
-In order to use the framework you need to have the following software
-installed on your system. The framework has been developed for Linux, but
-can be made to work on Windows or any other operating system since all
-prerequisites are also available for those systems, perhaps with slightly
-different installation procedures.
+In order to use the framework you must have the following software installed on your
+system. The framework has been developed for Linux, but can be made to work on Windows
+or any other operating system since all prerequisites are also available for those
+systems, perhaps with slightly different installation procedures.
 
 * Git
 * Python 2.7. Note that Python 3 cannot be used at this moment.
