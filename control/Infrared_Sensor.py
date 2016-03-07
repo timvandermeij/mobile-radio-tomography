@@ -119,4 +119,4 @@ class Infrared_Sensor(Threadable):
         super(Infrared_Sensor, self).deactivate()
 
         self._active = False
-        pylirc.deinit()
+        pylirc.exit()
