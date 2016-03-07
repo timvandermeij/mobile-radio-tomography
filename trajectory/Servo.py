@@ -56,12 +56,6 @@ class Servo(object):
         """
         return self._values.min <= value < self._values.max
 
-    def check_angle(self, angle):
-        """
-        Backward compatible method that is equal to `Servo.check_value`.
-        """
-        return self.check_value(angle)
-
     def get_pin(self):
         """
         Get the servo's pin number.
@@ -91,9 +85,3 @@ class Servo(object):
             pwm = self._current_pwm
 
         return self._values.min + self._value_factor * (pwm - self.pwm.min)
-
-    def get_angle(self, pwm=None):
-        """
-        Backward compatibility method for `Sensor.get_value`.
-        """
-        return self.get_value(pwm)

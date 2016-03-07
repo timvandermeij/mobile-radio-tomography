@@ -176,7 +176,7 @@ class Environment(object):
         """
         yaw = self.get_yaw()
         if id < len(self._servos):
-            yaw = yaw + self._servos[id].get_angle() * math.pi/180
+            yaw = yaw + self._servos[id].get_value() * math.pi/180
 
         return yaw
 

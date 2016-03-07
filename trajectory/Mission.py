@@ -243,7 +243,7 @@ class Mission(object):
         servo = None
         pwm = None
         for servo in self.environment.get_servos():
-            if servo.check_angle(yaw_angle):
+            if servo.check_value(yaw_angle):
                 pwm = servo.get_pwm(yaw_angle)
                 self.vehicle.set_servo(servo, pwm)
                 return
