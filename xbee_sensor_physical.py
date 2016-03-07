@@ -2,6 +2,7 @@ import sys
 import time
 import random
 from __init__ import __package__
+from core.Thread_Manager import Thread_Manager
 from settings import Arguments
 from zigbee.XBee_Packet import XBee_Packet
 from zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
@@ -21,31 +22,31 @@ def receive_packet(packet):
     print("> Custom packet received: {}".format(packet.get_all()))
 
 def main(argv):
-    arguments = Arguments("settings.json", argv)
-    settings = arguments.get_settings("xbee_sensor_physical")
-    loop_delay = settings.get("loop_delay")
+    thread_manager = Thread_Manager()
 
-    sensor = XBee_Sensor_Physical(arguments, get_location, receive_packet)
+    try:
+        arguments = Arguments("settings.json", argv)
+        xbee_sensor = XBee_Sensor_Physical(arguments, thread_manager,
+                                           get_location, receive_packet)
 
-    arguments.check_help()
+        arguments.check_help()
 
-    timestamp = 0
-    while True:
-        try:
+        xbee_sensor.activate()
+
+        timestamp = 0
+        while True:
             # Enqueue a custom packet at a fixed interval.
-            if sensor.id > 0 and time.time() > timestamp:
+            if xbee_sensor.id > 0 and time.time() > timestamp:
                 timestamp = time.time() + 8
                 packet = XBee_Packet()
                 packet.set("specification", "memory_map_chunk")
                 packet.set("latitude", 123456789.12)
                 packet.set("longitude", 123495678.34)
-                sensor.enqueue(packet)
+                xbee_sensor.enqueue(packet)
 
-            sensor.activate()
-            time.sleep(loop_delay)
-        except KeyboardInterrupt:
-            sensor.deactivate()
-            break
+            time.sleep(1)
+    except:
+        thread_manager.destroy()
 
 if __name__ == "__main__":
     main(sys.argv[1:])

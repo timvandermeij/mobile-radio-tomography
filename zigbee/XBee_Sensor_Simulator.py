@@ -1,3 +1,4 @@
+import thread
 import time
 import socket
 import random
@@ -9,10 +10,12 @@ from XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from ..settings import Arguments
 
 class XBee_Sensor_Simulator(XBee_Sensor):
-    def __init__(self, arguments, location_callback=None, receive_callback=None, viewer=None):
+    def __init__(self, arguments, thread_manager, location_callback=None, receive_callback=None):
         """
         Initialize the sensor with a unique, non-blocking UDP socket.
         """
+
+        super(XBee_Sensor_Simulator, self).__init__(thread_manager)
 
         if isinstance(arguments, Arguments):
             self.settings = arguments.get_settings("xbee_sensor_simulator")
@@ -23,7 +26,6 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             raise TypeError("Missing required location and receive callbacks")
 
         self.id = self.settings.get("xbee_id")
-        self.viewer = viewer
         self.scheduler = XBee_TDMA_Scheduler(self.id, arguments)
         self._location_callback = location_callback
         self._receive_callback = receive_callback
@@ -34,6 +36,8 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._socket.bind((self.settings.get("ip"), self.settings.get("port") + self.id))
         self._socket.setblocking(0)
+        self._active = False
+        self._loop_delay = self.settings.get("loop_delay")
 
     def activate(self):
         """
@@ -41,26 +45,45 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         The ground sensor (with ID 0) can only receive packets.
         """
 
-        if self.id > 0 and time.time() >= self._next_timestamp:
-            self._next_timestamp = self.scheduler.get_next_timestamp()
-            self._send()
+        super(XBee_Sensor_Simulator, self).activate()
 
-        # Check if there is data to be processed.
+        self._active = True
+        thread.start_new_thread(self._loop, ())
+
+    def _loop(self):
+        """
+        Execute the sensor loop. This runs in a separate thread.
+        """
+
         try:
-            data = self._socket.recv(self.settings.get("buffer_size"))
-        except socket.error:
-            return
+            while self._active:
+                if self.id > 0 and time.time() >= self._next_timestamp:
+                    self._next_timestamp = self.scheduler.get_next_timestamp()
+                    self._send()
 
-        # Unserialize the data (byte-encoded string).
-        packet = XBee_Packet()
-        packet.unserialize(data)
-        self._receive(packet)
+                # Check if there is data to be processed.
+                try:
+                    data = self._socket.recv(self.settings.get("buffer_size"))
+                except socket.error:
+                    continue
+
+                # Unserialize the data (byte-encoded string).
+                packet = XBee_Packet()
+                packet.unserialize(data)
+                self._receive(packet)
+
+                time.sleep(self._loop_delay)
+        except:
+            super(XBee_Sensor_Simulator, self).interrupt()
 
     def deactivate(self):
         """
         Deactivate the sensor by closing the socket.
         """
 
+        super(XBee_Sensor_Simulator, self).deactivate()
+
+        self._active = False
         self._socket.close()
 
     def enqueue(self, packet, to=None):
@@ -100,8 +123,6 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         ip = self.settings.get("ip")
         port = self.settings.get("port")
 
-        if self.viewer:
-            self.viewer.clear_arrows()
         for i in xrange(1, self.settings.get("number_of_sensors") + 1):
             if i == self.id:
                 continue
@@ -114,8 +135,6 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             packet.set("sensor_id", self.id)
             packet.set("timestamp", time.time())
             self._socket.sendto(packet.serialize(), (ip, port + i))
-            if self.viewer:
-                self.viewer.draw_arrow(self.id, i)
 
         # Send custom packets to their destination. Since the time slots are
         # limited in length, so is the number of custom packets we transfer
@@ -128,19 +147,12 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             limit -= 1
             item = self._queue.get()
             self._socket.sendto(item["packet"].serialize(), (ip, port + item["to"]))
-            if self.viewer:
-                self.viewer.draw_arrow(self.id, item["to"], "green")
 
         # Send the sweep data to the ground sensor.
         for packet in self._data:
             self._socket.sendto(packet.serialize(), (ip, port))
-            if self.viewer:
-                self.viewer.draw_arrow(self.id, 0, "blue")
 
         self._data = []
-
-        if self.viewer:
-            self.viewer.refresh()
 
     def _receive(self, packet):
         """

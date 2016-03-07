@@ -7,6 +7,7 @@ import Queue
 import time
 from xbee import ZigBee
 from mock import patch
+from ..core.Thread_Manager import Thread_Manager
 from ..settings import Arguments
 from ..zigbee.XBee_Packet import XBee_Packet
 from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
@@ -36,6 +37,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         ])
         self.settings = self.arguments.get_settings("xbee_sensor_physical")
         self.sensor = XBee_Sensor_Physical(self.arguments,
+                                           Thread_Manager(),
                                            self.location_callback,
                                            self.receive_callback)
         self.sensor.id = self.sensor_id
@@ -56,7 +58,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.assertIsInstance(self.sensor._queue, Queue.Queue)
         self.assertEqual(self.sensor._queue.qsize(), 0)
 
-    def test_activate_and_deactivate(self):
+    def test_setup(self):
         # Set all status variables to True to avoid being stuck in
         # the join loops. We cannot test the join process in the unit tests.
         self.sensor._node_identifier_set = True
@@ -64,8 +66,8 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.sensor._joined = True
         self.sensor._synchronized = True
 
-        # The serial connection and sensor must be initialized lazily.
-        self.sensor.activate()
+        # The serial connection and sensor must be initialized.
+        self.sensor._setup()
         self.assertIsInstance(self.sensor._serial_connection, serial.Serial)
         self.assertIsInstance(self.sensor._sensor, ZigBee)
         self.assertEqual(self.sensor._node_identifier_set, True)
@@ -128,7 +130,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
 
         # Activate the sensor and ignore any _send() calls as we are not
         # interested in the initialization calls.
-        self.sensor.activate()
+        self.sensor._setup()
         mock_send.call_count = 0
 
         # Packets must be sent to all other sensors except the ground sensor
@@ -184,7 +186,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.sensor._joined = True
         self.sensor._synchronized = True
 
-        self.sensor.activate()
+        self.sensor._setup()
 
         # Valid RX packets should be processed. Store the frame ID
         # for the DB call test following this test.
