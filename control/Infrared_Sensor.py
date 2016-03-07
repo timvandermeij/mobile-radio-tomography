@@ -1,5 +1,5 @@
 import os
-import lirc
+import pylirc
 import shutil
 import sys
 import thread
@@ -90,7 +90,7 @@ class Infrared_Sensor(Threadable):
 
         self._active = True
         configuration_file = "{}/remotes/{}.lircrc".format(self._base_path, self._remote)
-        lirc.init(self._program, configuration_file, blocking=False)
+        pylirc.init(self._program, configuration_file, False)
         thread.start_new_thread(self._loop, ())
 
     def _loop(self):
@@ -100,8 +100,8 @@ class Infrared_Sensor(Threadable):
 
         try:
             while self._active:
-                data = lirc.nextcode()
-                if len(data) == 1:
+                data = pylirc.nextcode()
+                if data is not None:
                     button = data[0]
                     if button in self._event_listeners:
                         callback = self._event_listeners[button]
@@ -119,4 +119,4 @@ class Infrared_Sensor(Threadable):
         super(Infrared_Sensor, self).deactivate()
 
         self._active = False
-        lirc.deinit()
+        pylirc.exit()

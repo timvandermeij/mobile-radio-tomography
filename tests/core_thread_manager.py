@@ -1,4 +1,3 @@
-import os
 import unittest
 from mock import patch
 from ..core.Threadable import Threadable
@@ -18,12 +17,6 @@ class TestCoreThreadManager(unittest.TestCase):
     def setUp(self):
         # Initialize the thread manager.
         self.thread_manager = Thread_Manager()
-
-    def tearDown(self):
-        # Clear the log directory.
-        files = [filename for filename in os.listdir("logs") if filename.endswith(".log")]
-        for filename in files:
-            os.remove("logs/{}".format(filename))
 
     def test_initialization(self):
         # Initially the thread storage must be empty.

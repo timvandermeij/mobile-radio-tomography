@@ -31,8 +31,9 @@ systems, perhaps with slightly different installation procedures.
   * Physical sensor/communication interfaces:
     * pyserial
     * RPi.GPIO
+    * RPIO
     * xbee
-    * python-lirc
+    * pylirc2
   * Vehicle trajectory mission interfaces:
     * lxml
     * pexpect

@@ -1,15 +1,16 @@
 import copy
 import importlib
+from ..core.Threadable import Threadable
 from ..geometry.Geometry import Geometry_Spherical
 from dronekit import VehicleMode, LocationLocal, LocationGlobal, LocationGlobalRelative
 
-class Vehicle(object):
+class Vehicle(Threadable):
     """
     Vehicle interface specification.
     """
 
     @classmethod
-    def create(cls, arguments, geometry):
+    def create(cls, arguments, geometry, thread_manager):
         """
         Create a Vehicle object from one of the subclass types.
 
@@ -21,9 +22,10 @@ class Vehicle(object):
         vehicle_class = settings.get("vehicle_class")
 
         module = importlib.import_module("..{}".format(vehicle_class), cls.__module__)
-        return module.__dict__[vehicle_class](arguments, geometry)
+        return module.__dict__[vehicle_class](arguments, geometry, thread_manager)
 
-    def __init__(self, arguments, geometry):
+    def __init__(self, arguments, geometry, thread_manager):
+        super(Vehicle, self).__init__("vehicle", thread_manager)
         self._geometry = geometry
         self._home_location = None
         self._mode = VehicleMode("PLACEHOLDER")
@@ -187,9 +189,14 @@ class Vehicle(object):
     def simple_takeoff(self, altitude):
         """
         Take off to a certain relative altitude in meters.
+
+        If the Vehicle backend does not support taking off, this method
+        is a no-op and should return `False` to indicate that it is not taking
+        off. Otherwise, return `True` so that the caller can check whether it
+        reached the specified altitude.
         """
 
-        raise NotImplementedError("Subclasses must implement simple_takeoff(altitude)")
+        return False
 
     def simple_goto(self, location):
         """

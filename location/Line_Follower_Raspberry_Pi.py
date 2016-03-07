@@ -4,7 +4,7 @@ from Line_Follower import Line_Follower
 from ..settings import Arguments, Settings
 
 class Line_Follower_Raspberry_Pi(Line_Follower):
-    def __init__(self, location, direction, callback, settings):
+    def __init__(self, location, direction, callback, settings, thread_manager, delay=0):
         """
         Initialize the line follower object for the Raspberry Pi. Note that the
         pin numbers in the settings file are the pin numbers for the connection
@@ -12,7 +12,7 @@ class Line_Follower_Raspberry_Pi(Line_Follower):
         17 (A3), 11, 14 (A0), 16 (A2) and 5 on the Zumo rover.
         """
 
-        super(Line_Follower_Raspberry_Pi, self).__init__(location, direction, callback)
+        super(Line_Follower_Raspberry_Pi, self).__init__(location, direction, callback, thread_manager, delay)
 
         if isinstance(settings, Arguments):
             settings = settings.get_settings("line_follower_raspberry_pi")
@@ -41,18 +41,18 @@ class Line_Follower_Raspberry_Pi(Line_Follower):
         # P1 header of the board.
         self.gpio.setmode(self.gpio.BOARD)
 
-    def activate(self):
+    def enable(self):
         """
-        Activate the line follower by turning on its IR LEDs.
+        Enable the line follower by turning on its IR LEDs.
         """
 
         self.gpio.setup(self._emitter_pin, self.gpio.OUT)
         self.gpio.output(self._emitter_pin, True)
         time.sleep(self._write_delay)
 
-    def deactivate(self):
+    def disable(self):
         """
-        Deactivate the line follower by turning off its IR LEDs.
+        Disable the line follower by turning off its IR LEDs.
         """
 
         self.gpio.setup(self._emitter_pin, self.gpio.OUT)
