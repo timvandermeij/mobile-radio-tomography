@@ -60,12 +60,16 @@ class Setup(object):
                     if ok:
                         monitor.sleep()
         except RuntimeError, e:
+            # Handle runtime errors from the monitor loop as informative and 
+            # loggable errors, but allow the vehicle to attempt to return to 
+            # launch.
             print(e)
-        except Exception, e:
-            # Handle exceptions gracefully by attempting to stop the program 
-            # ourselves. Unfortunately KeyboardInterrupts are not passed to us 
-            # when we run under pymavlink.
-            traceback.print_exc()
+            self.environment.thread_manager.log("main thread")
+        except:
+            # Stop vehicle immediately if there are serious problems.
+            monitor.stop()
+            self.environment.thread_manager.destroy()
+            return
 
         monitor.stop()
         mission.return_to_launch()

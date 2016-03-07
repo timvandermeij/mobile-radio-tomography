@@ -83,9 +83,12 @@ class Robot_Vehicle(Vehicle):
         self._line_follower.set_state(Line_Follower_State.AT_INTERSECTION)
 
     def _state_loop(self):
-        while self._running:
-            self._check_state()
-            time.sleep(self._loop_delay)
+        try:
+            while self._running:
+                self._check_state()
+                time.sleep(self._loop_delay)
+        except:
+            super(Robot_Vehicle, self).interrupt()
 
     def _check_state(self):
         if isinstance(self._state, Robot_State_Rotate):
