@@ -1,6 +1,7 @@
 import os
 import subprocess
 import serial
+import thread
 import time
 import random
 import copy
@@ -12,10 +13,12 @@ from XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from ..settings import Arguments
 
 class XBee_Sensor_Physical(XBee_Sensor):
-    def __init__(self, arguments, location_callback=None, receive_callback=None):
+    def __init__(self, arguments, thread_manager, location_callback=None, receive_callback=None):
         """
         Initialize the sensor.
         """
+
+        super(XBee_Sensor_Physical, self).__init__(thread_manager)
 
         if isinstance(arguments, Arguments):
             self.settings = arguments.get_settings("xbee_sensor_physical")
@@ -39,11 +42,13 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._address = None
         self._data = {}
         self._queue = Queue.Queue()
+        self._active = False
 
         # Prepare the packet and sensor data.
         self._custom_packet_limit = self.settings.get("custom_packet_limit")
         self._number_of_sensors = self.settings.get("number_of_sensors")
         self._sensors = self.settings.get("sensors")
+        self._loop_delay = self.settings.get("loop_delay")
         for index, address in enumerate(self._sensors):
             self._sensors[index] = address.decode("string_escape")
 
@@ -53,27 +58,46 @@ class XBee_Sensor_Physical(XBee_Sensor):
         The sensor always receives packets asynchronously.
         """
 
-        # Lazily initialize the serial connection and ZigBee object.
-        if self._serial_connection is None and self._sensor is None:
-            self._serial_connection = serial.Serial(self.settings.get("port"),
-                                                    self.settings.get("baud_rate"),
-                                                    rtscts=True, dsrdtr=True)
-            self._sensor = ZigBee(self._serial_connection, callback=self._receive)
-            time.sleep(self.settings.get("startup_delay"))
-            self._join()
+        super(XBee_Sensor_Physical, self).activate()
 
-        if not self._joined:
-            return
+        self._active = True
 
-        if self.id > 0 and time.time() >= self._next_timestamp:
-            self._next_timestamp = self.scheduler.get_next_timestamp()
-            self._send()
+        # Initialize the serial connection.
+        self._serial_connection = serial.Serial(self.settings.get("port"),
+                                                self.settings.get("baud_rate"),
+                                                rtscts=True, dsrdtr=True)
+        self._sensor = ZigBee(self._serial_connection, callback=self._receive)
+        time.sleep(self.settings.get("startup_delay"))
+        self._join()
+
+        thread.start_new_thread(self._loop, ())
+
+    def _loop(self):
+        """
+        Execute the sensor loop. This runs in a separate thread.
+        """
+
+        try:
+            while self._active:
+                if not self._joined:
+                    continue
+
+                if self.id > 0 and time.time() >= self._next_timestamp:
+                    self._next_timestamp = self.scheduler.get_next_timestamp()
+                    self._send()
+
+                time.sleep(self._loop_delay)
+        except:
+            super(XBee_Sensor_Physical, self).interrupt()
 
     def deactivate(self):
         """
         Deactivate the sensor and close the serial connection.
         """
 
+        super(XBee_Sensor_Physical, self).deactivate()
+
+        self._active = False
         self._sensor.halt()
         self._serial_connection.close()
 

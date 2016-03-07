@@ -325,16 +325,7 @@
         "name": "XBee TDMA scheduler",
         "parent": "xbee_base",
         "settings": {
-            "sweep_delay": 0.4
-        }
-    },
-    "xbee_viewer": {
-        "name": "XBee viewer",
-        "parent": "xbee_base",
-        "settings": {
-            "size": 10,
-            "circle_radius": 3,
-            "warnings": false
+            "sweep_delay": 0.5
         }
     }
 }

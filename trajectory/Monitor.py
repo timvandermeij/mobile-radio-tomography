@@ -1,4 +1,3 @@
-import thread
 import time
 from dronekit import LocationGlobalRelative
 from ..zigbee.XBee_Packet import XBee_Packet
@@ -27,8 +26,6 @@ class Monitor(object):
         self.memory_map = None
         self.plot = None
 
-        self.stopped = False
-
     def get_delay(self):
         return self.step_delay
 
@@ -44,8 +41,9 @@ class Monitor(object):
             from Plot import Plot
             self.plot = Plot(self.environment, self.memory_map)
 
-        if self.environment.get_xbee_sensor():
-            thread.start_new_thread(self.xbee_sensor_loop, ())
+        xbee_sensor = self.environment.get_xbee_sensor()
+        if xbee_sensor is not None:
+            xbee_sensor.activate()
 
     def step(self, add_point=None):
         """
@@ -116,13 +114,6 @@ class Monitor(object):
 
         return True
 
-    def xbee_sensor_loop(self):
-        xbee_sensor = self.environment.get_xbee_sensor()
-        loop_delay = xbee_sensor.settings.get("loop_delay")
-        while not self.stopped:
-            xbee_sensor.activate()
-            time.sleep(loop_delay)
-
     def sleep(self):
         time.sleep(self.step_delay)
 
@@ -136,9 +127,8 @@ class Monitor(object):
             pass
 
     def stop(self):
-        self.stopped = True
         xbee_sensor = self.environment.get_xbee_sensor()
-        if xbee_sensor:
+        if xbee_sensor is not None:
             xbee_sensor.deactivate()
 
         if self.plot:

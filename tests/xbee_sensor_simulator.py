@@ -5,6 +5,7 @@ import random
 import copy
 import Queue
 from mock import patch, MagicMock
+from ..core.Thread_Manager import Thread_Manager
 from ..settings import Arguments
 from ..zigbee.XBee_Packet import XBee_Packet
 from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
@@ -31,20 +32,16 @@ class TestXBeeSensorSimulator(unittest.TestCase):
 
         self.patcher = patch.dict('sys.modules', modules)
         self.patcher.start()
-        from ..zigbee.XBee_Viewer import XBee_Viewer
 
         self.id = 1
         self.arguments = Arguments("settings.json", [
             "--warnings", "--xbee-id", "1"
         ])
         self.settings = self.arguments.get_settings("xbee_sensor_simulator")
-        self.viewer = XBee_Viewer(self.arguments)
         self.sensor = XBee_Sensor_Simulator(self.arguments,
+                                            Thread_Manager(),
                                             self.location_callback,
-                                            self.receive_callback,
-                                            viewer=self.viewer)
-
-        self.viewer.draw_points()
+                                            self.receive_callback)
 
     def test_initialization(self):
         # The ID of the sensor must be set.

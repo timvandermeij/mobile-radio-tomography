@@ -1,9 +1,8 @@
-class XBee_Sensor(object):
-    def activate(self):
-        raise NotImplementedError("Subclasses must implement activate()")
+from ..core.Threadable import Threadable
 
-    def deactivate(self):
-        raise NotImplementedError("Subclasses must implement deactivate()")
+class XBee_Sensor(Threadable):
+    def __init__(self, thread_manager):
+        super(XBee_Sensor, self).__init__("xbee_sensor", thread_manager)
 
     def enqueue(self, packet, to=None):
         raise NotImplementedError("Subclasses must implement enqueue(packet, to=None)")

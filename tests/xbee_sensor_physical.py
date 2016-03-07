@@ -7,6 +7,7 @@ import Queue
 import time
 from xbee import ZigBee
 from mock import patch
+from ..core.Thread_Manager import Thread_Manager
 from ..settings import Arguments
 from ..zigbee.XBee_Packet import XBee_Packet
 from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
@@ -36,6 +37,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         ])
         self.settings = self.arguments.get_settings("xbee_sensor_physical")
         self.sensor = XBee_Sensor_Physical(self.arguments,
+                                           Thread_Manager(),
                                            self.location_callback,
                                            self.receive_callback)
         self.sensor.id = self.sensor_id
