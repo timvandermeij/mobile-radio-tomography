@@ -32,7 +32,7 @@ systems, perhaps with slightly different installation procedures.
     * pyserial
     * RPi.GPIO
     * xbee
-    * python-lirc
+    * pylirc2
   * Vehicle trajectory mission interfaces:
     * lxml
     * pexpect
