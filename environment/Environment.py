@@ -16,7 +16,7 @@ class Environment(object):
     _sensor_class = None
 
     @classmethod
-    def setup(self, arguments, geometry_class=None, vehicle=None, simulated=None):
+    def setup(self, arguments, geometry_class=None, vehicle=None, thread_manager=None, simulated=None):
         """
         Create an Environment object or simulated environment.
 
@@ -25,7 +25,8 @@ class Environment(object):
         Optionally, one can specify which `geometry_class` to use and what
         `vehicle` object to use. By default this depends on the settings for
         `geometry_class` and `vehicle_class` in the `environment` and `vehicle`
-        components, respectively.
+        components, respectively. If a `vehicle` is passed, then its
+        `thread_manager` must be passed as well.
         Finally, to use an environment with physical distance sensors,
         set `simulated` to `False`. This is required if the vehicle does not
         support simulation, which might depend on vehicle-specific settings.
@@ -43,6 +44,8 @@ class Environment(object):
         if vehicle is None:
             thread_manager = Thread_Manager()
             vehicle = Vehicle.create(arguments, geometry, thread_manager)
+        elif thread_manager is None:
+            raise ValueError("If a `vehicle` is provided then its `thread_manager` must be provided as well")
 
         vehicle.setup()
 
@@ -54,14 +57,15 @@ class Environment(object):
                 raise ValueError("Vehicle '{}' does not support environment simulation, check vehicle type and settings".format(vehicle.__class__.__name__))
 
             from Environment_Simulator import Environment_Simulator
-            return Environment_Simulator(vehicle, geometry, arguments)
+            return Environment_Simulator(vehicle, geometry, arguments, thread_manager)
 
         from Environment_Physical import Environment_Physical
-        return Environment_Physical(vehicle, geometry, arguments)
+        return Environment_Physical(vehicle, geometry, arguments, thread_manager)
 
-    def __init__(self, vehicle, geometry, arguments):
+    def __init__(self, vehicle, geometry, arguments, thread_manager):
         self.vehicle = vehicle
         self.geometry = geometry
+        self.thread_manager = thread_manager
 
         self.arguments = arguments
         self.settings = self.arguments.get_settings("environment")
@@ -98,7 +102,8 @@ class Environment(object):
         else:
             return
 
-        self._xbee_sensor = xbee_class(self.arguments, self.get_raw_location,
+        self._xbee_sensor = xbee_class(self.arguments, self.thread_manager,
+                                       self.get_raw_location,
                                        self.receive_packet)
 
     def get_vehicle(self):

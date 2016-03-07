@@ -11,8 +11,8 @@ class Environment_Simulator(Environment):
 
     _sensor_class = Distance_Sensor_Simulator
 
-    def __init__(self, vehicle, geometry, arguments):
-        super(Environment_Simulator, self).__init__(vehicle, geometry, arguments)
+    def __init__(self, vehicle, geometry, arguments, thread_manager):
+        super(Environment_Simulator, self).__init__(vehicle, geometry, arguments, thread_manager)
         self.has_location_check = False
         self.old_location = None
 
