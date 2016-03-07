@@ -1,4 +1,5 @@
 import thread
+import time
 from ..core.Threadable import Threadable
 
 class Line_Follower_Direction(object):

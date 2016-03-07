@@ -19,10 +19,11 @@ class Line_Follower_Arduino(Line_Follower):
         self._baud_rate = settings.get("serial_baud_rate")
         self._readable_leds = settings.get("readable_leds")
         self._line_threshold = settings.get("line_threshold")
+        rtscts = settings.get("serial_flow_control")
 
         # Initialize the serial connection.
         self._serial_connection = serial.Serial(self._device, self._baud_rate,
-                                                rtscts=True, dsrdtr=True,
+                                                rtscts=rtscts, dsrdtr=True,
                                                 timeout=None)
         self._serial_connection.reset_input_buffer()
 

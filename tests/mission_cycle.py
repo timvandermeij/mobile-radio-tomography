@@ -20,7 +20,10 @@ class TestMissionCycle(LocationTestCase):
         self.master = os.fdopen(master)
         self.port = os.ttyname(slave)
 
-        self.arguments = Arguments("settings.json", ["--vehicle-class", "Robot_Vehicle_Arduino", "--space-size", "3", "--serial-device", self.port])
+        self.arguments = Arguments("settings.json", [
+            "--vehicle-class", "Robot_Vehicle_Arduino", "--space-size", "3",
+            "--serial-device", self.port, "--serial-flow-control"
+        ])
         self.environment = Environment.setup(self.arguments, geometry_class="Geometry", simulated=True)
         self.vehicle = self.environment.get_vehicle()
 

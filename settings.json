@@ -50,7 +50,8 @@
         "parent": "line_follower_base",
         "settings": {
             "serial_device": "/dev/ttyUSB1",
-            "serial_baud_rate": 9600
+            "serial_baud_rate": 9600,
+            "serial_flow_control": false
         }
     },
     "mission": {
