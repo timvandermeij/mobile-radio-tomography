@@ -64,10 +64,10 @@ class Line_Follower(Threadable):
         self._running = False
 
     def enable(self):
-        raise NotImplementedError("Subclasses must implement activate()")
+        raise NotImplementedError("Subclasses must implement enable()")
 
     def disable(self):
-        raise NotImplementedError("Subclasses must implement deactivate()")
+        raise NotImplementedError("Subclasses must implement disable()")
 
     def read(self):
         raise NotImplementedError("Subclasses must implement read()")

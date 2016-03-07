@@ -43,7 +43,7 @@ class Line_Follower_Raspberry_Pi(Line_Follower):
 
     def enable(self):
         """
-        Activate the line follower by turning on its IR LEDs.
+        Enable the line follower by turning on its IR LEDs.
         """
 
         self.gpio.setup(self._emitter_pin, self.gpio.OUT)
@@ -52,7 +52,7 @@ class Line_Follower_Raspberry_Pi(Line_Follower):
 
     def disable(self):
         """
-        Deactivate the line follower by turning off its IR LEDs.
+        Disable the line follower by turning off its IR LEDs.
         """
 
         self.gpio.setup(self._emitter_pin, self.gpio.OUT)

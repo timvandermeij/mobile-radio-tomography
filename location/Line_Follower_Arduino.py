@@ -31,7 +31,7 @@ class Line_Follower_Arduino(Line_Follower):
 
     def enable(self):
         """
-        Activate the line follower by turning on its IR LEDs.
+        Enable the line follower by turning on its IR LEDs.
         """
 
         # The Arduino will do this when it reads the raw sensor values.
@@ -39,7 +39,7 @@ class Line_Follower_Arduino(Line_Follower):
 
     def disable(self):
         """
-        Deactivate the line follower by turning off its IR LEDs.
+        Disable the line follower by turning off its IR LEDs.
         """
 
         # The Arduino will do this when it reads the raw sensor values.
