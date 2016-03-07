@@ -64,7 +64,7 @@ class Robot_Vehicle(Vehicle):
         self._line_follower = self._line_follower_class(
             self._home_location, self._direction,
             self.line_follower_callback, arguments,
-            self.get_thread_manager(), line_follower_delay
+            thread_manager, line_follower_delay
         )
 
         # The delay of the robot vehicle state loop.

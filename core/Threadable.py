@@ -30,6 +30,3 @@ class Threadable(object):
 
         self._thread_manager.log("'{}' thread".format(self._name))
         thread.interrupt_main()
-
-    def get_thread_manager(self):
-        return self._thread_manager
