@@ -22,6 +22,8 @@ ZumoMotors motors;
 Pushbutton button(ZUMO_BUTTON);
 
 void setup() {
+  pinMode(LED_PIN, OUTPUT);
+
   // Play a little welcome song
   buzzer.play(">f32>>d32");
 
@@ -31,29 +33,29 @@ void setup() {
   // Initialize the reflectance sensors module
   reflectanceSensors.init();
 
-  // Wait for the user button to be pressed and released
-  button.waitForButton();
+  // Wait for connection to be started
+  while (!Serial.available()) {
+    delay(100);
+  }
 
-  pinMode(LED_PIN, OUTPUT);
+  char input[SERIAL_INPUT];
+  Serial.readBytesUntil('\n', input, SERIAL_INPUT);
+
+  // Sound off buzzer to denote Zumo is ready to start.
+  buzzer.play("L16 cdegreg4");
 }
 
 void loop() {
   digitalWrite(LED_PIN, HIGH);
 
-  // Echo serial input
+  // If we have serial input, then parse it as two motor speeds.
   if (Serial.available()) {
+    int motor1 = Serial.parseInt();
+    int motor2 = Serial.parseInt();
+    motors.setSpeeds(motor1, motor2);
+	// Ignore the rest of the line, which might simply be a newline.
     char input[SERIAL_INPUT];
     Serial.readBytesUntil('\n', input, SERIAL_INPUT);
-    int i;
-    for (i = 0; i < SERIAL_INPUT; i++) {
-      // Text ends at NULL or ETX
-      if (input[i] == '\0' || input[i] == '\3') {
-        break;
-      }
-      Serial.print(input[i], HEX);
-      Serial.print(' ');
-    }
-    Serial.println(" PONG");
   }
 
   // Produce serial output for the raw reflectance sensor values
