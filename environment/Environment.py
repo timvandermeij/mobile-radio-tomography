@@ -1,4 +1,5 @@
 import math
+from ..core.Thread_Manager import Thread_Manager
 from ..geometry import Geometry
 from ..trajectory.Servo import Servo
 from ..vehicle.Vehicle import Vehicle
@@ -38,8 +39,10 @@ class Environment(object):
             geometry_class = settings.get("geometry_class")
 
         geometry = Geometry.__dict__[geometry_class]()
+
         if vehicle is None:
-            vehicle = Vehicle.create(arguments, geometry)
+            thread_manager = Thread_Manager()
+            vehicle = Vehicle.create(arguments, geometry, thread_manager)
 
         vehicle.setup()
 

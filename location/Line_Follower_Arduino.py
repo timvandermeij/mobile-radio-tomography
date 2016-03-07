@@ -3,12 +3,12 @@ from Line_Follower import Line_Follower
 from ..settings import Arguments, Settings
 
 class Line_Follower_Arduino(Line_Follower):
-    def __init__(self, location, direction, callback, settings):
+    def __init__(self, location, direction, callback, settings, thread_manager, delay=0):
         """
         Initialize the line follower object for the Arduino.
         """
 
-        super(Line_Follower_Arduino, self).__init__(location, direction, callback)
+        super(Line_Follower_Arduino, self).__init__(location, direction, callback, thread_manager, delay)
 
         if isinstance(settings, Arguments):
             settings = settings.get_settings("line_follower_arduino")
@@ -29,7 +29,7 @@ class Line_Follower_Arduino(Line_Follower):
     def get_serial_connection(self):
         return self._serial_connection
 
-    def activate(self):
+    def enable(self):
         """
         Activate the line follower by turning on its IR LEDs.
         """
@@ -37,7 +37,7 @@ class Line_Follower_Arduino(Line_Follower):
         # The Arduino will do this when it reads the raw sensor values.
         pass
 
-    def deactivate(self):
+    def disable(self):
         """
         Deactivate the line follower by turning off its IR LEDs.
         """
@@ -54,8 +54,8 @@ class Line_Follower_Arduino(Line_Follower):
         # over the serial connection, so this should be run in a separate thread.
         raw_sensor_values = None
         while raw_sensor_values is None:
+            line = self._serial_connection.readline()
             try:
-                line = self._serial_connection.readline()
                 raw_sensor_values = [float(sensor_value) for sensor_value in line.lstrip('\0').rstrip().split(' ')]
             except:
                 # Ignore lines that we cannot parse.

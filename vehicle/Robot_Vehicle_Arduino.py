@@ -14,8 +14,8 @@ class Robot_Vehicle_Arduino(Robot_Vehicle):
 
     _line_follower_class = Line_Follower_Arduino
 
-    def __init__(self, arguments, geometry):
-        super(Robot_Vehicle_Arduino, self).__init__(arguments, geometry)
+    def __init__(self, arguments, geometry, thread_manager):
+        super(Robot_Vehicle_Arduino, self).__init__(arguments, geometry, thread_manager)
 
         self.settings = arguments.get_settings("vehicle_robot_arduino")
 

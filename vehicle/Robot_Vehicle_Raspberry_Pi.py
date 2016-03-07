@@ -11,8 +11,8 @@ class Robot_Vehicle_Raspberry_Pi(Robot_Vehicle):
 
     _line_follower_class = Line_Follower_Raspberry_Pi
 
-    def __init__(self, arguments, geometry):
-        super(Robot_Vehicle_Raspberry_Pi, self).__init__(arguments, geometry)
+    def __init__(self, arguments, geometry, thread_manager):
+        super(Robot_Vehicle_Raspberry_Pi, self).__init__(arguments, geometry, thread_manager)
 
         self.settings = arguments.get_settings("vehicle_robot_raspberry_pi")
 

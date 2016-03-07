@@ -19,8 +19,12 @@ class Dronekit_Vehicle(dronekit.Vehicle, MAVLink_Vehicle):
         else:
             return super(Dronekit_Vehicle, cls).__new__(cls, arguments, *a)
 
-    def __init__(self, handler, geometry=None):
+    def __init__(self, handler, geometry=None, thread_manager=None):
         if isinstance(handler, Arguments):
+            # Call the constructor of Threadable, which is the superclass of 
+            # the Vehicle base class, to make ourselves managed by the thread 
+            # manager.
+            super(Vehicle, self).__init__("dronekit_vehicle", thread_manager)
             self.settings = handler.get_settings("vehicle_dronekit")
             self._geometry = geometry
         else:
@@ -37,6 +41,11 @@ class Dronekit_Vehicle(dronekit.Vehicle, MAVLink_Vehicle):
         self.is_rover = False
         self.wait = False
         self._speed = 0.0
+
+    def deactivate(self):
+        super(Dronekit_Vehicle, self).deactivate()
+        # Close the MAVLink connection thread.
+        self.close()
 
     def setup(self):
         # Whether to use GPS and thus also wait for a GPS fix before arming.

@@ -1,3 +1,6 @@
+import thread
+from ..core.Threadable import Threadable
+
 class Line_Follower_Direction(object):
     """
     Enumeration of possible directions of the line follower.
@@ -19,13 +22,15 @@ class Line_Follower_Bit_Mask(object):
     LINE_RIGHT = 0b0001
     INTERSECTION = 0b1001
 
-class Line_Follower(object):
-    def __init__(self, location, direction, callback):
+class Line_Follower(Threadable):
+    def __init__(self, location, direction, callback, thread_manager, delay=0):
         """
         Initialize the line follower object. We assume that we are working
         with the Zumo Robot for Arduino v1.2 (assembled with 75:1 HP motors),
         which has a line follower with six LEDs.
         """
+
+        super(Line_Follower, self).__init__("line_follower", thread_manager)
 
         if not isinstance(location, tuple):
             raise ValueError("Location must be a tuple")
@@ -35,10 +40,33 @@ class Line_Follower(object):
         self._callback = callback
         self._state = Line_Follower_State.AT_LINE
 
+        self._delay = delay
+        self._running = False
+
+    def _loop(self):
+        try:
+            while self._running:
+                self.enable()
+                sensor_values = self.read()
+                self.update(sensor_values)
+                self.disable()
+                time.sleep(self._delay)
+        except:
+            super(Line_Follower, self).interrupt()
+
     def activate(self):
-        raise NotImplementedError("Subclasses must implement activate()")
+        super(Line_Follower, self).activate()
+        self._running = True
+        thread.start_new_thread(self._loop, ())
 
     def deactivate(self):
+        super(Line_Follower, self).deactivate()
+        self._running = False
+
+    def enable(self):
+        raise NotImplementedError("Subclasses must implement activate()")
+
+    def disable(self):
         raise NotImplementedError("Subclasses must implement deactivate()")
 
     def read(self):

@@ -1,5 +1,6 @@
 import unittest
 from mock import call, MagicMock
+from ..core.Thread_Manager import Thread_Manager
 from ..location.Line_Follower import Line_Follower, Line_Follower_State, Line_Follower_Direction
 
 class TestLocationLineFollower(unittest.TestCase):
@@ -8,23 +9,29 @@ class TestLocationLineFollower(unittest.TestCase):
         self.direction = Line_Follower_Direction.UP
         # Set up a line follower for the other tests.
         self.mock_callback = MagicMock()
-        self.line_follower = Line_Follower(self.location, self.direction, self.mock_callback)
+        thread_manager = Thread_Manager()
+        self.line_follower = Line_Follower(self.location, self.direction,
+                                           self.mock_callback, thread_manager)
 
     def test_initialization(self):
         # Test initialization of line follower with a local variable rather 
         # than the one already created at setUp.
         mock_callback = MagicMock()
+        thread_manager = Thread_Manager()
 
         # Location must be a tuple.
         with self.assertRaises(ValueError):
-            line_follower = Line_Follower([0, 0], self.direction, mock_callback)
+            line_follower = Line_Follower([0, 0], self.direction,
+                                          mock_callback, thread_manager)
 
         # Direction must be one of the defined types.
         with self.assertRaises(ValueError):
-            line_follower = Line_Follower(self.location, "up", mock_callback)
+            line_follower = Line_Follower(self.location, "up",
+                                          mock_callback, thread_manager)
 
         # Correct intialization should set the attributes.
-        line_follower = Line_Follower(self.location, self.direction, mock_callback)
+        line_follower = Line_Follower(self.location, self.direction,
+                                      mock_callback, thread_manager)
         self.assertEqual(line_follower._location, self.location)
         self.assertEqual(line_follower._direction, self.direction)
         self.assertEqual(line_follower._callback, mock_callback)
