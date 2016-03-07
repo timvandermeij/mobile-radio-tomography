@@ -166,11 +166,11 @@ class TestLocationLineFollower(unittest.TestCase):
         ])
 
     def test_set_state(self):
-        # Direction must be one of the defined types.
+        # State must be one of the defined types.
         with self.assertRaises(ValueError):
             self.line_follower.set_state("intersection")
 
-        # A valid direction must be set.
+        # A valid state must be set.
         self.line_follower.set_direction(Line_Follower_State.AT_LINE)
         self.assertEqual(self.line_follower._state, Line_Follower_State.AT_LINE)
 
