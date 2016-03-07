@@ -27,6 +27,9 @@ class Dronekit_Vehicle(dronekit.Vehicle, MAVLink_Vehicle):
             super(Vehicle, self).__init__("dronekit_vehicle", thread_manager)
             self.settings = handler.get_settings("vehicle_dronekit")
             self._geometry = geometry
+            # Because the dronekit Vehicle starts a MAVLink connection thread 
+            # immediately, register ourselves in the thread manager now.
+            super(Vehicle, self).activate()
         else:
             super(Dronekit_Vehicle, self).__init__(handler)
 
