@@ -124,6 +124,34 @@
             "gps": true
         }
     },
+    "vehicle_robot": {
+        "name": "Base robot vehicle",
+        "settings": {
+            "diverged_speed": 0.30,
+            "diverged_time": 0.25,
+            "rotate_speed": 0.30,
+            "vehicle_delay": 0.05,
+            "line_follower_delay": 0.01,
+            "home_location": [0,0],
+            "home_direction": 0
+        }
+    },
+    "vehicle_robot_raspberry_pi": {
+        "name": "Robot vehicle directly connected to a Raspberry Pi",
+        "settings": {
+            "direction_pins": [16,18],
+            "speed_pins": [24,26],
+            "speed_pwms": [0, 255],
+            "speeds": [0, 0.60]
+        }
+    },
+    "vehicle_robot_arduino": {
+        "name": "Robot vehicle connected through an Arduino with a serial connection",
+        "settings": {
+            "speed_pwms": [-400, 400],
+            "speeds": [-0.60, 0.60]
+        }
+    },
     "reconstruction": {
         "name": "Reconstruction",
         "settings": {

@@ -1,3 +1,4 @@
+import itertools
 import sys
 import time
 import math
@@ -9,6 +10,7 @@ from dronekit import VehicleMode, LocationGlobalRelative, LocationLocal
 from ..geometry.Geometry import Geometry_Spherical
 from Memory_Map import Memory_Map
 from ..vehicle.Mock_Vehicle import Mock_Vehicle
+from ..vehicle.Robot_Vehicle import Robot_Vehicle
 
 class Mission(object):
     """
@@ -126,8 +128,11 @@ class Mission(object):
 
         # Take off to target altitude
         print("Taking off!")
-        self.vehicle.simple_takeoff(self.altitude)
+        taking_off = self.vehicle.simple_takeoff(self.altitude)
         self.vehicle.speed = self.speed
+
+        if not taking_off:
+            return
 
         # Wait until the vehicle reaches a safe height before processing the 
         # goto (otherwise the command after Vehicle.commands.takeoff will 
@@ -238,7 +243,7 @@ class Mission(object):
         servo = None
         pwm = None
         for servo in self.environment.get_servos():
-            if servo.check_angle(yaw_angle):
+            if servo.check_value(yaw_angle):
                 pwm = servo.get_pwm(yaw_angle)
                 self.vehicle.set_servo(servo, pwm)
                 return
@@ -316,7 +321,6 @@ class Mission_Auto(Mission):
     def start(self):
         # Set mode to AUTO to start mission
         self.vehicle.mode = VehicleMode("AUTO")
-        self.vehicle.flush()
 
     def check_waypoint(self):
         next_waypoint = self.vehicle.get_next_waypoint()
@@ -350,7 +354,6 @@ class Mission_Guided(Mission):
         # Set mode to GUIDED. In fact the arming should already have done this, 
         # but it is good to do it here as well.
         self.vehicle.mode = VehicleMode("GUIDED")
-        self.vehicle.flush()
 
 # Actual mission implementations
 
@@ -388,7 +391,6 @@ class Mission_Browse(Mission_Guided):
     def step(self):
         # We stand still and change the angle to look around.
         self.send_global_velocity(0,0,0)
-        self.vehicle.flush()
         self.set_sensor_yaw(self.yaw, relative=False, direction=1)
 
         # When we're standing still, we rotate the vehicle to measure distances 
@@ -576,7 +578,6 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
         if self.sensor_dist < 2 * self.padding + self.closeness:
             print("Start scanning due to closeness.")
             self.send_global_velocity(0,0,0)
-            self.vehicle.flush()
             self.browsing = True
             self.start_yaw = self.yaw = self.vehicle.attitude.yaw
             return True
@@ -682,3 +683,113 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
 
     def cost(self, start, goal):
         return self.geometry.get_distance_meters(start, goal)
+
+class Mission_Cycle(Mission_Guided):
+    def setup(self):
+        super(Mission_Guided, self).setup()
+
+        if not isinstance(self.vehicle, Robot_Vehicle):
+            raise ValueError("Mission_Cycle only works with robot vehicles")
+
+        self.done = False
+        self.current_waypoint = None
+
+        wpzip = itertools.izip_longest
+        grid_size = int(self.size)
+        # Last coordinate index of the grid in both directions
+        size = grid_size - 1
+
+        location = self.vehicle.location
+        if location.north == 0 and location.east == 0:
+            self.id = 0
+            self.waypoints = itertools.chain(
+                # 0
+                wpzip(xrange(1, grid_size), [], fillvalue=0),
+                # 1
+                itertools.chain(
+                    wpzip(xrange(size - 1, -1, -1), [], fillvalue=0),
+                    wpzip([], xrange(1, grid_size), fillvalue=0)
+                ),
+                # 2
+                wpzip([], xrange(size - 1, -1, -1), fillvalue=0),
+                # 3
+                itertools.chain(
+                    wpzip([], xrange(1, grid_size), fillvalue=0),
+                    wpzip(xrange(1, grid_size), [], fillvalue=size)
+                ),
+                # 4
+                wpzip(xrange(size - 1, -1, -1), [], fillvalue=size),
+                # 5
+                itertools.chain(
+                    wpzip(xrange(1, grid_size), [], fillvalue=size),
+                    wpzip([], xrange(size - 1, -1, -1), fillvalue=size)
+                ),
+                # 6
+                wpzip([], xrange(1, grid_size), fillvalue=size),
+                # 7
+                itertools.chain(
+                    wpzip([], xrange(size - 1, -1, -1), fillvalue=size),
+                    wpzip(xrange(size - 1, -1, -1), [], fillvalue=0)
+                )
+            )
+        elif location.north == 0 and location.east == size:
+            self.id = 1
+            self.waypoints = itertools.chain(
+                # 0
+                wpzip(xrange(1, grid_size), [], fillvalue=size),
+                # 1
+                wpzip(
+                    itertools.repeat(size, size * 2),
+                    itertools.repeat(size, size * 2)
+                ),
+                # 2
+                wpzip([], xrange(size - 1, -1, -1), fillvalue=size),
+                # 3
+                wpzip(
+                    itertools.repeat(size, size * 2),
+                    itertools.repeat(0, size * 2)
+                ),
+                # 4
+                wpzip(xrange(size - 1, -1, -1), [], fillvalue=0),
+                # 5
+                wpzip(
+                    itertools.repeat(0, size * 2),
+                    itertools.repeat(0, size * 2)
+                ),
+                # 6
+                wpzip([], xrange(1, grid_size), fillvalue=0),
+                # 7
+                wpzip(
+                    itertools.repeat(0, size * 2),
+                    itertools.repeat(size, size * 2)
+                )
+            )
+        else:
+            raise ValueError("Vehicle is incorrectly positioned at ({},{}), must be at (0,0) or (0,{})".format(location.north, location.east, size))
+
+    def step(self):
+        if self.done:
+            return
+
+        if self.current_waypoint is None:
+            self.next_waypoint()
+        else:
+            location = self.vehicle.location
+            wp = self.current_waypoint
+            if location.north == wp[0] and location.east == wp[1]:
+                # TODO: Delay to perform measurements. We need to synchronize 
+                # the robots so that they measure at the "correct" location.
+                self.next_waypoint()
+
+    def check_waypoint(self):
+        return not self.done
+
+    def next_waypoint(self):
+        try:
+            waypoint = self.waypoints.next()
+        except StopIteration:
+            self.done = True
+            return
+
+        self.current_waypoint = waypoint
+        self.vehicle.simple_goto(LocationLocal(waypoint[0], waypoint[1], 0.0))

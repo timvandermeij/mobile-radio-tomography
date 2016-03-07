@@ -1,5 +1,6 @@
 import unittest
 from mock import patch, call, MagicMock
+from ..core.Thread_Manager import Thread_Manager
 from ..settings import Arguments
 
 class TestLocationLineFollowerRaspberryPi(unittest.TestCase):
@@ -25,8 +26,10 @@ class TestLocationLineFollowerRaspberryPi(unittest.TestCase):
         from ..location.Line_Follower_Raspberry_Pi import Line_Follower_Raspberry_Pi
 
         self.mock_callback = MagicMock()
+        self.thread_manager = Thread_Manager()
         self.line_follower = Line_Follower_Raspberry_Pi(
-            self.location, self.direction, self.mock_callback, self.settings
+            self.location, self.direction, self.mock_callback, self.settings,
+            self.thread_manager
         )
 
     def tearDown(self):
@@ -42,10 +45,10 @@ class TestLocationLineFollowerRaspberryPi(unittest.TestCase):
         # Board numbering has to be used.
         self.line_follower.gpio.setmode.assert_called_once_with(self.line_follower.gpio.BOARD)
 
-    def test_activate(self):
+    def test_enable(self):
         emitter_pin = self.settings.get("emitter_pin")
 
-        self.line_follower.activate()
+        self.line_follower.enable()
         self.line_follower.gpio.setup.assert_has_calls([
             call(emitter_pin, self.line_follower.gpio.OUT)
         ])
@@ -53,10 +56,10 @@ class TestLocationLineFollowerRaspberryPi(unittest.TestCase):
             call(emitter_pin, True)
         ])
 
-    def test_deactivate(self):
+    def test_disable(self):
         emitter_pin = self.settings.get("emitter_pin")
 
-        self.line_follower.deactivate()
+        self.line_follower.disable()
         self.line_follower.gpio.setup.assert_has_calls([
             call(emitter_pin, self.line_follower.gpio.OUT)
         ])
