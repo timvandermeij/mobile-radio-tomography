@@ -52,6 +52,18 @@ class XBee_Sensor_Physical(XBee_Sensor):
         for index, address in enumerate(self._sensors):
             self._sensors[index] = address.decode("string_escape")
 
+    def _setup(self):
+        """
+        Setup the serial connection and join the network.
+        """
+
+        self._serial_connection = serial.Serial(self.settings.get("port"),
+                                                self.settings.get("baud_rate"),
+                                                rtscts=True, dsrdtr=True)
+        self._sensor = ZigBee(self._serial_connection, callback=self._receive)
+        time.sleep(self.settings.get("startup_delay"))
+        self._join()
+
     def activate(self):
         """
         Activate the sensor by sending a packet if it is not a ground station.
@@ -61,15 +73,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
         super(XBee_Sensor_Physical, self).activate()
 
         self._active = True
-
-        # Initialize the serial connection.
-        self._serial_connection = serial.Serial(self.settings.get("port"),
-                                                self.settings.get("baud_rate"),
-                                                rtscts=True, dsrdtr=True)
-        self._sensor = ZigBee(self._serial_connection, callback=self._receive)
-        time.sleep(self.settings.get("startup_delay"))
-        self._join()
-
+        self._setup()
         thread.start_new_thread(self._loop, ())
 
     def _loop(self):
