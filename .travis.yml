@@ -11,6 +11,6 @@ install:
   - pip install simpleparse
   - pip install PyVRML97
   - pip install PyDispatcher
-script: python -m unittest discover -s tests -p "*.py" -t ..
+script: ./test.sh
 notifications:
   email: false
