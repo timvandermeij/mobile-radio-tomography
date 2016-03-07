@@ -15,6 +15,10 @@ or any other operating system since all prerequisites are also available for tho
 systems, perhaps with slightly different installation procedures.
 
 * Git
+* Binaries and development headers for the [LIRC](http://www.lirc.org/) package 
+  for remote control support. Check whether and how your package manager 
+  provides these packages, otherwise you can retrieve them from the LIRC 
+  website itself.
 * Python 2.7. Note that Python 3 cannot be used at this moment.
 * `pip` for Python 2.7. `pip` is often not available on extremely old and bare
   systems. If it is also not delivered by a package manager, one can also
