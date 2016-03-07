@@ -1,16 +1,18 @@
 import unittest
 from mock import call, MagicMock
+from ..location.Line_Follower import Line_Follower, Line_Follower_State, Line_Follower_Direction
 
 class TestLocationLineFollower(unittest.TestCase):
     def setUp(self):
-        from ..location.Line_Follower import Line_Follower_Direction
-
         self.location = (0, 0)
         self.direction = Line_Follower_Direction.UP
+        # Set up a line follower for the other tests.
+        self.mock_callback = MagicMock()
+        self.line_follower = Line_Follower(self.location, self.direction, self.mock_callback)
 
     def test_initialization(self):
-        from ..location.Line_Follower import Line_Follower, Line_Follower_State
-
+        # Test initialization of line follower with a local variable rather 
+        # than the one already created at setUp.
         mock_callback = MagicMock()
 
         # Location must be a tuple.
@@ -28,158 +30,139 @@ class TestLocationLineFollower(unittest.TestCase):
         self.assertEqual(line_follower._callback, mock_callback)
         self.assertEqual(line_follower._state, Line_Follower_State.AT_LINE)
 
-    def test_update(self):
-        from ..location.Line_Follower import Line_Follower, Line_Follower_Direction, Line_Follower_State
-
-        mock_callback = MagicMock()
-        line_follower = Line_Follower(self.location, self.direction, mock_callback)
-
+    def test_update_line(self):
         # Invalid sensor values should cause an error.
         with self.assertRaises(ValueError):
-            line_follower.update(0b0110)
+            self.line_follower.update(0b0110)
 
         # It should detect being on a single line.
-        line_follower = Line_Follower(self.location, self.direction, mock_callback)
-        line_follower.update([0, 1, 1, 0])
-        self.assertEqual(line_follower._location, self.location)
-        self.assertEqual(line_follower._direction, self.direction)
-        self.assertEqual(line_follower._state, Line_Follower_State.AT_LINE)
-        self.assertFalse(mock_callback.called)
-        mock_callback.reset_mock()
+        self.line_follower.update([0, 1, 1, 0])
+        self.assertEqual(self.line_follower._location, self.location)
+        self.assertEqual(self.line_follower._direction, self.direction)
+        self.assertEqual(self.line_follower._state, Line_Follower_State.AT_LINE)
+        self.assertFalse(self.mock_callback.called)
 
-        # It should detect being on an intersection (both left and right lines).
-        line_follower = Line_Follower(self.location, self.direction, mock_callback)
-        line_follower.update([1, 1, 1, 1])
+    def test_update_intersection_both(self):
+        # It should detect being on an intersection (both sides).
+        self.line_follower.update([1, 1, 1, 1])
         new_location = (self.location[0], self.location[1] + 1)
-        self.assertEqual(line_follower._location, new_location)
-        self.assertEqual(line_follower._direction, self.direction)
-        self.assertEqual(line_follower._state, Line_Follower_State.AT_INTERSECTION)
-        mock_callback.assert_has_calls([
+        self.assertEqual(self.line_follower._location, new_location)
+        self.assertEqual(self.line_follower._direction, self.direction)
+        self.assertEqual(self.line_follower._state, Line_Follower_State.AT_INTERSECTION)
+        self.mock_callback.assert_has_calls([
             call("intersection", new_location)
         ])
-        mock_callback.reset_mock()
 
+    def test_update_intersection_left(self):
         # It should detect being on an intersection (only left line).
-        line_follower = Line_Follower(self.location, self.direction, mock_callback)
-        line_follower.update([1, 1, 1, 0])
-        self.assertEqual(line_follower._location, new_location)
-        self.assertEqual(line_follower._direction, self.direction)
-        self.assertEqual(line_follower._state, Line_Follower_State.AT_INTERSECTION)
-        mock_callback.assert_has_calls([
+        self.line_follower.update([1, 1, 1, 0])
+        new_location = (self.location[0], self.location[1] + 1)
+        self.assertEqual(self.line_follower._location, new_location)
+        self.assertEqual(self.line_follower._direction, self.direction)
+        self.assertEqual(self.line_follower._state, Line_Follower_State.AT_INTERSECTION)
+        self.mock_callback.assert_has_calls([
             call("intersection", new_location)
         ])
-        mock_callback.reset_mock()
 
+    def test_update_intersection_right(self):
         # It should detect being on an intersection (only right line).
-        line_follower = Line_Follower(self.location, self.direction, mock_callback)
-        line_follower.update([0, 1, 1, 1])
-        self.assertEqual(line_follower._location, new_location)
-        self.assertEqual(line_follower._direction, self.direction)
-        self.assertEqual(line_follower._state, Line_Follower_State.AT_INTERSECTION)
-        mock_callback.assert_has_calls([
+        self.line_follower.update([0, 1, 1, 1])
+        new_location = (self.location[0], self.location[1] + 1)
+        self.assertEqual(self.line_follower._location, new_location)
+        self.assertEqual(self.line_follower._direction, self.direction)
+        self.assertEqual(self.line_follower._state, Line_Follower_State.AT_INTERSECTION)
+        self.mock_callback.assert_has_calls([
             call("intersection", new_location)
         ])
-        mock_callback.reset_mock()
 
+    def test_update_intersection_multi(self):
         # It should do nothing when the vehicle is on an intersection and we
         # detect an intersection again.
-        line_follower = Line_Follower(self.location, self.direction, mock_callback)
-        line_follower.update([1, 1, 1, 1])
-        line_follower.update([1, 1, 1, 1])
-        self.assertEqual(line_follower._location, new_location)
-        self.assertEqual(line_follower._direction, self.direction)
-        self.assertEqual(line_follower._state, Line_Follower_State.AT_INTERSECTION)
-        self.assertEqual(mock_callback.call_count, 1)
-        mock_callback.reset_mock()
+        self.line_follower.update([1, 1, 1, 1])
+        self.line_follower.update([1, 1, 1, 1])
+        new_location = (self.location[0], self.location[1] + 1)
+        self.assertEqual(self.line_follower._location, new_location)
+        self.assertEqual(self.line_follower._direction, self.direction)
+        self.assertEqual(self.line_follower._state, Line_Follower_State.AT_INTERSECTION)
+        self.assertEqual(self.mock_callback.call_count, 1)
 
+    def test_update_direction_down(self):
         # It should handle changing directions.
-        line_follower = Line_Follower(self.location, self.direction, mock_callback)
-        line_follower.set_direction(Line_Follower_Direction.DOWN)
-        line_follower.update([0, 1, 1, 1])
+        self.line_follower.set_direction(Line_Follower_Direction.DOWN)
+        self.line_follower.update([0, 1, 1, 1])
         new_location = (self.location[0], self.location[1] - 1)
-        self.assertEqual(line_follower._location, new_location)
-        self.assertEqual(line_follower._direction, Line_Follower_Direction.DOWN)
-        self.assertEqual(line_follower._state, Line_Follower_State.AT_INTERSECTION)
-        mock_callback.assert_has_calls([
+        self.assertEqual(self.line_follower._location, new_location)
+        self.assertEqual(self.line_follower._direction, Line_Follower_Direction.DOWN)
+        self.assertEqual(self.line_follower._state, Line_Follower_State.AT_INTERSECTION)
+        self.mock_callback.assert_has_calls([
             call("intersection", new_location)
         ])
-        mock_callback.reset_mock()
 
-        line_follower = Line_Follower(self.location, self.direction, mock_callback)
-        line_follower.set_direction(Line_Follower_Direction.LEFT)
-        line_follower.update([0, 1, 1, 1])
+    def test_update_direction_left(self):
+        self.line_follower.set_direction(Line_Follower_Direction.LEFT)
+        self.line_follower.update([0, 1, 1, 1])
         new_location = (self.location[0] - 1, self.location[1])
-        self.assertEqual(line_follower._location, new_location)
-        self.assertEqual(line_follower._direction, Line_Follower_Direction.LEFT)
-        self.assertEqual(line_follower._state, Line_Follower_State.AT_INTERSECTION)
-        mock_callback.assert_has_calls([
+        self.assertEqual(self.line_follower._location, new_location)
+        self.assertEqual(self.line_follower._direction, Line_Follower_Direction.LEFT)
+        self.assertEqual(self.line_follower._state, Line_Follower_State.AT_INTERSECTION)
+        self.mock_callback.assert_has_calls([
             call("intersection", new_location)
         ])
-        mock_callback.reset_mock()
 
-        line_follower = Line_Follower(self.location, self.direction, mock_callback)
-        line_follower.set_direction(Line_Follower_Direction.RIGHT)
-        line_follower.update([0, 1, 1, 1])
+    def test_update_direction_right(self):
+        self.line_follower.set_direction(Line_Follower_Direction.RIGHT)
+        self.line_follower.update([0, 1, 1, 1])
         new_location = (self.location[0] + 1, self.location[1])
-        self.assertEqual(line_follower._location, new_location)
-        self.assertEqual(line_follower._direction, Line_Follower_Direction.RIGHT)
-        self.assertEqual(line_follower._state, Line_Follower_State.AT_INTERSECTION)
-        mock_callback.assert_has_calls([
+        self.assertEqual(self.line_follower._location, new_location)
+        self.assertEqual(self.line_follower._direction, Line_Follower_Direction.RIGHT)
+        self.assertEqual(self.line_follower._state, Line_Follower_State.AT_INTERSECTION)
+        self.mock_callback.assert_has_calls([
             call("intersection", new_location)
         ])
-        mock_callback.reset_mock()
 
+    def test_update_nothing(self):
         # It should do nothing when the vehicle is not on a line and no other
         # lines are detected.
-        line_follower = Line_Follower(self.location, self.direction, mock_callback)
-        line_follower.update([0, 0, 0, 0])
-        self.assertEqual(line_follower._location, self.location)
-        self.assertEqual(line_follower._direction, Line_Follower_Direction.UP)
-        self.assertEqual(line_follower._state, Line_Follower_State.AT_LINE)
-        self.assertFalse(mock_callback.called)
-        mock_callback.reset_mock()
+        self.line_follower.update([0, 0, 0, 0])
+        self.assertEqual(self.line_follower._location, self.location)
+        self.assertEqual(self.line_follower._direction, Line_Follower_Direction.UP)
+        self.assertEqual(self.line_follower._state, Line_Follower_State.AT_LINE)
+        self.assertFalse(self.mock_callback.called)
 
+    def test_update_sides(self):
         # It should do nothing when the vehicle is not on a line and both other
         # lines are detected.
-        line_follower = Line_Follower(self.location, self.direction, mock_callback)
-        line_follower.update([1, 0, 0, 1])
-        self.assertEqual(line_follower._location, self.location)
-        self.assertEqual(line_follower._direction, Line_Follower_Direction.UP)
-        self.assertEqual(line_follower._state, Line_Follower_State.AT_LINE)
-        self.assertFalse(mock_callback.called)
-        mock_callback.reset_mock()
+        self.line_follower.update([1, 0, 0, 1])
+        self.assertEqual(self.line_follower._location, self.location)
+        self.assertEqual(self.line_follower._direction, Line_Follower_Direction.UP)
+        self.assertEqual(self.line_follower._state, Line_Follower_State.AT_LINE)
+        self.assertFalse(self.mock_callback.called)
 
-        # It should let the controller know when the vehicle diverged from the grid.
-        line_follower = Line_Follower(self.location, self.direction, mock_callback)
-        line_follower.update([1, 0, 0, 0])
-        self.assertEqual(line_follower._location, self.location)
-        self.assertEqual(line_follower._direction, Line_Follower_Direction.UP)
-        self.assertEqual(line_follower._state, Line_Follower_State.AT_LINE)
-        mock_callback.assert_has_calls([
+    def test_update_diverged_left(self):
+        # It should let the controller know when the vehicle diverged from the 
+        # grid.
+        self.line_follower.update([1, 0, 0, 0])
+        self.assertEqual(self.line_follower._location, self.location)
+        self.assertEqual(self.line_follower._direction, Line_Follower_Direction.UP)
+        self.assertEqual(self.line_follower._state, Line_Follower_State.AT_LINE)
+        self.mock_callback.assert_has_calls([
             call("diverged", "left")
         ])
-        mock_callback.reset_mock()
 
-        line_follower = Line_Follower(self.location, self.direction, mock_callback)
-        line_follower.update([0, 0, 0, 1])
-        self.assertEqual(line_follower._location, self.location)
-        self.assertEqual(line_follower._direction, Line_Follower_Direction.UP)
-        self.assertEqual(line_follower._state, Line_Follower_State.AT_LINE)
-        mock_callback.assert_has_calls([
+    def test_update_diverged_right(self):
+        self.line_follower.update([0, 0, 0, 1])
+        self.assertEqual(self.line_follower._location, self.location)
+        self.assertEqual(self.line_follower._direction, Line_Follower_Direction.UP)
+        self.assertEqual(self.line_follower._state, Line_Follower_State.AT_LINE)
+        self.mock_callback.assert_has_calls([
             call("diverged", "right")
         ])
-        mock_callback.reset_mock()
 
     def test_set_location(self):
-        from ..location.Line_Follower import Line_Follower, Line_Follower_Direction
-
-        mock_callback = MagicMock()
-        line_follower = Line_Follower(self.location, self.direction, mock_callback)
-
         # Direction must be one of the defined types.
         with self.assertRaises(ValueError):
-            line_follower.set_direction("up")
+            self.line_follower.set_direction("up")
 
         # A valid direction must be set.
-        line_follower.set_direction(Line_Follower_Direction.LEFT)
-        self.assertEqual(line_follower._direction, Line_Follower_Direction.LEFT)
+        self.line_follower.set_direction(Line_Follower_Direction.LEFT)
+        self.assertEqual(self.line_follower._direction, Line_Follower_Direction.LEFT)
