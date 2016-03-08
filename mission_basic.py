@@ -7,7 +7,7 @@ Documentation for the source is provided at http://python.dronekit.io/examples/m
 
 import sys
 import os
-import traceback
+import time
 
 # Package imports
 # Ensure that we can import from the current directory as a package since 
@@ -23,6 +23,7 @@ class Setup(object):
     def __init__(self, arguments):
         self.arguments = arguments
         self.settings = self.arguments.get_settings("mission")
+        self.activated = False
 
     def setup(self):
         self.environment = Environment.setup(self.arguments)
@@ -47,11 +48,19 @@ class Setup(object):
 
         infrared_sensor = environment.get_infrared_sensor()
         if infrared_sensor is not None:
-            infrared_sensor.register("start", self.start)
-            infrared_sensor.register("stop", self.stop)
+            infrared_sensor.register("start", self.enable)
+            infrared_sensor.register("stop", self.disable)
             infrared_sensor.activate()
         else:
-            self.start()
+            self.activated = True
+
+        while not self.activated:
+            self.monitor.sleep()
+
+        self.start()
+
+    def enable(self):
+        self.activated = True
 
     def start(self):
         print("Starting mission")
@@ -77,7 +86,7 @@ class Setup(object):
             self.environment.thread_manager.log("main thread")
         except:
             # Stop vehicle immediately if there are serious problems.
-            self.stop()
+            self.disable()
             return
 
         # Return to lauch at the end of the mission or when we can safely 
@@ -85,7 +94,7 @@ class Setup(object):
         self.monitor.stop()
         self.mission.return_to_launch()
 
-    def stop(self):
+    def disable(self):
         self.monitor.stop()
         self.environment.thread_manager.destroy()
 
