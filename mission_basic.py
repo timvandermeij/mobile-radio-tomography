@@ -31,7 +31,7 @@ class Setup(object):
         mission_class = self.settings.get("mission_class")
         self.mission = Mission.__dict__[mission_class](self.environment, self.settings)
 
-        self.monitor = Monitor(mission, environment)
+        self.monitor = Monitor(self.mission, self.environment)
 
         self.arguments.check_help()
 
@@ -46,7 +46,7 @@ class Setup(object):
         self.mission.arm_and_takeoff()
         self.mission.display()
 
-        infrared_sensor = environment.get_infrared_sensor()
+        infrared_sensor = self.environment.get_infrared_sensor()
         if infrared_sensor is not None:
             infrared_sensor.register("start", self.enable)
             infrared_sensor.register("stop", self.disable)
