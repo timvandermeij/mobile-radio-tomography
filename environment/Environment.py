@@ -1,5 +1,6 @@
 import math
 from ..core.Thread_Manager import Thread_Manager
+from ..control.Infrared_Sensor import Infrared_Sensor
 from ..geometry import Geometry
 from ..trajectory.Servo import Servo
 from ..vehicle.Vehicle import Vehicle
