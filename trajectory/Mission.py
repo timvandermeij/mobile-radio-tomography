@@ -706,10 +706,10 @@ class Mission_Infrared(Mission_Guided):
         self.infrared_sensor.register("right", self._right)
 
     def step(self):
-        if self._motor_speeds:
-            self.vehicle.set_speeds(*self._motor_speeds)
-        elif self._motor_turn != 0:
+        if self._motor_turn != 0:
             self.vehicle.set_rotate(self._motor_turn)
+        else:
+            self.vehicle.set_speeds(*self._motor_speeds)
 
         self._motor_speeds = (0, 0, True, True)
         self._motor_turn = -1
