@@ -299,6 +299,9 @@ class Robot_Vehicle(Vehicle):
         # Start turning the vehicle at turning speed. If we want to rotate 
         # clockwise, the left motor goes forward and the right motor backward, 
         # while counterclockwise is the other way around.
+        self.set_rotate(rotate_direction)
+
+    def set_rotate(self, rotate_direction):
         self.set_speeds(self._rotate_speed, self._rotate_speed, rotate_direction == 1, rotate_direction == -1)
 
     def _move_waypoint(self):
