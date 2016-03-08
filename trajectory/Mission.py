@@ -712,7 +712,7 @@ class Mission_Infrared(Mission_Guided):
             self.vehicle.set_speeds(*self._motor_speeds)
 
         self._motor_speeds = (0, 0, True, True)
-        self._motor_turn = -1
+        self._motor_turn = 0
 
     def _up(self):
         self._motor_speeds = (self.speed, self.speed, True, True)
