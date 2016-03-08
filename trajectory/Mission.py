@@ -686,19 +686,21 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
 
 class Mission_Infrared(Mission_Guided):
     def setup(self):
-        super(Mission_Guided, self).setup()
+        super(Mission_Infrared, self).setup()
 
         if not isinstance(self.vehicle, Robot_Vehicle):
             raise ValueError("Mission_Infrared only works with robot vehicles")
 
-        infrared_sensor = self.environment.get_infrared_sensor()
-        if infrared_sensor is None:
+        self.infrared_sensor = self.environment.get_infrared_sensor()
+        if self.infrared_sensor is None:
             raise ValueError("Mission_Infrared only works with infrared sensor")
 
-        infrared_sensor.register("up", self._up)
-        infrared_sensor.register("down", self._down)
-        infrared_sensor.register("left", self._left)
-        infrared_sensor.register("right", self._right)
+    def start(self):
+        super(Mission_Infrared, self).start()
+        self.infrared_sensor.register("up", self._up)
+        self.infrared_sensor.register("down", self._down)
+        self.infrared_sensor.register("left", self._left)
+        self.infrared_sensor.register("right", self._right)
 
     def step(self):
         self.vehicle.set_speeds(0,0)
