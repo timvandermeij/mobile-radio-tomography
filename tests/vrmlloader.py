@@ -7,7 +7,9 @@ from ..settings import Arguments
 class TestVRMLLoader(LocationTestCase):
     def setUp(self):
         super(TestVRMLLoader, self).setUp()
-        self.arguments = Arguments("settings.json", ["--no-infrared-sensor"])
+        self.arguments = Arguments("settings.json", [
+            "--vehicle-class", "Mock_Vehicle", "--no-infrared-sensor"
+        ])
         self.environment = Environment.setup(self.arguments, simulated=True)
 
     def test_load(self):

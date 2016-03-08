@@ -1,6 +1,5 @@
 import math
 from ..core.Thread_Manager import Thread_Manager
-from ..control.Infrared_Sensor import Infrared_Sensor
 from ..geometry import Geometry
 from ..trajectory.Servo import Servo
 from ..vehicle.Vehicle import Vehicle
@@ -83,6 +82,7 @@ class Environment(object):
         self._setup_xbee_sensor()
 
         if self.settings.get("infrared_sensor"):
+            from ..control.Infrared_Sensor import Infrared_Sensor
             self._infrared_sensor = Infrared_Sensor(arguments, thread_manager)
         else:
             self._infrared_sensor = None
