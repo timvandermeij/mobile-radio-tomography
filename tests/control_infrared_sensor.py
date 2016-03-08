@@ -108,6 +108,7 @@ class TestControlInfraredSensor(unittest.TestCase):
         self.assertFalse(mock_release_callback.called)
 
         self.infrared_sensor._handle_lirc_code(None)
+        self.infrared_sensor._handle_lirc_code(None)
         self.assertEqual(mock_callback.call_count, 1)
         self.assertEqual(mock_release_callback.call_count, 1)
         # Start button was not pressed.

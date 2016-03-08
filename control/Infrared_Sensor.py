@@ -131,7 +131,7 @@ class Infrared_Sensor(Threadable):
                 callback = self._release_listeners[self._previous_button]
                 callback()
 
-                self.previous_button = None
+            self._previous_button = None
 
     def deactivate(self):
         """
