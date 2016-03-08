@@ -74,7 +74,7 @@ class Setup(object):
                 viewer.start()
             else:
                 ok = True
-                while ok:
+                while ok and self.activated:
                     ok = self.monitor.step()
                     if ok:
                         self.monitor.sleep()
@@ -95,8 +95,11 @@ class Setup(object):
         self.mission.return_to_launch()
 
     def disable(self):
-        self.monitor.stop()
-        self.environment.thread_manager.destroy()
+        if self.activated:
+            self.activated = False
+            print("Stopped mission")
+            self.monitor.stop()
+            self.environment.thread_manager.destroy()
 
 def main(argv):
     arguments = Arguments("settings.json", argv)
