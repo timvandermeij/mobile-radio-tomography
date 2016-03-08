@@ -24,60 +24,75 @@ class Setup(object):
         self.arguments = arguments
         self.settings = self.arguments.get_settings("mission")
 
-    def start(self):
-        environment = Environment.setup(self.arguments)
+    def setup(self):
+        self.environment = Environment.setup(self.arguments)
 
         mission_class = self.settings.get("mission_class")
-        mission = Mission.__dict__[mission_class](environment, self.settings)
+        self.mission = Mission.__dict__[mission_class](self.environment, self.settings)
 
-        monitor = Monitor(mission, environment)
+        self.monitor = Monitor(mission, environment)
 
         self.arguments.check_help()
 
         print("Setting up mission")
-        mission.setup()
-        mission.display()
+        self.mission.setup()
+        self.mission.display()
 
-        # As of ArduCopter 3.3 it is possible to take off using a mission item.
-        mission.arm_and_takeoff()
-        mission.display()
+        self.monitor.setup()
 
+        # Arm the vehicle and take off to the specified altitude if the vehicle 
+        # can fly.
+        self.mission.arm_and_takeoff()
+        self.mission.display()
+
+        infrared_sensor = environment.get_infrared_sensor()
+        if infrared_sensor is not None:
+            infrared_sensor.register("start", self.start)
+            infrared_sensor.register("stop", self.stop)
+            infrared_sensor.activate()
+        else:
+            self.start()
+
+    def start(self):
         print("Starting mission")
-        mission.start()
+        self.mission.start()
 
         # Monitor mission
-        monitor.setup()
-
         try:
-            if monitor.use_viewer():
+            if self.monitor.use_viewer():
                 from trajectory.Viewer import Viewer_Vehicle
-                viewer = Viewer_Vehicle(environment, monitor)
+                viewer = Viewer_Vehicle(self.environment, self.monitor)
                 viewer.start()
             else:
                 ok = True
                 while ok:
-                    ok = monitor.step()
+                    ok = self.monitor.step()
                     if ok:
-                        monitor.sleep()
+                        self.monitor.sleep()
         except RuntimeError, e:
             # Handle runtime errors from the monitor loop as informative and 
             # loggable errors, but allow the vehicle to attempt to return to 
             # launch.
             print(e)
-            environment.thread_manager.log("main thread")
+            self.environment.thread_manager.log("main thread")
         except:
             # Stop vehicle immediately if there are serious problems.
-            monitor.stop()
-            environment.thread_manager.destroy()
+            self.stop()
             return
 
-        monitor.stop()
-        mission.return_to_launch()
+        # Return to lauch at the end of the mission or when we can safely 
+        # return before a potential problem.
+        self.monitor.stop()
+        self.mission.return_to_launch()
+
+    def stop(self):
+        self.monitor.stop()
+        self.environment.thread_manager.destroy()
 
 def main(argv):
     arguments = Arguments("settings.json", argv)
     setup = Setup(arguments)
-    setup.start()
+    setup.setup()
 
 # The 'api start' command of pymavlink executes the script using the builtin 
 # function `execfile`, which makes the module name __builtin__, so allow this 

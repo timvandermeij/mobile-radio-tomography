@@ -91,6 +91,7 @@
                 }
             ],
             "xbee_type": "",
+            "infrared_sensor": true,
             "scenefile": null,
             "translation": [0.0,0.0,0.0],
             "location_check": false

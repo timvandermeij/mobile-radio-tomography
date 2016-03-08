@@ -81,6 +81,11 @@ class Environment(object):
         self.packet_callbacks = {}
         self._setup_xbee_sensor()
 
+        if self.settings.get("infrared_sensor"):
+            self._infrared_sensor = Infrared_Sensor(arguments, thread_manager)
+        else:
+            self._infrared_sensor = None
+
         self.vehicle.add_attribute_listener('home_location', self.on_home_location)
         self.vehicle.add_attribute_listener('servos', self.on_servos)
 
@@ -132,6 +137,9 @@ class Environment(object):
 
     def get_xbee_sensor(self):
         return self._xbee_sensor
+
+    def get_infrared_sensor(self):
+        return self._infrared_sensor
 
     def add_packet_action(self, action, callback):
         self.packet_callbacks[action] = callback
