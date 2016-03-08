@@ -12,7 +12,6 @@ class SettingsTestCase(unittest.TestCase):
 
     def tearDown(self):
         super(SettingsTestCase, self).tearDown()
-        print("Tearing down settings for '{}'".format(self.__class__.__name__))
         Settings.settings_files = {}
 
 class TestSettings(SettingsTestCase):
