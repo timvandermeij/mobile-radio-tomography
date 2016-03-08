@@ -32,7 +32,6 @@ class Robot_Vehicle_Arduino(Robot_Vehicle):
 
     def setup(self):
         self._serial_connection.reset_output_buffer()
-        self._serial_connection.dtr = False
 
     @property
     def use_simulation(self):
@@ -46,12 +45,7 @@ class Robot_Vehicle_Arduino(Robot_Vehicle):
     def deactivate(self):
         # Turn off motors.
         self.set_speeds(0, 0)
-
         super(Robot_Vehicle_Arduino, self).deactivate()
-
-        # Reset the vehicle by sending a pulse on the DTR line.
-        self._serial_connection.dtr = False
-        self._serial_connection.dtr = True
 
     def set_speeds(self, left_speed, right_speed, left_forward=True, right_forward=True):
         output = ""
