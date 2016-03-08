@@ -2,8 +2,9 @@ import unittest
 from mock import patch, call, MagicMock
 from ..core.Thread_Manager import Thread_Manager
 from ..settings import Arguments
+from settings import SettingsTestCase
 
-class TestLocationLineFollowerRaspberryPi(unittest.TestCase):
+class TestLocationLineFollowerRaspberryPi(SettingsTestCase):
     def setUp(self):
         # We need to mock the RPi.GPIO module as it is only available
         # on Raspberry Pi devices and these tests run on a PC.
@@ -33,6 +34,7 @@ class TestLocationLineFollowerRaspberryPi(unittest.TestCase):
         )
 
     def tearDown(self):
+        super(TestLocationLineFollowerRaspberryPi, self).tearDown()
         self.patcher.stop()
 
     def test_initialization(self):

@@ -1,8 +1,9 @@
 import unittest
 from ..reconstruction.Weight_Matrix import Weight_Matrix
 from ..settings.Arguments import Arguments
+from settings import SettingsTestCase
 
-class TestReconstructionWeightMatrix(unittest.TestCase):
+class TestReconstructionWeightMatrix(SettingsTestCase):
     def setUp(self):
         origin = [0, 0]
         size = [4, 4]

@@ -1,10 +1,11 @@
 import unittest
-from geometry import LocationTestCase
 from ..environment import Environment
 from ..environment.VRMLLoader import VRMLLoader
 from ..settings import Arguments
+from geometry import LocationTestCase
+from settings import SettingsTestCase
 
-class TestVRMLLoader(LocationTestCase):
+class TestVRMLLoader(LocationTestCase, SettingsTestCase):
     def setUp(self):
         super(TestVRMLLoader, self).setUp()
         self.arguments = Arguments("settings.json", [])
