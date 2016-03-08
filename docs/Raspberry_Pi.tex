@@ -127,6 +127,14 @@ over.
           10.42.0.10 to 10.42.0.11. If after this change you cannot SSH into 
           the device, run {\tt nmap -sP 10.42.0.0/24} on your computer to 
           determine which IP address was assigned to the device.
+    \item Create a directory {\tt mkdir /etc/systemd/system/dhcpcd@.service.d} 
+          and go to that directory with {\tt cd 
+          /etc/systemd/system/dhcpcd@.service.d}. Then edit {\tt timeout.conf} 
+          to add the following lines:
+
+          {\tt [Service]} \\
+          {\tt ExecStart=} \\
+          {\tt ExecStart=/usr/bin/dhcpcd -w -q -t 5 \%I}
     \item Edit {\tt /boot/cmdline.txt} to remove the recently added IP part.
           After that, reboot the Raspberry Pi device.
     \item On your laptop, edit the old link-local connection. Change the type 
