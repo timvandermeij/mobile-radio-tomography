@@ -695,36 +695,27 @@ class Mission_Infrared(Mission_Guided):
         if self.infrared_sensor is None:
             raise ValueError("Mission_Infrared only works with infrared sensor")
 
-        self._motor_speeds = (0, 0, True, True)
-        self._motor_turn = 0
-
     def start(self):
         super(Mission_Infrared, self).start()
-        self.infrared_sensor.register("up", self._up)
-        self.infrared_sensor.register("down", self._down)
-        self.infrared_sensor.register("left", self._left)
-        self.infrared_sensor.register("right", self._right)
+        self.infrared_sensor.register("up", self._up, self._release)
+        self.infrared_sensor.register("down", self._down, self._release)
+        self.infrared_sensor.register("left", self._left, self._release)
+        self.infrared_sensor.register("right", self._right, self._release)
 
-    def step(self):
-        if self._motor_turn != 0:
-            self.vehicle.set_rotate(self._motor_turn)
-        else:
-            self.vehicle.set_speeds(*self._motor_speeds)
-
-        self._motor_speeds = (0, 0, True, True)
-        self._motor_turn = 0
+    def _release(self):
+        self.vehicle.set_speeds(0, 0, True, True)
 
     def _up(self):
-        self._motor_speeds = (self.speed, self.speed, True, True)
+        self.vehicle.set_speeds(self.speed, self.speed, True, True)
 
     def _down(self):
-        self._motor_speeds = (self.speed, self.speed, False, False)
+        self.vehicle.set_speeds(self.speed, self.speed, False, False)
 
     def _left(self):
-        self._motor_turn = -1
+        self.vehicle.set_rotate(-1)
 
     def _right(self):
-        self._motor_turn = 1
+        self.vehicle.set_rotate(1)
 
 class Mission_Cycle(Mission_Guided):
     def setup(self):
