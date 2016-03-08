@@ -64,11 +64,11 @@ class Setup(object):
             # loggable errors, but allow the vehicle to attempt to return to 
             # launch.
             print(e)
-            self.environment.thread_manager.log("main thread")
+            environment.thread_manager.log("main thread")
         except:
             # Stop vehicle immediately if there are serious problems.
             monitor.stop()
-            self.environment.thread_manager.destroy()
+            environment.thread_manager.destroy()
             return
 
         monitor.stop()
