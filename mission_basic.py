@@ -91,8 +91,9 @@ class Setup(object):
 
         # Return to lauch at the end of the mission or when we can safely 
         # return before a potential problem.
-        self.monitor.stop()
-        self.mission.return_to_launch()
+        if self.activated:
+            self.monitor.stop()
+            self.mission.return_to_launch()
 
     def disable(self):
         if self.activated:
