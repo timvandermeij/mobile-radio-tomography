@@ -4,6 +4,7 @@ python:
 install:
   - pip install pyserial
   - pip install xbee
+  - pip install pylirc2
   - pip install pymavlink
   - pip install mavproxy
   - pip install dronekit

@@ -22,7 +22,8 @@ class TestMissionCycle(LocationTestCase):
 
         self.arguments = Arguments("settings.json", [
             "--vehicle-class", "Robot_Vehicle_Arduino", "--space-size", "3",
-            "--serial-device", self.port, "--serial-flow-control"
+            "--serial-device", self.port, "--serial-flow-control",
+            "--no-infrared-sensor"
         ])
         self.environment = Environment.setup(self.arguments, geometry_class="Geometry", simulated=True)
         self.vehicle = self.environment.get_vehicle()
