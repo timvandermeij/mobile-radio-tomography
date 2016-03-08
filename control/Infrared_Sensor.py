@@ -30,6 +30,8 @@ class Infrared_Sensor(Threadable):
 
         self._active = False
         self._event_listeners = {}
+        self._release_listeners = {}
+        self._previous_button = None
 
         self._configure()
 
@@ -67,19 +69,30 @@ class Infrared_Sensor(Threadable):
         except IOError:
             raise OSError("Configuration directory is not writable. Run this as root.")
 
-    def register(self, button, callback):
+    def register(self, button, callback, release_callback=None):
         """
-        Register an event listener for the infrared sensor. If the button is
-        pressed on the remote control, the callback will be called.
+        Register an event listener for the infrared sensor. If the button
+        configured to match with the given `button` name is pressed on the
+        remote control, the `callback` will be called. When it is released
+        (which is almost immediate unless the `repeat` configuration is used),
+        the `release_callback` is called. The `release_callback` is optional,
+        but all callbacks must be callable, otherwise a `ValueError` is raised.
+        If a button not known to the settings is given, a `KeyError` is raised.
         """
 
         if button not in self._buttons:
             raise KeyError("Unknown button provided: '{}'".format(button))
 
-        if not hasattr(callback, "__call__"):
-            raise ValueError("Invalid callback provided for the '{}' button".format(button))
+        self._check_callback(button, callback)
 
         self._event_listeners[button] = callback
+        if release_callback is not None:
+            self._check_callback(button, release_callback)
+            self._release_listeners[button] = release_callback
+
+    def _check_callback(self, button, callback):
+        if not hasattr(callback, "__call__"):
+            raise ValueError("Invalid callback provided for the '{}' button".format(button))
 
     def activate(self):
         """
@@ -101,15 +114,24 @@ class Infrared_Sensor(Threadable):
         try:
             while self._active:
                 data = pylirc.nextcode()
-                if data is not None:
-                    button = data[0]
-                    if button in self._event_listeners:
-                        callback = self._event_listeners[button]
-                        callback()
-
+                self._handle_lirc_code(data)
                 time.sleep(self._wait_delay)
         except:
             super(Infrared_Sensor, self).interrupt()
+
+    def _handle_lirc_code(self, data):
+        if data is not None:
+            button = data[0]
+            self._previous_button = button
+            if button in self._event_listeners:
+                callback = self._event_listeners[button]
+                callback()
+        elif self._previous_button is not None:
+            if self._previous_button in self._release_listeners:
+                callback = self._release_listeners[self._previous_button]
+                callback()
+
+                self.previous_button = None
 
     def deactivate(self):
         """
