@@ -1,10 +1,11 @@
 import time
 import unittest
-from ..settings import Settings
 from ..zigbee.XBee_Packet import XBee_Packet
 from ..zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
+from ..settings import Settings
+from settings import SettingsTestCase
 
-class TestXBeeTDMAScheduler(unittest.TestCase):
+class TestXBeeTDMAScheduler(SettingsTestCase):
     def setUp(self):
         self.id = 2
         self.settings = Settings("settings.json", "xbee_tdma_scheduler")

@@ -3,11 +3,12 @@ import pty
 import os
 import serial
 from mock import patch
-from ..settings import Arguments
-from ..zigbee.XBee_Configurator import XBee_Configurator
 from xbee import ZigBee
+from ..zigbee.XBee_Configurator import XBee_Configurator
+from ..settings import Arguments
+from settings import SettingsTestCase
 
-class TestXBeeConfigurator(unittest.TestCase):
+class TestXBeeConfigurator(SettingsTestCase):
     def setUp(self):
         # Create a virtual serial port.
         master, slave = pty.openpty()

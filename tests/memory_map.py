@@ -2,12 +2,13 @@ import unittest
 import math
 import numpy as np
 import sys
-from geometry import LocationTestCase
 from ..environment import Environment
 from ..trajectory.Memory_Map import Memory_Map
 from ..settings import Arguments
+from geometry import LocationTestCase
+from settings import SettingsTestCase
 
-class TestMemoryMap(LocationTestCase):
+class TestMemoryMap(LocationTestCase, SettingsTestCase):
     def setUp(self):
         super(TestMemoryMap, self).setUp()
         self.arguments = Arguments("settings.json", [

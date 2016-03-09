@@ -1,10 +1,20 @@
 import unittest
 from ..settings import Settings
 
-class TestSettings(unittest.TestCase):
+class SettingsTestCase(unittest.TestCase):
+    """
+    A test case that makes use of Arguments or Settings.
+    These tests should always clean up the static state of Settings so that
+    any changes made in the Settings objects do not bleed through into other
+    tests, which could cause intermittent passes or fails depending on the
+    test running order.
+    """
+
     def tearDown(self):
+        super(SettingsTestCase, self).tearDown()
         Settings.settings_files = {}
 
+class TestSettings(SettingsTestCase):
     def test_missing_file(self):
         with self.assertRaises(IOError):
             settings = Settings("tests/invalid.json", "foo")

@@ -8,11 +8,12 @@ import time
 from xbee import ZigBee
 from mock import patch
 from ..core.Thread_Manager import Thread_Manager
-from ..settings import Arguments
 from ..zigbee.XBee_Packet import XBee_Packet
 from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
+from ..settings import Arguments
+from settings import SettingsTestCase
 
-class TestXBeeSensorPhysical(unittest.TestCase):
+class TestXBeeSensorPhysical(SettingsTestCase):
     def location_callback(self):
         """
         Get the current GPS location (latitude and longitude pair).
