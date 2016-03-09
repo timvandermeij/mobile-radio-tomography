@@ -5,13 +5,14 @@ import itertools
 import time
 from mock import patch
 from dronekit import LocationLocal
-from geometry import LocationTestCase
 from ..environment.Environment import Environment
 from ..trajectory.Mission import Mission_Cycle
 from ..vehicle.Robot_Vehicle import Robot_State
 from ..settings import Arguments
+from geometry import LocationTestCase
+from settings import SettingsTestCase
 
-class TestMissionCycle(LocationTestCase):
+class TestMissionCycle(LocationTestCase, SettingsTestCase):
     def setUp(self):
         super(TestMissionCycle, self).setUp()
 
@@ -29,6 +30,10 @@ class TestMissionCycle(LocationTestCase):
 
         settings = self.arguments.get_settings("mission")
         self.mission = Mission_Cycle(self.environment, settings)
+
+    def tearDown(self):
+        super(TestMissionCycle, self).tearDown()
+        self.vehicle.deactivate()
 
     def test_setup(self):
         with patch('sys.stdout'):

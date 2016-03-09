@@ -6,6 +6,7 @@ from ..geometry.Geometry import Geometry, Geometry_Spherical
 
 class LocationTestCase(unittest.TestCase):
     def setUp(self):
+        super(LocationTestCase, self).setUp()
         self.addTypeEqualityFunc(LocationLocal, self.assertLocationLocalEqual)
         self.addTypeEqualityFunc(LocationGlobal, self.assertLocationGlobalEqual)
         self.addTypeEqualityFunc(LocationGlobalRelative, self.assertLocationGlobalEqual)

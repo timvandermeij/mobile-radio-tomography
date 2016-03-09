@@ -6,11 +6,12 @@ import copy
 import Queue
 from mock import patch, MagicMock
 from ..core.Thread_Manager import Thread_Manager
-from ..settings import Arguments
 from ..zigbee.XBee_Packet import XBee_Packet
 from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
+from ..settings import Arguments
+from settings import SettingsTestCase
 
-class TestXBeeSensorSimulator(unittest.TestCase):
+class TestXBeeSensorSimulator(SettingsTestCase):
     def location_callback(self):
         """
         Get the current GPS location (latitude and longitude pair).
