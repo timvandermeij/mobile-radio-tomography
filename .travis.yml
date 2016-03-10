@@ -5,7 +5,6 @@ install:
   - pip install pyserial
   - pip install xbee
   - pip install pymavlink
-  - pip install mavproxy
   - pip install dronekit
   - pip install PyOpenGL
   - pip install simpleparse
