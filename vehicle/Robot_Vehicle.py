@@ -112,11 +112,12 @@ class Robot_Vehicle(Vehicle):
                 if self._mode.name == "AUTO":
                     # In AUTO mode, immediately try to move to the next 
                     # waypoint, or rotate in the right direction.
-                    self._move_waypoint()
+                    self._move_waypoint(self._current_waypoint + 1)
             else:
-                # We reached an intersection. Check whether we need to rotate 
-                # here, and otherwise move away from it again.
-                self._move_waypoint()
+                # We reached an intersection or we are at an intersection and 
+                # maybe have a next waypoint. Check whether we need to rotate 
+                # here, and otherwise move away from it to the next waypoint.
+                self._move_waypoint(max(0, self._current_waypoint))
 
     def line_follower_callback(self, event, data):
         if event == "intersection":
@@ -135,9 +136,10 @@ class Robot_Vehicle(Vehicle):
                     # moving to, not when we rotate away from it again.
                     direction = (self._state.current_direction + direction) % 4
                     self._state.current_direction = direction
-            else:
-                # We went off the line, so steer the motors such that the robot 
-                # gets back to the line.
+            elif self._is_waypoint(self._current_waypoint):
+                # We went off the line while moving (semi)automatically to 
+                # a next waypoint. Steer the motors such that the robot gets 
+                # back to the line.
                 speed = self._move_speed
                 speed_difference = direction * self._diverged_speed
                 self.set_speeds(speed - speed_difference, speed + speed_difference)
@@ -209,7 +211,7 @@ class Robot_Vehicle(Vehicle):
         if waypoint == -1:
             waypoint = self._current_waypoint
 
-        if waypoint >= len(self._waypoints) or waypoint < 0:
+        if not self._is_waypoint(waypoint):
             return None
 
         wp = self._waypoints[waypoint]
@@ -304,16 +306,25 @@ class Robot_Vehicle(Vehicle):
     def set_rotate(self, rotate_direction):
         self.set_speeds(self._rotate_speed, self._rotate_speed, rotate_direction == 1, rotate_direction == -1)
 
-    def _move_waypoint(self):
-        if self._current_waypoint + 1 >= len(self._waypoints):
+    def _is_waypoint(self, waypoint):
+        return 0 <= waypoint < len(self._waypoints)
+
+    def _move_waypoint(self, waypoint):
+        """
+        Attempt to move to the given `waypoint`. The `waypoint` should usually
+        be the next or current waypoint, depending on whether we reached the
+        current waypoint or not.
+        This method must only be called if we are at an intersection.
+        """
+        if not self._is_waypoint(waypoint):
             return
 
-        next_waypoint = self._waypoints[self._current_waypoint+1]
+        next_waypoint = self._waypoints[waypoint]
         next_direction = self._next_direction(next_waypoint)
         if next_direction == self._direction:
             # Start moving in the given direction
             self._state = Robot_State("move")
-            self._current_waypoint += 1
+            self._current_waypoint = waypoint
             self.set_speeds(self.speed, self.speed)
         else:
             self._set_direction(next_direction)
