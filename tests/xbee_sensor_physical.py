@@ -4,6 +4,7 @@ import serial
 import random
 import Queue
 import time
+from core_thread_manager import ThreadableTestCase
 from xbee import ZigBee
 from mock import patch
 from ..core.Thread_Manager import Thread_Manager
@@ -12,7 +13,7 @@ from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
 from ..settings import Arguments
 from settings import SettingsTestCase
 
-class TestXBeeSensorPhysical(SettingsTestCase):
+class TestXBeeSensorPhysical(ThreadableTestCase, SettingsTestCase):
     def location_callback(self):
         """
         Get the current GPS location (latitude and longitude pair).
@@ -36,8 +37,9 @@ class TestXBeeSensorPhysical(SettingsTestCase):
             "sensor_4", "sensor_5", "sensor_6", "sensor_7", "sensor_8"
         ])
         self.settings = self.arguments.get_settings("xbee_sensor_physical")
+        self.thread_manager = Thread_Manager()
         self.sensor = XBee_Sensor_Physical(self.arguments,
-                                           Thread_Manager(),
+                                           self.thread_manager,
                                            self.location_callback,
                                            self.receive_callback)
         self.sensor.id = self.sensor_id

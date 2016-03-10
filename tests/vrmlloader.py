@@ -1,10 +1,11 @@
 from ..environment import Environment
 from ..environment.VRMLLoader import VRMLLoader
 from ..settings import Arguments
+from core_thread_manager import ThreadableTestCase
 from geometry import LocationTestCase
 from settings import SettingsTestCase
 
-class TestVRMLLoader(LocationTestCase, SettingsTestCase):
+class TestVRMLLoader(ThreadableTestCase, LocationTestCase, SettingsTestCase):
     def setUp(self):
         super(TestVRMLLoader, self).setUp()
         self.arguments = Arguments("settings.json", [

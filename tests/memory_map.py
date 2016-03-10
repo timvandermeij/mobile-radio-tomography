@@ -4,10 +4,11 @@ import sys
 from ..environment import Environment
 from ..trajectory.Memory_Map import Memory_Map
 from ..settings import Arguments
+from core_thread_manager import ThreadableTestCase
 from geometry import LocationTestCase
 from settings import SettingsTestCase
 
-class TestMemoryMap(LocationTestCase, SettingsTestCase):
+class TestMemoryMap(ThreadableTestCase, LocationTestCase, SettingsTestCase):
     def setUp(self):
         super(TestMemoryMap, self).setUp()
         self.arguments = Arguments("settings.json", [

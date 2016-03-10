@@ -3,6 +3,21 @@ from mock import patch
 from ..core.Threadable import Threadable
 from ..core.Thread_Manager import Thread_Manager
 
+class ThreadableTestCase(unittest.TestCase):
+    """
+    A test case that makes use of Threadable. We make sure that
+    all spawned threads are destroyed after the test.
+    """
+
+    def tearDown(self):
+        super(ThreadableTestCase, self).tearDown()
+
+        if hasattr(self, "thread_manager"):
+            self.thread_manager.destroy()
+
+        if hasattr(self, "environment") and hasattr(self.environment, "thread_manager"):
+            self.environment.thread_manager.destroy()
+
 class Mock_Thread(Threadable):
     def __init__(self, thread_manager):
         super(Mock_Thread, self).__init__("mock_thread", thread_manager)
@@ -13,7 +28,7 @@ class Mock_Thread(Threadable):
     def deactivate(self):
         super(Mock_Thread, self).deactivate()
 
-class TestCoreThreadManager(unittest.TestCase):
+class TestCoreThreadManager(ThreadableTestCase):
     def setUp(self):
         # Initialize the thread manager.
         self.thread_manager = Thread_Manager()
