@@ -11,9 +11,9 @@ from settings import SettingsTestCase
 class TestMemoryMap(LocationTestCase, SettingsTestCase):
     def setUp(self):
         super(TestMemoryMap, self).setUp()
-        self.arguments = Arguments("settings.json",
-            ["--vehicle-class", "Mock_Vehicle"]
-        )
+        self.arguments = Arguments("settings.json", [
+            "--vehicle-class", "Mock_Vehicle", "--no-infrared-sensor"
+        ])
         self.environment = Environment.setup(self.arguments, geometry_class="Geometry", simulated=True)
         self.coord_delta = sys.float_info.epsilon * 10
     

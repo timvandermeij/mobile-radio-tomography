@@ -22,7 +22,7 @@
         "settings": {
             "remote": "Sony_RM-SRB5",
             "program": "mobile-radio-tomography",
-            "buttons": ["start", "stop"],
+            "buttons": ["start", "stop", "up", "down", "left", "right"],
             "wait_delay": 0.05
         }
     },
@@ -91,6 +91,7 @@
                 }
             ],
             "xbee_type": "",
+            "infrared_sensor": true,
             "scenefile": null,
             "translation": [0.0,0.0,0.0],
             "location_check": false

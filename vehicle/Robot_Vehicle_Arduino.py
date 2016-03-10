@@ -29,6 +29,7 @@ class Robot_Vehicle_Arduino(Robot_Vehicle):
         self._speed_servos = [Servo(i, self._speeds, self._speed_pwms) for i in range(2)]
 
         self._serial_connection = self._line_follower.get_serial_connection()
+        self._current_speed = (0, 0, True, True)
 
     def setup(self):
         self._serial_connection.reset_output_buffer()
@@ -48,6 +49,14 @@ class Robot_Vehicle_Arduino(Robot_Vehicle):
         super(Robot_Vehicle_Arduino, self).deactivate()
 
     def set_speeds(self, left_speed, right_speed, left_forward=True, right_forward=True):
+        new_speed = (left_speed, right_speed, left_forward, right_forward)
+        if self._current_speed == new_speed:
+            # Avoid sending the same message multiple times after each other, 
+            # since the Arduino will keep at the same speed until a different 
+            # message appears.
+            return
+
+        self._current_speed = new_speed
         output = ""
         for i, speed, forward in [(0, left_speed, left_forward), (1, right_speed, right_forward)]:
             if not forward:
