@@ -1,9 +1,9 @@
-import unittest
+from core_thread_manager import ThreadableTestCase
 from mock import patch, call, MagicMock
 from ..settings import Arguments
 from settings import SettingsTestCase
 
-class TestDistanceSensorPhysical(SettingsTestCase):
+class TestDistanceSensorPhysical(ThreadableTestCase, SettingsTestCase):
     def setUp(self):
         # We need to mock the RPi.GPIO module as it is only available
         # on Raspberry Pi devices and these tests run on a PC.
@@ -16,13 +16,12 @@ class TestDistanceSensorPhysical(SettingsTestCase):
         self.patcher = patch.dict('sys.modules', modules)
         self.patcher.start()
         from ..environment import Environment
-        from ..distance.Distance_Sensor_Physical import Distance_Sensor_Physical
         arguments = Arguments("settings.json", [
             "--sensors", "0", "--no-infrared-sensor"
         ])
         self.settings = arguments.get_settings("distance_sensor_physical")
-        environment = Environment.setup(arguments, simulated=False)
-        self.distance_sensor = environment.get_distance_sensors()[0]
+        self.environment = Environment.setup(arguments, simulated=False)
+        self.distance_sensor = self.environment.get_distance_sensors()[0]
 
     def tearDown(self):
         super(TestDistanceSensorPhysical, self).tearDown()

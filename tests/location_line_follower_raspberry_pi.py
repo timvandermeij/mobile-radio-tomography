@@ -1,10 +1,10 @@
-import unittest
+from core_thread_manager import ThreadableTestCase
 from mock import patch, call, MagicMock
 from ..core.Thread_Manager import Thread_Manager
 from ..settings import Arguments
 from settings import SettingsTestCase
 
-class TestLocationLineFollowerRaspberryPi(SettingsTestCase):
+class TestLocationLineFollowerRaspberryPi(ThreadableTestCase, SettingsTestCase):
     def setUp(self):
         # We need to mock the RPi.GPIO module as it is only available
         # on Raspberry Pi devices and these tests run on a PC.

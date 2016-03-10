@@ -50,8 +50,9 @@ systems, perhaps with slightly different installation procedures.
     * PyVRML97 (you may need to use `pip install --user "PyVRML97==2.3.0b1"`)
     * PyDispatcher
     * pyglet
-  * Unit testing:
+  * Testing:
     * mock
+    * importchecker
 * In order to use the map display of ArduPilot, make sure that OpenCV and 
   wxWidgets as well as their respective Python bindings are installed and 
   available. If not, the following directions might help you get it:
@@ -215,19 +216,18 @@ parameters. The `--help` argument will display which parameters you can tune
 for the reconstruction and visualization (for instance, the reconstructor and
 the interpolation method are customizable).
 
-Running the unit tests
-======================
+Running the tests
+=================
 
-The framework contains unit tests to ensure that all components behave the
-way we expect them to behave and therefore to reduce the risk of introducing
-regressions during development. The unit tests have to be executed from the
+The framework contains tests to ensure that all components behave the way
+we expect them to behave and therefore to reduce the risk of introducing
+regressions during development. The tests have to be executed from the
 root folder using the following command:
 
-    $ python2 -m unittest discover -s tests -p "*.py" -t ..
+    $ python2 test.py
 
-The result of running all unit tests should be "OK" in the terminal. This
-command is executed automatically by Travis CI for each pull request or push
-to a branch.
+This command is executed automatically by Travis CI for each pull request
+or push to a branch.
 
 License
 =======

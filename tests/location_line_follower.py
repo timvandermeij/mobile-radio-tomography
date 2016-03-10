@@ -1,17 +1,17 @@
-import unittest
+from core_thread_manager import ThreadableTestCase
 from mock import call, MagicMock
 from ..core.Thread_Manager import Thread_Manager
 from ..location.Line_Follower import Line_Follower, Line_Follower_State, Line_Follower_Direction
 
-class TestLocationLineFollower(unittest.TestCase):
+class TestLocationLineFollower(ThreadableTestCase):
     def setUp(self):
         self.location = (0, 0)
         self.direction = Line_Follower_Direction.UP
         # Set up a line follower for the other tests.
         self.mock_callback = MagicMock()
-        thread_manager = Thread_Manager()
+        self.thread_manager = Thread_Manager()
         self.line_follower = Line_Follower(self.location, self.direction,
-                                           self.mock_callback, thread_manager)
+                                           self.mock_callback, self.thread_manager)
 
     def test_initialization(self):
         # Test initialization of line follower with a local variable rather 

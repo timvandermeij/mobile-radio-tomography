@@ -6,8 +6,6 @@ Documentation for the source is provided at http://python.dronekit.io/examples/m
 """
 
 import sys
-import os
-import time
 
 # Package imports
 # Ensure that we can import from the current directory as a package since 

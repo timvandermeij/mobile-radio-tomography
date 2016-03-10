@@ -5,12 +5,12 @@ install:
   - pip install pyserial
   - pip install xbee
   - pip install pymavlink
-  - pip install mavproxy
   - pip install dronekit
   - pip install PyOpenGL
   - pip install simpleparse
   - pip install PyVRML97
   - pip install PyDispatcher
-script: ./test.sh
+  - pip install importchecker
+script: python2 test.py
 notifications:
   email: false

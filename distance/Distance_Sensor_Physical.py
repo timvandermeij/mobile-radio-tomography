@@ -1,6 +1,5 @@
 import time
 import RPi.GPIO
-from ..settings import Settings
 from Distance_Sensor import Distance_Sensor
 
 class Distance_Sensor_Physical(Distance_Sensor):

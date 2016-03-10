@@ -1,5 +1,4 @@
 import unittest
-import math
 from ..trajectory.Servo import Servo
 
 class TestServo(unittest.TestCase):

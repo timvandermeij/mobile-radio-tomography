@@ -1,18 +1,17 @@
-import unittest
 import os
 import pty
 import itertools
-import time
 from mock import patch
 from dronekit import LocationLocal
 from ..environment.Environment import Environment
 from ..trajectory.Mission import Mission_Cycle
 from ..vehicle.Robot_Vehicle import Robot_State
 from ..settings import Arguments
+from core_thread_manager import ThreadableTestCase
 from geometry import LocationTestCase
 from settings import SettingsTestCase
 
-class TestMissionCycle(LocationTestCase, SettingsTestCase):
+class TestMissionCycle(ThreadableTestCase, LocationTestCase, SettingsTestCase):
     def setUp(self):
         super(TestMissionCycle, self).setUp()
 

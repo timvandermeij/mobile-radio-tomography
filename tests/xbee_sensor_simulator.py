@@ -1,9 +1,9 @@
-import unittest
 import socket
 import time
 import random
 import copy
 import Queue
+from core_thread_manager import ThreadableTestCase
 from mock import patch, MagicMock
 from ..core.Thread_Manager import Thread_Manager
 from ..zigbee.XBee_Packet import XBee_Packet
@@ -11,7 +11,7 @@ from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 from ..settings import Arguments
 from settings import SettingsTestCase
 
-class TestXBeeSensorSimulator(SettingsTestCase):
+class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
     def location_callback(self):
         """
         Get the current GPS location (latitude and longitude pair).
@@ -39,8 +39,9 @@ class TestXBeeSensorSimulator(SettingsTestCase):
             "--warnings", "--xbee-id", "1"
         ])
         self.settings = self.arguments.get_settings("xbee_sensor_simulator")
+        self.thread_manager = Thread_Manager()
         self.sensor = XBee_Sensor_Simulator(self.arguments,
-                                            Thread_Manager(),
+                                            self.thread_manager,
                                             self.location_callback,
                                             self.receive_callback)
 

@@ -1,9 +1,9 @@
-import unittest
-from mock import patch, call, MagicMock
+from core_thread_manager import ThreadableTestCase
+from mock import patch, MagicMock
 from ..core.Thread_Manager import Thread_Manager
 from ..settings import Arguments
 
-class TestControlInfraredSensor(unittest.TestCase):
+class TestControlInfraredSensor(ThreadableTestCase):
     def setUp(self):
         # We need to mock the pylirc module as we do not want to use actual 
         # LIRC communication. We assume the pylirc module works as expected.
@@ -21,14 +21,16 @@ class TestControlInfraredSensor(unittest.TestCase):
         self.old_configure = Infrared_Sensor._configure
         Infrared_Sensor._configure = MagicMock()
 
-        thread_manager = Thread_Manager()
+        self.thread_manager = Thread_Manager()
 
         self.arguments = Arguments("settings.json", [])
         self.settings = self.arguments.get_settings("infrared_sensor")
-        self.infrared_sensor = Infrared_Sensor(self.settings, thread_manager)
+        self.infrared_sensor = Infrared_Sensor(self.settings, self.thread_manager)
         self.mock_callback = MagicMock()
 
     def tearDown(self):
+        super(TestControlInfraredSensor, self).tearDown()
+
         # Reset mock configure method so that we do not lose the original 
         # method during multiple tests.
         from ..control.Infrared_Sensor import Infrared_Sensor
