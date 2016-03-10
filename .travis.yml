@@ -10,6 +10,7 @@ install:
   - pip install simpleparse
   - pip install PyVRML97
   - pip install PyDispatcher
-script: ./test.sh
+  - pip install importchecker
+script: python2 test.py
 notifications:
   email: false
