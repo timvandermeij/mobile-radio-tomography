@@ -7,9 +7,7 @@ import numpy as np
 
 from dronekit import VehicleMode, LocationGlobalRelative, LocationLocal
 
-from ..geometry.Geometry import Geometry_Spherical
 from Memory_Map import Memory_Map
-from ..vehicle.Mock_Vehicle import Mock_Vehicle
 from ..vehicle.Robot_Vehicle import Robot_Vehicle
 
 class Mission(object):

@@ -1,8 +1,6 @@
-import unittest
 import os
 import pty
 import itertools
-import time
 from mock import patch
 from dronekit import LocationLocal
 from ..environment.Environment import Environment

@@ -2,7 +2,6 @@ import sys
 
 from __init__ import __package__
 from settings import Arguments
-from geometry import Geometry
 from environment import Environment
 from trajectory.Viewer import Viewer_Interactive
 

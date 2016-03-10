@@ -7,7 +7,6 @@ Full documentation is provided at http://python.dronekit.io/examples/vehicle_sta
 """
 
 from droneapi.lib import VehicleMode
-from pymavlink import mavutil
 import time
 
 # First get an instance of the API endpoint

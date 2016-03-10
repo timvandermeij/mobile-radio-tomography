@@ -1,7 +1,6 @@
-import unittest
 from mock import patch
 from StringIO import StringIO
-from ..settings import Arguments, Settings
+from ..settings import Arguments
 from settings import SettingsTestCase
 
 class TestArguments(SettingsTestCase):

@@ -1,4 +1,3 @@
-import unittest
 import socket
 import time
 import random

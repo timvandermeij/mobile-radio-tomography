@@ -1,5 +1,4 @@
 import time
-import unittest
 from ..zigbee.XBee_Packet import XBee_Packet
 from ..zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from ..settings import Settings

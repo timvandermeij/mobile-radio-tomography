@@ -1,4 +1,3 @@
-import unittest
 import pty
 import os
 import serial

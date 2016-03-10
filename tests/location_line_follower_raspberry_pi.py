@@ -1,4 +1,3 @@
-import unittest
 from mock import patch, call, MagicMock
 from ..core.Thread_Manager import Thread_Manager
 from ..settings import Arguments

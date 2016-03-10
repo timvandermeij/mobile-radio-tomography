@@ -1,4 +1,3 @@
-import unittest
 from ..environment import Environment
 from ..environment.VRMLLoader import VRMLLoader
 from ..settings import Arguments

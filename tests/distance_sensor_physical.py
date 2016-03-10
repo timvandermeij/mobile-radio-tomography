@@ -1,4 +1,3 @@
-import unittest
 from mock import patch, call, MagicMock
 from ..settings import Arguments
 from settings import SettingsTestCase
@@ -16,7 +15,6 @@ class TestDistanceSensorPhysical(SettingsTestCase):
         self.patcher = patch.dict('sys.modules', modules)
         self.patcher.start()
         from ..environment import Environment
-        from ..distance.Distance_Sensor_Physical import Distance_Sensor_Physical
         arguments = Arguments("settings.json", [
             "--sensors", "0", "--no-infrared-sensor"
         ])

@@ -1,6 +1,5 @@
 import sys
 import math
-import numpy as np
 from Distance_Sensor import Distance_Sensor
 
 class Distance_Sensor_Simulator(Distance_Sensor):

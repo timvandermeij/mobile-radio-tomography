@@ -1,4 +1,3 @@
-import unittest
 from ..reconstruction.Weight_Matrix import Weight_Matrix
 from ..settings.Arguments import Arguments
 from settings import SettingsTestCase
