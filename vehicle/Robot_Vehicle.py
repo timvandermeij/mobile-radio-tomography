@@ -234,6 +234,12 @@ class Robot_Vehicle(Vehicle):
         self._current_waypoint = -1
         self.add_waypoint(location)
 
+    def is_current_location_valid(self):
+        if self._state.name == "move":
+            return False
+
+        return super(Robot_Vehicle, self).is_current_location_valid()
+
     @property
     def location(self):
         return LocationLocal(self._location[0], self._location[1], 0.0)
@@ -275,7 +281,7 @@ class Robot_Vehicle(Vehicle):
         return Attitude(0.0, 0.0, yaw)
 
     def set_yaw(self, heading, relative=False, direction=1):
-        if self._state.name != "intersection" and not isinstance(self._state, Robot_State_Rotate):
+        if self._at_intersection():
             # We can only rotate on an intersection where we can see all 
             # cardinal lines.
             return
@@ -354,3 +360,11 @@ class Robot_Vehicle(Vehicle):
         # No need to change direction if the difference is 0 for both cardinal 
         # directions.
         return self._direction
+
+    def _at_intersection(self):
+        if self._state.name == "intersection":
+            return True
+        if isinstance(self._state, Robot_State_Rotate):
+            return True
+
+        return False
