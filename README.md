@@ -20,6 +20,7 @@ systems, perhaps with slightly different installation procedures.
   provides these packages, otherwise you can retrieve them from the LIRC 
   website itself.
 * Python 2.7. Note that Python 3 cannot be used at this moment.
+* PyQt4
 * `pip` for Python 2.7. `pip` is often not available on extremely old and bare
   systems. If it is also not delivered by a package manager, one can also
   [install it with get-pip.py](https://pip.pypa.io/en/latest/installing.html).
@@ -38,6 +39,7 @@ systems, perhaps with slightly different installation procedures.
     * RPIO
     * xbee
     * pylirc2
+    * pyusb
   * Vehicle trajectory mission interfaces:
     * lxml
     * pexpect
