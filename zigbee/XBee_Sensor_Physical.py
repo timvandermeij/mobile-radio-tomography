@@ -18,20 +18,15 @@ class XBee_Sensor_Physical(XBee_Sensor):
         Initialize the sensor.
         """
 
-        super(XBee_Sensor_Physical, self).__init__(thread_manager)
+        super(XBee_Sensor_Physical, self).__init__(thread_manager, location_callback, receive_callback)
 
         if isinstance(arguments, Arguments):
             self.settings = arguments.get_settings("xbee_sensor_physical")
         else:
             raise ValueError("'settings' must be an instance of Arguments")
 
-        if location_callback == None or receive_callback == None:
-            raise TypeError("Missing required location and receive callbacks")
-
         self.id = 0
         self.scheduler = XBee_TDMA_Scheduler(self.id, arguments)
-        self._location_callback = location_callback
-        self._receive_callback = receive_callback
         self._next_timestamp = 0
         self._serial_connection = None
         self._node_identifier_set = False
@@ -206,13 +201,8 @@ class XBee_Sensor_Physical(XBee_Sensor):
         """
 
         # Create and send the RSSI broadcast packets.
-        location = self._location_callback()
-        packet = XBee_Packet()
-        packet.set("specification", "rssi_broadcast")
-        packet.set("latitude", location[0])
-        packet.set("longitude", location[1])
+        packet = self.make_rssi_broadcast_packet()
         packet.set("sensor_id", self.id)
-        packet.set("timestamp", time.time())
 
         for index in xrange(1, self._number_of_sensors + 1):
             if index == self.id:
@@ -258,8 +248,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
             packet = XBee_Packet()
             packet.unserialize(raw_packet["rf_data"])
 
-            if not packet.is_private():
-                self._receive_callback(packet)
+            if self.check_receive(packet):
                 return
 
             if packet.get("specification") == "ntp":
@@ -282,14 +271,8 @@ class XBee_Sensor_Physical(XBee_Sensor):
             # Synchronize the scheduler using the timestamp in the packet.
             self._next_timestamp = self.scheduler.synchronize(packet)
 
-            # Sanitize and complete the packet for the ground station.
-            location = self._location_callback()
-            ground_station_packet = XBee_Packet()
-            ground_station_packet.set("specification", "rssi_ground_station")
-            ground_station_packet.set("from_latitude", packet.get("latitude"))
-            ground_station_packet.set("from_longitude", packet.get("longitude"))
-            ground_station_packet.set("to_latitude", location[0])
-            ground_station_packet.set("to_longitude", location[1])
+            # Create the packet for the ground station.
+            ground_station_packet = self.make_ground_station_packet(packet)
 
             # Generate a frame ID to be able to match this packet and the
             # associated RSSI (DB command) request.
