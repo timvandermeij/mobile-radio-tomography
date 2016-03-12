@@ -1,20 +1,28 @@
 # TODO: replace XBee device identity in the settings file
 # TODO: replace random image with actual reconstruction
+# TODO: migrate color map/interpolation and remove old runner and viewer
 
 import numpy as np
 import sys
 import time
 import usb
+from ..reconstruction.Dump_Reader import Dump_Reader
+from ..reconstruction.Weight_Matrix import Weight_Matrix
+from ..reconstruction.Least_Squares_Reconstructor import Least_Squares_Reconstructor
+from ..reconstruction.SVD_Reconstructor import SVD_Reconstructor
+from ..reconstruction.Truncated_SVD_Reconstructor import Truncated_SVD_Reconstructor
+from ..settings import Arguments
 from PyQt4 import QtCore, QtGui
 
 class Dashboard(QtGui.QMainWindow):
-    def __init__(self, settings):
+    def __init__(self):
         """
         Initialize the dashboard window.
         """
 
         super(Dashboard, self).__init__()
-        self.settings = settings
+        self._arguments = Arguments("settings.json", [])
+        self._dashboard_settings = self._arguments.get_settings("dashboard")
 
         # Set the dimensions, title and icon of the window.
         self.setGeometry(0, 0, 800, 600)
@@ -83,11 +91,11 @@ class Dashboard(QtGui.QMainWindow):
         the ground station XBee.
         """
 
-        xbee_insertion_delay = self.settings.get("xbee_insertion_delay")
+        xbee_insertion_delay = self._dashboard_settings.get("xbee_insertion_delay") * 1000
         xbee_found = False
 
         try:
-            xbee_identity = self.settings.get("xbee_identity")
+            xbee_identity = self._dashboard_settings.get("xbee_identity")
             xbee_identity = [str(value) for value in xbee_identity]
             for device in usb.core.find(find_all=True):
                 device_identity = [hex(device.idVendor), hex(device.idProduct)]
@@ -121,21 +129,76 @@ class Dashboard(QtGui.QMainWindow):
 
         self._reset()
 
-        # Create a random image.
-        a = np.random.randint(0,256,size=(100,100,3)).astype(np.uint32)
-        b = (255 << 24 | a[:,:,0] << 16 | a[:,:,1] << 8 | a[:,:,2]).flatten()
-        image = QtGui.QImage(b, 100, 100, QtGui.QImage.Format_RGB32)
-        label = QtGui.QLabel(self)
-        label.setFixedSize(100, 100)
-        label.setPixmap(QtGui.QPixmap(image))
+        # Create the label for the image.
+        self._label = QtGui.QLabel(self)
 
         # Create the layout and add the widgets.
         vbox = QtGui.QVBoxLayout()
         vbox.addStretch(1)
-        vbox.addWidget(label)
+        vbox.addWidget(self._label)
         vbox.addStretch(1)
 
         hbox = QtGui.QHBoxLayout(self._central_widget)
         hbox.addStretch(1)
         hbox.addLayout(vbox)
         hbox.addStretch(1)
+
+        # Fetch the settings for the reconstruction.
+        reconstruction_settings = self._arguments.get_settings("reconstruction")
+        self._pause_time = reconstruction_settings.get("pause_time") * 1000
+
+        # Set the width and height of the label.
+        self._viewer_width, self._viewer_height = self._dashboard_settings.get("viewer_dimensions")
+        self._label.setFixedSize(self._viewer_width, self._viewer_height)
+
+        # Create the reader.
+        filename = reconstruction_settings.get("filename")
+        self._reader = Dump_Reader("reconstruction_data/{}.json".format(filename))
+
+        # Create the reconstructor.
+        reconstructors = {
+            "least-squares": Least_Squares_Reconstructor,
+            "svd": SVD_Reconstructor,
+            "truncated-svd": Truncated_SVD_Reconstructor
+        }
+        reconstructor = reconstruction_settings.get("reconstructor")
+        if reconstructor not in reconstructors:
+            messageBox = QtGui.QMessageBox.error(
+                self,
+                "Unknown reconstructor",
+                "Reconstructor '{}' does not exist.".format(reconstructor),
+                QtGui.QMessageBox.Ok
+            )
+            return
+
+        reconstructor_class = reconstructors[reconstructor]
+        self._reconstructor = reconstructor_class(self._arguments)
+
+        # Create the weight matrix.
+        self._weight_matrix = Weight_Matrix(self._arguments, self._reader.get_origin(),
+                                            self._reader.get_size())
+
+        # Execute the reconstruction and visualization.
+        self._rssi = []
+        self._reconstruction_loop()
+
+    def _reconstruction_loop(self):
+        """
+        Execute the reconstruction to recompute the image when
+        a new measurement is processed.
+        """
+
+        width, height = self._reader.get_size()
+        if self._reader.count_packets() > 0:
+            packet = self._reader.get_packet()
+            self._rssi.append(packet.get("rssi"))
+            source = (packet.get("from_latitude"), packet.get("from_longitude"))
+            destination = (packet.get("to_latitude"), packet.get("to_longitude"))
+            self._weight_matrix.update(source, destination)
+            if self._weight_matrix.check():
+                pixels = self._reconstructor.execute(self._weight_matrix.output(), self._rssi)
+                image = QtGui.QImage(pixels, width, height, QtGui.QImage.Format_RGB32)
+                scaled_image = image.scaled(self._viewer_width, self._viewer_height)
+                self._label.setPixmap(QtGui.QPixmap(scaled_image))
+
+            QtCore.QTimer.singleShot(self._pause_time, self._reconstruction_loop)

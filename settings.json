@@ -2,6 +2,7 @@
     "dashboard": {
         "name": "Dashboard",
         "settings": {
+            "viewer_dimensions": [500, 500],
             "xbee_identity": ["0x90c", "0x1000"],
             "xbee_insertion_delay": 0.2
         }
