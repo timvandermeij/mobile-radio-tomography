@@ -272,7 +272,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
             self._next_timestamp = self.scheduler.synchronize(packet)
 
             # Create the packet for the ground station.
-            ground_station_packet = self.make_ground_station_packet(packet)
+            ground_station_packet = self.make_rssi_ground_station_packet(packet)
 
             # Generate a frame ID to be able to match this packet and the
             # associated RSSI (DB command) request.

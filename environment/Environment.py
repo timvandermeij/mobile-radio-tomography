@@ -127,7 +127,7 @@ class Environment(object):
         """
         Retrieve the list of `Distance_Sensor` objects.
 
-        This method lazy-initializes the distance sensors.
+        This method lazily initializes the distance sensors.
         """
 
         if self._distance_sensors is None:
@@ -181,7 +181,7 @@ class Environment(object):
         """
 
         if not hasattr(callback, "__call__"):
-            raise TypeError("Must provide a callback.")
+            raise TypeError("The provided callback is not callable.")
 
         if action in self._packet_callbacks:
             raise KeyError("Action '{}' already has a registered callback.".format(action))

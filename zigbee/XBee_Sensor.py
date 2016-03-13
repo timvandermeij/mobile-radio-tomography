@@ -84,7 +84,7 @@ class XBee_Sensor(Threadable):
 
         return packet
 
-    def make_ground_station_packet(self, rssi_packet):
+    def make_rssi_ground_station_packet(self, rssi_packet):
         """
         Create an XBee_Packet object containing location data of the current
         XBee and data from an XBee_Packet `rssi_packet`. The `rssi_packet`
@@ -93,7 +93,7 @@ class XBee_Sensor(Threadable):
         The resulting packet is only missing RSSI information.
 
         The packet can then be sent to the ground station as an indication of
-        the signal strength between the XBee that sended the `rssi_packet` and
+        the signal strength between the XBee that sent the `rssi_packet` and
         the current XBee.
         """
 
@@ -110,4 +110,3 @@ class XBee_Sensor(Threadable):
         ground_station_packet.set("to_valid", location_valid)
 
         return ground_station_packet
-

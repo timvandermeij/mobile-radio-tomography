@@ -81,5 +81,5 @@ class MAVLink_Vehicle(Vehicle):
     def is_current_location_valid(self):
         if isinstance(self._geometry, Geometry_Spherical):
             return self.is_location_valid(self.location.global_relative_frame)
-        else:
-            return self.is_location_valid(self.location.local_frame)
+
+        return self.is_location_valid(self.location.local_frame)

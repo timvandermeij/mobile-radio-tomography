@@ -372,10 +372,8 @@ class Robot_Vehicle(Vehicle):
     def _at_intersection(self):
         if self._state.name == "intersection":
             return True
-        if isinstance(self._state, Robot_State_Rotate):
-            return True
 
-        return False
+        return isinstance(self._state, Robot_State_Rotate)
 
     def _at_current_waypoint(self):
         if not self._is_waypoint(self._current_waypoint):
