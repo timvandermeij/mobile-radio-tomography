@@ -205,18 +205,16 @@ Reconstruction and visualization
 --------------------------------
 
 The reconstruction and visualization components convert a dataset with signal
-strength measurements to a two-dimensional image per valid sweep. There are
-several reconstructors:
+strength measurements to a set of two-dimensional images. We provide multiple
+reconstructors:
 
 * Least squares
 * SVD
 * Truncated SVD
 
-Execute `python2 reconstruction.py` in a terminal to execute the reconstruction
-and visualization components with the default file, reconstructor and other
-parameters. The `--help` argument will display which parameters you can tune
-for the reconstruction and visualization (for instance, the reconstructor and
-the interpolation method are customizable).
+Run `python2 dashboard.py` in a terminal to open the dashboard. In the
+`Reconstruction` menu choose `Start` to start the reconstruction and
+visualization components with the default parameters.
 
 Running the tests
 =================
