@@ -212,9 +212,9 @@ reconstructors:
 * SVD
 * Truncated SVD
 
-Run `python2 dashboard.py` in a terminal to open the dashboard. In the
-`Reconstruction` menu choose `Start` to start the reconstruction and
-visualization components with the default parameters.
+Run `python2 dashboard.py` in a terminal to open the dashboard. The toolbar
+allows you to change the used reconstructor and start the reconstruction and
+visualization process.
 
 Running the tests
 =================
