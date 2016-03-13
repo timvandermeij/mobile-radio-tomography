@@ -10,25 +10,20 @@ from XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from ..settings import Arguments
 
 class XBee_Sensor_Simulator(XBee_Sensor):
-    def __init__(self, arguments, thread_manager, location_callback=None, receive_callback=None):
+    def __init__(self, arguments, thread_manager, location_callback, receive_callback, valid_callback):
         """
         Initialize the sensor with a unique, non-blocking UDP socket.
         """
 
-        super(XBee_Sensor_Simulator, self).__init__(thread_manager)
+        super(XBee_Sensor_Simulator, self).__init__(thread_manager, location_callback, receive_callback, valid_callback)
 
         if isinstance(arguments, Arguments):
             self.settings = arguments.get_settings("xbee_sensor_simulator")
         else:
             raise ValueError("'arguments' must be an instance of Arguments")
 
-        if location_callback == None or receive_callback == None:
-            raise TypeError("Missing required location and receive callbacks")
-
         self.id = self.settings.get("xbee_id")
         self.scheduler = XBee_TDMA_Scheduler(self.id, arguments)
-        self._location_callback = location_callback
-        self._receive_callback = receive_callback
         self._next_timestamp = self.scheduler.get_next_timestamp()
         self._data = []
         self._queue = Queue.Queue()
@@ -127,13 +122,8 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             if i == self.id:
                 continue
 
-            location = self._location_callback()
-            packet = XBee_Packet()
-            packet.set("specification", "rssi_broadcast")
-            packet.set("latitude", location[0])
-            packet.set("longitude", location[1])
+            packet = self.make_rssi_broadcast_packet()
             packet.set("sensor_id", self.id)
-            packet.set("timestamp", time.time())
             self._socket.sendto(packet.serialize(), (ip, port + i))
 
         # Send custom packets to their destination. Since the time slots are
@@ -159,20 +149,12 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         Receive and process packets from all other sensors in the network.
         """
 
-        if not packet.is_private():
-            self._receive_callback(packet)
-        else:
+        if not self.check_receive(packet):
             if self.id > 0:
                 self._next_timestamp = self.scheduler.synchronize(packet)
 
-                # Sanitize and complete the packet for the ground station.
-                location = self._location_callback()
-                ground_station_packet = XBee_Packet()
-                ground_station_packet.set("specification", "rssi_ground_station")
-                ground_station_packet.set("from_latitude", packet.get("latitude"))
-                ground_station_packet.set("from_longitude", packet.get("longitude"))
-                ground_station_packet.set("to_latitude", location[0])
-                ground_station_packet.set("to_longitude", location[1])
+                # Create and complete the packet for the ground station.
+                ground_station_packet = self.make_ground_station_packet(packet)
                 ground_station_packet.set("rssi", random.randint(0, 60))
                 self._data.append(ground_station_packet)
             else:

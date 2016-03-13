@@ -107,7 +107,7 @@ class Robot_Vehicle(Vehicle):
                     self.set_speeds(self.speed, self.speed)
                     self._last_diverged_time = None
         elif self._state.name == "intersection":
-            if self._location == self.get_waypoint():
+            if self._at_current_waypoint():
                 # We reached the current waypoint.
                 if self._mode.name == "AUTO":
                     # In AUTO mode, immediately try to move to the next 
@@ -234,6 +234,17 @@ class Robot_Vehicle(Vehicle):
         self._current_waypoint = -1
         self.add_waypoint(location)
 
+    def is_current_location_valid(self):
+        # When we are moving, then the location is no longer correct.
+        if self._is_moving():
+            return False
+
+        # If we are not at the waypoint, then the location is not yet valid.
+        if not self._at_current_waypoint():
+            return False
+
+        return super(Robot_Vehicle, self).is_current_location_valid()
+
     @property
     def location(self):
         return LocationLocal(self._location[0], self._location[1], 0.0)
@@ -245,7 +256,7 @@ class Robot_Vehicle(Vehicle):
     @speed.setter
     def speed(self, value):
         self._move_speed = value
-        if self._running and self._state.name == "move" and self._last_diverged_time is None:
+        if self._is_moving() and self._last_diverged_time is None:
             self.set_speeds(value, value)
 
     def _get_yaw(self):
@@ -275,7 +286,7 @@ class Robot_Vehicle(Vehicle):
         return Attitude(0.0, 0.0, yaw)
 
     def set_yaw(self, heading, relative=False, direction=1):
-        if self._state.name != "intersection" and not isinstance(self._state, Robot_State_Rotate):
+        if not self._at_intersection():
             # We can only rotate on an intersection where we can see all 
             # cardinal lines.
             return
@@ -354,3 +365,21 @@ class Robot_Vehicle(Vehicle):
         # No need to change direction if the difference is 0 for both cardinal 
         # directions.
         return self._direction
+
+    def _is_moving(self):
+        return self._running and self._state.name == "move"
+
+    def _at_intersection(self):
+        if self._state.name == "intersection":
+            return True
+        if isinstance(self._state, Robot_State_Rotate):
+            return True
+
+        return False
+
+    def _at_current_waypoint(self):
+        if not self._is_waypoint(self._current_waypoint):
+            return False
+
+        waypoint = self._waypoints[self._current_waypoint]
+        return waypoint == self._location

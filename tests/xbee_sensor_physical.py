@@ -24,6 +24,9 @@ class TestXBeeSensorPhysical(ThreadableTestCase, SettingsTestCase):
     def receive_callback(self, packet):
         pass
 
+    def valid_callback(self, other_valid=None):
+        return True
+
     def setUp(self):
         self.sensor_id = 1
 
@@ -41,13 +44,15 @@ class TestXBeeSensorPhysical(ThreadableTestCase, SettingsTestCase):
         self.sensor = XBee_Sensor_Physical(self.arguments,
                                            self.thread_manager,
                                            self.location_callback,
-                                           self.receive_callback)
+                                           self.receive_callback,
+                                           self.valid_callback)
         self.sensor.id = self.sensor_id
 
     def test_initialization(self):
         self.assertEqual(self.sensor.id, self.sensor_id)
         self.assertTrue(hasattr(self.sensor._location_callback, "__call__"))
         self.assertTrue(hasattr(self.sensor._receive_callback, "__call__"))
+        self.assertTrue(hasattr(self.sensor._valid_callback, "__call__"))
         self.assertEqual(self.sensor._next_timestamp, 0)
         self.assertEqual(self.sensor._serial_connection, None)
         self.assertEqual(self.sensor._node_identifier_set, False)
@@ -151,8 +156,10 @@ class TestXBeeSensorPhysical(ThreadableTestCase, SettingsTestCase):
         valid_packet.set("specification", "rssi_ground_station")
         valid_packet.set("from_latitude", 123456789.12)
         valid_packet.set("from_longitude", 123456789.12)
+        valid_packet.set("from_valid", True)
         valid_packet.set("to_latitude", 123456789.12)
         valid_packet.set("to_longitude", 123456789.12)
+        valid_packet.set("to_valid", True)
         valid_packet.set("rssi", 56)
         self.sensor._data = {
             42: valid_packet
@@ -196,6 +203,7 @@ class TestXBeeSensorPhysical(ThreadableTestCase, SettingsTestCase):
         packet.set("specification", "rssi_broadcast")
         packet.set("latitude", 123456789.12)
         packet.set("longitude", 123459678.34)
+        packet.set("valid", True)
         packet.set("sensor_id", 2)
         packet.set("timestamp", time.time())
         raw_packet = {

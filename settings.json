@@ -221,6 +221,10 @@
                         "format": "d"
                     },
                     {
+                        "name": "valid",
+                        "format": "?"
+                    },
+                    {
                         "name": "sensor_id",
                         "format": "B"
                     },
@@ -245,12 +249,20 @@
                         "format": "d"
                     },
                     {
+                        "name": "from_valid",
+                        "format": "?"
+                    },
+                    {
                         "name": "to_latitude",
                         "format": "d"
                     },
                     {
                         "name": "to_longitude",
                         "format": "d"
+                    },
+                    {
+                        "name": "to_valid",
+                        "format": "?"
                     },
                     {
                         "name": "rssi",

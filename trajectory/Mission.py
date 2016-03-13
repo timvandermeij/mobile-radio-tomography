@@ -805,11 +805,9 @@ class Mission_Cycle(Mission_Guided):
         if self.current_waypoint is None:
             self.next_waypoint()
         else:
-            location = self.vehicle.location
-            wp = self.current_waypoint
-            if location.north == wp[0] and location.east == wp[1]:
-                # TODO: Delay to perform measurements. We need to synchronize 
-                # the robots so that they measure at the "correct" location.
+            # Delay to perform measurements. We need to synchronize the robots 
+            # so that they both measure at the "valid" location.
+            if self.environment.is_measurement_valid():
                 self.next_waypoint()
 
     def check_waypoint(self):

@@ -47,7 +47,7 @@ class Vehicle(Threadable):
         This can depend on settings or the Vehicle class itself.
         """
 
-        raise NotImplementedError("Subclasses must implement use_simulation property")
+        raise NotImplementedError("Subclasses must implement `use_simulation` property")
 
     @property
     def home_location(self):
@@ -76,6 +76,7 @@ class Vehicle(Threadable):
 
         The mode is returned as a `VehicleMode` object with a `name` property.
         """
+
         return self._mode
 
     @mode.setter
@@ -85,14 +86,25 @@ class Vehicle(Threadable):
 
         The mode must be a `VehicleMode` object.
         """
+
         self._mode = value
 
     @property
     def armed(self):
+        """
+        Check whether the vehicle is armed.
+
+        An armed vehicle is ready to move around or is currently moving.
+        """
+
         return self._armed
 
     @armed.setter
     def armed(self, value):
+        """
+        Arm or disarm the vehicle by setting a boolean `value` to its state.
+        """
+
         self._armed = value
 
     def update_mission(self):
@@ -203,17 +215,45 @@ class Vehicle(Threadable):
         Set the target `location` of the vehicle to the given `Location` object.
         """
 
-        raise NotImplementedError("Subclasses must implement simple_goto(location)")
+        raise NotImplementedError("Subclasses must implement `simple_goto(location)`")
+
+    def is_location_valid(self, location):
+        """
+        Check whether a given `location` is valid, i.e. it is populated with
+        a somewhat correct location. The default implementation checks whether
+        none of the fields is populated with `None`, which is what dronekit
+        does when it has no location information yet.
+
+        Returns a boolean indicating whether the `location` is useable.
+        If an invalid location type is given, then a `TypeError` is raised.
+        """
+
+        if isinstance(location, LocationLocal):
+            # Only need to check one field
+            return location.north is not None
+        if isinstance(location, LocationGlobalRelative) or isinstance(location, LocationGlobal):
+            # Check for a coordinate field and altitude field as per dronekit.
+            return location.lat is not None and location.alt is not None
+
+        raise TypeError("Invalid type for location object")
+
+    def is_current_location_valid(self):
+        """
+        Check whether the current vehicle location is valid.
+        """
+
+        return self.is_location_valid(self.location)
 
     @property
     def location(self):
         """
         Retrieve the current location of the vehicle.
 
-        This property returns the location as a `Location` object.
+        This property returns the location as a `Locations` object or one of
+        the `LocationGlobal`, `LocalGlobalRelative` or `LocationLocal` objects.
         """
 
-        raise NotImplementedError("Subclasses must implement location property")
+        raise NotImplementedError("Subclasses must implement `location` property")
 
     @property
     def speed(self):
@@ -223,7 +263,7 @@ class Vehicle(Threadable):
         If the speed cannot be retrieved, raise a `NotImplementedError`.
         """
 
-        raise NotImplementedError("Subclass does not implement speed property")
+        raise NotImplementedError("Subclass does not implement `speed` property")
 
     @speed.setter
     def speed(self, value):
@@ -245,7 +285,7 @@ class Vehicle(Threadable):
         If the velocity cannot be retrieved, raise a `NotImplementedError`.
         """
 
-        raise NotImplementedError("Subclass does not implement velocity property")
+        raise NotImplementedError("Subclass does not implement `velocity` property")
 
     @velocity.setter
     def velocity(self, value):
@@ -268,7 +308,7 @@ class Vehicle(Threadable):
         If the attitude cannot be retrieved, raise a `NotImplementedError`.
         """
 
-        raise NotImplementedError("Subclass does not implement attitude property")
+        raise NotImplementedError("Subclass does not implement `attitude` property")
 
     def set_yaw(self, heading, relative=False, direction=1):
         """
@@ -302,7 +342,7 @@ class Vehicle(Threadable):
         If the vehicle does not support servos, raise a `NotImplementedError`.
         """
 
-        raise NotImplementedError("Subclass does not implement set_servo(servo, pwm)")
+        raise NotImplementedError("Subclass does not implement `set_servo(servo, pwm)`")
 
     def add_attribute_listener(self, attribute, listener):
         """
