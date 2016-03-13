@@ -3,9 +3,6 @@
 import matplotlib
 matplotlib.use("Qt4Agg")
 import matplotlib.pyplot as plt
-import numpy as np
-import sys
-import time
 import usb
 from ..reconstruction.Dump_Reader import Dump_Reader
 from ..reconstruction.Weight_Matrix import Weight_Matrix
