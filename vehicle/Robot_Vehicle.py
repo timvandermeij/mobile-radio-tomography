@@ -251,7 +251,7 @@ class Robot_Vehicle(Vehicle):
     @speed.setter
     def speed(self, value):
         self._move_speed = value
-        if self._running and self._state.name == "move" and self._last_diverged_time is None:
+        if self._is_moving() and self._last_diverged_time is None:
             self.set_speeds(value, value)
 
     def _get_yaw(self):
@@ -281,7 +281,7 @@ class Robot_Vehicle(Vehicle):
         return Attitude(0.0, 0.0, yaw)
 
     def set_yaw(self, heading, relative=False, direction=1):
-        if self._at_intersection():
+        if not self._at_intersection():
             # We can only rotate on an intersection where we can see all 
             # cardinal lines.
             return
@@ -360,6 +360,9 @@ class Robot_Vehicle(Vehicle):
         # No need to change direction if the difference is 0 for both cardinal 
         # directions.
         return self._direction
+
+    def _is_moving(self):
+        return self._running and self._state.name == "move"
 
     def _at_intersection(self):
         if self._state.name == "intersection":
