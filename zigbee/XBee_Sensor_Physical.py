@@ -13,12 +13,12 @@ from XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from ..settings import Arguments
 
 class XBee_Sensor_Physical(XBee_Sensor):
-    def __init__(self, arguments, thread_manager, location_callback=None, receive_callback=None):
+    def __init__(self, arguments, thread_manager, location_callback, receive_callback, valid_callback):
         """
         Initialize the sensor.
         """
 
-        super(XBee_Sensor_Physical, self).__init__(thread_manager, location_callback, receive_callback)
+        super(XBee_Sensor_Physical, self).__init__(thread_manager, location_callback, receive_callback, valid_callback)
 
         if isinstance(arguments, Arguments):
             self.settings = arguments.get_settings("xbee_sensor_physical")

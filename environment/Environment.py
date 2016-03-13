@@ -110,7 +110,8 @@ class Environment(object):
 
         self._xbee_sensor = xbee_class(self.arguments, self.thread_manager,
                                        self.get_raw_location,
-                                       self.receive_packet)
+                                       self.receive_packet,
+                                       self.location_valid)
 
     def get_vehicle(self):
         return self.vehicle
@@ -167,6 +168,9 @@ class Environment(object):
             return (location.north, location.east)
         else:
             return (location.lat, location.lon)
+
+    def location_valid(self, other_valid=None):
+        return self.vehicle.is_current_location_valid()
 
     def get_distance(self, location):
         """

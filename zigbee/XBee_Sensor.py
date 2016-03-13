@@ -3,7 +3,31 @@ from ..core.Threadable import Threadable
 from XBee_Packet import XBee_Packet
 
 class XBee_Sensor(Threadable):
-    def __init__(self, thread_manager, location_callback, receive_callback):
+    """
+    Base XBee sensor class.
+
+    This class sets up some private characteristics of the XBee sensor handler,
+    and contains common code for the simulated and physical specializations.
+    """
+
+    def __init__(self, thread_manager, location_callback, receive_callback, valid_callback):
+        """
+        Set up the XBee sensor.
+
+        The sensor has a `thread_manager`, which is a `Thread_Manager` object
+        in which it can register its own thread loop. Additionally, it requires
+        certian callbacks. The `location_callback` is called whenever the
+        XBee needs to know its own location for the "rssi_broadcast" and the
+        "rssi_ground_station" private packets. The `receive_callback` is called
+        whenever any non-private packets are received and has the `XBee_Packet`
+        as an argument. Finally, the `valid_callback` is called shortly after
+        the `location_callback` is called, and may be given a boolean argument
+        indicating whether another XBee sensor has a valid location, but only
+        when creating the "rssi_ground_station" private packet. This may be
+        used by the callback to determine whether measurements at a certain
+        location are finished.
+        """
+
         super(XBee_Sensor, self).__init__("xbee_sensor", thread_manager)
 
         if not hasattr(location_callback, "__call__"):
@@ -12,8 +36,12 @@ class XBee_Sensor(Threadable):
         if not hasattr(receive_callback, "__call__"):
             raise TypeError("Receive callback is not callable")
 
+        if not hasattr(valid_callback, "__call__"):
+            raise TypeError("Valid location callback is not callable")
+
         self._location_callback = location_callback
         self._receive_callback = receive_callback
+        self._valid_callback = valid_callback
 
     def enqueue(self, packet, to=None):
         raise NotImplementedError("Subclasses must implement `enqueue(packet, to=None)`")
@@ -51,6 +79,7 @@ class XBee_Sensor(Threadable):
         packet.set("specification", "rssi_broadcast")
         packet.set("latitude", location[0])
         packet.set("longitude", location[1])
+        packet.set("valid", self._valid_callback())
         packet.set("timestamp", time.time())
 
         return packet
@@ -68,13 +97,17 @@ class XBee_Sensor(Threadable):
         the current XBee.
         """
 
+        from_valid = rssi_packet.get("valid")
         location = self._location_callback()
+        location_valid = self._valid_callback(from_valid)
         ground_station_packet = XBee_Packet()
         ground_station_packet.set("specification", "rssi_ground_station")
         ground_station_packet.set("from_latitude", rssi_packet.get("latitude"))
         ground_station_packet.set("from_longitude", rssi_packet.get("longitude"))
+        ground_station_packet.set("from_valid", from_valid)
         ground_station_packet.set("to_latitude", location[0])
         ground_station_packet.set("to_longitude", location[1])
+        ground_station_packet.set("to_valid", location_valid)
 
         return ground_station_packet
 
