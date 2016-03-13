@@ -2,6 +2,9 @@
 # TODO: replace random image with actual reconstruction
 # TODO: migrate color map/interpolation and remove old runner and viewer
 
+import matplotlib
+matplotlib.use("Qt4Agg")
+import matplotlib.pyplot as plt
 import numpy as np
 import sys
 import time
@@ -197,7 +200,18 @@ class Dashboard(QtGui.QMainWindow):
             self._weight_matrix.update(source, destination)
             if self._weight_matrix.check():
                 pixels = self._reconstructor.execute(self._weight_matrix.output(), self._rssi)
-                image = QtGui.QImage(pixels, width, height, QtGui.QImage.Format_RGB32)
+
+                # Render the image with Matplotlib.
+                figure = plt.figure(frameon=False, figsize=(width, height))
+                axes = figure.add_axes([0, 0, 1, 1])
+                axes.axis("off")
+                axes.imshow(pixels.reshape((width, height)), cmap="pink", interpolation="hamming")
+                figure.canvas.draw()
+
+                # Draw the image with Qt.
+                size = figure.canvas.size()
+                image = QtGui.QImage(figure.canvas.buffer_rgba(), size.width(), size.height(),
+                                     QtGui.QImage.Format_ARGB32)
                 scaled_image = image.scaled(self._viewer_width, self._viewer_height)
                 self._label.setPixmap(QtGui.QPixmap(scaled_image))
 
