@@ -230,7 +230,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
         # for the next round.
         for frame_id in self._data.keys():
             packet = self._data[frame_id]
-            if packet.get("rssi") == None:
+            if packet.get("rssi") is None:
                 continue
 
             self._sensor.send("tx", dest_addr_long=self._sensors[0],
@@ -289,14 +289,14 @@ class XBee_Sensor_Physical(XBee_Sensor):
                     original_packet.set("rssi", ord(raw_packet["parameter"]))
             elif raw_packet["command"] == "SH":
                 # Serial number (high) has been received.
-                if self._address == None:
+                if self._address is None:
                     self._address = raw_packet["parameter"]
                 elif raw_packet["parameter"] not in self._address:
                     self._address = raw_packet["parameter"] + self._address
                     self._address_set = True
             elif raw_packet["command"] == "SL":
                 # Serial number (low) has been received.
-                if self._address == None:
+                if self._address is None:
                     self._address = raw_packet["parameter"]
                 elif raw_packet["parameter"] not in self._address:
                     self._address = self._address + raw_packet["parameter"]

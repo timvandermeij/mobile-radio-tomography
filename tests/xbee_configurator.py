@@ -57,7 +57,7 @@ class TestXBeeConfigurator(SettingsTestCase):
         # always be None. The case of a response that is not None is
         # covered by the decode value unit test above.
         response = self.configurator.get("ID")
-        self.assertTrue(response == None)
+        self.assertIsNone(response)
 
     @patch("xbee.ZigBee.wait_read_frame")
     def test_get(self, mock_wait_read_frame):
