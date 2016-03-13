@@ -156,7 +156,7 @@ class Dashboard(QtGui.QMainWindow):
 
         # Create the reader.
         filename = reconstruction_settings.get("filename")
-        self._reader = Dump_Reader("reconstruction_data/{}.json".format(filename))
+        self._reader = Dump_Reader("assets/reconstruction_{}.json".format(filename))
 
         # Create the reconstructor.
         reconstructors = {
