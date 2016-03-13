@@ -96,6 +96,10 @@ class TestMissionCycle(ThreadableTestCase, LocationTestCase, SettingsTestCase):
         self.vehicle._location = (1,0)
         self.vehicle._state = Robot_State("intersection")
         self.mission.step()
+        # The mission waits for the other XBee to send a valid location packet.
+        self.assertEqual(self.mission.current_waypoint, (1,0))
+        self.assertTrue(self.environment.location_valid(other_valid=True))
+        self.mission.step()
         self.assertEqual(self.mission.current_waypoint, (2,0))
         self.vehicle._check_state()
         self.assertEqual(self.vehicle._waypoints, [(2,0)])

@@ -107,7 +107,7 @@ class Robot_Vehicle(Vehicle):
                     self.set_speeds(self.speed, self.speed)
                     self._last_diverged_time = None
         elif self._state.name == "intersection":
-            if self._location == self.get_waypoint():
+            if self._at_current_waypoint():
                 # We reached the current waypoint.
                 if self._mode.name == "AUTO":
                     # In AUTO mode, immediately try to move to the next 
@@ -235,7 +235,12 @@ class Robot_Vehicle(Vehicle):
         self.add_waypoint(location)
 
     def is_current_location_valid(self):
-        if self._state.name == "move":
+        # When we are moving, then the location is no longer correct.
+        if self._is_moving():
+            return False
+
+        # If we are not at the waypoint, then the location is not yet valid.
+        if not self._at_current_waypoint():
             return False
 
         return super(Robot_Vehicle, self).is_current_location_valid()
@@ -371,3 +376,10 @@ class Robot_Vehicle(Vehicle):
             return True
 
         return False
+
+    def _at_current_waypoint(self):
+        if not self._is_waypoint(self._current_waypoint):
+            return False
+
+        waypoint = self._waypoints[self._current_waypoint]
+        return waypoint == self._location
