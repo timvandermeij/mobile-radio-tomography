@@ -112,13 +112,23 @@ class Dashboard(QtGui.QMainWindow):
 
         self._reset()
 
-        # Create the menu bar.
-        startAction = QtGui.QAction("Start", self)
-        startAction.triggered.connect(self._reconstruction_start)
+        # Create the reconstruction toolbar.
+        toolbar = self.addToolBar("Reconstruction")
+        toolbar.setMovable(False)
+        toolbar.setStyleSheet("QToolBar {spacing: 8px;}")
 
-        menu_bar = self.menuBar()
-        reconstruction_menu = menu_bar.addMenu("Reconstruction")
-        reconstruction_menu.addAction(startAction)
+        reconstructor_label = QtGui.QLabel("Reconstructor:", self)
+        reconstructor_box = QtGui.QComboBox()
+        reconstructor_box.addItems(["Least squares", "SVD", "Truncated SVD"])
+        reconstructor_box.setCurrentIndex(2)
+        reconstructor_action = QtGui.QAction(QtGui.QIcon("assets/start.png"), "Start", self)
+        reconstructor_action.triggered.connect(self._reconstruction_start)
+
+        toolbar.addWidget(reconstructor_label)
+        toolbar.addWidget(reconstructor_box)
+        toolbar.addAction(reconstructor_action)
+
+        self._reconstructor_box = reconstructor_box
 
     def _reconstruction_start(self):
         """
@@ -156,21 +166,12 @@ class Dashboard(QtGui.QMainWindow):
         self._reader = Dump_Reader("assets/reconstruction_{}.json".format(filename))
 
         # Create the reconstructor.
+        reconstructor = str(self._reconstructor_box.currentText())
         reconstructors = {
-            "least-squares": Least_Squares_Reconstructor,
-            "svd": SVD_Reconstructor,
-            "truncated-svd": Truncated_SVD_Reconstructor
+            "Least squares": Least_Squares_Reconstructor,
+            "SVD": SVD_Reconstructor,
+            "Truncated SVD": Truncated_SVD_Reconstructor
         }
-        reconstructor = reconstruction_settings.get("reconstructor")
-        if reconstructor not in reconstructors:
-            messageBox = QtGui.QMessageBox.error(
-                self,
-                "Unknown reconstructor",
-                "Reconstructor '{}' does not exist.".format(reconstructor),
-                QtGui.QMessageBox.Ok
-            )
-            return
-
         reconstructor_class = reconstructors[reconstructor]
         self._reconstructor = reconstructor_class(self._arguments)
 
@@ -180,6 +181,10 @@ class Dashboard(QtGui.QMainWindow):
 
         # Execute the reconstruction and visualization.
         self._rssi = []
+        self._width, self._height = self._reader.get_size()
+        self._figure = plt.figure(frameon=False, figsize=(self._width, self._height))
+        self._axes = self._figure.add_axes([0, 0, 1, 1])
+        self._axes.axis("off")
         self._reconstruction_loop()
 
     def _reconstruction_loop(self):
@@ -188,7 +193,6 @@ class Dashboard(QtGui.QMainWindow):
         a new measurement is processed.
         """
 
-        width, height = self._reader.get_size()
         if self._reader.count_packets() > 0:
             packet = self._reader.get_packet()
             self._rssi.append(packet.get("rssi"))
@@ -199,17 +203,14 @@ class Dashboard(QtGui.QMainWindow):
                 pixels = self._reconstructor.execute(self._weight_matrix.output(), self._rssi)
 
                 # Render the image with Matplotlib.
-                figure = plt.figure(frameon=False, figsize=(width, height))
-                axes = figure.add_axes([0, 0, 1, 1])
-                axes.axis("off")
-                axes.imshow(pixels.reshape((width, height)), cmap=self._cmap, origin="lower",
-                                           interpolation=self._interpolation)
-                figure.canvas.draw()
+                self._axes.imshow(pixels.reshape((self._width, self._height)), cmap=self._cmap,
+                                  origin="lower", interpolation=self._interpolation)
+                self._figure.canvas.draw()
 
                 # Draw the image with Qt.
-                size = figure.canvas.size()
-                image = QtGui.QImage(figure.canvas.buffer_rgba(), size.width(), size.height(),
-                                     QtGui.QImage.Format_ARGB32)
+                size = self._figure.canvas.size()
+                image = QtGui.QImage(self._figure.canvas.buffer_rgba(), size.width(),
+                                     size.height(), QtGui.QImage.Format_ARGB32)
                 scaled_image = image.scaled(self._viewer_width, self._viewer_height)
                 self._label.setPixmap(QtGui.QPixmap(scaled_image))
 

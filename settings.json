@@ -166,7 +166,6 @@
         "name": "Reconstruction",
         "settings": {
             "filename": "static",
-            "reconstructor": "truncated-svd",
             "pause_time": 0.5,
             "cmap": "pink",
             "interpolation": "hamming"
