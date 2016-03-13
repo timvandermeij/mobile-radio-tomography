@@ -1,6 +1,4 @@
 # TODO: replace XBee device identity in the settings file
-# TODO: replace random image with actual reconstruction
-# TODO: migrate color map/interpolation and remove old runner and viewer
 
 import matplotlib
 matplotlib.use("Qt4Agg")
@@ -149,6 +147,8 @@ class Dashboard(QtGui.QMainWindow):
         # Fetch the settings for the reconstruction.
         reconstruction_settings = self._arguments.get_settings("reconstruction")
         self._pause_time = reconstruction_settings.get("pause_time") * 1000
+        self._cmap = reconstruction_settings.get("cmap")
+        self._interpolation = reconstruction_settings.get("interpolation")
 
         # Set the width and height of the label.
         self._viewer_width, self._viewer_height = self._dashboard_settings.get("viewer_dimensions")
@@ -205,7 +205,8 @@ class Dashboard(QtGui.QMainWindow):
                 figure = plt.figure(frameon=False, figsize=(width, height))
                 axes = figure.add_axes([0, 0, 1, 1])
                 axes.axis("off")
-                axes.imshow(pixels.reshape((width, height)), cmap="pink", interpolation="hamming")
+                axes.imshow(pixels.reshape((width, height)), cmap=self._cmap, origin="lower",
+                                           interpolation=self._interpolation)
                 figure.canvas.draw()
 
                 # Draw the image with Qt.
