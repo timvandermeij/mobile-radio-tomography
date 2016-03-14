@@ -143,8 +143,8 @@ class Robot_Vehicle(Vehicle):
                 # a next waypoint. Steer the motors such that the robot gets 
                 # back to the line.
                 speed = self._move_speed
-                speed_difference = direction * self._diverged_speed
-                self.set_speeds(speed - speed_difference, speed + speed_difference)
+                speed_difference = direction * self._diverged_speed * speed
+                self.set_speeds(speed + speed_difference, speed - speed_difference)
                 self._last_diverged_time = time.time()
 
     def set_speeds(left_speed, right_speed, left_forward=True, right_forward=True):
