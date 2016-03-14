@@ -3,8 +3,8 @@
         "name": "Dashboard",
         "settings": {
             "viewer_dimensions": [500, 500],
-            "xbee_identity": ["0x90c", "0x1000"],
-            "xbee_insertion_delay": 0.2
+            "xbee_identity": ["0x403", "0x6015"],
+            "xbee_insertion_delay": 0.1
         }
     },
     "distance_sensor_simulator": {

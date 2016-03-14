@@ -1,5 +1,3 @@
-# TODO: replace XBee device identity in the settings file
-
 import matplotlib
 matplotlib.use("Qt4Agg")
 import matplotlib.pyplot as plt
