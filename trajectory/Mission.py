@@ -152,6 +152,12 @@ class Mission(object):
         """
         raise NotImplementedError("Must be implemented in child class")
 
+    def stop(self):
+        """
+        Stop the vehicle and the mission immediately.
+        """
+        self.vehicle.armed = False
+
     def step(self):
         """
         Perform any calculations for the current vehicle state.

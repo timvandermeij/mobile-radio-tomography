@@ -127,6 +127,8 @@ class Monitor(object):
             pass
 
     def stop(self):
+        self.mission.stop()
+
         xbee_sensor = self.environment.get_xbee_sensor()
         if xbee_sensor is not None:
             xbee_sensor.deactivate()
