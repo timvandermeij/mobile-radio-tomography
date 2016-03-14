@@ -121,7 +121,9 @@ class Robot_Vehicle(Vehicle):
 
     def line_follower_callback(self, event, data):
         if event == "intersection":
-            self._location = (data[0], data[1])
+            # Invert location data since the Line_Follower is in (x,y) notation 
+            # where y is north and x is east.
+            self._location = (data[1], data[0])
             self._state = Robot_State(event)
         elif event == "diverged":
             direction = -1 if data == "left" else 1
