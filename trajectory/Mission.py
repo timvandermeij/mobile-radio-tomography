@@ -173,7 +173,7 @@ class Mission(object):
         if sensor_distance == 0:
             print("Inside the object, abort mission.")
             sys.exit(1)
-        elif sensor_distance < self.closeness:
+        elif sensor_distance <= self.closeness:
             self.vehicle.mode = VehicleMode("GUIDED")
             self.vehicle.speed = 0.0
             raise RuntimeError("Too close to the object ({} m), halting.".format(sensor_distance))
@@ -338,7 +338,7 @@ class Mission_Auto(Mission):
         if next_waypoint >= self._first_waypoint:
             if distance < self.farness:
                 print("Distance to waypoint ({}): {} m".format(next_waypoint, distance))
-                if distance < self.closeness:
+                if distance <= self.closeness:
                     print("Close enough: skip to next waypoint")
                     self.vehicle.set_next_waypoint()
                     next_waypoint = next_waypoint + 1
@@ -555,7 +555,7 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
 
         distance = self.distance_to_point()
         print("Distance to current point ({}): {} m".format(self.current_point, distance))
-        if self.current_point < 0 or distance < self.closeness:
+        if self.current_point < 0 or distance <= self.closeness:
             if self.current_point == self.next_waypoint:
                 print("Waypoint reached.")
                 self.next_waypoint = self.next_waypoint + 1
