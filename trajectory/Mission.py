@@ -5,9 +5,10 @@ import math
 
 import numpy as np
 
-from dronekit import VehicleMode, LocationGlobalRelative, LocationLocal
+from dronekit import VehicleMode, LocationGlobal, LocationGlobalRelative, LocationLocal
 
 from Memory_Map import Memory_Map
+from ..geometry.Geometry import Geometry_Spherical
 from ..vehicle.Robot_Vehicle import Robot_Vehicle
 
 class Mission(object):
@@ -93,7 +94,8 @@ class Mission(object):
         home_location = self.vehicle.home_location
         if home_location is not None:
             print("Home location: {}".format(home_location))
-            self.geometry.set_home_location(home_location)
+            if isinstance(home_location, LocationGlobal) and isinstance(self.geometry, Geometry_Spherical):
+                self.geometry.set_home_location(home_location)
 
     def get_waypoints(self):
         """
