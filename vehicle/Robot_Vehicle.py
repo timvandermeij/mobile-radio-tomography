@@ -330,7 +330,9 @@ class Robot_Vehicle(Vehicle):
         This method must only be called if we are at an intersection.
         """
         if not self._is_waypoint(waypoint):
-            self.set_speeds(0,0)
+            if self._is_waypoint(self._current_waypoint):
+                self.set_speeds(0,0)
+
             return
 
         next_waypoint = self._waypoints[waypoint]
