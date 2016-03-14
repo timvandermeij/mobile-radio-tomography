@@ -113,7 +113,7 @@ class Robot_Vehicle(Vehicle):
                     # In AUTO mode, immediately try to move to the next 
                     # waypoint, or rotate in the right direction.
                     self._move_waypoint(self._current_waypoint + 1)
-            else:
+            elif self._mode.name == "AUTO" or self._mode.name == "GUIDED":
                 # We reached an intersection or we are at an intersection and 
                 # maybe have a next waypoint. Check whether we need to rotate 
                 # here, and otherwise move away from it to the next waypoint.
