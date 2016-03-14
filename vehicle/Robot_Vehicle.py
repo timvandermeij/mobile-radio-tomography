@@ -38,7 +38,7 @@ class Robot_Vehicle(Vehicle):
 
         self._move_speed = 0.0
 
-        # Speed difference in m/s to adjust when we diverge from a line.
+        # Speed ratio of the current move speed when we diverge from a line.
         self._diverged_speed = settings.get("diverged_speed")
         # Time in seconds to keep adjusted speed when we diverge from a line.
         self._diverged_time = settings.get("diverged_time")
@@ -113,7 +113,7 @@ class Robot_Vehicle(Vehicle):
                     # In AUTO mode, immediately try to move to the next 
                     # waypoint, or rotate in the right direction.
                     self._move_waypoint(self._current_waypoint + 1)
-            else:
+            elif self._mode.name == "AUTO" or self._mode.name == "GUIDED":
                 # We reached an intersection or we are at an intersection and 
                 # maybe have a next waypoint. Check whether we need to rotate 
                 # here, and otherwise move away from it to the next waypoint.
@@ -121,7 +121,9 @@ class Robot_Vehicle(Vehicle):
 
     def line_follower_callback(self, event, data):
         if event == "intersection":
-            self._location = (data[0], data[1])
+            # Invert location data since the Line_Follower is in (x,y) notation 
+            # where y is north and x is east.
+            self._location = (data[1], data[0])
             self._state = Robot_State(event)
         elif event == "diverged":
             direction = -1 if data == "left" else 1
@@ -141,8 +143,8 @@ class Robot_Vehicle(Vehicle):
                 # a next waypoint. Steer the motors such that the robot gets 
                 # back to the line.
                 speed = self._move_speed
-                speed_difference = direction * self._diverged_speed
-                self.set_speeds(speed - speed_difference, speed + speed_difference)
+                speed_difference = direction * self._diverged_speed * speed
+                self.set_speeds(speed + speed_difference, speed - speed_difference)
                 self._last_diverged_time = time.time()
 
     def set_speeds(left_speed, right_speed, left_forward=True, right_forward=True):
@@ -325,9 +327,16 @@ class Robot_Vehicle(Vehicle):
         Attempt to move to the given `waypoint`. The `waypoint` should usually
         be the next or current waypoint, depending on whether we reached the
         current waypoint or not.
-        This method must only be called if we are at an intersection.
+        This method must only be called if we are at an intersection that is
+        equal to the current waypoint location.
         """
+
         if not self._is_waypoint(waypoint):
+            # If there is no new waypoint, do nothing and stand still if we 
+            # happened to reach the current waypoint
+            if self._is_waypoint(self._current_waypoint):
+                self.set_speeds(0,0)
+
             return
 
         next_waypoint = self._waypoints[waypoint]
