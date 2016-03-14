@@ -38,7 +38,7 @@ class Robot_Vehicle(Vehicle):
 
         self._move_speed = 0.0
 
-        # Speed difference in m/s to adjust when we diverge from a line.
+        # Speed ratio of the current move speed when we diverge from a line.
         self._diverged_speed = settings.get("diverged_speed")
         # Time in seconds to keep adjusted speed when we diverge from a line.
         self._diverged_time = settings.get("diverged_time")
@@ -327,9 +327,13 @@ class Robot_Vehicle(Vehicle):
         Attempt to move to the given `waypoint`. The `waypoint` should usually
         be the next or current waypoint, depending on whether we reached the
         current waypoint or not.
-        This method must only be called if we are at an intersection.
+        This method must only be called if we are at an intersection that is
+        equal to the current waypoint location.
         """
+
         if not self._is_waypoint(waypoint):
+            # If there is no new waypoint, do nothing and stand still if we 
+            # happened to reach the current waypoint
             if self._is_waypoint(self._current_waypoint):
                 self.set_speeds(0,0)
 
