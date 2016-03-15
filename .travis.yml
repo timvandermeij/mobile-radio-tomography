@@ -11,6 +11,7 @@ install:
   - pip install PyVRML97
   - pip install PyDispatcher
   - pip install importchecker
+  - pip install pyudev
 script: python2 test.py
 notifications:
   email: false
