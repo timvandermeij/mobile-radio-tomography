@@ -10,7 +10,7 @@ class Vehicle(Threadable):
     """
 
     @classmethod
-    def create(cls, arguments, geometry, thread_manager):
+    def create(cls, arguments, geometry, thread_manager, usb_manager):
         """
         Create a Vehicle object from one of the subclass types.
 
@@ -22,9 +22,9 @@ class Vehicle(Threadable):
         vehicle_class = settings.get("vehicle_class")
 
         module = importlib.import_module("..{}".format(vehicle_class), cls.__module__)
-        return module.__dict__[vehicle_class](arguments, geometry, thread_manager)
+        return module.__dict__[vehicle_class](arguments, geometry, thread_manager, usb_manager)
 
-    def __init__(self, arguments, geometry, thread_manager):
+    def __init__(self, arguments, geometry, thread_manager, usb_manager):
         super(Vehicle, self).__init__("vehicle", thread_manager)
         self._geometry = geometry
         self._home_location = None

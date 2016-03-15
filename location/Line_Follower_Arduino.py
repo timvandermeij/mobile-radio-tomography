@@ -1,9 +1,8 @@
-import serial
 from Line_Follower import Line_Follower
 from ..settings import Arguments, Settings
 
 class Line_Follower_Arduino(Line_Follower):
-    def __init__(self, location, direction, callback, settings, thread_manager, delay=0):
+    def __init__(self, location, direction, callback, settings, thread_manager, usb_manager, delay=0):
         """
         Initialize the line follower object for the Arduino.
         """
@@ -22,9 +21,8 @@ class Line_Follower_Arduino(Line_Follower):
         rtscts = settings.get("serial_flow_control")
 
         # Initialize the serial connection.
-        self._serial_connection = serial.Serial(self._device, self._baud_rate,
-                                                rtscts=rtscts, dsrdtr=True,
-                                                timeout=None)
+        self._serial_connection = usb_manager.get_ttl_device()
+        self._serial_connection.rtscts = rtscts
         self._serial_connection.reset_input_buffer()
 
     def get_serial_connection(self):

@@ -1,5 +1,3 @@
-# TODO: integration
-
 import pyudev
 import serial
 

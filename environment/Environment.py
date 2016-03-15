@@ -17,7 +17,8 @@ class Environment(object):
     _sensor_class = None
 
     @classmethod
-    def setup(self, arguments, geometry_class=None, vehicle=None, thread_manager=None, simulated=None):
+    def setup(self, arguments, geometry_class=None, vehicle=None, thread_manager=None,
+              usb_manager=None, simulated=None):
         """
         Create an Environment object or simulated environment.
 
@@ -42,10 +43,13 @@ class Environment(object):
 
         geometry = Geometry.__dict__[geometry_class]()
 
-        usb_manager = USB_Manager()
+        if usb_manager is None:
+            usb_manager = USB_Manager()
+        
+        usb_manager.index()
         if vehicle is None:
             thread_manager = Thread_Manager()
-            vehicle = Vehicle.create(arguments, geometry, thread_manager)
+            vehicle = Vehicle.create(arguments, geometry, thread_manager, usb_manager)
         elif thread_manager is None:
             raise ValueError("If a `vehicle` is provided then its `thread_manager` must be provided as well")
 
@@ -70,7 +74,6 @@ class Environment(object):
         self.thread_manager = thread_manager
 
         self.usb_manager = usb_manager
-        self.usb_manager.index()
 
         self.arguments = arguments
         self.settings = self.arguments.get_settings("environment")

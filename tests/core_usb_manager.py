@@ -20,6 +20,7 @@ class USBManagerTestCase(unittest.TestCase):
 
         # Create a virtual serial port.
         master, slave = pty.openpty()
+        self.master = os.fdopen(master)
         self.port = os.ttyname(slave)
 
         # Mock the method for obtaining devices.

@@ -19,7 +19,7 @@ class Dronekit_Vehicle(dronekit.Vehicle, MAVLink_Vehicle):
         else:
             return super(Dronekit_Vehicle, cls).__new__(cls, arguments, *a)
 
-    def __init__(self, handler, geometry=None, thread_manager=None):
+    def __init__(self, handler, geometry=None, thread_manager=None, usb_manager=None):
         if isinstance(handler, Arguments):
             # Call the constructor of Threadable, which is the superclass of 
             # the Vehicle base class, to make ourselves managed by the thread 

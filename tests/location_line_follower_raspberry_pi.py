@@ -30,7 +30,7 @@ class TestLocationLineFollowerRaspberryPi(ThreadableTestCase, SettingsTestCase):
         self.thread_manager = Thread_Manager()
         self.line_follower = Line_Follower_Raspberry_Pi(
             self.location, self.direction, self.mock_callback, self.settings,
-            self.thread_manager
+            self.thread_manager, None
         )
 
     def tearDown(self):
