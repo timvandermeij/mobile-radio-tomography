@@ -2,16 +2,17 @@ from ..environment import Environment
 from ..environment.VRMLLoader import VRMLLoader
 from ..settings import Arguments
 from core_thread_manager import ThreadableTestCase
+from core_usb_manager import USBManagerTestCase
 from geometry import LocationTestCase
 from settings import SettingsTestCase
 
-class TestVRMLLoader(ThreadableTestCase, LocationTestCase, SettingsTestCase):
+class TestVRMLLoader(ThreadableTestCase, USBManagerTestCase, LocationTestCase, SettingsTestCase):
     def setUp(self):
         super(TestVRMLLoader, self).setUp()
         self.arguments = Arguments("settings.json", [
             "--vehicle-class", "Mock_Vehicle", "--no-infrared-sensor"
         ])
-        self.environment = Environment.setup(self.arguments, simulated=True)
+        self.environment = Environment.setup(self.arguments, usb_manager=self.usb_manager, simulated=True)
 
     def test_load(self):
         filename = "tests/vrml/castle.wrl"

@@ -10,14 +10,13 @@ from core_usb_manager import USBManagerTestCase
 from geometry import LocationTestCase
 from settings import SettingsTestCase
 
-class TestMissionCycle(USBManagerTestCase, ThreadableTestCase, LocationTestCase, SettingsTestCase):
+class TestMissionCycle(ThreadableTestCase, USBManagerTestCase, LocationTestCase, SettingsTestCase):
     def setUp(self):
         super(TestMissionCycle, self).setUp()
 
         self.arguments = Arguments("settings.json", [
             "--vehicle-class", "Robot_Vehicle_Arduino", "--space-size", "3",
-            "--serial-device", self.port, "--serial-flow-control",
-            "--no-infrared-sensor"
+            "--serial-flow-control", "--no-infrared-sensor"
         ])
         self.environment = Environment.setup(self.arguments, geometry_class="Geometry",
                                              usb_manager=self.usb_manager, simulated=True)
