@@ -1,5 +1,6 @@
 import sys
 from __init__ import __package__
+from core.USB_Manager import USB_Manager
 from settings import Arguments
 from zigbee.XBee_Configurator import XBee_Configurator
 
@@ -14,6 +15,8 @@ def main(argv):
     settings = arguments.get_settings("xbee_configurator")
     arguments.check_help()
 
+    usb_manager = USB_Manager()
+
     for sensor_id in range(0, settings.get("number_of_sensors") + 1):
         if sensor_id == 0:
             raw_input("Connect the ground station XBee sensor and press Enter...")
@@ -26,7 +29,7 @@ def main(argv):
             "PM": 0,
             "PL": 0
         }
-        xbee_configurator = XBee_Configurator(arguments)
+        xbee_configurator = XBee_Configurator(arguments, usb_manager)
 
         # Show the current parameters.
         for key in parameters.iterkeys():
