@@ -23,6 +23,7 @@ def main(argv):
         else:
             raw_input("Connect XBee sensor {} and press Enter...".format(sensor_id))
 
+        usb_manager.index()
         parameters = {
             "ID": settings.get("pan_id"),
             "NI": str(sensor_id),
@@ -52,7 +53,7 @@ def main(argv):
         else:
             print("{}[Sensor {}] Changes not written to sensor.{}".format(COLORS["red"], sensor_id, COLORS["end"]))
 
-        del xbee_configurator
+        usb_manager.clear()
 
 if __name__ == "__main__":
     main(sys.argv[1:])

@@ -8,7 +8,7 @@ class XBee_Configurator(object):
 
     def __init__(self, settings, usb_manager):
         """
-        Open a serial connection to the XBee chip.
+        Initialize the XBee configurator.
         """
 
         if isinstance(settings, Arguments):
@@ -19,17 +19,9 @@ class XBee_Configurator(object):
             raise ValueError("'settings' must be an instance of Settings or Arguments")
 
         self._usb_manager = usb_manager
-        self._usb_manager.index()
         self._serial_connection = self._usb_manager.get_xbee_device()
         self._sensor = ZigBee(self._serial_connection)
         time.sleep(self.settings.get("startup_delay"))
-
-    def __del__(self):
-        """
-        Close the serial connection to the XBee chip.
-        """
-
-        self._usb_manager.clear()
 
     def _encode_value(self, value):
         """
