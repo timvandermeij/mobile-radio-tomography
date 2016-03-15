@@ -14,8 +14,6 @@ class Line_Follower_Arduino(Line_Follower):
         elif not isinstance(settings, Settings):
             raise ValueError("'settings' must be an instance of Settings or Arguments")
 
-        self._device = settings.get("serial_device")
-        self._baud_rate = settings.get("serial_baud_rate")
         self._readable_leds = settings.get("readable_leds")
         self._line_threshold = settings.get("line_threshold")
         rtscts = settings.get("serial_flow_control")
