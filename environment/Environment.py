@@ -1,5 +1,6 @@
 import math
 from ..core.Thread_Manager import Thread_Manager
+from ..core.USB_Manager import USB_Manager
 from ..geometry import Geometry
 from ..trajectory.Servo import Servo
 from ..vehicle.Vehicle import Vehicle
@@ -41,6 +42,7 @@ class Environment(object):
 
         geometry = Geometry.__dict__[geometry_class]()
 
+        usb_manager = USB_Manager()
         if vehicle is None:
             thread_manager = Thread_Manager()
             vehicle = Vehicle.create(arguments, geometry, thread_manager)
@@ -57,15 +59,18 @@ class Environment(object):
                 raise ValueError("Vehicle '{}' does not support environment simulation, check vehicle type and settings".format(vehicle.__class__.__name__))
 
             from Environment_Simulator import Environment_Simulator
-            return Environment_Simulator(vehicle, geometry, arguments, thread_manager)
+            return Environment_Simulator(vehicle, geometry, arguments, thread_manager, usb_manager)
 
         from Environment_Physical import Environment_Physical
-        return Environment_Physical(vehicle, geometry, arguments, thread_manager)
+        return Environment_Physical(vehicle, geometry, arguments, thread_manager, usb_manager)
 
-    def __init__(self, vehicle, geometry, arguments, thread_manager):
+    def __init__(self, vehicle, geometry, arguments, thread_manager, usb_manager):
         self.vehicle = vehicle
         self.geometry = geometry
         self.thread_manager = thread_manager
+
+        self.usb_manager = usb_manager
+        self.usb_manager.index()
 
         self.arguments = arguments
         self.settings = self.arguments.get_settings("environment")
@@ -109,7 +114,9 @@ class Environment(object):
         else:
             return
 
-        self._xbee_sensor = xbee_class(self.arguments, self.thread_manager,
+        self._xbee_sensor = xbee_class(self.arguments,
+                                       self.thread_manager,
+                                       self.usb_manager,
                                        self.get_raw_location,
                                        self.receive_packet,
                                        self.location_valid)

@@ -1,5 +1,4 @@
 from xbee import ZigBee
-import serial
 import time
 from ..settings import Arguments, Settings
 

@@ -98,6 +98,7 @@ class Setup(object):
             self.activated = False
             print("Stopped mission")
             self.monitor.stop()
+            self.environment.usb_manager.clear()
             self.environment.thread_manager.destroy()
 
 def main(argv):

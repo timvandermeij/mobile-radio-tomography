@@ -1,6 +1,5 @@
 import os
 import subprocess
-import serial
 import thread
 import time
 import random
@@ -19,10 +18,8 @@ class XBee_Sensor_Physical(XBee_Sensor):
         Initialize the sensor.
         """
 
-        super(XBee_Sensor_Physical, self).__init__(thread_manager, location_callback,
-                                                   receive_callback, valid_callback)
-
-        self._usb_manager = usb_manager
+        super(XBee_Sensor_Physical, self).__init__(thread_manager, usb_manager,
+                                                   location_callback, receive_callback, valid_callback)
 
         if isinstance(arguments, Arguments):
             self.settings = arguments.get_settings("xbee_sensor_physical")

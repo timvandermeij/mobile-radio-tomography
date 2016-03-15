@@ -29,7 +29,7 @@ def main(argv):
 
     try:
         arguments = Arguments("settings.json", argv)
-        xbee_sensor = XBee_Sensor_Simulator(arguments, thread_manager,
+        xbee_sensor = XBee_Sensor_Simulator(arguments, thread_manager, None,
                                             get_location, receive_packet,
                                             location_valid)
 

@@ -5,8 +5,16 @@ import unittest
 from mock import MagicMock
 from ..core.USB_Manager import USB_Manager, USB_Device_Category, USB_Device_Baud_Rate
 
-class TestCoreUSBManager(unittest.TestCase):
+class USBManagerTestCase(unittest.TestCase):
+    """
+    A test case that makes use of a USB manager. We make sure that
+    the USB manager contains a fixed number of devices instead of
+    looking for the real devices.
+    """
+
     def setUp(self):
+        super(USBManagerTestCase, self).setUp()
+
         # Initialize the USB manager.
         self.usb_manager = USB_Manager()
 
@@ -34,6 +42,7 @@ class TestCoreUSBManager(unittest.TestCase):
         ])
         self.usb_manager._obtain_devices = mock_obtain_devices
 
+class TestCoreUSBManager(USBManagerTestCase):
     def test_initialization(self):
         # Initially the USB device storage must contain empty categories.
         self.assertEqual(self.usb_manager._devices, {
