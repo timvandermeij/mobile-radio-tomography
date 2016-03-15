@@ -1,6 +1,5 @@
 import os
 import subprocess
-import serial
 import thread
 import time
 import random
@@ -13,12 +12,14 @@ from XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from ..settings import Arguments
 
 class XBee_Sensor_Physical(XBee_Sensor):
-    def __init__(self, arguments, thread_manager, location_callback, receive_callback, valid_callback):
+    def __init__(self, arguments, thread_manager, usb_manager,
+                 location_callback, receive_callback, valid_callback):
         """
         Initialize the sensor.
         """
 
-        super(XBee_Sensor_Physical, self).__init__(thread_manager, location_callback, receive_callback, valid_callback)
+        super(XBee_Sensor_Physical, self).__init__(thread_manager, usb_manager,
+                                                   location_callback, receive_callback, valid_callback)
 
         if isinstance(arguments, Arguments):
             self.settings = arguments.get_settings("xbee_sensor_physical")
@@ -52,9 +53,12 @@ class XBee_Sensor_Physical(XBee_Sensor):
         Setup the serial connection and join the network.
         """
 
-        self._serial_connection = serial.Serial(self.settings.get("port"),
-                                                self.settings.get("baud_rate"),
-                                                rtscts=True, dsrdtr=True)
+        port = self.settings.get("port")
+        if port != "":
+            self._serial_connection = self._usb_manager.get_xbee_device(port)
+        else:
+            self._serial_connection = self._usb_manager.get_xbee_device()
+
         self._sensor = ZigBee(self._serial_connection, callback=self._receive)
         time.sleep(self.settings.get("startup_delay"))
         self._join()

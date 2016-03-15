@@ -3,6 +3,7 @@ import time
 import random
 from __init__ import __package__
 from core.Thread_Manager import Thread_Manager
+from core.USB_Manager import USB_Manager
 from settings import Arguments
 from zigbee.XBee_Packet import XBee_Packet
 from zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
@@ -26,12 +27,14 @@ def location_valid(other_valid=None):
 
 def main(argv):
     thread_manager = Thread_Manager()
+    usb_manager = USB_Manager()
+    usb_manager.index()
 
     try:
         arguments = Arguments("settings.json", argv)
         xbee_sensor = XBee_Sensor_Physical(arguments, thread_manager,
-                                           get_location, receive_packet,
-                                           location_valid)
+                                           usb_manager, get_location,
+                                           receive_packet, location_valid)
 
         arguments.check_help()
 
@@ -51,6 +54,7 @@ def main(argv):
             time.sleep(1)
     except:
         thread_manager.destroy()
+        usb_manager.clear()
 
 if __name__ == "__main__":
     main(sys.argv[1:])

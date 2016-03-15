@@ -45,6 +45,7 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
         self.thread_manager = Thread_Manager()
         self.sensor = XBee_Sensor_Simulator(self.arguments,
                                             self.thread_manager,
+                                            None,
                                             self.location_callback,
                                             self.receive_callback,
                                             self.valid_callback)

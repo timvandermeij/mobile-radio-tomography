@@ -99,6 +99,7 @@ class Setup(object):
             print("Stopped mission")
             self.monitor.stop()
             self.environment.thread_manager.destroy()
+            self.environment.usb_manager.clear()
 
 def main(argv):
     arguments = Arguments("settings.json", argv)

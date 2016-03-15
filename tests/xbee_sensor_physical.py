@@ -1,5 +1,3 @@
-import pty
-import os
 import serial
 import random
 import Queue
@@ -11,9 +9,10 @@ from ..core.Thread_Manager import Thread_Manager
 from ..zigbee.XBee_Packet import XBee_Packet
 from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
 from ..settings import Arguments
+from core_usb_manager import USBManagerTestCase
 from settings import SettingsTestCase
 
-class TestXBeeSensorPhysical(ThreadableTestCase, SettingsTestCase):
+class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTestCase):
     def location_callback(self):
         """
         Get the current GPS location (latitude and longitude pair).
@@ -28,11 +27,9 @@ class TestXBeeSensorPhysical(ThreadableTestCase, SettingsTestCase):
         return True
 
     def setUp(self):
-        self.sensor_id = 1
+        super(TestXBeeSensorPhysical, self).setUp()
 
-        # Create a virtual serial port.
-        master, slave = pty.openpty()
-        self.port = os.ttyname(slave)
+        self.sensor_id = 1
 
         self.arguments = Arguments("settings.json", [
             "--port", self.port,
@@ -41,8 +38,11 @@ class TestXBeeSensorPhysical(ThreadableTestCase, SettingsTestCase):
         ])
         self.settings = self.arguments.get_settings("xbee_sensor_physical")
         self.thread_manager = Thread_Manager()
+
+        self.usb_manager.index()
         self.sensor = XBee_Sensor_Physical(self.arguments,
                                            self.thread_manager,
+                                           self.usb_manager,
                                            self.location_callback,
                                            self.receive_callback,
                                            self.valid_callback)

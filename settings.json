@@ -49,8 +49,6 @@
         "name": "Line follower (Arduino)",
         "parent": "line_follower_base",
         "settings": {
-            "serial_device": "/dev/ttyUSB1",
-            "serial_baud_rate": 9600,
             "serial_flow_control": false
         }
     },
@@ -187,7 +185,6 @@
             "number_of_sensors": 2,
             "custom_packet_limit": 1,
             "loop_delay": 0.01,
-            "baud_rate": 57600,
             "specifications": {
                 "memory_map_chunk": [
                     {
@@ -304,7 +301,6 @@
         "name": "XBee configurator",
         "parent": "xbee_base",
         "settings": {
-            "port": "/dev/ttyUSB0",
             "pan_id": 2015,
             "startup_delay": 1
         }
@@ -323,7 +319,7 @@
         "name": "XBee sensor (physical)",
         "parent": "xbee_base",
         "settings": {
-            "port": "/dev/ttyUSB0",
+            "port": "",
             "sensors": [
                 "\\x00\\x13\\xa2\\x00@\\xe6n\\xbd",
                 "\\x00\\x13\\xa2\\x00@\\xe6o5",

@@ -1,5 +1,6 @@
 import sys
 from __init__ import __package__
+from core.USB_Manager import USB_Manager
 from settings import Arguments
 from zigbee.XBee_Configurator import XBee_Configurator
 
@@ -14,19 +15,22 @@ def main(argv):
     settings = arguments.get_settings("xbee_configurator")
     arguments.check_help()
 
+    usb_manager = USB_Manager()
+
     for sensor_id in range(0, settings.get("number_of_sensors") + 1):
         if sensor_id == 0:
             raw_input("Connect the ground station XBee sensor and press Enter...")
         else:
             raw_input("Connect XBee sensor {} and press Enter...".format(sensor_id))
 
+        usb_manager.index()
         parameters = {
             "ID": settings.get("pan_id"),
             "NI": str(sensor_id),
             "PM": 0,
             "PL": 0
         }
-        xbee_configurator = XBee_Configurator(arguments)
+        xbee_configurator = XBee_Configurator(arguments, usb_manager)
 
         # Show the current parameters.
         for key in parameters.iterkeys():
@@ -49,7 +53,7 @@ def main(argv):
         else:
             print("{}[Sensor {}] Changes not written to sensor.{}".format(COLORS["red"], sensor_id, COLORS["end"]))
 
-        del xbee_configurator
+        usb_manager.clear()
 
 if __name__ == "__main__":
     main(sys.argv[1:])

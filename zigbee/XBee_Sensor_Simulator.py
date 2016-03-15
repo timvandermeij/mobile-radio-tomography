@@ -10,12 +10,14 @@ from XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from ..settings import Arguments
 
 class XBee_Sensor_Simulator(XBee_Sensor):
-    def __init__(self, arguments, thread_manager, location_callback, receive_callback, valid_callback):
+    def __init__(self, arguments, thread_manager, usb_manager,
+                 location_callback, receive_callback, valid_callback):
         """
         Initialize the sensor with a unique, non-blocking UDP socket.
         """
 
-        super(XBee_Sensor_Simulator, self).__init__(thread_manager, location_callback, receive_callback, valid_callback)
+        super(XBee_Sensor_Simulator, self).__init__(thread_manager, usb_manager,
+                                                    location_callback, receive_callback, valid_callback)
 
         if isinstance(arguments, Arguments):
             self.settings = arguments.get_settings("xbee_sensor_simulator")

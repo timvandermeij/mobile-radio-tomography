@@ -1,5 +1,3 @@
-import os
-import pty
 import itertools
 from mock import patch
 from dronekit import LocationLocal
@@ -8,24 +6,20 @@ from ..trajectory.Mission import Mission_Cycle
 from ..vehicle.Robot_Vehicle import Robot_State
 from ..settings import Arguments
 from core_thread_manager import ThreadableTestCase
+from core_usb_manager import USBManagerTestCase
 from geometry import LocationTestCase
 from settings import SettingsTestCase
 
-class TestMissionCycle(ThreadableTestCase, LocationTestCase, SettingsTestCase):
+class TestMissionCycle(ThreadableTestCase, USBManagerTestCase, LocationTestCase, SettingsTestCase):
     def setUp(self):
         super(TestMissionCycle, self).setUp()
 
-        # Create a virtual serial port.
-        master, slave = pty.openpty()
-        self.master = os.fdopen(master)
-        self.port = os.ttyname(slave)
-
         self.arguments = Arguments("settings.json", [
             "--vehicle-class", "Robot_Vehicle_Arduino", "--space-size", "3",
-            "--serial-device", self.port, "--serial-flow-control",
-            "--no-infrared-sensor"
+            "--serial-flow-control", "--no-infrared-sensor"
         ])
-        self.environment = Environment.setup(self.arguments, geometry_class="Geometry", simulated=True)
+        self.environment = Environment.setup(self.arguments, geometry_class="Geometry",
+                                             usb_manager=self.usb_manager, simulated=True)
         self.vehicle = self.environment.get_vehicle()
 
         settings = self.arguments.get_settings("mission")

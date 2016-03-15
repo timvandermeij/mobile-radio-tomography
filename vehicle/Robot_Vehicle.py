@@ -31,8 +31,8 @@ class Robot_Vehicle(Vehicle):
 
     _line_follower_class = None
 
-    def __init__(self, arguments, geometry, thread_manager):
-        super(Robot_Vehicle, self).__init__(arguments, geometry, thread_manager)
+    def __init__(self, arguments, geometry, thread_manager, usb_manager):
+        super(Robot_Vehicle, self).__init__(arguments, geometry, thread_manager, usb_manager)
 
         settings = arguments.get_settings("vehicle_robot")
 
@@ -64,7 +64,7 @@ class Robot_Vehicle(Vehicle):
         self._line_follower = self._line_follower_class(
             self._home_location, self._direction,
             self.line_follower_callback, arguments,
-            thread_manager, line_follower_delay
+            thread_manager, usb_manager, line_follower_delay
         )
 
         # The delay of the robot vehicle state loop.

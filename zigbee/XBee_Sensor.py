@@ -10,13 +10,14 @@ class XBee_Sensor(Threadable):
     and contains common code for the simulated and physical specializations.
     """
 
-    def __init__(self, thread_manager, location_callback, receive_callback, valid_callback):
+    def __init__(self, thread_manager, usb_manager, location_callback, receive_callback, valid_callback):
         """
         Set up the XBee sensor.
 
         The sensor has a `thread_manager`, which is a `Thread_Manager` object
-        in which it can register its own thread loop. Additionally, it requires
-        certian callbacks. The `location_callback` is called whenever the
+        in which it can register its own thread loop. The physical XBee sensor
+        uses a `usb_manager`, which we ignore for the simulator .Additionally, it
+        requires certian callbacks. The `location_callback` is called whenever the
         XBee needs to know its own location for the "rssi_broadcast" and the
         "rssi_ground_station" private packets. The `receive_callback` is called
         whenever any non-private packets are received and has the `XBee_Packet`
@@ -39,6 +40,7 @@ class XBee_Sensor(Threadable):
         if not hasattr(valid_callback, "__call__"):
             raise TypeError("Valid location callback is not callable")
 
+        self._usb_manager = usb_manager
         self._location_callback = location_callback
         self._receive_callback = receive_callback
         self._valid_callback = valid_callback
