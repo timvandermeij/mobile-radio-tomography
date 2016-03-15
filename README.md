@@ -38,6 +38,7 @@ systems, perhaps with slightly different installation procedures.
     * RPIO
     * xbee
     * pylirc2
+    * pyudev
   * Vehicle trajectory mission interfaces:
     * lxml
     * pexpect
