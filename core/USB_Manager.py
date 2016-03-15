@@ -1,5 +1,4 @@
 # TODO: integration
-# TODO: testing
 
 import pyudev
 import serial
@@ -39,9 +38,7 @@ class USB_Manager(object):
         Index all connected USB devices with their path, baud rate and category.
         """
 
-        context = pyudev.Context()
-
-        for device in context.list_devices(subsystem="tty", ID_BUS="usb"):
+        for device in self._obtain_devices():
             fingerprint = [device["ID_VENDOR_ID"], device["ID_MODEL_ID"]]
 
             if fingerprint == USB_Device_Fingerprint.XBEE:
@@ -59,6 +56,14 @@ class USB_Manager(object):
             usb_device.category = category
 
             self._devices[category].append(usb_device)
+
+    def _obtain_devices(self):
+        """
+        Obtain a list of available USB devices.
+        """
+
+        context = pyudev.Context()
+        return context.list_devices(subsystem="tty", ID_BUS="usb")
 
     def get_xbee_device(self, path=None):
         """
