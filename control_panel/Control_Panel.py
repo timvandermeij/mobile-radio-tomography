@@ -10,16 +10,16 @@ from ..reconstruction.Truncated_SVD_Reconstructor import Truncated_SVD_Reconstru
 from ..settings import Arguments
 from PyQt4 import QtCore, QtGui
 
-class Dashboard(QtGui.QMainWindow):
+class Control_Panel(QtGui.QMainWindow):
     def __init__(self):
         """
-        Initialize the dashboard window.
+        Initialize the control panel.
         """
 
-        super(Dashboard, self).__init__()
+        super(Control_Panel, self).__init__()
 
         self._arguments = Arguments("settings.json", [])
-        self._dashboard_settings = self._arguments.get_settings("dashboard")
+        self._control_panel_settings = self._arguments.get_settings("control_panel")
         self._usb_manager = USB_Manager()
 
         # Set the dimensions, title and icon of the window.
@@ -89,13 +89,12 @@ class Dashboard(QtGui.QMainWindow):
         the ground station XBee.
         """
 
-        xbee_insertion_delay = self._dashboard_settings.get("xbee_insertion_delay") * 1000
-
         try:
             self._usb_manager.index()
             self._usb_manager.get_xbee_device()
             self._control()
         except KeyError:
+            xbee_insertion_delay = self._control_panel_settings.get("xbee_insertion_delay") * 1000
             QtCore.QTimer.singleShot(xbee_insertion_delay, self._loading_loop)
 
     def _control(self):
@@ -151,7 +150,7 @@ class Dashboard(QtGui.QMainWindow):
         self._interpolation = reconstruction_settings.get("interpolation")
 
         # Set the width and height of the label.
-        self._viewer_width, self._viewer_height = self._dashboard_settings.get("viewer_dimensions")
+        self._viewer_width, self._viewer_height = self._control_panel_settings.get("viewer_dimensions")
         self._label.setFixedSize(self._viewer_width, self._viewer_height)
 
         # Create the reader.

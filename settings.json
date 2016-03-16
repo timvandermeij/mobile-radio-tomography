@@ -1,9 +1,8 @@
 {
-    "dashboard": {
-        "name": "Dashboard",
+    "control_panel": {
+        "name": "Control panel",
         "settings": {
             "viewer_dimensions": [500, 500],
-            "xbee_identity": ["0x403", "0x6015"],
             "xbee_insertion_delay": 0.1
         }
     },
