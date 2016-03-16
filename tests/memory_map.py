@@ -5,16 +5,17 @@ from ..environment import Environment
 from ..trajectory.Memory_Map import Memory_Map
 from ..settings import Arguments
 from core_thread_manager import ThreadableTestCase
+from core_usb_manager import USBManagerTestCase
 from geometry import LocationTestCase
 from settings import SettingsTestCase
 
-class TestMemoryMap(ThreadableTestCase, LocationTestCase, SettingsTestCase):
+class TestMemoryMap(ThreadableTestCase, USBManagerTestCase, LocationTestCase, SettingsTestCase):
     def setUp(self):
         super(TestMemoryMap, self).setUp()
         self.arguments = Arguments("settings.json", [
             "--vehicle-class", "Mock_Vehicle", "--no-infrared-sensor"
         ])
-        self.environment = Environment.setup(self.arguments, geometry_class="Geometry", simulated=True)
+        self.environment = Environment.setup(self.arguments, geometry_class="Geometry", usb_manager=self.usb_manager, simulated=True)
         self.coord_delta = sys.float_info.epsilon * 10
     
     def test_init(self):

@@ -116,8 +116,8 @@ class MockAttitude(object):
         return False
 
 class Mock_Vehicle(MAVLink_Vehicle):
-    def __init__(self, arguments, geometry, thread_manager):
-        super(Mock_Vehicle, self).__init__(arguments, geometry, thread_manager)
+    def __init__(self, arguments, geometry, thread_manager, usb_manager):
+        super(Mock_Vehicle, self).__init__(arguments, geometry, thread_manager, usb_manager)
 
         # Whether the vehicle has taken off. Affects commands interface.
         self._takeoff = False

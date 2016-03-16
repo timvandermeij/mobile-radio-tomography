@@ -4,7 +4,7 @@ from Line_Follower import Line_Follower
 from ..settings import Arguments, Settings
 
 class Line_Follower_Raspberry_Pi(Line_Follower):
-    def __init__(self, location, direction, callback, settings, thread_manager, delay=0):
+    def __init__(self, location, direction, callback, settings, thread_manager, usb_manager, delay=0):
         """
         Initialize the line follower object for the Raspberry Pi. Note that the
         pin numbers in the settings file are the pin numbers for the connection

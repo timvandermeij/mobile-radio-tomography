@@ -57,8 +57,6 @@
         "name": "Line follower (Arduino)",
         "parent": "line_follower_base",
         "settings": {
-            "serial_device": "/dev/ttyUSB1",
-            "serial_baud_rate": 9600,
             "serial_flow_control": false
         }
     },
@@ -137,8 +135,8 @@
     "vehicle_robot": {
         "name": "Base robot vehicle",
         "settings": {
-            "diverged_speed": 0.30,
-            "diverged_time": 0.25,
+            "diverged_speed": 0.2,
+            "diverged_time": 0.2,
             "rotate_speed": 0.30,
             "vehicle_delay": 0.05,
             "line_follower_delay": 0.01,
@@ -189,7 +187,6 @@
             "number_of_sensors": 2,
             "custom_packet_limit": 1,
             "loop_delay": 0.01,
-            "baud_rate": 57600,
             "specifications": {
                 "memory_map_chunk": [
                     {
@@ -223,6 +220,10 @@
                         "format": "d"
                     },
                     {
+                        "name": "valid",
+                        "format": "?"
+                    },
+                    {
                         "name": "sensor_id",
                         "format": "B"
                     },
@@ -247,12 +248,20 @@
                         "format": "d"
                     },
                     {
+                        "name": "from_valid",
+                        "format": "?"
+                    },
+                    {
                         "name": "to_latitude",
                         "format": "d"
                     },
                     {
                         "name": "to_longitude",
                         "format": "d"
+                    },
+                    {
+                        "name": "to_valid",
+                        "format": "?"
                     },
                     {
                         "name": "rssi",
@@ -294,7 +303,6 @@
         "name": "XBee configurator",
         "parent": "xbee_base",
         "settings": {
-            "port": "/dev/ttyUSB0",
             "pan_id": 2015,
             "startup_delay": 1
         }
@@ -313,7 +321,7 @@
         "name": "XBee sensor (physical)",
         "parent": "xbee_base",
         "settings": {
-            "port": "/dev/ttyUSB0",
+            "port": "",
             "sensors": [
                 "\\x00\\x13\\xa2\\x00@\\xe6n\\xbd",
                 "\\x00\\x13\\xa2\\x00@\\xe6o5",

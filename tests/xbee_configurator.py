@@ -1,27 +1,27 @@
-import pty
-import os
 import serial
 from mock import patch
 from xbee import ZigBee
+from ..core.USB_Manager import USB_Device_Baud_Rate
 from ..zigbee.XBee_Configurator import XBee_Configurator
 from ..settings import Arguments
+from core_usb_manager import USBManagerTestCase
 from settings import SettingsTestCase
 
-class TestXBeeConfigurator(SettingsTestCase):
+class TestXBeeConfigurator(USBManagerTestCase, SettingsTestCase):
     def setUp(self):
-        # Create a virtual serial port.
-        master, slave = pty.openpty()
-        self.port = os.ttyname(slave)
+        super(TestXBeeConfigurator, self).setUp()
 
         self.arguments = Arguments("settings.json", ["--port={}".format(self.port)])
         self.settings = self.arguments.get_settings("xbee_configurator")
-        self.configurator = XBee_Configurator(self.arguments)
+
+        self.usb_manager.index()
+        self.configurator = XBee_Configurator(self.arguments, self.usb_manager)
 
     def test_initialization(self):
         self.assertIsInstance(self.configurator._serial_connection, serial.Serial)
         self.assertEqual(self.configurator._serial_connection.port, self.port)
         self.assertEqual(self.configurator._serial_connection.baudrate,
-                         self.settings.get("baud_rate"))
+                         USB_Device_Baud_Rate.XBEE)
         self.assertIsInstance(self.configurator._sensor, ZigBee)
 
     def test_encode_value(self):
@@ -57,7 +57,7 @@ class TestXBeeConfigurator(SettingsTestCase):
         # always be None. The case of a response that is not None is
         # covered by the decode value unit test above.
         response = self.configurator.get("ID")
-        self.assertTrue(response == None)
+        self.assertIsNone(response)
 
     @patch("xbee.ZigBee.wait_read_frame")
     def test_get(self, mock_wait_read_frame):

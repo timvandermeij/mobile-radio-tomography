@@ -5,9 +5,10 @@ import math
 
 import numpy as np
 
-from dronekit import VehicleMode, LocationGlobalRelative, LocationLocal
+from dronekit import VehicleMode, LocationGlobal, LocationGlobalRelative, LocationLocal
 
 from Memory_Map import Memory_Map
+from ..geometry.Geometry import Geometry_Spherical
 from ..vehicle.Robot_Vehicle import Robot_Vehicle
 
 class Mission(object):
@@ -93,7 +94,8 @@ class Mission(object):
         home_location = self.vehicle.home_location
         if home_location is not None:
             print("Home location: {}".format(home_location))
-            self.geometry.set_home_location(home_location)
+            if isinstance(home_location, LocationGlobal) and isinstance(self.geometry, Geometry_Spherical):
+                self.geometry.set_home_location(home_location)
 
     def get_waypoints(self):
         """
@@ -150,6 +152,12 @@ class Mission(object):
         """
         raise NotImplementedError("Must be implemented in child class")
 
+    def stop(self):
+        """
+        Stop the vehicle and the mission immediately.
+        """
+        self.vehicle.armed = False
+
     def step(self):
         """
         Perform any calculations for the current vehicle state.
@@ -165,7 +173,7 @@ class Mission(object):
         if sensor_distance == 0:
             print("Inside the object, abort mission.")
             sys.exit(1)
-        elif sensor_distance < self.closeness:
+        elif sensor_distance <= self.closeness:
             self.vehicle.mode = VehicleMode("GUIDED")
             self.vehicle.speed = 0.0
             raise RuntimeError("Too close to the object ({} m), halting.".format(sensor_distance))
@@ -330,7 +338,7 @@ class Mission_Auto(Mission):
         if next_waypoint >= self._first_waypoint:
             if distance < self.farness:
                 print("Distance to waypoint ({}): {} m".format(next_waypoint, distance))
-                if distance < self.closeness:
+                if distance <= self.closeness:
                     print("Close enough: skip to next waypoint")
                     self.vehicle.set_next_waypoint()
                     next_waypoint = next_waypoint + 1
@@ -372,8 +380,7 @@ class Mission_Square(Mission_Auto):
 class Mission_Forward(Mission_Auto):
     def get_points(self):
         points = []
-        points.append(self.environment.get_location(5.0, 0))
-        points.append(self.environment.get_location(0, 0))
+        points.append(self.environment.get_location(1.0, 0))
         return points
 
 class Mission_Browse(Mission_Guided):
@@ -548,7 +555,7 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
 
         distance = self.distance_to_point()
         print("Distance to current point ({}): {} m".format(self.current_point, distance))
-        if self.current_point < 0 or distance < self.closeness:
+        if self.current_point < 0 or distance <= self.closeness:
             if self.current_point == self.next_waypoint:
                 print("Waypoint reached.")
                 self.next_waypoint = self.next_waypoint + 1
@@ -805,11 +812,9 @@ class Mission_Cycle(Mission_Guided):
         if self.current_waypoint is None:
             self.next_waypoint()
         else:
-            location = self.vehicle.location
-            wp = self.current_waypoint
-            if location.north == wp[0] and location.east == wp[1]:
-                # TODO: Delay to perform measurements. We need to synchronize 
-                # the robots so that they measure at the "correct" location.
+            # Delay to perform measurements. We need to synchronize the robots 
+            # so that they both measure at the "valid" location.
+            if self.environment.is_measurement_valid():
                 self.next_waypoint()
 
     def check_waypoint(self):

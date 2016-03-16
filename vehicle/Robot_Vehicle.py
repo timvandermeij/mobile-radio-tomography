@@ -31,14 +31,14 @@ class Robot_Vehicle(Vehicle):
 
     _line_follower_class = None
 
-    def __init__(self, arguments, geometry, thread_manager):
-        super(Robot_Vehicle, self).__init__(arguments, geometry, thread_manager)
+    def __init__(self, arguments, geometry, thread_manager, usb_manager):
+        super(Robot_Vehicle, self).__init__(arguments, geometry, thread_manager, usb_manager)
 
         settings = arguments.get_settings("vehicle_robot")
 
         self._move_speed = 0.0
 
-        # Speed difference in m/s to adjust when we diverge from a line.
+        # Speed ratio of the current move speed when we diverge from a line.
         self._diverged_speed = settings.get("diverged_speed")
         # Time in seconds to keep adjusted speed when we diverge from a line.
         self._diverged_time = settings.get("diverged_time")
@@ -64,7 +64,7 @@ class Robot_Vehicle(Vehicle):
         self._line_follower = self._line_follower_class(
             self._home_location, self._direction,
             self.line_follower_callback, arguments,
-            thread_manager, line_follower_delay
+            thread_manager, usb_manager, line_follower_delay
         )
 
         # The delay of the robot vehicle state loop.
@@ -107,13 +107,13 @@ class Robot_Vehicle(Vehicle):
                     self.set_speeds(self.speed, self.speed)
                     self._last_diverged_time = None
         elif self._state.name == "intersection":
-            if self._location == self.get_waypoint():
+            if self._at_current_waypoint():
                 # We reached the current waypoint.
                 if self._mode.name == "AUTO":
                     # In AUTO mode, immediately try to move to the next 
                     # waypoint, or rotate in the right direction.
                     self._move_waypoint(self._current_waypoint + 1)
-            else:
+            elif self._mode.name == "AUTO" or self._mode.name == "GUIDED":
                 # We reached an intersection or we are at an intersection and 
                 # maybe have a next waypoint. Check whether we need to rotate 
                 # here, and otherwise move away from it to the next waypoint.
@@ -121,7 +121,9 @@ class Robot_Vehicle(Vehicle):
 
     def line_follower_callback(self, event, data):
         if event == "intersection":
-            self._location = (data[0], data[1])
+            # Invert location data since the Line_Follower is in (x,y) notation 
+            # where y is north and x is east.
+            self._location = (data[1], data[0])
             self._state = Robot_State(event)
         elif event == "diverged":
             direction = -1 if data == "left" else 1
@@ -141,8 +143,8 @@ class Robot_Vehicle(Vehicle):
                 # a next waypoint. Steer the motors such that the robot gets 
                 # back to the line.
                 speed = self._move_speed
-                speed_difference = direction * self._diverged_speed
-                self.set_speeds(speed - speed_difference, speed + speed_difference)
+                speed_difference = direction * self._diverged_speed * speed
+                self.set_speeds(speed + speed_difference, speed - speed_difference)
                 self._last_diverged_time = time.time()
 
     def set_speeds(left_speed, right_speed, left_forward=True, right_forward=True):
@@ -234,6 +236,17 @@ class Robot_Vehicle(Vehicle):
         self._current_waypoint = -1
         self.add_waypoint(location)
 
+    def is_current_location_valid(self):
+        # When we are moving, then the location is no longer correct.
+        if self._is_moving():
+            return False
+
+        # If we are not at the waypoint, then the location is not yet valid.
+        if not self._at_current_waypoint():
+            return False
+
+        return super(Robot_Vehicle, self).is_current_location_valid()
+
     @property
     def location(self):
         return LocationLocal(self._location[0], self._location[1], 0.0)
@@ -245,7 +258,7 @@ class Robot_Vehicle(Vehicle):
     @speed.setter
     def speed(self, value):
         self._move_speed = value
-        if self._running and self._state.name == "move" and self._last_diverged_time is None:
+        if self._is_moving() and self._last_diverged_time is None:
             self.set_speeds(value, value)
 
     def _get_yaw(self):
@@ -275,7 +288,7 @@ class Robot_Vehicle(Vehicle):
         return Attitude(0.0, 0.0, yaw)
 
     def set_yaw(self, heading, relative=False, direction=1):
-        if self._state.name != "intersection" and not isinstance(self._state, Robot_State_Rotate):
+        if not self._at_intersection():
             # We can only rotate on an intersection where we can see all 
             # cardinal lines.
             return
@@ -314,9 +327,16 @@ class Robot_Vehicle(Vehicle):
         Attempt to move to the given `waypoint`. The `waypoint` should usually
         be the next or current waypoint, depending on whether we reached the
         current waypoint or not.
-        This method must only be called if we are at an intersection.
+        This method must only be called if we are at an intersection that is
+        equal to the current waypoint location.
         """
+
         if not self._is_waypoint(waypoint):
+            # If there is no new waypoint, do nothing and stand still if we 
+            # happened to reach the current waypoint
+            if self._is_waypoint(self._current_waypoint):
+                self.set_speeds(0,0)
+
             return
 
         next_waypoint = self._waypoints[waypoint]
@@ -354,3 +374,19 @@ class Robot_Vehicle(Vehicle):
         # No need to change direction if the difference is 0 for both cardinal 
         # directions.
         return self._direction
+
+    def _is_moving(self):
+        return self._running and self._state.name == "move"
+
+    def _at_intersection(self):
+        if self._state.name == "intersection":
+            return True
+
+        return isinstance(self._state, Robot_State_Rotate)
+
+    def _at_current_waypoint(self):
+        if not self._is_waypoint(self._current_waypoint):
+            return False
+
+        waypoint = self._waypoints[self._current_waypoint]
+        return waypoint == self._location

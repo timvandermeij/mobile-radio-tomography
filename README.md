@@ -40,6 +40,7 @@ systems, perhaps with slightly different installation procedures.
     * xbee
     * pylirc2
     * pyusb
+    * pyudev
   * Vehicle trajectory mission interfaces:
     * lxml
     * pexpect

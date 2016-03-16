@@ -21,13 +21,17 @@ def receive_packet(packet):
 
     print("> Custom packet received: {}".format(packet.get_all()))
 
+def location_valid(other_valid=None):
+    return True
+
 def main(argv):
     thread_manager = Thread_Manager()
 
     try:
         arguments = Arguments("settings.json", argv)
-        xbee_sensor = XBee_Sensor_Simulator(arguments, thread_manager,
-                                            get_location, receive_packet)
+        xbee_sensor = XBee_Sensor_Simulator(arguments, thread_manager, None,
+                                            get_location, receive_packet,
+                                            location_valid)
 
         arguments.check_help()
 

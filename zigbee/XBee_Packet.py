@@ -76,22 +76,19 @@ class XBee_Packet(object):
 
         specification = self._specifications[specification_name]
 
-        # Verify that all fields in the specification have been provided.
-        # Skip fields with a value (usually identifier fields) as in that
-        # case the provided value will be used.
-        for field in specification:
-            name = field["name"]
-            if name not in self._contents and "value" not in field:
-                raise KeyError("Field '{}' has not been provided.".format(name))
-
         # Pack the fields in the same order as in the specification. The
         # order is important as the same order is used to unpack.
+        # Verify that all fields in the specification have been provided.
+        # In case of fields with a value (usually identifier fields), instead
+        # use the provided value.
         packed_message = ""
         for field in specification:
             if "value" in field:
                 value = field["value"]
-            else:
+            elif field["name"] in self._contents:
                 value = self._contents[field["name"]]
+            else:
+                raise KeyError("Field '{}' has not been provided.".format(field["name"]))
 
             packed_message += struct.pack(field["format"], value)
 
@@ -122,7 +119,7 @@ class XBee_Packet(object):
                 specification_name = name
                 break
 
-        if specification == None:
+        if specification is None:
             raise KeyError("Invalid specification has been provided")
 
         # Loop through all fields in the specification that do not have
