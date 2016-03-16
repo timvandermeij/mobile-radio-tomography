@@ -2,7 +2,6 @@ import sys
 import time
 from __init__ import __package__
 from settings import Arguments
-from distance.Distance_Sensor_Physical import Distance_Sensor_Physical
 from environment import Environment
 
 def main(argv):

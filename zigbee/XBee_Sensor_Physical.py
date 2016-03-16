@@ -1,6 +1,6 @@
 import os
 import subprocess
-import serial
+import thread
 import time
 import random
 import copy
@@ -12,23 +12,22 @@ from XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from ..settings import Arguments
 
 class XBee_Sensor_Physical(XBee_Sensor):
-    def __init__(self, arguments, location_callback=None, receive_callback=None):
+    def __init__(self, arguments, thread_manager, usb_manager,
+                 location_callback, receive_callback, valid_callback):
         """
         Initialize the sensor.
         """
+
+        super(XBee_Sensor_Physical, self).__init__(thread_manager, usb_manager,
+                                                   location_callback, receive_callback, valid_callback)
 
         if isinstance(arguments, Arguments):
             self.settings = arguments.get_settings("xbee_sensor_physical")
         else:
             raise ValueError("'settings' must be an instance of Arguments")
 
-        if location_callback == None or receive_callback == None:
-            raise TypeError("Missing required location and receive callbacks")
-
         self.id = 0
         self.scheduler = XBee_TDMA_Scheduler(self.id, arguments)
-        self._location_callback = location_callback
-        self._receive_callback = receive_callback
         self._next_timestamp = 0
         self._serial_connection = None
         self._node_identifier_set = False
@@ -39,14 +38,30 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._address = None
         self._data = {}
         self._queue = Queue.Queue()
-        self._verbose = self.settings.get("verbose")
+        self._active = False
 
         # Prepare the packet and sensor data.
         self._custom_packet_limit = self.settings.get("custom_packet_limit")
         self._number_of_sensors = self.settings.get("number_of_sensors")
         self._sensors = self.settings.get("sensors")
+        self._loop_delay = self.settings.get("loop_delay")
         for index, address in enumerate(self._sensors):
             self._sensors[index] = address.decode("string_escape")
+
+    def _setup(self):
+        """
+        Setup the serial connection and join the network.
+        """
+
+        port = self.settings.get("port")
+        if port != "":
+            self._serial_connection = self._usb_manager.get_xbee_device(port)
+        else:
+            self._serial_connection = self._usb_manager.get_xbee_device()
+
+        self._sensor = ZigBee(self._serial_connection, callback=self._receive)
+        time.sleep(self.settings.get("startup_delay"))
+        self._join()
 
     def activate(self):
         """
@@ -54,26 +69,38 @@ class XBee_Sensor_Physical(XBee_Sensor):
         The sensor always receives packets asynchronously.
         """
 
-        # Lazily initialize the serial connection and ZigBee object.
-        if self._serial_connection == None and self._sensor == None:
-            self._serial_connection = serial.Serial(self.settings.get("port"),
-                                                    self.settings.get("baud_rate"))
-            self._sensor = ZigBee(self._serial_connection, callback=self._receive)
-            time.sleep(self.settings.get("startup_delay"))
-            self._join()
+        super(XBee_Sensor_Physical, self).activate()
 
-        if not self._joined:
-            return
+        self._active = True
+        self._setup()
+        thread.start_new_thread(self._loop, ())
 
-        if self.id > 0 and time.time() >= self._next_timestamp:
-            self._next_timestamp = self.scheduler.get_next_timestamp()
-            self._send()
+    def _loop(self):
+        """
+        Execute the sensor loop. This runs in a separate thread.
+        """
+
+        try:
+            while self._active:
+                if not self._joined:
+                    continue
+
+                if self.id > 0 and time.time() >= self._next_timestamp:
+                    self._next_timestamp = self.scheduler.get_next_timestamp()
+                    self._send()
+
+                time.sleep(self._loop_delay)
+        except:
+            super(XBee_Sensor_Physical, self).interrupt()
 
     def deactivate(self):
         """
         Deactivate the sensor and close the serial connection.
         """
 
+        super(XBee_Sensor_Physical, self).deactivate()
+
+        self._active = False
         self._sensor.halt()
         self._serial_connection.close()
 
@@ -178,13 +205,8 @@ class XBee_Sensor_Physical(XBee_Sensor):
         """
 
         # Create and send the RSSI broadcast packets.
-        location = self._location_callback()
-        packet = XBee_Packet()
-        packet.set("specification", "rssi_broadcast")
-        packet.set("latitude", location[0])
-        packet.set("longitude", location[1])
+        packet = self.make_rssi_broadcast_packet()
         packet.set("sensor_id", self.id)
-        packet.set("timestamp", time.time())
 
         for index in xrange(1, self._number_of_sensors + 1):
             if index == self.id:
@@ -193,9 +215,6 @@ class XBee_Sensor_Physical(XBee_Sensor):
             self._sensor.send("tx", dest_addr_long=self._sensors[index],
                               dest_addr="\xFF\xFE", frame_id="\x00",
                               data=packet.serialize())
-
-            if self._verbose:
-                print("--> Sending to sensor {}.".format(index))
 
         # Send custom packets to their destination. Since the time slots are
         # limited in length, so is the number of custom packets we transfer
@@ -215,7 +234,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
         # for the next round.
         for frame_id in self._data.keys():
             packet = self._data[frame_id]
-            if packet.get("rssi") == None:
+            if packet.get("rssi") is None:
                 continue
 
             self._sensor.send("tx", dest_addr_long=self._sensors[0],
@@ -223,9 +242,6 @@ class XBee_Sensor_Physical(XBee_Sensor):
                               data=packet.serialize())
 
             self._data.pop(frame_id)
-
-            if self._verbose:
-                print("--> Sending to ground station.")
 
     def _receive(self, raw_packet):
         """
@@ -236,8 +252,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
             packet = XBee_Packet()
             packet.unserialize(raw_packet["rf_data"])
 
-            if not packet.is_private():
-                self._receive_callback(packet)
+            if self.check_receive(packet):
                 return
 
             if packet.get("specification") == "ntp":
@@ -257,20 +272,11 @@ class XBee_Sensor_Physical(XBee_Sensor):
                 print("[{}] Ground station received {}".format(time.time(), packet.get_all()))
                 return
 
-            if self._verbose:
-                print("<-- Received from sensor {}.".format(packet.get("sensor_id")))
-
             # Synchronize the scheduler using the timestamp in the packet.
             self._next_timestamp = self.scheduler.synchronize(packet)
 
-            # Sanitize and complete the packet for the ground station.
-            location = self._location_callback()
-            ground_station_packet = XBee_Packet()
-            ground_station_packet.set("specification", "rssi_ground_station")
-            ground_station_packet.set("from_latitude", packet.get("latitude"))
-            ground_station_packet.set("from_longitude", packet.get("longitude"))
-            ground_station_packet.set("to_latitude", location[0])
-            ground_station_packet.set("to_longitude", location[1])
+            # Create the packet for the ground station.
+            ground_station_packet = self.make_rssi_ground_station_packet(packet)
 
             # Generate a frame ID to be able to match this packet and the
             # associated RSSI (DB command) request.
@@ -287,14 +293,14 @@ class XBee_Sensor_Physical(XBee_Sensor):
                     original_packet.set("rssi", ord(raw_packet["parameter"]))
             elif raw_packet["command"] == "SH":
                 # Serial number (high) has been received.
-                if self._address == None:
+                if self._address is None:
                     self._address = raw_packet["parameter"]
                 elif raw_packet["parameter"] not in self._address:
                     self._address = raw_packet["parameter"] + self._address
                     self._address_set = True
             elif raw_packet["command"] == "SL":
                 # Serial number (low) has been received.
-                if self._address == None:
+                if self._address is None:
                     self._address = raw_packet["parameter"]
                 elif raw_packet["parameter"] not in self._address:
                     self._address = self._address + raw_packet["parameter"]

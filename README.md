@@ -1,22 +1,24 @@
 [![Build status](https://travis-ci.org/timvandermeij/mobile-radio-tomography.svg)](https://travis-ci.org/timvandermeij/mobile-radio-tomography)
 
-The mobile radio tomography framework contains tools to perform mobile radio tomographic
-imaging using XBee chips mounted on unmanned vehicles such as rover cars or drones.
-The goal of this work is to map an object in 3D using signal strength measurements.
-This framework is the result of research projects performed by Tim van der Meij
-(@timvandermeij) and Leon Helwerda (@lhelwerd) in collaboration with Leiden University
-and CWI Amsterdam, both based in the Netherlands.
+The mobile radio tomography framework provides tools for performing mobile radio
+tomographic imaging using XBee chips mounted on unmanned vehicles such as rover cars
+or drones. This framework is the result of research projects and master theses by
+Tim van der Meij (@timvandermeij) and Leon Helwerda (@lhelwerd) in collaboration with
+Leiden University and CWI Amsterdam, both located in the Netherlands.
 
 Prerequisites
 =============
 
-In order to use the framework you need to have the following software
-installed on your system. The framework has been developed for Linux, but
-can be made to work on Windows or any other operating system since all
-prerequisites are also available for those systems, perhaps with slightly
-different installation procedures.
+In order to use the framework you must have the following software installed on your
+system. The framework has been developed for Linux, but can be made to work on Windows
+or any other operating system since all prerequisites are also available for those
+systems, perhaps with slightly different installation procedures.
 
 * Git
+* Binaries and development headers for the [LIRC](http://www.lirc.org/) package 
+  for remote control support. Check whether and how your package manager 
+  provides these packages, otherwise you can retrieve them from the LIRC 
+  website itself.
 * Python 2.7. Note that Python 3 cannot be used at this moment.
 * `pip` for Python 2.7. `pip` is often not available on extremely old and bare
   systems. If it is also not delivered by a package manager, one can also
@@ -24,30 +26,34 @@ different installation procedures.
   Ensure that you have the correct version of `pip` with `pip --version` or use
   `pip2` instead.
 
-  Use `pip install --user <package>` to install each of the following packages,
-  sorted by purpose:
+  Use `pip install --user <package>` to install or upgrade each of the 
+  following packages, sorted by purpose:
   * General packages:
     * matplotlib
     * NumPy
     * scipy
   * Physical sensor/communication interfaces:
-    * pyserial (you may need to use `pip install --user "pyserial==2.7"`)
+    * pyserial
     * RPi.GPIO
+    * RPIO
     * xbee
+    * pylirc2
+    * pyudev
   * Vehicle trajectory mission interfaces:
     * lxml
     * pexpect
     * pymavlink
     * mavproxy
-    * droneapi
+    * dronekit
   * Environment simulation:
     * PyOpenGL
     * simpleparse
     * PyVRML97 (you may need to use `pip install --user "PyVRML97==2.3.0b1"`)
     * PyDispatcher
     * pyglet
-  * Unit testing:
+  * Testing:
     * mock
+    * importchecker
 * In order to use the map display of ArduPilot, make sure that OpenCV and 
   wxWidgets as well as their respective Python bindings are installed and 
   available. If not, the following directions might help you get it:
@@ -71,10 +77,6 @@ different installation procedures.
   Then, add the following line to your `~/.bashrc`:
 
       export PATH=$PATH:$HOME/ardupilot/Tools/autotest
-
-  Finally, create a file `~/.mavinit.src` with the following line:
-
-      module load droneapi.module.api
 
 For all commands in this file, replace `python2` with `python` if your
 operating system does not need to distinguish between Python 2 and Python 3.
@@ -111,11 +113,14 @@ Vehicle mission
 The trajectory mission sets up an unmanned aerial vehicle (UAV) and directs it
 to move and rotate within its environment. The script supports various mission
 types and simulation modes. You can run it using the ArduPilot simulator with
-the following command:
+the following commands:
 
     $ sim_vehicle.sh -v ArduCopter --map
-    [...wait until the simulator is set up, after "GPS lock at 0 meters"...]
-    STABILIZE> script mission.scr
+
+One can also use different vehicle types, such as APMrover2 for a ground rover.
+Then start the mission script using the following command in another terminal:
+
+    $ python2 mission_basic.py --vehicle Dronekit_Vehicle
 
 This starts the mission with default settings from `settings.json`. The
 ArduPilot simulator provides an overhead map showing the copter's position.
@@ -143,11 +148,9 @@ XBee sensor (simulator)
 The XBee sensor simulator is used to simulate the behavior of an XBee
 sensor network. This is especially useful for determining communication
 schemes for the sensors. Start the tool on a laptop or desktop computer
-with `python2 xbee_sensor_simulator.py` in a terminal to get both output
-in the terminal as well as open a viewer that visualizes the communication
-between the sensors in the network. Settings for the simulation, such as
-the number of sensors in the network, can be altered in the `settings.json`
-file.
+with `python2 xbee_sensor_simulator.py` in a terminal to get output in the
+terminal. Settings for the simulation, such as the number of sensors in the
+network, can be altered in the `settings.json` file.
 
 XBee sensor (physical)
 ----------------------
@@ -181,6 +184,22 @@ to receive continuous measurements from the distance sensor. Change the pin
 numbers for the trigger and echo pins in `settings.json` if you have used
 different pin numbers when connecting the HC-SR04 sensor to the Raspberry Pi.
 
+Infrared sensor
+---------------
+
+We assume that you have setup a Raspberry Pi with Arch Linux ARM and
+that you have connected the TSOP38238 sensor. Make sure that LIRC is setup
+correctly on the device (refer to the `docs` folder for more information on
+this). This tool must be run on the Raspberry Pi. Start the tool with
+`python2 infrared_sensor.py` and use a Sony RM-SRB5 remote. Press the play
+and stop buttons on the remote and verify that the callback functions are
+triggered.
+
+You can change the remote that you wish to use. To do so, create or download
+the `lircd.conf` file and place it in the `control/remotes` folder. Then
+create a `lircrc` file using the same remote name there to bind the buttons
+to the events. Finally change the remote name in the settings file.
+
 Reconstruction and visualization
 --------------------------------
 
@@ -198,19 +217,18 @@ parameters. The `--help` argument will display which parameters you can tune
 for the reconstruction and visualization (for instance, the reconstructor and
 the interpolation method are customizable).
 
-Running the unit tests
-======================
+Running the tests
+=================
 
-The framework contains unit tests to ensure that all components behave the
-way we expect them to behave and therefore to reduce the risk of introducing
-regressions during development. The unit tests have to be executed from the
+The framework contains tests to ensure that all components behave the way
+we expect them to behave and therefore to reduce the risk of introducing
+regressions during development. The tests have to be executed from the
 root folder using the following command:
 
-    $ python2 -m unittest discover -s tests -p "*.py" -t ..
+    $ python2 test.py
 
-The result of running all unit tests should be "OK" in the terminal. This
-command is executed automatically by Travis CI for each pull request or push
-to a branch.
+This command is executed automatically by Travis CI for each pull request
+or push to a branch.
 
 License
 =======

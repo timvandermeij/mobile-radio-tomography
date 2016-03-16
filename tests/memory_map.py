@@ -1,18 +1,21 @@
-import unittest
 import math
 import numpy as np
 import sys
-from droneapi.lib import Location
-from geometry import LocationTestCase
 from ..environment import Environment
 from ..trajectory.Memory_Map import Memory_Map
 from ..settings import Arguments
+from core_thread_manager import ThreadableTestCase
+from core_usb_manager import USBManagerTestCase
+from geometry import LocationTestCase
+from settings import SettingsTestCase
 
-class TestMemoryMap(LocationTestCase):
+class TestMemoryMap(ThreadableTestCase, USBManagerTestCase, LocationTestCase, SettingsTestCase):
     def setUp(self):
         super(TestMemoryMap, self).setUp()
-        self.arguments = Arguments("settings.json", [])
-        self.environment = Environment.setup(self.arguments, simulated=True)
+        self.arguments = Arguments("settings.json", [
+            "--vehicle-class", "Mock_Vehicle", "--no-infrared-sensor"
+        ])
+        self.environment = Environment.setup(self.arguments, geometry_class="Geometry", usb_manager=self.usb_manager, simulated=True)
         self.coord_delta = sys.float_info.epsilon * 10
     
     def test_init(self):
@@ -59,9 +62,7 @@ class TestMemoryMap(LocationTestCase):
         self.assertIn(in_bounds, memory_map.get_nonzero())
         loc = memory_map.get_location(250, 250)
         location = self.environment.get_location()
-        self.assertAlmostEqual(loc.lat, location.lat, delta=self.coord_delta)
-        self.assertAlmostEqual(loc.lon, location.lon, delta=self.coord_delta)
-        self.assertEqual(loc.alt, location.alt)
+        self.assertEqual(loc, location)
 
         self.assertEqual(memory_map.get_location(*in_bounds), memory_map.get_nonzero_locations()[0])
 
@@ -83,6 +84,6 @@ class TestMemoryMap(LocationTestCase):
         self.assertEqual(len(memory_map.get_nonzero()), 1)
         self.assertIn(idx, memory_map.get_nonzero())
         loc = memory_map.get_location(*idx)
-        self.assertAlmostEqual(loc.lat, location.lat, delta=self.coord_delta)
-        self.assertAlmostEqual(loc.lon, location.lon, delta=self.coord_delta)
-        self.assertEqual(loc.alt, location.alt)
+        self.assertAlmostEqual(loc.north, location.north, delta=self.coord_delta)
+        self.assertAlmostEqual(loc.east, location.east, delta=self.coord_delta)
+        self.assertEqual(loc.down, location.down)

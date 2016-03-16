@@ -1,15 +1,17 @@
-import unittest
 import socket
 import time
 import random
 import copy
 import Queue
+from core_thread_manager import ThreadableTestCase
 from mock import patch, MagicMock
-from ..settings import Arguments
+from ..core.Thread_Manager import Thread_Manager
 from ..zigbee.XBee_Packet import XBee_Packet
 from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
+from ..settings import Arguments
+from settings import SettingsTestCase
 
-class TestXBeeSensorSimulator(unittest.TestCase):
+class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
     def location_callback(self):
         """
         Get the current GPS location (latitude and longitude pair).
@@ -19,6 +21,9 @@ class TestXBeeSensorSimulator(unittest.TestCase):
 
     def receive_callback(self, packet):
         pass
+
+    def valid_callback(self, other_valid=None):
+        return True
 
     def setUp(self):
         # We need to mock the Matplotlib module as we do not want to use
@@ -31,20 +36,19 @@ class TestXBeeSensorSimulator(unittest.TestCase):
 
         self.patcher = patch.dict('sys.modules', modules)
         self.patcher.start()
-        from ..zigbee.XBee_Viewer import XBee_Viewer
 
         self.id = 1
         self.arguments = Arguments("settings.json", [
             "--warnings", "--xbee-id", "1"
         ])
         self.settings = self.arguments.get_settings("xbee_sensor_simulator")
-        self.viewer = XBee_Viewer(self.arguments)
+        self.thread_manager = Thread_Manager()
         self.sensor = XBee_Sensor_Simulator(self.arguments,
+                                            self.thread_manager,
+                                            None,
                                             self.location_callback,
                                             self.receive_callback,
-                                            viewer=self.viewer)
-
-        self.viewer.draw_points()
+                                            self.valid_callback)
 
     def test_initialization(self):
         # The ID of the sensor must be set.
@@ -53,9 +57,10 @@ class TestXBeeSensorSimulator(unittest.TestCase):
         # The next timestamp must be set.
         self.assertNotEqual(self.sensor._next_timestamp, 0)
 
-        # Both the location and the receive callback must be set.
+        # The location, receive and valid callbacks must be set.
         self.assertTrue(hasattr(self.sensor._location_callback, "__call__"))
         self.assertTrue(hasattr(self.sensor._receive_callback, "__call__"))
+        self.assertTrue(hasattr(self.sensor._valid_callback, "__call__"))
 
         # The sweep data list must be empty.
         self.assertEqual(self.sensor._data, [])
@@ -123,6 +128,7 @@ class TestXBeeSensorSimulator(unittest.TestCase):
         packet.set("specification", "rssi_broadcast")
         packet.set("latitude", 123456789.12)
         packet.set("longitude", 123459678.34)
+        packet.set("valid", True)
         packet.set("sensor_id", 2)
         packet.set("timestamp", time.time())
 

@@ -1,19 +1,25 @@
-import unittest
-from droneapi.lib import Location
-from geometry import LocationTestCase
 from ..environment import Environment
 from ..environment.VRMLLoader import VRMLLoader
 from ..settings import Arguments
+from core_thread_manager import ThreadableTestCase
+from core_usb_manager import USBManagerTestCase
+from geometry import LocationTestCase
+from settings import SettingsTestCase
 
-class TestVRMLLoader(LocationTestCase):
+class TestVRMLLoader(ThreadableTestCase, USBManagerTestCase, LocationTestCase, SettingsTestCase):
     def setUp(self):
         super(TestVRMLLoader, self).setUp()
-        self.arguments = Arguments("settings.json", [])
-        self.environment = Environment.setup(self.arguments, simulated=True)
+        self.arguments = Arguments("settings.json", [
+            "--vehicle-class", "Mock_Vehicle", "--no-infrared-sensor"
+        ])
+        self.environment = Environment.setup(self.arguments, usb_manager=self.usb_manager, simulated=True)
 
     def test_load(self):
         filename = "tests/vrml/castle.wrl"
+        with self.assertRaises(ValueError):
+            loader = VRMLLoader(self.environment, filename, translation=[1,2])
+
         loader = VRMLLoader(self.environment, filename, translation=[40.0, 3.14, 5.67])
         self.assertEqual(loader.filename, filename)
-        self.assertEqual(loader.translation, Location(40.0, 3.14, 5.67))
+        self.assertEqual(loader.translation, (40.0, 3.14, 5.67))
         self.assertEqual(len(loader.get_objects()), 14)

@@ -17,6 +17,41 @@
             "speed_of_sound": 34320
         }
     },
+    "infrared_sensor": {
+        "name": "Infrared sensor",
+        "settings": {
+            "remote": "Sony_RM-SRB5",
+            "program": "mobile-radio-tomography",
+            "buttons": ["start", "stop", "up", "down", "left", "right"],
+            "wait_delay": 0.05
+        }
+    },
+    "line_follower_base": {
+        "name": "Line follower base",
+        "settings": {
+            "readable_leds": [0, 2, 3, 5],
+            "line_threshold": 300,
+            "line_follower_module": "Line_Follower_Arduino"
+        }
+    },
+    "line_follower_raspberry_pi": {
+        "name": "Line follower (Raspberry Pi)",
+        "parent": "line_follower_base",
+        "settings": {
+            "led_pins": [29, 31, 32, 33, 35, 36],
+            "emitter_pin": 37,
+            "write_delay": 0.0002,
+            "max_value": 1023,
+            "charge_delay": 0.00001
+        }
+    },
+    "line_follower_arduino": {
+        "name": "Line follower (Arduino)",
+        "parent": "line_follower_base",
+        "settings": {
+            "serial_flow_control": false
+        }
+    },
     "mission": {
         "name": "Drone trajectory mission data",
         "settings": {
@@ -30,9 +65,7 @@
             "space_size": 100.0,
             "resolution": 1,
             "yaw_step": 10.0,
-            "vehicle_simulation": true,
-            "mission_class": "Mission_Square",
-            "geometry_class": "Geometry_Spherical"
+            "mission_class": "Mission_Browse"
         }
     },
     "mission_monitor": {
@@ -46,8 +79,17 @@
     "environment": {
         "name": "Vehicle environment",
         "settings": {
+            "geometry_class": "Geometry_Spherical",
             "distance_sensors": [0.0],
+            "servo_pins": [
+                {
+                    "pin": 7,
+                    "angles": [0,360],
+                    "pwm": [1000,2000]
+                }
+            ],
             "xbee_type": "",
+            "infrared_sensor": true,
             "scenefile": null,
             "translation": [0.0,0.0,0.0],
             "location_check": false
@@ -63,9 +105,51 @@
         "name": "Interactive environment 3D scene viewer",
         "parent": "environment_viewer",
         "settings": {
-            "geometry_class": "Geometry",
             "camera_speed": 5.0,
             "rotate_speed": 90.0
+        }
+    },
+    "vehicle": {
+        "name": "Vehicle interface",
+        "settings": {
+            "vehicle_class": "Mock_Vehicle"
+        }
+    },
+    "vehicle_dronekit": {
+        "name": "Dronekit vehicle backend",
+        "settings": {
+            "connect": "127.0.0.1:14550",
+            "mavlink_baud_rate": 115200,
+            "vehicle_simulation": true,
+            "gps": true
+        }
+    },
+    "vehicle_robot": {
+        "name": "Base robot vehicle",
+        "settings": {
+            "diverged_speed": 0.2,
+            "diverged_time": 0.2,
+            "rotate_speed": 0.30,
+            "vehicle_delay": 0.05,
+            "line_follower_delay": 0.01,
+            "home_location": [0,0],
+            "home_direction": 0
+        }
+    },
+    "vehicle_robot_raspberry_pi": {
+        "name": "Robot vehicle directly connected to a Raspberry Pi",
+        "settings": {
+            "direction_pins": [16,18],
+            "speed_pins": [24,26],
+            "speed_pwms": [0, 255],
+            "speeds": [0, 0.60]
+        }
+    },
+    "vehicle_robot_arduino": {
+        "name": "Robot vehicle connected through an Arduino with a serial connection",
+        "settings": {
+            "speed_pwms": [-400, 400],
+            "speeds": [-0.60, 0.60]
         }
     },
     "planning": {
@@ -126,7 +210,6 @@
             "number_of_sensors": 2,
             "custom_packet_limit": 1,
             "loop_delay": 0.01,
-            "baud_rate": 57600,
             "specifications": {
                 "memory_map_chunk": [
                     {
@@ -160,6 +243,10 @@
                         "format": "d"
                     },
                     {
+                        "name": "valid",
+                        "format": "?"
+                    },
+                    {
                         "name": "sensor_id",
                         "format": "B"
                     },
@@ -184,12 +271,20 @@
                         "format": "d"
                     },
                     {
+                        "name": "from_valid",
+                        "format": "?"
+                    },
+                    {
                         "name": "to_latitude",
                         "format": "d"
                     },
                     {
                         "name": "to_longitude",
                         "format": "d"
+                    },
+                    {
+                        "name": "to_valid",
+                        "format": "?"
                     },
                     {
                         "name": "rssi",
@@ -231,7 +326,6 @@
         "name": "XBee configurator",
         "parent": "xbee_base",
         "settings": {
-            "port": "/dev/ttyUSB0",
             "pan_id": 2015,
             "startup_delay": 1
         }
@@ -250,33 +344,23 @@
         "name": "XBee sensor (physical)",
         "parent": "xbee_base",
         "settings": {
-            "port": "/dev/ttyUSB0",
+            "port": "",
             "sensors": [
                 "\\x00\\x13\\xa2\\x00@\\xe6n\\xbd",
                 "\\x00\\x13\\xa2\\x00@\\xe6o5",
                 "\\x00\\x13\\xa2\\x00@\\xe6n\\xb9"
             ],
             "ntp_delay": 3,
-            "response_delay": 0.5,
+            "response_delay": 0.3,
             "startup_delay": 1,
-            "synchronize": false,
-            "verbose": false
+            "synchronize": false
         }
     },
     "xbee_tdma_scheduler": {
         "name": "XBee TDMA scheduler",
         "parent": "xbee_base",
         "settings": {
-            "sweep_delay": 1
-        }
-    },
-    "xbee_viewer": {
-        "name": "XBee viewer",
-        "parent": "xbee_base",
-        "settings": {
-            "size": 10,
-            "circle_radius": 3,
-            "warnings": false
+            "sweep_delay": 0.5
         }
     }
 }

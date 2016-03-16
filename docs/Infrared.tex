@@ -1,0 +1,100 @@
+\documentclass{article}
+
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\parindent=0pt
+\frenchspacing
+
+\usepackage[none]{hyphenat}
+\usepackage{parskip}
+\usepackage[hyphens]{url}
+\usepackage{hyperref}
+
+\hypersetup{colorlinks, citecolor=red, filecolor=red, linkcolor=black, urlcolor=blue}
+
+\begin{document}
+
+\title{Configuring infrared sensors}
+\author{Leon Helwerda and Tim van der Meij}
+\date{\today}
+
+\maketitle
+
+\section{Introduction}
+This document describes the configuration steps required to setup an infrared 
+sensor for usage with a rover vehicle. We use TSOP38238 infrared sensors.
+
+\section{Configuration}
+Attach the infrared receiver sensor TSOP38238 to the Raspberry Pi 2 as follows. 
+Note that the IR sensor has three pins. We number them from 1 to 3 by placing 
+the round part of the sensor face up and number the pins from left to right. 
+Use three F/F wires to connect them.
+
+\begin{itemize}
+    \item Pin 1 of the sensor is the output data, connect it to GPIO 18, which 
+          is pin number 12 when counting on the board.
+    \item Pin 2 is a ground pin, connect it to any free ground pin (e.g., pin 6 
+          if we are powering the Pi from microUSB).
+    \item Pin 3 is a power pin, connect it to a free power pin. According to 
+          the data sheet at \url{http://www.vishay.com/docs/82491/tsop382.pdf} 
+          this can be any supply voltage between 2.5 V and 5.5 V, so either 
+          3.3V (pin 1) or 5V (pins 2 or 4) should work. We tested it with 5V.
+\end{itemize}
+
+Ensure that the LIRC package and module are installed. SSH to the Raspberry Pi 
+as usual and use {\tt lsmod | grep lirc}. Check whether {\tt lirc\_dev} and 
+{\tt lirc\_rpi} are in there. If they are not loaded, follow these instructions 
+to set them up correctly:
+
+\begin{itemize}
+    \item Make sure the system is up to date with {\tt sudo pacman -Syu}. You
+          might need to reboot the device afterward.
+    \item Run {\tt sudo pacman -S lirc} to install the required packages.
+    \item Make a backup ({\tt sudo cp /boot/config.txt /boot/config.txt.bak}) 
+          and then edit with {\tt sudo vim /boot/config.txt} to add the 
+          following line (no spaces or comments!) in that file:
+
+          {\tt dtoverlay=lirc-rpi,gpio\_in\_pin=18}
+
+          Change the pin number if the first data pin above is chosen 
+          differently!
+    \item Add a file {\tt /etc/lirc/hardware.conf} with the same contents as 
+          the {\tt hardware.conf} file in the {\tt raspberry-pi} directory (for 
+          instance, {\tt scp} it).  Make sure that the file exists and is 
+          correct because the Pi will not boot if this file does not exist!  
+          This file and {\tt /boot/config.txt} give the {\tt lirc\_rpi} module 
+          access to the ports and devices that it needs, otherwise the module 
+          will halt the entire kernel.
+    \item Enable the LIRC daemon: {\tt systemctl enable lircd}
+    \item Reboot the Raspberry Pi after checking that everything is in order.
+    \item After the device has restarted, SSH to it again. Check the output of 
+          {\tt lsmod | grep lirc} to see if everything is loaded correctly; 
+          otherwise, {\tt dmesg} might provide error messages.
+\end{itemize}
+
+If at any point the Raspberry Pi no longer connects via SSH, undo everything 
+that was changed to the files on the microSD card via a microSD reader and try 
+again.
+
+Now to test if the IR sensor is working. Start {\tt mode2 -d /dev/lirc0} to 
+test whether we can receive IR inputs from the IR sensor. Press some buttons on 
+a TV or hifi remote. If everything works correctly, then one should see output 
+that contains ``spaces'' and ``pulses'' with numbers. These correspond to 
+timing values that the LIRC configuration can convert to the actual button 
+presses accordingly, depending on the remote control configuration.
+
+Note that the {\tt lirc\_rpi} module is not really a default module, but it is 
+provided with Raspberry Pi kernels anyway. This can give some problems on 
+certain distributions that might not provide it in a standard form. The 
+instructions here are for recent builds of Arch Linux ARM\@.
+
+\section{Resources}
+\begin{itemize}
+    \item \url{http://www.modmypi.com/blog/raspberry-pis-remotes-ir-receivers}
+    \item 
+        \url{http://bofhsolutions.blogspot.nl/2014/12/raspberry-pi-lirc-arch-linux.html}
+    \item \url{https://wiki.archlinux.org/index.php/LIRC}
+    \item 
+        \url{http://alexba.in/blog/2013/01/06/setting-up-lirc-on-the-raspberrypi}
+\end{itemize}
+
+\end{document}

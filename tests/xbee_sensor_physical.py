@@ -1,17 +1,18 @@
-import unittest
-import pty
-import os
 import serial
 import random
 import Queue
 import time
+from core_thread_manager import ThreadableTestCase
 from xbee import ZigBee
 from mock import patch
-from ..settings import Arguments
+from ..core.Thread_Manager import Thread_Manager
 from ..zigbee.XBee_Packet import XBee_Packet
 from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
+from ..settings import Arguments
+from core_usb_manager import USBManagerTestCase
+from settings import SettingsTestCase
 
-class TestXBeeSensorPhysical(unittest.TestCase):
+class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTestCase):
     def location_callback(self):
         """
         Get the current GPS location (latitude and longitude pair).
@@ -22,12 +23,13 @@ class TestXBeeSensorPhysical(unittest.TestCase):
     def receive_callback(self, packet):
         pass
 
-    def setUp(self):
-        self.sensor_id = 1
+    def valid_callback(self, other_valid=None):
+        return True
 
-        # Create a virtual serial port.
-        master, slave = pty.openpty()
-        self.port = os.ttyname(slave)
+    def setUp(self):
+        super(TestXBeeSensorPhysical, self).setUp()
+
+        self.sensor_id = 1
 
         self.arguments = Arguments("settings.json", [
             "--port", self.port,
@@ -35,15 +37,22 @@ class TestXBeeSensorPhysical(unittest.TestCase):
             "sensor_4", "sensor_5", "sensor_6", "sensor_7", "sensor_8"
         ])
         self.settings = self.arguments.get_settings("xbee_sensor_physical")
+        self.thread_manager = Thread_Manager()
+
+        self.usb_manager.index()
         self.sensor = XBee_Sensor_Physical(self.arguments,
+                                           self.thread_manager,
+                                           self.usb_manager,
                                            self.location_callback,
-                                           self.receive_callback)
+                                           self.receive_callback,
+                                           self.valid_callback)
         self.sensor.id = self.sensor_id
 
     def test_initialization(self):
         self.assertEqual(self.sensor.id, self.sensor_id)
         self.assertTrue(hasattr(self.sensor._location_callback, "__call__"))
         self.assertTrue(hasattr(self.sensor._receive_callback, "__call__"))
+        self.assertTrue(hasattr(self.sensor._valid_callback, "__call__"))
         self.assertEqual(self.sensor._next_timestamp, 0)
         self.assertEqual(self.sensor._serial_connection, None)
         self.assertEqual(self.sensor._node_identifier_set, False)
@@ -56,7 +65,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.assertIsInstance(self.sensor._queue, Queue.Queue)
         self.assertEqual(self.sensor._queue.qsize(), 0)
 
-    def test_activate_and_deactivate(self):
+    def test_setup(self):
         # Set all status variables to True to avoid being stuck in
         # the join loops. We cannot test the join process in the unit tests.
         self.sensor._node_identifier_set = True
@@ -64,8 +73,8 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.sensor._joined = True
         self.sensor._synchronized = True
 
-        # The serial connection and sensor must be initialized lazily.
-        self.sensor.activate()
+        # The serial connection and sensor must be initialized.
+        self.sensor._setup()
         self.assertIsInstance(self.sensor._serial_connection, serial.Serial)
         self.assertIsInstance(self.sensor._sensor, ZigBee)
         self.assertEqual(self.sensor._node_identifier_set, True)
@@ -128,7 +137,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
 
         # Activate the sensor and ignore any _send() calls as we are not
         # interested in the initialization calls.
-        self.sensor.activate()
+        self.sensor._setup()
         mock_send.call_count = 0
 
         # Packets must be sent to all other sensors except the ground sensor
@@ -147,8 +156,10 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         valid_packet.set("specification", "rssi_ground_station")
         valid_packet.set("from_latitude", 123456789.12)
         valid_packet.set("from_longitude", 123456789.12)
+        valid_packet.set("from_valid", True)
         valid_packet.set("to_latitude", 123456789.12)
         valid_packet.set("to_longitude", 123456789.12)
+        valid_packet.set("to_valid", True)
         valid_packet.set("rssi", 56)
         self.sensor._data = {
             42: valid_packet
@@ -184,7 +195,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         self.sensor._joined = True
         self.sensor._synchronized = True
 
-        self.sensor.activate()
+        self.sensor._setup()
 
         # Valid RX packets should be processed. Store the frame ID
         # for the DB call test following this test.
@@ -192,6 +203,7 @@ class TestXBeeSensorPhysical(unittest.TestCase):
         packet.set("specification", "rssi_broadcast")
         packet.set("latitude", 123456789.12)
         packet.set("longitude", 123459678.34)
+        packet.set("valid", True)
         packet.set("sensor_id", 2)
         packet.set("timestamp", time.time())
         raw_packet = {

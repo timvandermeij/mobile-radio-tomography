@@ -1,11 +1,15 @@
 [Unit]
 Description=Mobile radio tomography
+Requires=lircd.service
+After=lircd.service
 
 [Service]
 Type=forking
 User=root
 ExecStart=/usr/bin/screen -dmS sensor /home/alarm/mobile-radio-tomography/raspberry-pi-start.sh
 ExecStop=/usr/bin/screen -S sensor -X quit
+Restart=always
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target

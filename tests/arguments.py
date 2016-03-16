@@ -1,12 +1,9 @@
-import unittest
 from mock import patch
 from StringIO import StringIO
-from ..settings import Arguments, Settings
+from ..settings import Arguments
+from settings import SettingsTestCase
 
-class TestArguments(unittest.TestCase):
-    def tearDown(self):
-        Settings.settings_files = {}
-
+class TestArguments(SettingsTestCase):
     def test_default_settings(self):
         arguments = Arguments("tests/invalid.json", ["tests/settings.json"])
         # Command line input for settings file is initialized immediately

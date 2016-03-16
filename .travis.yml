@@ -2,15 +2,16 @@ language: python
 python:
   - "2.7"
 install:
-  - pip install "pyserial==2.7"
+  - pip install pyserial
   - pip install xbee
   - pip install pymavlink
-  - pip install mavproxy
-  - pip install droneapi
+  - pip install dronekit
   - pip install PyOpenGL
   - pip install simpleparse
   - pip install PyVRML97
   - pip install PyDispatcher
-script: python -m unittest discover -s tests -p "*.py" -t ..
+  - pip install importchecker
+  - pip install pyudev
+script: python2 test.py
 notifications:
   email: false

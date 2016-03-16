@@ -95,16 +95,8 @@ over.
           In that file, add a space and {\tt ip=169.254.0.2} at the end of the 
           line. Do not create a new line for that. Save the file and {\tt sync} 
           again.
-    \item Place the file {\tt raspberry-pi/network} in {\tt 
-          root/etc/conf.d/network} and the file {\tt 
-          raspberry-pi/\\network.service} in {\tt 
-          root/etc/systemd/system/network.service}. Create the directories 
-          where necessary. Increment the last part of the IP address in the 
-          {\tt network} file. The first Raspberry Pi should have IP address 
-          {\tt 10.42.0.10} and the second Raspberry Pi has IP address {\tt 
-          10.42.0.11}, and so on.
-    \item Unmount the mounts using {\tt umount boot root}. Finally, run {\tt 
-          rm -rf~../\emph{pi\_dir}} to remove the temporary directory.
+    \item Unmount the mounts using {\tt umount boot root}. Finally, run {\tt rm 
+          -rf~../\emph{pi\_dir}} to remove the temporary directory.
     \item Insert the micro SD card into the Raspberry Pi device. Connect an 
           ethernet cable from the Raspberry Pi to a laptop and then power the 
           Raspberry Pi using a micro USB charger (in that order, as the 
@@ -122,9 +114,28 @@ over.
     \item Run {\tt su} to become the root superuser. Use the password ``root''.
     \item Edit {\tt /etc/ssh/sshd\_config} and set {\tt PermitRootLogin} to the 
           value {\tt yes} to allow root login from SSH\@.
-    \item Run {\tt systemctl disable dhcpcd@eth0.service} and {\tt systemctl 
-          enable network.service}.
-    \item Edit {\tt /boot/cmdline.txt} to remove the recently added IP part. 
+    \item Edit {\tt /etc/dhcpcd.conf} to assign a static IP address for the
+          Raspberry Pi device. Add the following section at the bottom of the
+          file:
+
+          {\tt interface eth0} \\
+          {\tt static ip\_address=10.42.0.10/24} \\
+          {\tt static routers=10.42.0.1} \\
+          {\tt static domain\_name\_servers=10.42.0.1 8.8.8.8}
+
+          This is for the first Raspberry Pi. For the second device, change
+          10.42.0.10 to 10.42.0.11. If after this change you cannot SSH into 
+          the device, run {\tt nmap -sP 10.42.0.0/24} on your computer to 
+          determine which IP address was assigned to the device.
+    \item Create a directory {\tt mkdir /etc/systemd/system/dhcpcd@.service.d} 
+          and go to that directory with {\tt cd 
+          /etc/systemd/system/dhcpcd@.service.d}. Then edit {\tt timeout.conf} 
+          to add the following lines:
+
+          {\tt [Service]} \\
+          {\tt ExecStart=} \\
+          {\tt ExecStart=/usr/bin/dhcpcd -w -q -t 5 \%I}
+    \item Edit {\tt /boot/cmdline.txt} to remove the recently added IP part.
           After that, reboot the Raspberry Pi device.
     \item On your laptop, edit the old link-local connection. Change the type 
           to ``Shared with other computers'' and check the checkbox at the 

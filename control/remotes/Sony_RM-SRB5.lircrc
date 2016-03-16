@@ -1,0 +1,39 @@
+begin
+    button = cd_play
+    prog = mobile-radio-tomography
+    config = start
+end
+
+begin
+    button = cd_stop
+    prog = mobile-radio-tomography
+    config = stop
+end
+
+begin
+    button = vol+
+    prog = mobile-radio-tomography
+    config = up
+    repeat = 1
+end
+
+begin
+    button = vol-
+    prog = mobile-radio-tomography
+    config = down
+    repeat = 1
+end
+
+begin
+    button = previous
+    prog = mobile-radio-tomography
+    config = left
+    repeat = 1
+end
+
+begin
+    button = next
+    prog = mobile-radio-tomography
+    config = right
+    repeat = 1
+end
