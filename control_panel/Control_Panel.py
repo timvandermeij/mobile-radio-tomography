@@ -1,4 +1,3 @@
-# TODO: fix reconstruction view toolbar button (extract reconstructor and handle in main class?)
 # TODO: split into multiple files
 
 import matplotlib
@@ -59,18 +58,20 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         reconstructor_box.setCurrentIndex(2)
         reconstructor_action = QtGui.QAction(QtGui.QIcon("assets/start.png"), "Start",
                                              self._controller.central_widget)
-        reconstructor_action.triggered.connect(self._reconstruction_start)
+        reconstructor_action.triggered.connect(
+            lambda: self._reconstruction_start(str(reconstructor_box.currentText()))
+        )
 
         toolbar.addWidget(reconstructor_label)
         toolbar.addWidget(reconstructor_box)
         toolbar.addAction(reconstructor_action)
 
-        self._reconstructor_box = reconstructor_box
-
-    def _reconstruction_start(self):
+    def _reconstruction_start(self, reconstructor):
         """
         Start the reconstruction process.
         """
+
+        self.clear()
 
         # Create the label for the image.
         self._label = QtGui.QLabel()
@@ -102,14 +103,13 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._reader = Dump_Reader("assets/reconstruction_{}.json".format(filename))
 
         # Create the reconstructor.
-        reconstructor = str(self._reconstructor_box.currentText())
         reconstructors = {
             "Least squares": Least_Squares_Reconstructor,
             "SVD": SVD_Reconstructor,
             "Truncated SVD": Truncated_SVD_Reconstructor
         }
         reconstructor_class = reconstructors[reconstructor]
-        self._reconstructor = reconstructor_class(self._arguments)
+        self._reconstructor = reconstructor_class(self._controller.arguments)
 
         # Create the weight matrix.
         self._weight_matrix = Weight_Matrix(self._controller.arguments, self._reader.get_origin(),
