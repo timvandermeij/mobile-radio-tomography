@@ -1,6 +1,6 @@
 import sys
 from __init__ import __package__
-from control_panel.Control_Panel import Control_Panel_Window
+from control_panel.Control_Panel_Window import Control_Panel_Window
 from PyQt4 import QtGui
 
 def main(argv):
