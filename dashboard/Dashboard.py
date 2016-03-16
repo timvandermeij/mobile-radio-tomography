@@ -1,7 +1,7 @@
 import matplotlib
 matplotlib.use("Qt4Agg")
 import matplotlib.pyplot as plt
-import usb
+from ..core.USB_Manager import USB_Manager
 from ..reconstruction.Dump_Reader import Dump_Reader
 from ..reconstruction.Weight_Matrix import Weight_Matrix
 from ..reconstruction.Least_Squares_Reconstructor import Least_Squares_Reconstructor
@@ -17,8 +17,10 @@ class Dashboard(QtGui.QMainWindow):
         """
 
         super(Dashboard, self).__init__()
+
         self._arguments = Arguments("settings.json", [])
         self._dashboard_settings = self._arguments.get_settings("dashboard")
+        self._usb_manager = USB_Manager()
 
         # Set the dimensions, title and icon of the window.
         self.setGeometry(0, 0, 800, 600)
@@ -88,20 +90,13 @@ class Dashboard(QtGui.QMainWindow):
         """
 
         xbee_insertion_delay = self._dashboard_settings.get("xbee_insertion_delay") * 1000
-        xbee_found = False
 
         try:
-            xbee_identity = self._dashboard_settings.get("xbee_identity")
-            xbee_identity = [str(value) for value in xbee_identity]
-            for device in usb.core.find(find_all=True):
-                device_identity = [hex(device.idVendor), hex(device.idProduct)]
-                if device_identity == xbee_identity:
-                    xbee_found = True
-        finally:
-            if not xbee_found:
-                QtCore.QTimer.singleShot(xbee_insertion_delay, self._loading_loop)
-            else:
-                self._control()
+            self._usb_manager.index()
+            self._usb_manager.get_xbee_device()
+            self._control()
+        except KeyError:
+            QtCore.QTimer.singleShot(xbee_insertion_delay, self._loading_loop)
 
     def _control(self):
         """
