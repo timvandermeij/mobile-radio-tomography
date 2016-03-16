@@ -1,3 +1,4 @@
+import itertools
 import math
 import numpy as np
 
@@ -27,20 +28,22 @@ class Problem(object):
         these variables. The values can be scalar values, or each can be
         a numpy vector containing the bound value for every variable in order.
         If the tuple has a third component, then this value determines
-        whether the variables are binary or real. Again, this can either be
-        `True` to add constraints to make all variables binary, or it can be
-        a numpy array of booleans that determine which variables are binary,
-        in order.
+        whether the variables are binary, integer or real. This can be a numpy
+        array containing types, respectively `bool`, `np.int` and `np.float`.
         """
 
         self.dim = dim
         if domain is None:
             self.domain = (0.0, 1.0)
+            self._bool_indices = ()
+            self._int_indices = ()
         else:
             domain = tuple(domain)
             if len(domain) < 2:
                 raise(ValueError("Incorrect domain type"))
             self.domain = domain
+            self._bool_indices = np.nonzero(domain[2] == bool)
+            self._int_indices = np.nonzero(domain[2] == np.int)
 
         # Cache objectives and constraints so that they do not have to be 
         # recreated every time
@@ -49,7 +52,7 @@ class Problem(object):
 
     def format_steps(self, steps):
         dim = self.dim
-        return np.array((steps * ((dim / len(steps)) + 1))[:dim])
+        return np.array((steps * ((dim / len(steps)) + 1))[:dim]).flatten()
 
     def get_random_vector(self):
         """
@@ -65,11 +68,11 @@ class Problem(object):
         low = self.domain[0]
         high = self.domain[1]
         v = (np.random.rand(self.dim) * (high - low)) + low
-        # If there is a d[2], then this tells us which element is a binary type 
-        # and which ones are reals.
+        # If there is a d[2], then this tells us which elements are a binary 
+        # type, which ones are integer and which ones are reals.
         if len(self.domain) > 2:
-            indices = np.nonzero(self.domain[2])
-            v[indices] = np.random.random_integers(0, 1, size=len(indices[0]))
+            # Draw random binary values.
+            v[self._bool_indices] = np.random.random_integers(0, 1, size=len(self._bool_indices[0]))
 
         return v
 
@@ -99,6 +102,8 @@ class Problem(object):
         the vector. These two evaluations are returned, where the feasibility
         is a boolean and the objectives are a list of function values.
         """
+
+        point = self.format_point(point)
         Feasible = all(constraint(point) for constraint in self.constraints)
         if Feasible:
             Objective = [float(objective(point)) for objective in self.objectives]
@@ -129,13 +134,26 @@ class Problem(object):
             # We check whether a value is above the probability of flipping.
             # If so, then the calculation becomes |1 - old| which flips the bit
             # Otherwise, the calculation is |0 - old| which keeps the old value
-            indices = np.nonzero(self.domain[2])
-            x_new[indices] = np.absolute(
-                (np.random.rand(len(indices[0])) > np.array(steps)[indices[0]])
-                - point[indices]
-            )
+            indices = self._bool_indices[0]
+            if len(indices) > 0:
+                x_new[self._bool_indices] = np.absolute(
+                    (np.random.rand(len(indices)) > np.array(steps)[indices])
+                    - point[self._bool_indices]
+                )
+
+            low = self.domain[0]
+            high = self.domain[1]
+            x_new[self._int_indices] = np.remainder(x_new[self._int_indices] - low, high - low - 0.5) + low
 
         return x_new
+
+    def format_point(self, point):
+        if self._int_indices:
+            # Round integer variables.
+            point = np.copy(point)
+            point[self._int_indices] = np.round(point[self._int_indices])
+
+        return point
 
     def get_objectives(self):
         """
@@ -173,7 +191,7 @@ class Problem(object):
             constraints.extend([
                 lambda x: np.all(
                     (x < self.domain[1]) +
-                    (self.domain[2] * (x <= self.domain[2]))
+                    ((self.domain[2] == bool) * (x <= self.domain[2]))
                 )
             ])
         else:
@@ -199,83 +217,67 @@ class Reconstruction_Plan(Problem):
             raise ValueError("'arguments' must be an instance of Arguments")
 
         self.settings = arguments.get_settings("planning_problem")
-        N = self.settings.get("number_of_measurements")
-        network_size = self.settings.get("network_size")
+        self.N = self.settings.get("number_of_measurements")
+        self.network_size = self.settings.get("network_size")
+        self.padding = self.settings.get("network_padding")
 
-        # Variables:
-        # - distances from the origin of each measurement line y_1 .. y_n
-        #   domain: from -net_d to net_d (in meters)
-        # - angles of each measurement line compared to the x axis a_1 .. a_n
-        #   domain: from 0.0 to math.pi (in radians)
-        #   This corresponds to slopes.
-        net_d = math.sqrt((network_size[0])**2 + (network_size[1])**2)
-        domain = (
-            # Minimum values per variable
-            np.array([[-network_size[1]]*N, [0.0]*N, [0]*N]).flatten(),
-            # Maximum values per variable
-            np.array([[net_d]*N, [math.pi]*N, [1]*N]).flatten(),
-            # Whether variables are boolean or real
-            np.array([[False]*N, [False]*N, [True]*N]).flatten()
-        )
-        super(Reconstruction_Plan, self).__init__(N*3, domain)
+        num_variables, domain = self.get_domain()
+        super(Reconstruction_Plan, self).__init__(num_variables, domain)
 
         # Initial weight matrix object which is filled with current locations 
         # during evaluations.
-        self.weight_matrix = Weight_Matrix(arguments, [0, 0], network_size)
+        size = [self.network_size[0]-self.padding[0]*2, self.network_size[1]-self.padding[1]*2]
+        self.weight_matrix = Weight_Matrix(arguments, self.padding, size)
         self.matrix = None
         self.unsnappable = 0
         self.distances = None
-
-        self.N = N
-        self.network_size = network_size
 
         self.unsnappable_max = self.N * self.settings.get("unsnappable_rate")
 
         self.geometry = Geometry()
 
+    def get_domain(self):
+        raise NotImplementedError("Subclass must implement `get_domain`")
+
     def format_steps(self, steps):
-        if len(steps) == 2:
-            return np.array([steps[0]] * self.N + [steps[1]] * self.N + [0.5]*self.N)
-        if len(steps) == 3:
-            return np.array([steps[0]] * self.N + [steps[1]] * self.N + [steps[2]]*self.N)
+        if len(steps) == self.dim/self.N:
+            return np.array(list(itertools.chain(*[[s] * self.N for s in steps]))).flatten()
 
         return super(Reconstruction_Plan, self).format_steps(steps)
 
-    def generate_positions(self, offset, angle, cardinal=False):
-        if angle == math.pi/2 or (cardinal and self.geometry.check_angle(angle, math.pi/2, math.pi/8)):
-            return [[offset, 0], [offset, self.network_size[1]]]
-        if angle < math.pi/2:
-            beta = math.pi/2 - angle
-        else:
-            beta = angle - math.pi/2
-
-        if cardinal and self.geometry.check_angle(angle, 0.0, math.pi/8):
-            a = 0.0
-        else:
-            a = math.tan(angle)
-        b = offset / math.sin(beta)
-        return [[0, b], [self.network_size[0], a*self.network_size[0]+b]]
+    def generate_positions(self, point, index):
+        raise NotImplementedError("Subclass must implement `generate_positions(point, index)`")
 
     def get_positions(self, point):
         unsnappable = 0
 
         # Generate positions, check snappability and create weight matrix
         positions = []
+
+        point = self.format_point(point)
         for i in range(self.N):
-            sensor_points = self.generate_positions(point[i], point[i+self.N], point[i+2*self.N])
-            snapped_points = self.weight_matrix.update(*sensor_points)
+            sensor_points = self.generate_positions(point, i)
+            snapped_points = self.select_positions(sensor_points)
             if snapped_points is None:
                 unsnappable += 1
             else:
-                positions.extend(snapped_points)
+                positions.append(snapped_points)
 
-        return positions, unsnappable
+        return np.array(positions), unsnappable
+
+    def select_positions(self, sensor_points):
+        snapped_points = self.weight_matrix.update(*sensor_points)
+        return snapped_points
 
     def evaluate_point(self, point):
         self.weight_matrix.reset()
         positions, self.unsnappable = self.get_positions(point)
 
-        self.distances = np.array([(positions[p][0]-positions[p+1][0])**2+(positions[p][1]-positions[p+1][1])**2 for p in range(0, len(positions), 2)])
+        if positions.size > 0:
+            self.distances = np.linalg.norm(positions[:,0,:]-positions[:,1,:], axis=1)
+        else:
+            self.distances = np.array([])
+
         self.matrix = self.weight_matrix.output()
 
         return super(Reconstruction_Plan, self).evaluate_point(point)
@@ -312,3 +314,92 @@ class Reconstruction_Plan(Problem):
             lambda x: self.unsnappable < self.unsnappable_max
         ])
         return constraints
+
+class Reconstruction_Plan_Continuous(Reconstruction_Plan):
+    def get_domain(self):
+        # Variables:
+        # - distances from the origin of each measurement line y_1 .. y_n
+        #   domain: from -net_d to net_d (in meters)
+        # - angles of each measurement line compared to x axis a_1 .. a_n
+        #   domain: from 0.0 to math.pi (in radians)
+        #   This corresponds to slopes.
+        num_variables = self.N*3
+        net_d = math.sqrt((self.network_size[0])**2 + (self.network_size[1])**2)
+        domain = (
+            # Minimum values per variable
+            np.array([[-self.network_size[1]]*self.N, [0.0]*self.N, [0]*self.N]).flatten(),
+            # Maximum values per variable
+            np.array([[net_d]*self.N, [math.pi]*self.N, [1]*self.N]).flatten(),
+            # Whether variables are boolean or real
+            np.array([[np.float]*self.N, [np.float]*self.N, [bool]*self.N]).flatten()
+        )
+
+        return num_variables, domain
+
+    def format_steps(self, steps):
+        if len(steps) == 2:
+            pairs = [steps[0]] * self.N + [steps[1]] * self.N
+            return np.array([pairs + [0.5]*self.N]).flatten()
+
+        return super(Reconstruction_Plan_Continuous, self).format_steps(steps)
+
+    def generate_positions(self, point, index):
+        offset = point[index]
+        angle = point[index+self.N]
+        cardinal = point[index+2*self.N]
+
+        if angle == math.pi/2 or (cardinal and self.geometry.check_angle(angle, math.pi/2, math.pi/8)):
+            return [[offset, 0], [offset, self.network_size[1]]]
+        if angle < math.pi/2:
+            beta = math.pi/2 - angle
+        else:
+            beta = angle - math.pi/2
+
+        if cardinal and self.geometry.check_angle(angle, 0.0, math.pi/8):
+            a = 0.0
+        else:
+            a = math.tan(angle)
+        b = offset / math.sin(beta)
+        return [[0, b], [self.network_size[0], a*self.network_size[0]+b]]
+
+class Reconstruction_Plan_Discrete(Reconstruction_Plan):
+    def get_domain(self):
+        num_variables = self.N*4
+        # Variables:
+        # x and y coordinates for two measurement points, natural numbers.
+        # Valid coordinates are within the grid size bounds and also not inside 
+        # the network itself.
+        max_y = [self.network_size[0]]*self.N
+        max_x = [self.network_size[1]]*self.N
+        domain = (
+            # Minimum values per variable
+            np.array([[0]*num_variables]).flatten(),
+            # Maximum values per variable
+            np.array([max_y, max_x, max_y, max_x]).flatten(),
+            # Whether variables are boolean or real
+            np.array([[np.int]*num_variables]).flatten()
+        )
+
+        return num_variables, domain
+
+    def format_steps(self, steps):
+        if len(steps) == 2:
+            pairs = [steps[0]] * self.N + [steps[1]] * self.N
+            return np.array([pairs + pairs]).flatten()
+
+        return super(Reconstruction_Plan_Discrete, self).format_steps(steps)
+
+    def generate_positions(self, point, index):
+        return [
+            [int(point[index]), int(point[index+self.N])],
+            [int(point[index+2*self.N]), int(point[index+3*self.N])]
+        ]
+
+    def select_positions(self, sensor_points):
+        snapped_points = super(Reconstruction_Plan_Discrete, self).select_positions(sensor_points)
+        if snapped_points is None:
+            return None
+
+        # Keep the unsnapped points since we may be able to perform 
+        # measurements on different grid positions.
+        return sensor_points

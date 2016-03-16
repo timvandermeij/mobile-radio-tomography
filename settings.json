@@ -71,7 +71,8 @@
     "planning": {
         "name": "Base trajectory planning",
         "settings": {
-            "algorithm_class": "SMS-EMOA"
+            "algorithm_class": "SMS-EMOA",
+            "discrete": false
         }
     },
     "planning_algorithm": {
@@ -88,6 +89,7 @@
         "settings": {
             "number_of_measurements": 20,
             "network_size": [64,64],
+            "network_padding": [0,0],
             "unsnappable_rate": 0.5
         }
     },

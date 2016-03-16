@@ -116,6 +116,9 @@ class Algorithm(object):
         # of higher values like in the original 2D-KLP algorithm. Thus yStar 
         # starts out as infinity and decreases within the algorithm.
         yStar = np.inf
+        if all(Objectives[i][1] == yStar for i in P):
+            return OrderedDict([(i, Objectives[i]) for i in P]), range(len(P))
+
         todelete = []
         for idx, i in enumerate(P):
             if Objectives[i][1] < yStar:
