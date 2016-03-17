@@ -1,4 +1,11 @@
 {
+    "control_panel": {
+        "name": "Control panel",
+        "settings": {
+            "viewer_dimensions": [500, 500],
+            "xbee_insertion_delay": 0.1
+        }
+    },
     "distance_sensor_simulator": {
         "name": "Distance sensor (simulator)",
         "settings": {
@@ -156,13 +163,7 @@
         "name": "Reconstruction",
         "settings": {
             "filename": "static",
-            "reconstructor": "truncated-svd",
-            "pause_time": 0.75
-        }
-    },
-    "reconstruction_viewer": {
-        "name": "Reconstruction viewer",
-        "settings": {
+            "pause_time": 0.5,
             "cmap": "pink",
             "interpolation": "hamming"
         }

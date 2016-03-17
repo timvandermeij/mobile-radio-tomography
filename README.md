@@ -20,6 +20,7 @@ systems, perhaps with slightly different installation procedures.
   provides these packages, otherwise you can retrieve them from the LIRC 
   website itself.
 * Python 2.7. Note that Python 3 cannot be used at this moment.
+* PyQt4
 * `pip` for Python 2.7. `pip` is often not available on extremely old and bare
   systems. If it is also not delivered by a package manager, one can also
   [install it with get-pip.py](https://pip.pypa.io/en/latest/installing.html).
@@ -204,18 +205,16 @@ Reconstruction and visualization
 --------------------------------
 
 The reconstruction and visualization components convert a dataset with signal
-strength measurements to a two-dimensional image per valid sweep. There are
-several reconstructors:
+strength measurements to a set of two-dimensional images. We provide multiple
+reconstructors:
 
 * Least squares
 * SVD
 * Truncated SVD
 
-Execute `python2 reconstruction.py` in a terminal to execute the reconstruction
-and visualization components with the default file, reconstructor and other
-parameters. The `--help` argument will display which parameters you can tune
-for the reconstruction and visualization (for instance, the reconstructor and
-the interpolation method are customizable).
+Run `python2 control_panel.py` in a terminal to open the control panel. The
+toolbar allows you to change the reconstructor and start the reconstruction
+and visualization process.
 
 Running the tests
 =================
