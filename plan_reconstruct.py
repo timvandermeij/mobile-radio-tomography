@@ -37,6 +37,12 @@ def do_plot(name):
             pass
 
 def do_data(name, data):
+    """
+    Handle data output.
+    Either write a JSON file with the given `name` for the `data` object, or
+    print the data to the standard output.
+    """
+
     if displayless or 'SAVE_PATH' in os.environ:
         path = os.environ['SAVE_PATH'] if 'SAVE_PATH' in os.environ else '.'
         filename = "{}/{}.json".format(path, name)

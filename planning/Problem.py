@@ -10,7 +10,7 @@ class Problem(object):
     """
     Generic problem statement structure.
     
-    A problem consists of a dimsension of the input variables, the domains of 
+    A problem consists of a dimension of the input variables, the domains of 
     the input variables, objectives and constraints. The input vectors are 
     also generated, mutated and evaluated for feasibility and objective 
     fitness here.
@@ -51,6 +51,13 @@ class Problem(object):
         self.constraints = self.get_constraints()
 
     def format_steps(self, steps):
+        """
+        Convert a list of `steps` to a full list of the problem's dimension.
+
+        The returned vector of step sizes has the same number of elements as
+        the number of variables that the problem has.
+        """
+
         dim = self.dim
         return np.array((steps * ((dim / len(steps)) + 1))[:dim]).flatten()
 
@@ -95,7 +102,8 @@ class Problem(object):
 
     def evaluate_point(self, point):
         """
-        Evaluate a single individual. a vector containing variable values.
+        Evaluate a single individual `point`.
+        The `point` is a vector containing variable values.
 
         This checks whether this vector is feasible according to all of the
         problem constraints, and calculates the objective function values for
@@ -126,6 +134,12 @@ class Problem(object):
         independently, but only if a uniform random value is higher than the
         step size threshold. Higher step sizes decrease the probability of
         flipping, while lower step sizes increase flip mutation frequency.
+
+        For integer variables, we ensure that the values remain inside the
+        domains of the problem by cyclically transferring them to the other
+        side of the bounds. The values themselves are not converted to integer
+        here to avoid bias to certain values. Use `format_point` to convert
+        an individual to its final representation.
         """
 
         x_new = point + steps * np.random.randn(self.dim)
@@ -146,11 +160,23 @@ class Problem(object):
         return x_new
 
     def _clip(self, values):
+        """
+        Cyclically clip a vector of `values` so that all values remain within
+        the domain of the problem. Values that are too low are transferred by
+        the same magnitude below the upper bound, and vice versa.
+        """
+
         low = self.domain[0]
         high = self.domain[1]
         return np.remainder(values - low, high - low - 0.5) + low
 
     def format_point(self, point):
+        """
+        Convert an individual vector `point` to its final representation.
+
+        This converts integer variables to their rounded versions.
+        """
+
         if self._int_indices:
             # Round integer variables.
             point = np.copy(point)
@@ -245,6 +271,9 @@ class Reconstruction_Plan(Problem):
         raise NotImplementedError("Subclass must implement `get_domain`")
 
     def format_steps(self, steps):
+        # Convert a list of step sizes that has the same number of elements as 
+        # there are variables for a single measurement so that they apply to 
+        # each variable of each measurement.
         if len(steps) == self.dim/self.N:
             return np.array(list(itertools.chain(*[[s] * self.N for s in steps]))).flatten()
 
@@ -271,6 +300,15 @@ class Reconstruction_Plan(Problem):
         return np.array(positions), unsnappable
 
     def select_positions(self, sensor_points):
+        """
+        Select the positions for the given `sensor_points`.
+
+        This method updates the weight matrix with the given points, and
+        returns the final positions for the sensors which may be changed by the
+        snap to boundary algorithm of the weight matrix.
+        The method returns `None` when the positions could not be snapped.
+        """
+
         snapped_points = self.weight_matrix.update(*sensor_points)
         return snapped_points
 
@@ -279,6 +317,7 @@ class Reconstruction_Plan(Problem):
         positions, self.unsnappable = self.get_positions(point)
 
         if positions.size > 0:
+            # Generate distances between all the pairs of sensor positions.
             self.distances = np.linalg.norm(positions[:,0,:]-positions[:,1,:], axis=1)
         else:
             self.distances = np.array([])
@@ -328,6 +367,8 @@ class Reconstruction_Plan_Continuous(Reconstruction_Plan):
         # - angles of each measurement line compared to x axis a_1 .. a_n
         #   domain: from 0.0 to math.pi (in radians)
         #   This corresponds to slopes.
+        # - whether to snap an angle into a cardinal direction if it is close
+        #   enough such a direction.
         num_variables = self.N*3
         net_d = math.sqrt((self.network_size[0])**2 + (self.network_size[1])**2)
         domain = (
@@ -343,6 +384,8 @@ class Reconstruction_Plan_Continuous(Reconstruction_Plan):
 
     def format_steps(self, steps):
         if len(steps) == 2:
+            # Use two step sizes for offset and angle variables respectively, 
+            # and use a sane default for the boolean cardinal variable.
             pairs = [steps[0]] * self.N + [steps[1]] * self.N
             return np.array([pairs + [0.5]*self.N]).flatten()
 
@@ -354,13 +397,17 @@ class Reconstruction_Plan_Continuous(Reconstruction_Plan):
         cardinal = point[index+2*self.N]
 
         if angle == math.pi/2 or (cardinal and self.geometry.check_angle(angle, math.pi/2, math.pi/8)):
+            # Straight upward angle, which are not very nice to calculate in 
+            # the goniometric functions.
             return [[offset, 0], [offset, self.network_size[1]]]
         if angle < math.pi/2:
             beta = math.pi/2 - angle
         else:
             beta = angle - math.pi/2
 
+        # Define the function of the line as y = ax + b
         if cardinal and self.geometry.check_angle(angle, 0.0, math.pi/8):
+            # Straight rightward line without a slope, so y = b
             a = 0.0
         else:
             a = math.tan(angle)
@@ -389,14 +436,21 @@ class Reconstruction_Plan_Discrete(Reconstruction_Plan):
 
     def format_steps(self, steps):
         if len(steps) == 2:
+            # Use two step sizes for x and y variables respectively.
             pairs = [steps[0]] * self.N + [steps[1]] * self.N
             return np.array([pairs + pairs]).flatten()
 
         return super(Reconstruction_Plan_Discrete, self).format_steps(steps)
 
     def mutate(self, point, steps):
+        # Ensure we work on a copy of the original individual, so that it is 
+        # left untouched.
         point = np.copy(point)
         for i in range(self.N):
+            # Randomly choose an axis. If we do so, make one of the points of 
+            # a measurement snap toward the other side of the grid. This causes 
+            # the points to spread out more and make it more likely that the 
+            # measurement intersects with the network more.
             axis = np.random.choice([-1,0,1])
             if axis == -1:
                 continue
