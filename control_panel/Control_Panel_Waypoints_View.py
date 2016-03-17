@@ -1,5 +1,5 @@
-from PyQt4 import QtCore, QtGui
-from Control_Panel_View import Control_Panel_View, Control_Panel_View_Name
+from PyQt4 import QtGui
+from Control_Panel_View import Control_Panel_View
 
 class Control_Panel_Waypoints_View(Control_Panel_View):
     def show(self):
