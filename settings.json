@@ -319,6 +319,58 @@
                         "name": "timestamp_4",
                         "format": "d"
                     }
+                ],
+                "waypoint_clear": [
+                    {
+                        "name": "id",
+                        "format": "B",
+                        "value": 5,
+                        "private": false
+                    },
+                    {
+                        "name": "sensor_id",
+                        "format": "B"
+                    }
+                ],
+                "waypoint_add": [
+                    {
+                        "name": "id",
+                        "format": "B",
+                        "value": 6,
+                        "private": false
+                    },
+                    {
+                        "name": "latitude",
+                        "format": "d"
+                    },
+                    {
+                        "name": "longitude",
+                        "format": "d"
+                    },
+                    {
+                        "name": "index",
+                        "format": "i"
+                    },
+                    {
+                        "name": "to_id",
+                        "format": "B"
+                    }
+                ],
+                "waypoint_ack": [
+                    {
+                        "name": "id",
+                        "format": "B",
+                        "value": 7,
+                        "private": false
+                    },
+                    {
+                        "name": "next_index",
+                        "format": "i"
+                    },
+                    {
+                        "name": "sensor_id",
+                        "format": "B"
+                    }
                 ]
             }
         }
