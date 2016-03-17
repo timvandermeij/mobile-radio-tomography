@@ -141,11 +141,14 @@ class Problem(object):
                     - point[self._bool_indices]
                 )
 
-            low = self.domain[0]
-            high = self.domain[1]
-            x_new[self._int_indices] = np.remainder(x_new[self._int_indices] - low, high - low - 0.5) + low
+            x_new[self._int_indices] = self._clip(x_new[self._int_indices])
 
         return x_new
+
+    def _clip(self, values):
+        low = self.domain[0]
+        high = self.domain[1]
+        return np.remainder(values - low, high - low - 0.5) + low
 
     def format_point(self, point):
         if self._int_indices:
@@ -226,7 +229,9 @@ class Reconstruction_Plan(Problem):
 
         # Initial weight matrix object which is filled with current locations 
         # during evaluations.
-        size = [self.network_size[0]-self.padding[0]*2, self.network_size[1]-self.padding[1]*2]
+        self.network_width = self.network_size[0] - self.padding[0]*2
+        self.network_height = self.network_size[1] - self.padding[1]*2
+        size = [self.network_width, self.network_height]
         self.weight_matrix = Weight_Matrix(arguments, self.padding, size)
         self.matrix = None
         self.unsnappable = 0
@@ -369,13 +374,13 @@ class Reconstruction_Plan_Discrete(Reconstruction_Plan):
         # x and y coordinates for two measurement points, natural numbers.
         # Valid coordinates are within the grid size bounds and also not inside 
         # the network itself.
-        max_y = [self.network_size[0]]*self.N
-        max_x = [self.network_size[1]]*self.N
+        max_y = [self.network_size[0]+1]*self.N
+        max_x = [self.network_size[1]+1]*self.N
         domain = (
             # Minimum values per variable
             np.array([[0]*num_variables]).flatten(),
             # Maximum values per variable
-            np.array([max_y, max_x, max_y, max_x]).flatten(),
+            np.array([max_x, max_y, max_x, max_y]).flatten(),
             # Whether variables are boolean or real
             np.array([[np.int]*num_variables]).flatten()
         )
@@ -388,6 +393,32 @@ class Reconstruction_Plan_Discrete(Reconstruction_Plan):
             return np.array([pairs + pairs]).flatten()
 
         return super(Reconstruction_Plan_Discrete, self).format_steps(steps)
+
+    def mutate(self, point, steps):
+        point = np.copy(point)
+        for i in range(self.N):
+            axis = np.random.choice([-1,0,1])
+            if axis == -1:
+                continue
+
+            size = [self.network_width, self.network_height]
+            other_axis = (axis+1)%2
+            diff = size[axis]
+            if point[i+axis*self.N] + diff > self.network_size[axis]:
+                diff = -diff
+
+            s = steps[i+other_axis*self.N] * np.random.randn()
+            other_axis_point = point[i+other_axis*self.N]
+            if (
+                0 <= other_axis_point < self.padding[other_axis] or
+               self.padding[other_axis] + size[other_axis] < other_axis_point < self.network_size[other_axis]
+            ):
+                s = size[other_axis]/2 * s
+
+            point[i+(axis+2)*self.N] = point[i+axis*self.N] + diff
+            point[i+(other_axis+2)*self.N] += s
+
+        return super(Reconstruction_Plan_Discrete, self).mutate(point, steps)
 
     def generate_positions(self, point, index):
         return [
