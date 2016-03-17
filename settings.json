@@ -159,6 +159,31 @@
             "speeds": [-0.60, 0.60]
         }
     },
+    "planning": {
+        "name": "Base trajectory planning",
+        "settings": {
+            "algorithm_class": "SMS-EMOA",
+            "discrete": false
+        }
+    },
+    "planning_algorithm": {
+        "name": "Evolutionary multiobjective optimization algorithm",
+        "settings": {
+            "population_size": 15,
+            "iteration_limit": 100,
+            "iteration_debug": 100,
+            "step_size": [0.5]
+        }
+    },
+    "planning_problem": {
+        "name": "Reconstruction trajectory planning problem",
+        "settings": {
+            "number_of_measurements": 20,
+            "network_size": [64,64],
+            "network_padding": [0,0],
+            "unsnappable_rate": 0.5
+        }
+    },
     "reconstruction": {
         "name": "Reconstruction",
         "settings": {
