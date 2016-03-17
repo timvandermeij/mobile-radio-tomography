@@ -1,3 +1,4 @@
+from functools import partial
 from PyQt4 import QtCore, QtGui
 from Control_Panel_View import Control_Panel_View
 
@@ -7,41 +8,32 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         Show the waypoints view.
         """
 
-        # Create the label for the first vehicle.
-        label_1 = QtGui.QLabel("Waypoints for vehicle 1:")
+        labels = []
+        tables = []
 
-        # Create the table for the first vehicle.
-        table_1 = QtGui.QTableWidget()
-        table_1.setRowCount(1)
-        table_1.setColumnCount(2)
-        table_1.setHorizontalHeaderLabels(["x", "y"])
-        table_1.horizontalHeader().setResizeMode(0, QtGui.QHeaderView.Stretch)
-        table_1.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Stretch)
+        for vehicle in [1, 2]:
+            # Create the label for the vehicle.
+            label = QtGui.QLabel("Waypoints for vehicle {}:".format(vehicle))
+            labels.append(label)
 
-        # Create the context menu for the rows in the table for the first vehicle.
-        table_1.verticalHeader().setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
-        remove_rows_action = QtGui.QAction("Remove row(s)", table_1)
-        remove_rows_action.triggered.connect(lambda: self._remove_rows(table_1))
-        table_1.verticalHeader().addAction(remove_rows_action)
+            # Create the table for the vehicle.
+            table = QtGui.QTableWidget()
+            table.setRowCount(1)
+            table.setColumnCount(2)
+            table.setHorizontalHeaderLabels(["x", "y"])
+            table.horizontalHeader().setResizeMode(0, QtGui.QHeaderView.Stretch)
+            table.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Stretch)
+            tables.append(table)
 
-        # Create the label for the first vehicle.
-        label_2 = QtGui.QLabel("Waypoints for vehicle 2:")
-
-        # Create the table for the second vehicle.
-        table_2 = QtGui.QTableWidget()
-        table_2.setRowCount(1)
-        table_2.setColumnCount(2)
-        table_2.setHorizontalHeaderLabels(["x", "y"])
-        table_2.horizontalHeader().setResizeMode(0, QtGui.QHeaderView.Stretch)
-        table_2.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Stretch)
-
-        # Create the context menu for the rows in the table for the second vehicle.
-        table_2.verticalHeader().setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
-        remove_rows_action = QtGui.QAction("Remove row(s)", table_2)
-        remove_rows_action.triggered.connect(lambda: self._remove_rows(table_2))
-        table_2.verticalHeader().addAction(remove_rows_action)
-
-        tables = [table_1, table_2]
+            # Create the context menu for the rows in the table. We use
+            # `functools.partial` because Python only creates new bindings in
+            # namespaces through assignment and parameter lists of functions.
+            # The parameter `table` is therefore not defined in the namespace of
+            # the lambda, but rather in the namespace of `show()`.
+            table.verticalHeader().setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
+            remove_rows_action = QtGui.QAction("Remove row(s)", table)
+            remove_rows_action.triggered.connect(partial(self._remove_rows, table))
+            table.verticalHeader().addAction(remove_rows_action)
 
         # Create the buttons for adding new rows and sending the waypoints.
         add_row_button = QtGui.QPushButton("Add row")
@@ -51,12 +43,12 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
         # Create the layout and add the widgets.
         hbox_labels = QtGui.QHBoxLayout()
-        hbox_labels.addWidget(label_1)
-        hbox_labels.addWidget(label_2)
+        for label in labels:
+            hbox_labels.addWidget(label)
 
         hbox_tables = QtGui.QHBoxLayout()
-        hbox_tables.addWidget(table_1)
-        hbox_tables.addWidget(table_2)
+        for table in tables:
+            hbox_tables.addWidget(table)
 
         hbox_buttons = QtGui.QHBoxLayout()
         hbox_buttons.addWidget(add_row_button)
