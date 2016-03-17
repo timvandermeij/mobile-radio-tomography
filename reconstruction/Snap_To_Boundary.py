@@ -102,6 +102,10 @@ class Snap_To_Boundary(object):
         start = Point(start[0], start[1])
         end = Point(end[0], end[1])
 
+        # Ensure that the start and end points are not the same point.
+        if start == end:
+            return None
+
         # Ensure that the start and end points are outside the network.
         if not self._is_outside(start, end):
             return None
