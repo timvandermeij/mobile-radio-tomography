@@ -29,10 +29,13 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         table_2.horizontalHeader().setResizeMode(0, QtGui.QHeaderView.Stretch)
         table_2.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Stretch)
 
+        tables = [table_1, table_2]
+
         # Create the buttons for adding new rows and sending the waypoints.
         add_row_button = QtGui.QPushButton("Add row")
-        add_row_button.clicked.connect(lambda: self._add_row(table_1, table_2))
+        add_row_button.clicked.connect(lambda: self._add_row(tables))
         send_button = QtGui.QPushButton("Send")
+        send_button.clicked.connect(lambda: self._send(tables))
 
         # Create the layout and add the widgets.
         hbox_labels = QtGui.QHBoxLayout()
@@ -53,10 +56,32 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         vbox.addLayout(hbox_tables)
         vbox.addLayout(hbox_buttons)
 
-    def _add_row(self, table_1, table_2):
+    def _add_row(self, tables):
         """
-        Add a row to both tables at the same time.
+        Add a row to all tables at the same time.
         """
 
-        table_1.insertRow(table_1.rowCount())
-        table_2.insertRow(table_2.rowCount())
+        for table in tables:
+            table.insertRow(table.rowCount())
+
+    def _send(self, tables):
+        """
+        Send the waypoints from all tables to the corresponding vehicles.
+        """
+
+        waypoints = {}
+
+        for index, table in enumerate(tables):
+            vehicle = index + 1
+            for row in range(table.rowCount()):
+                x = table.item(row, 0)
+                y = table.item(row, 1)
+                if x is not None and y is not None:
+                    x = int(x.text())
+                    y = int(y.text())
+                    if vehicle not in waypoints:
+                        waypoints[vehicle] = [(x, y)]
+                    else:
+                        waypoints[vehicle].append((x, y))
+
+        # TODO: send waypoints to vehicles using XBee
