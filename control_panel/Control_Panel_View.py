@@ -3,6 +3,7 @@ from PyQt4 import QtCore
 class Control_Panel_View_Name(object):
     LOADING = 1
     RECONSTRUCTION = 2
+    WAYPOINTS = 3
 
 class Control_Panel_View(object):
     def __init__(self, controller):

@@ -1,6 +1,7 @@
 from Control_Panel_View import Control_Panel_View_Name
 from Control_Panel_Loading_View import Control_Panel_Loading_View
 from Control_Panel_Reconstruction_View import Control_Panel_Reconstruction_View
+from Control_Panel_Waypoints_View import Control_Panel_Waypoints_View
 from ..core.USB_Manager import USB_Manager
 from ..settings import Arguments
 
@@ -29,7 +30,8 @@ class Control_Panel_Controller(object):
 
         views = {
             Control_Panel_View_Name.LOADING: Control_Panel_Loading_View,
-            Control_Panel_View_Name.RECONSTRUCTION: Control_Panel_Reconstruction_View
+            Control_Panel_View_Name.RECONSTRUCTION: Control_Panel_Reconstruction_View,
+            Control_Panel_View_Name.WAYPOINTS: Control_Panel_Waypoints_View
         }
 
         if name not in views:
