@@ -1,3 +1,4 @@
+import time
 from functools import partial
 from PyQt4 import QtCore, QtGui
 from Control_Panel_View import Control_Panel_View
@@ -83,19 +84,41 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         Send the waypoints from all tables to the corresponding vehicles.
         """
 
+        # Create a list of waypoints (tuples) per vehicle.
         waypoints = {}
-
+        total = 0
         for index, table in enumerate(tables):
             vehicle = index + 1
             for row in range(table.rowCount()):
                 x = table.item(row, 0)
                 y = table.item(row, 1)
-                if x is not None and y is not None:
-                    x = int(x.text())
-                    y = int(y.text())
-                    if vehicle not in waypoints:
-                        waypoints[vehicle] = [(x, y)]
-                    else:
-                        waypoints[vehicle].append((x, y))
+                if x is None or y is None:
+                    continue
 
-        # TODO: send waypoints to vehicles using XBee
+                total += 1
+                x = int(x.text())
+                y = int(y.text())
+                if vehicle not in waypoints:
+                    waypoints[vehicle] = [(x, y)]
+                else:
+                    waypoints[vehicle].append((x, y))
+
+        # Create a progress dialog and send the waypoints to the vehicles.
+        progress = QtGui.QProgressDialog(self._controller.central_widget)
+        progress.setMinimum(0)
+        progress.setMaximum(total)
+        progress.setWindowModality(QtCore.Qt.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.setCancelButton(None)
+
+        count = 0
+        for vehicle in waypoints:
+            for waypoint in waypoints[vehicle]:
+                progress.setLabelText("Sending waypoint ({}, {}) to vehicle {}...".format(waypoint[0], waypoint[1], vehicle))
+                progress.setValue(count)
+                # TODO: send waypoint to the vehicle using the XBee device and remove `time.sleep`
+                count += 1
+                time.sleep(0.1)
+
+        progress.setValue(total)
+        progress.deleteLater()
