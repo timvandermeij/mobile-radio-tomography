@@ -1,4 +1,4 @@
-from PyQt4 import QtGui
+from PyQt4 import QtCore, QtGui
 from Control_Panel_View import Control_Panel_View
 
 class Control_Panel_Waypoints_View(Control_Panel_View):
@@ -12,22 +12,34 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
         # Create the table for the first vehicle.
         table_1 = QtGui.QTableWidget()
-        table_1.setRowCount(16)
+        table_1.setRowCount(1)
         table_1.setColumnCount(2)
         table_1.setHorizontalHeaderLabels(["x", "y"])
         table_1.horizontalHeader().setResizeMode(0, QtGui.QHeaderView.Stretch)
         table_1.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Stretch)
+
+        # Create the context menu for the rows in the table for the first vehicle.
+        table_1.verticalHeader().setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
+        remove_rows_action = QtGui.QAction("Remove row(s)", table_1)
+        remove_rows_action.triggered.connect(lambda: self._remove_rows(table_1))
+        table_1.verticalHeader().addAction(remove_rows_action)
 
         # Create the label for the first vehicle.
         label_2 = QtGui.QLabel("Waypoints for vehicle 2:")
 
         # Create the table for the second vehicle.
         table_2 = QtGui.QTableWidget()
-        table_2.setRowCount(16)
+        table_2.setRowCount(1)
         table_2.setColumnCount(2)
         table_2.setHorizontalHeaderLabels(["x", "y"])
         table_2.horizontalHeader().setResizeMode(0, QtGui.QHeaderView.Stretch)
         table_2.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Stretch)
+
+        # Create the context menu for the rows in the table for the second vehicle.
+        table_2.verticalHeader().setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
+        remove_rows_action = QtGui.QAction("Remove row(s)", table_2)
+        remove_rows_action.triggered.connect(lambda: self._remove_rows(table_2))
+        table_2.verticalHeader().addAction(remove_rows_action)
 
         tables = [table_1, table_2]
 
@@ -63,6 +75,16 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
         for table in tables:
             table.insertRow(table.rowCount())
+
+    def _remove_rows(self, table):
+        """
+        Remove one or more selected rows from a table.
+        """
+
+        items = table.selectionModel().selectedRows()
+        rows = [item.row() for item in items]
+        for row in reversed(sorted(rows)):
+            table.removeRow(row)
 
     def _send(self, tables):
         """
