@@ -117,4 +117,4 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
                 scaled_image = image.scaled(self._viewer_width, self._viewer_height)
                 self._label.setPixmap(QtGui.QPixmap(scaled_image))
 
-            QtCore.QTimer.singleShot(self._pause_time, self._reconstruction_loop)
+            QtCore.QTimer.singleShot(self._pause_time, lambda: self._reconstruction_loop())
