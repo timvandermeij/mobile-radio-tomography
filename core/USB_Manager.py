@@ -3,7 +3,7 @@ import serial
 
 class USB_Device_Fingerprint(object):
     XBEE = ["0403", "6015"]
-    TTL = ["0403", "6001"]
+    TTL = ["1a86", "7523"]
 
 class USB_Device_Category(object):
     XBEE = 1

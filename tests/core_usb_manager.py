@@ -3,7 +3,7 @@ import pty
 import serial
 import unittest
 from mock import MagicMock
-from ..core.USB_Manager import USB_Manager, USB_Device_Category, USB_Device_Baud_Rate
+from ..core.USB_Manager import USB_Manager, USB_Device_Category, USB_Device_Baud_Rate, USB_Device_Fingerprint
 
 class USBManagerTestCase(unittest.TestCase):
     """
@@ -26,13 +26,13 @@ class USBManagerTestCase(unittest.TestCase):
         # Mock the method for obtaining devices.
         mock_obtain_devices = MagicMock(return_value=[
             { # XBee device
-                "ID_VENDOR_ID": "0403",
-                "ID_MODEL_ID": "6015",
+                "ID_VENDOR_ID": USB_Device_Fingerprint.XBEE[0],
+                "ID_MODEL_ID": USB_Device_Fingerprint.XBEE[1],
                 "DEVNAME": self.port
             },
             { # TTL device
-                "ID_VENDOR_ID": "0403",
-                "ID_MODEL_ID": "6001",
+                "ID_VENDOR_ID": USB_Device_Fingerprint.TTL[0],
+                "ID_MODEL_ID": USB_Device_Fingerprint.TTL[1],
                 "DEVNAME": self.port
             },
             { # Other device
