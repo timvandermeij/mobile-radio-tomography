@@ -85,27 +85,37 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         total = 0
         for index, table in enumerate(tables):
             vehicle = index + 1
+            previous = ()
             for row in range(table.rowCount()):
                 x = table.item(row, 0)
                 y = table.item(row, 1)
-                if x is None or y is None:
-                    continue
+                if (x is None or y is None) and not previous:
+                    raise ValueError("Missing coordinates for vehicle {}, row {} and no previous waypoint".format(vehicle, row))
 
-                total += 1
-                try:
-                    x = int(x.text())
-                except ValueError:
-                    raise ValueError("Invalid integer for vehicle {}, row {}, column x: {}".format(vehicle, row, x.text()))
+                if x is None:
+                    # If a table cell is empty, use the previous waypoints's 
+                    # coordinates for the current waypoint.
+                    x = previous[0]
+                else:
+                    try:
+                        x = int(x.text())
+                    except ValueError:
+                        raise ValueError("Invalid integer for vehicle {}, row {}, column x: {}".format(vehicle, row, x.text()))
 
-                try:
-                    y = int(y.text())
-                except ValueError:
-                    raise ValueError("Invalid integer for vehicle {}, row {}, column y: {}".format(vehicle, row, y.text()))
+                if y is None:
+                    y = previous[1]
+                else:
+                    try:
+                        y = int(y.text())
+                    except ValueError:
+                        raise ValueError("Invalid integer for vehicle {}, row {}, column y: {}".format(vehicle, row, y.text()))
 
                 if vehicle not in waypoints:
                     waypoints[vehicle] = [(x, y)]
                 else:
                     waypoints[vehicle].append((x, y))
+
+                previous = (x, y)
 
         return waypoints, total
 
