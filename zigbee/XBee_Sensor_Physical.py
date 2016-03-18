@@ -45,6 +45,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._number_of_sensors = self.settings.get("number_of_sensors")
         self._sensors = self.settings.get("sensors")
         self._loop_delay = self.settings.get("loop_delay")
+        self._ground_station_delay = self.settings.get("ground_station_delay")
         for index, address in enumerate(self._sensors):
             self._sensors[index] = address.decode("string_escape")
 
@@ -88,6 +89,10 @@ class XBee_Sensor_Physical(XBee_Sensor):
                 if self.id > 0 and time.time() >= self._next_timestamp:
                     self._next_timestamp = self.scheduler.get_next_timestamp()
                     self._send()
+                elif self.id == 0:
+                    # The ground station is only allowed to send custom packets.
+                    self._send_custom_packets()
+                    time.sleep(self._ground_station_delay)
 
                 time.sleep(self._loop_delay)
         except:
@@ -216,19 +221,10 @@ class XBee_Sensor_Physical(XBee_Sensor):
                               dest_addr="\xFF\xFE", frame_id="\x00",
                               data=packet.serialize())
 
-        # Send custom packets to their destination. Since the time slots are
-        # limited in length, so is the number of custom packets we transfer
-        # in each sweep.
-        limit = self._custom_packet_limit
-        while not self._queue.empty():
-            if limit == 0:
-                break
-
-            limit -= 1
-            item = self._queue.get()
-            self._sensor.send("tx", dest_addr_long=self._sensors[item["to"]],
-                              dest_addr="\xFF\xFE", frame_id="\x00",
-                              data=item["packet"].serialize())
+        # Send custom packets to their destinations. Since the time slots
+        # are limited in length, so is the number of custom packets we
+        # send in each sweep.
+        self._send_custom_packets()
 
         # Send the sweep data to the ground sensor and clear the list
         # for the next round.
@@ -242,6 +238,22 @@ class XBee_Sensor_Physical(XBee_Sensor):
                               data=packet.serialize())
 
             self._data.pop(frame_id)
+
+    def _send_custom_packets(self):
+        """
+        Send custom packets to their destinations.
+        """
+
+        limit = self._custom_packet_limit
+        while not self._queue.empty():
+            if limit == 0:
+                break
+
+            limit -= 1
+            item = self._queue.get()
+            self._sensor.send("tx", dest_addr_long=self._sensors[item["to"]],
+                              dest_addr="\xFF\xFE", frame_id="\x00",
+                              data=item["packet"].serialize())
 
     def _receive(self, raw_packet):
         """
