@@ -870,6 +870,11 @@ class Mission_XBee(Mission_Auto):
         Clear the mission waypoints after receiving a "waypoint_clear" packet.
         """
 
+        xbee_sensor = self.environment.get_xbee_sensor()
+        if xbee_sensor.id != packet.get("to_id"):
+            # Ignore packets not meant for us.
+            return
+
         self.clear_mission()
         self._send_ack()
 
