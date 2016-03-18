@@ -5,7 +5,7 @@
             "viewer_dimensions": [500, 500],
             "xbee_insertion_delay": 0.1,
             "waypoints_max_retries": 5,
-            "waypoints_retry_interval": 2000
+            "waypoints_retry_interval": 500
         }
     },
     "distance_sensor_simulator": {
@@ -405,7 +405,7 @@
                 "\\x00\\x13\\xa2\\x00@\\xe6o5",
                 "\\x00\\x13\\xa2\\x00@\\xe6n\\xb9"
             ],
-            "ground_station_delay": 0.25,
+            "ground_station_delay": 0.1,
             "ntp_delay": 3,
             "response_delay": 0.3,
             "startup_delay": 1,
