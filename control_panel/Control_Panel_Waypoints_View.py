@@ -2,8 +2,17 @@ import time
 from functools import partial
 from PyQt4 import QtCore, QtGui
 from Control_Panel_View import Control_Panel_View
+from ..zigbee.XBee_Packet import XBee_Packet
 
 class Control_Panel_Waypoints_View(Control_Panel_View):
+    MAX_RETRIES = 5
+
+    def __init__(self, controller):
+        super(Control_Panel_Waypoints_View, self).__init__(controller)
+        self._clear_send()
+        self._controller.add_packet_callback("waypoint_ack", self._receive_ack)
+        self._controller.xbee.activate()
+
     def show(self):
         """
         Show the waypoints view.
@@ -137,21 +146,114 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             return
 
         # Create a progress dialog and send the waypoints to the vehicles.
-        progress = QtGui.QProgressDialog(self._controller.central_widget)
-        progress.setMinimum(0)
-        progress.setMaximum(total)
-        progress.setWindowModality(QtCore.Qt.WindowModal)
-        progress.setMinimumDuration(0)
-        progress.setCancelButton(None)
+        self._progress = QtGui.QProgressDialog(self._controller.central_widget)
+        self._progress.setMinimum(0)
+        self._progress.setMaximum(total)
+        self._progress.setWindowModality(QtCore.Qt.WindowModal)
+        self._progress.setMinimumDuration(0)
+        self._progress.setCancelButtonText("Cancel")
+        self._progress.canceled.connect(lambda: self._cancel())
+        self._progress.setLabelText("Initializing...")
+        self._progress.open()
 
-        count = 0
+        self._labels = dict([(vehicle, "") for vehicle in waypoints])
+
+        self._retry_counts = dict([(vehicle, self.MAX_RETRIES) for vehicle in waypoints])
+        self._indexes = dict([(vehicle, -1) for vehicle in waypoints])
+
+        self._timers = {}
         for vehicle in waypoints:
-            for waypoint in waypoints[vehicle]:
-                progress.setLabelText("Sending waypoint ({}, {}) to vehicle {}...".format(waypoint[0], waypoint[1], vehicle))
-                progress.setValue(count)
-                # TODO: send waypoint to the vehicle using the XBee device and remove `time.sleep`
-                count += 1
-                time.sleep(0.1)
+            timer = QtCore.QTimer()
+            timer.setInterval(1000)
+            timer.setSingleShot(True)
+            # Bind timeout signal to retry for the current vehicle.
+            timer.timeout.connect(lambda vehicle=vehicle: self._retry(vehicle))
+            self._timers[vehicle] = timer
 
-        progress.setValue(total)
-        progress.deleteLater()
+        self._waypoints = waypoints
+        for vehicle in self._waypoints:
+            self._send_clear(vehicle)
+
+    def _send_clear(self, vehicle):
+        packet = XBee_Packet()
+        packet.set("specification", "waypoint_clear")
+        packet.set("to_id", vehicle)
+
+        self._controller.xbee.enqueue(packet, to=vehicle)
+
+        self._set_label(vehicle, "Clearing old waypoints")
+        self._timers[vehicle].start()
+
+    def _send_one(self, vehicle):
+        index = self._indexes[vehicle]
+        if index not in self._waypoints[vehicle]:
+            self._update_value()
+            return
+
+        waypoint = self._waypoints[vehicle][index]
+
+        packet = XBee_Packet()
+        packet.set("specification", "waypoint_add")
+        packet.set("latitude", waypoint[0])
+        packet.set("longitude", waypoint[1])
+        packet.set("index", index)
+        packet.set("to_id", vehicle)
+
+        self._controller.xbee.enqueue(packet, to=vehicle)
+
+        self._set_label("Sending waypoint #{} ({}, {})".format(index, waypoint[0], waypoint[1]))
+        self._timers[vehicle].start()
+
+    def _receive_ack(self, packet):
+        vehicle = packet.get("sensor_id")
+        index = packet.get("next_index")
+
+        self._timers[vehicle].stop()
+        self._indexes[vehicle] = index
+        self._retry_counts[vehicle] = self.MAX_RETRIES
+        self._send_once(vehicle)
+
+    def _retry(self, vehicle):
+        self._retry_counts[vehicle] -= 1
+        if self._retry_counts[vehicle] > 0:
+            if self._indexes[vehicle] == -1:
+                self._send_clear(vehicle)
+            else:
+                self._send_one(vehicle)
+        else:
+            self._cancel("Vehicle {}: Maximum retry attempts for {} reached".format(vehicle, "clearing waypoints" if self._indexes[vehicle] == -1 else "index {}".format(self._indexes[vehicle])))
+
+    def _set_label(self, vehicle, text):
+        self._labels[vehicle] = text
+        self._update_labels()
+        self._update_value()
+
+    def _update_labels(self):
+        self._progress.setLabelText("\n".join("Vehicle {}: {}{}".format(vehicle, label, " ({} attempts remaining)".format(self._retry_counts[vehicle]) if self._retry_counts[vehicle] < self.MAX_RETRIES else "") for vehicle, label in self._labels.iteritems()))
+
+    def _update_value(self):
+        self._progress.setValue(max(0, min(self._total, sum(self._indexes.values()))))
+
+    def _cancel(self, message=None):
+        for timer in self._timers.values():
+            timer.stop()
+
+        if self._progress is not None:
+            self._progress.cancel()
+            self._progress.deleteLater()
+
+        if message is not None:
+            QtGui.QMessageBox.critical(self._controller.central_widget,
+                                       "Sending failed", message)
+
+        self._clear_send()
+
+    def _clear_send(self):
+        # Clear variables used in the _send method and its submethods
+        self._progress = None
+        self._labels = {}
+        self._retry_counts = {}
+        self._indexes = {}
+        self._waypoints = {}
+        self._total = 0
+        self._timers = {}
