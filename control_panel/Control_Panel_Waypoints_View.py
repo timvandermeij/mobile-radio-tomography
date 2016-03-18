@@ -1,3 +1,5 @@
+import json
+import os
 from functools import partial
 from PyQt4 import QtCore, QtGui
 from Control_Panel_View import Control_Panel_View
@@ -55,6 +57,10 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         # Create the buttons for adding new rows and sending the waypoints.
         add_row_button = QtGui.QPushButton("Add row")
         add_row_button.clicked.connect(lambda: self._add_row(tables))
+        import_button = QtGui.QPushButton("Import")
+        import_button.clicked.connect(lambda: self._import(tables))
+        export_button = QtGui.QPushButton("Export")
+        export_button.clicked.connect(lambda: self._export(tables))
         send_button = QtGui.QPushButton("Send")
         send_button.setEnabled(xbee_enabled)
         send_button.clicked.connect(lambda: self._send(tables))
@@ -70,6 +76,9 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
         hbox_buttons = QtGui.QHBoxLayout()
         hbox_buttons.addWidget(add_row_button)
+        hbox_buttons.addStretch(1)
+        hbox_buttons.addWidget(import_button)
+        hbox_buttons.addWidget(export_button)
         hbox_buttons.addStretch(1)
         hbox_buttons.addWidget(send_button)
 
@@ -139,6 +148,57 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
                 previous = (x, y)
 
         return waypoints, total
+
+    def _import(self, tables):
+        fn = QtGui.QFileDialog.getOpenFileName(self._controller.central_widget,
+                                               "Import file", os.getcwd(),
+                                               "JSON files (*.json)")
+
+        try:
+            with open(fn, 'r') as import_file:
+                waypoints = json.load(import_file)
+                if isinstance(waypoints, list):
+                    waypoints = {
+                        1: [sensor_pairs[0] for sensor_pairs in waypoints],
+                        2: [sensor_pairs[1] for sensor_pairs in waypoints]
+                    }
+                elif not isinstance(waypoints, dict):
+                    raise ValueError("Waypoints must be a JSON list or array")
+        except IOError as e:
+            message = "Could not open file '{}': {}".format(fn, e.strerror)
+            QtGui.QMessageBox.critical(self._controller.central_widget,
+                                       "File error", message)
+        except ValueError as e:
+            QtGui.QMessageBox.critical(self._controller.central_widget,
+                                       "JSON error", e.message)
+
+        for index, table in enumerate(tables):
+            vehicle = str(index + 1)
+            for row in range(table.rowCount()):
+                table.removeRow(row)
+            for row, waypoint in enumerate(waypoints[vehicle]):
+                table.insertRow(row)
+                table.setItem(row, 0, QtGui.QTableWidgetItem(str(waypoint[0])))
+                table.setItem(row, 1, QtGui.QTableWidgetItem(str(waypoint[1])))
+
+    def _export(self, tables):
+        try:
+            waypoints, total = self._make_waypoints(tables)
+        except ValueError as e:
+            QtGui.QMessageBox.critical(self._controller.central_widget,
+                                       "Waypoint incorrect", e.message)
+            return
+
+        fn = QtGui.QFileDialog.getSaveFileName(self._controller.central_widget,
+                                               "Export file", os.getcwd(),
+                                               "JSON files (*.json)")
+        try:
+            with open(fn, 'w') as export_file:
+                json.dump(waypoints, export_file)
+        except IOError as e:
+            message = "Could not open file '{}': {}".format(fn, e.strerror)
+            QtGui.QMessageBox.critical(self._controller.central_widget,
+                                       "File error", message)
 
     def _send(self, tables):
         """
