@@ -847,6 +847,9 @@ class Mission_XBee(Mission_Auto):
         self.environment.add_packet_action("waypoint_clear", self._clear_waypoints)
         self.environment.add_packet_action("waypoint_add", self._add_waypoint)
 
+    def get_points(self):
+        return []
+
     def _send_ack(self):
         """
         Send a "waypoint_ack" packet to the ground station.
@@ -863,7 +866,7 @@ class Mission_XBee(Mission_Auto):
         ack_packet.set("next_index", self.vehicle.count_waypoints())
         ack_packet.set("sensor_id", xbee_sensor.id)
 
-        xbee_sensor.enqueue(packet)
+        xbee_sensor.enqueue(ack_packet, to=0)
 
     def _clear_waypoints(self, packet):
         """
@@ -901,7 +904,7 @@ class Mission_XBee(Mission_Auto):
 
         latitude = packet.get("latitude")
         longitude = packet.get("longitude")
-        if isistance(self.geometry, Geometry_Spherical):
+        if isinstance(self.geometry, Geometry_Spherical):
             point = LocationGlobalRelative(latitude, longitude, self.altitude)
         else:
             point = LocationLocal(latitude, longitude, -self.altitude)

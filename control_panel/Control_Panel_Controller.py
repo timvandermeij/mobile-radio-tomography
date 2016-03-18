@@ -38,9 +38,9 @@ class Control_Panel_Controller(object):
 
     def _receive(self, packet):
         specification = packet.get("specification")
-        if specification in self_packet_callbacks:
+        if specification in self._packet_callbacks:
             callback = self._packet_callbacks[specification]
-            callback()
+            callback(packet)
 
     def _location_valid(self, other_valid=None):
         return False

@@ -130,6 +130,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
                 else:
                     waypoints[vehicle].append((x, y))
 
+                total += 1
                 previous = (x, y)
 
         return waypoints, total
@@ -172,6 +173,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             self._timers[vehicle] = timer
 
         self._waypoints = waypoints
+        self._total = total
         for vehicle in self._waypoints:
             self._send_clear(vehicle)
 
@@ -187,7 +189,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
     def _send_one(self, vehicle):
         index = self._indexes[vehicle]
-        if index not in self._waypoints[vehicle]:
+        if len(self._waypoints[vehicle]) <= index:
             self._update_value()
             return
 
@@ -202,17 +204,18 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
         self._controller.xbee.enqueue(packet, to=vehicle)
 
-        self._set_label("Sending waypoint #{} ({}, {})".format(index, waypoint[0], waypoint[1]))
+        self._set_label(vehicle, "Sending waypoint #{} ({}, {})".format(index, waypoint[0], waypoint[1]))
         self._timers[vehicle].start()
 
     def _receive_ack(self, packet):
         vehicle = packet.get("sensor_id")
         index = packet.get("next_index")
 
-        self._timers[vehicle].stop()
+        if vehicle not in self._timers:
+            return
+
         self._indexes[vehicle] = index
-        self._retry_counts[vehicle] = self._max_retries
-        self._send_once(vehicle)
+        self._retry_counts[vehicle] = self._max_retries + 1
 
     def _retry(self, vehicle):
         self._retry_counts[vehicle] -= 1

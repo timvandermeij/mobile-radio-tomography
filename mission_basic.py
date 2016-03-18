@@ -76,7 +76,7 @@ class Setup(object):
                     ok = self.monitor.step()
                     if ok:
                         self.monitor.sleep()
-        except RuntimeError, e:
+        except RuntimeError as e:
             # Handle runtime errors from the monitor loop as informative and 
             # loggable errors, but allow the vehicle to attempt to return to 
             # launch.
