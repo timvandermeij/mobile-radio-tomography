@@ -1,4 +1,3 @@
-import time
 from functools import partial
 from PyQt4 import QtCore, QtGui
 from Control_Panel_View import Control_Panel_View
@@ -43,11 +42,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             table.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Stretch)
             tables.append(table)
 
-            # Create the context menu for the rows in the table. We use
-            # `functools.partial` because Python only creates new bindings in
-            # namespaces through assignment and parameter lists of functions.
-            # The parameter `table` is therefore not defined in the namespace of
-            # the lambda, but rather in the namespace of `show()`.
+            # Create the context menu for the rows in the table.
             table.verticalHeader().setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
             remove_rows_action = QtGui.QAction("Remove row(s)", table)
             remove_rows_action.triggered.connect(partial(self._remove_rows, table))
@@ -173,7 +168,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             timer.setInterval(self._retry_interval)
             timer.setSingleShot(True)
             # Bind timeout signal to retry for the current vehicle.
-            timer.timeout.connect(lambda vehicle=vehicle: self._retry(vehicle))
+            timer.timeout.connect(partial(self._retry, vehicle))
             self._timers[vehicle] = timer
 
         self._waypoints = waypoints
