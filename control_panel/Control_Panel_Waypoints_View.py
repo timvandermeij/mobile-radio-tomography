@@ -9,6 +9,8 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         Show the waypoints view.
         """
 
+        self._add_menu_bar()
+
         labels = []
         tables = []
 

@@ -1,4 +1,4 @@
-from PyQt4 import QtCore
+from PyQt4 import QtCore, QtGui
 
 class Control_Panel_View_Name(object):
     LOADING = 1
@@ -13,19 +13,53 @@ class Control_Panel_View(object):
 
         self._controller = controller
 
-    def clear(self):
+    def clear(self, layout=None):
         """
         Clear the view, thereby deleting any existing widgets.
         """
 
-        layout = self._controller.central_widget.layout()
+        menu_bar = self._controller.window._menu_bar
+        if menu_bar is not None:
+            menu_bar.hide()
 
-        # Delete all widgets in the layout.
+        toolbar = self._controller.window._toolbar
+        if toolbar is not None:
+            self._controller.window.removeToolBar(toolbar)
+            self._controller.window._toolbar = None
+
         if layout is not None:
-            for item in reversed(range(layout.count())):
-                widget = layout.itemAt(item).widget()
-                if widget is not None:
-                    widget.setParent(None)
+            for index in reversed(range(layout.count())):
+                item = layout.itemAt(index)
 
-        # Delete the layout itself.
-        QtCore.QObjectCleanupHandler().add(layout)
+                if isinstance(item, QtGui.QWidgetItem):
+                    item.widget().close()
+                else:
+                    self.clear(item.layout())
+
+            # Delete the layout itself.
+            QtCore.QObjectCleanupHandler().add(layout)
+
+    def _add_menu_bar(self):
+        """
+        Create a menu bar for the window.
+        """
+
+        if self._controller.window._menu_bar is not None:
+            self._controller.window._menu_bar.show()
+            return
+
+        self._controller.window._menu_bar = self._controller.window.menuBar()
+
+        reconstruction_action = QtGui.QAction("Reconstruction", self._controller.window)
+        reconstruction_action.triggered.connect(
+            lambda: self._controller.show_view(Control_Panel_View_Name.RECONSTRUCTION)
+        )
+
+        waypoints_action = QtGui.QAction("Waypoints", self._controller.window)
+        waypoints_action.triggered.connect(
+            lambda: self._controller.show_view(Control_Panel_View_Name.WAYPOINTS)
+        )
+
+        view_menu = self._controller.window._menu_bar.addMenu("View")
+        view_menu.addAction(reconstruction_action)
+        view_menu.addAction(waypoints_action)

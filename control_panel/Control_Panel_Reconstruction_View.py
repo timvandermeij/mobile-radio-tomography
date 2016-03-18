@@ -15,6 +15,8 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         Show the reconstruction view.
         """
 
+        self._add_menu_bar()
+
         # Create the toolbar.
         toolbar = self._controller.window.addToolBar("Reconstruction")
         toolbar.setMovable(False)
@@ -33,6 +35,8 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         toolbar.addWidget(reconstructor_label)
         toolbar.addWidget(reconstructor_box)
         toolbar.addAction(reconstructor_action)
+
+        self._controller.window._toolbar = toolbar
 
     def _reconstruction_start(self, reconstructor):
         """

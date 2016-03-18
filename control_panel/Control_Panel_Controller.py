@@ -38,5 +38,5 @@ class Control_Panel_Controller(object):
             raise ValueError("Unknown view name specified.")
 
         view = views[name](self)
-        view.clear()
+        view.clear(self.central_widget.layout())
         view.show()
