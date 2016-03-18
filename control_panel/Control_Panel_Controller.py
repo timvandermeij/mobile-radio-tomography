@@ -1,3 +1,5 @@
+import traceback
+from PyQt4 import QtGui
 from Control_Panel_View import Control_Panel_View_Name
 from Control_Panel_Loading_View import Control_Panel_Loading_View
 from Control_Panel_Reconstruction_View import Control_Panel_Reconstruction_View
@@ -69,9 +71,13 @@ class Control_Panel_Controller(object):
             Control_Panel_View_Name.WAYPOINTS: Control_Panel_Waypoints_View
         }
 
-        if name not in views:
-            raise ValueError("Unknown view name specified.")
+        try:
+            if name not in views:
+                raise ValueError("Unknown view name specified.")
 
-        view = views[name](self)
-        self._current_view = view
-        view.show()
+            view = views[name](self)
+            self._current_view = view
+            view.show()
+        except Exception as e:
+            QtGui.QMessageBox.critical(self.central_widget, "Internal error", traceback.format_exc() + "\nThe application will now exit.")
+            self.window.close()
