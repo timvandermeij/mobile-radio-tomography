@@ -5,13 +5,17 @@ from Control_Panel_View import Control_Panel_View
 from ..zigbee.XBee_Packet import XBee_Packet
 
 class Control_Panel_Waypoints_View(Control_Panel_View):
-    MAX_RETRIES = 5
-
     def __init__(self, controller):
         super(Control_Panel_Waypoints_View, self).__init__(controller)
+        settings = self._controller.arguments.get_settings("control_panel")
+        self._max_retries = settings.get("waypoints_max_retries")
+        self._retry_interval = settings.get("waypoints_retry_interval")
         self._clear_send()
-        self._controller.add_packet_callback("waypoint_ack", self._receive_ack)
-        self._controller.xbee.activate()
+
+    def clear(self, layout=None):
+        super(Control_Panel_Waypoints_View, self).clear(layout)
+        self._controller.remove_packet_callback("waypoint_ack")
+        self._controller.xbee.deactivate()
 
     def show(self):
         """
@@ -19,6 +23,8 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         """
 
         self._add_menu_bar()
+        self._controller.add_packet_callback("waypoint_ack", self._receive_ack)
+        self._controller.xbee.activate()
 
         labels = []
         tables = []
@@ -158,13 +164,13 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
         self._labels = dict([(vehicle, "") for vehicle in waypoints])
 
-        self._retry_counts = dict([(vehicle, self.MAX_RETRIES) for vehicle in waypoints])
+        self._retry_counts = dict([(vehicle, self._max_retries) for vehicle in waypoints])
         self._indexes = dict([(vehicle, -1) for vehicle in waypoints])
 
         self._timers = {}
         for vehicle in waypoints:
             timer = QtCore.QTimer()
-            timer.setInterval(1000)
+            timer.setInterval(self._retry_interval)
             timer.setSingleShot(True)
             # Bind timeout signal to retry for the current vehicle.
             timer.timeout.connect(lambda vehicle=vehicle: self._retry(vehicle))
@@ -210,7 +216,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
         self._timers[vehicle].stop()
         self._indexes[vehicle] = index
-        self._retry_counts[vehicle] = self.MAX_RETRIES
+        self._retry_counts[vehicle] = self._max_retries
         self._send_once(vehicle)
 
     def _retry(self, vehicle):
@@ -229,7 +235,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         self._update_value()
 
     def _update_labels(self):
-        self._progress.setLabelText("\n".join("Vehicle {}: {}{}".format(vehicle, label, " ({} attempts remaining)".format(self._retry_counts[vehicle]) if self._retry_counts[vehicle] < self.MAX_RETRIES else "") for vehicle, label in self._labels.iteritems()))
+        self._progress.setLabelText("\n".join("Vehicle {}: {}{}".format(vehicle, label, " ({} attempts remaining)".format(self._retry_counts[vehicle]) if self._retry_counts[vehicle] < self._max_retries else "") for vehicle, label in self._labels.iteritems()))
 
     def _update_value(self):
         self._progress.setValue(max(0, min(self._total, sum(self._indexes.values()))))

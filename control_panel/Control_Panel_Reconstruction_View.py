@@ -44,6 +44,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         """
 
         self.clear()
+        self.show()
 
         # Create the label for the image.
         self._label = QtGui.QLabel()

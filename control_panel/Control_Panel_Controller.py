@@ -13,12 +13,13 @@ class Control_Panel_Controller(object):
         Initialize the control panel controller.
         """
 
-        # Set the central widget and window for loading views.
         self.central_widget = central_widget
         self.window = window
+        self._current_view = None
 
         # Create arguments (for obtaining various settings in views)
         # and a USB manager (for checking insertion of XBee devices).
+        # Initialize the XBee sensor for use by specific views.
         self.arguments = Arguments("settings.json", [])
         self.thread_manager = Thread_Manager()
         self.usb_manager = USB_Manager()
@@ -30,7 +31,7 @@ class Control_Panel_Controller(object):
         self._packet_callbacks = {}
 
         # Show the loading view (default).
-        self.show_view(Control_Panel_View_Name.WAYPOINTS)
+        self.show_view(Control_Panel_View_Name.LOADING)
 
     def _get_location(self):
         return (0, 0)
@@ -50,10 +51,17 @@ class Control_Panel_Controller(object):
 
         self._packet_callbacks[specification] = callback
 
+    def remove_packet_callback(self, specification):
+        if specification in self._packet_callbacks:
+            del self._packet_callbacks[specification]
+
     def show_view(self, name):
         """
         Show a new view, identified by `name`, and clear the current view.
         """
+
+        if self._current_view is not None:
+            self._current_view.clear(self.central_widget.layout())
 
         views = {
             Control_Panel_View_Name.LOADING: Control_Panel_Loading_View,
@@ -65,5 +73,5 @@ class Control_Panel_Controller(object):
             raise ValueError("Unknown view name specified.")
 
         view = views[name](self)
-        view.clear(self.central_widget.layout())
+        self._current_view = view
         view.show()

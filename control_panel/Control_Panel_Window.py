@@ -28,4 +28,10 @@ class Control_Panel_Window(QtGui.QMainWindow):
         self.setCentralWidget(central_widget)
 
         # Create a controller.
-        controller = Control_Panel_Controller(central_widget, self)
+        self.controller = Control_Panel_Controller(central_widget, self)
+
+    def closeEvent(self, event):
+        self.controller.thread_manager.destroy()
+        self.controller.usb_manager.clear()
+
+        event.accept()
