@@ -72,9 +72,10 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
         super(XBee_Sensor_Physical, self).activate()
 
-        self._active = True
-        self._setup()
-        thread.start_new_thread(self._loop, ())
+        if not self._active:
+            self._setup()
+            self._active = True
+            thread.start_new_thread(self._loop, ())
 
     def _loop(self):
         """
@@ -105,9 +106,10 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
         super(XBee_Sensor_Physical, self).deactivate()
 
-        self._active = False
-        self._sensor.halt()
-        self._serial_connection.close()
+        if self._active:
+            self._active = False
+            self._sensor.halt()
+            self._serial_connection.close()
 
     def enqueue(self, packet, to=None):
         """

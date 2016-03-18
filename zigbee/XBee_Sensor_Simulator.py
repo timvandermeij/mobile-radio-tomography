@@ -44,8 +44,9 @@ class XBee_Sensor_Simulator(XBee_Sensor):
 
         super(XBee_Sensor_Simulator, self).activate()
 
-        self._active = True
-        thread.start_new_thread(self._loop, ())
+        if not self._active:
+            self._active = True
+            thread.start_new_thread(self._loop, ())
 
     def _loop(self):
         """
@@ -80,8 +81,9 @@ class XBee_Sensor_Simulator(XBee_Sensor):
 
         super(XBee_Sensor_Simulator, self).deactivate()
 
-        self._active = False
-        self._socket.close()
+        if self._active:
+            self._active = False
+            self._socket.close()
 
     def enqueue(self, packet, to=None):
         """
