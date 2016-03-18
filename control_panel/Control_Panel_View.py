@@ -42,24 +42,14 @@ class Control_Panel_View(object):
     def _add_menu_bar(self):
         """
         Create a menu bar for the window.
-        """
+
+        Subclasses can extend this to add more custom menus and actions to
+        the menu bar. If they do so, then they must extend the `clear` method
+        with the following code to clear the entire menu bar:
 
         if self._controller.window._menu_bar is not None:
-            self._controller.window._menu_bar.show()
-            return
+            self._controller.window._menu_bar.clear()
+            self._controller.window._menu_bar = None
+        """
 
-        self._controller.window._menu_bar = self._controller.window.menuBar()
-
-        reconstruction_action = QtGui.QAction("Reconstruction", self._controller.window)
-        reconstruction_action.triggered.connect(
-            lambda: self._controller.show_view(Control_Panel_View_Name.RECONSTRUCTION)
-        )
-
-        waypoints_action = QtGui.QAction("Waypoints", self._controller.window)
-        waypoints_action.triggered.connect(
-            lambda: self._controller.show_view(Control_Panel_View_Name.WAYPOINTS)
-        )
-
-        view_menu = self._controller.window._menu_bar.addMenu("View")
-        view_menu.addAction(reconstruction_action)
-        view_menu.addAction(waypoints_action)
+        self._controller.add_menu_bar()
