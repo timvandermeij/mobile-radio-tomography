@@ -23,7 +23,11 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
         self._add_menu_bar()
         self._controller.add_packet_callback("waypoint_ack", self._receive_ack)
-        self._controller.xbee.activate()
+        try:
+            self._controller.xbee.activate()
+            xbee_enabled = True
+        except KeyError:
+            xbee_enabled = False
 
         labels = []
         tables = []
@@ -52,6 +56,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         add_row_button = QtGui.QPushButton("Add row")
         add_row_button.clicked.connect(lambda: self._add_row(tables))
         send_button = QtGui.QPushButton("Send")
+        send_button.setEnabled(xbee_enabled)
         send_button.clicked.connect(lambda: self._send(tables))
 
         # Create the layout and add the widgets.
