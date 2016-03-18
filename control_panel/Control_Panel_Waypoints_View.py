@@ -79,11 +79,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         for row in reversed(sorted(rows)):
             table.removeRow(row)
 
-    def _send(self, tables):
-        """
-        Send the waypoints from all tables to the corresponding vehicles.
-        """
-
+    def _make_waypoints(self, tables):
         # Create a list of waypoints (tuples) per vehicle.
         waypoints = {}
         total = 0
@@ -96,12 +92,34 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
                     continue
 
                 total += 1
-                x = int(x.text())
-                y = int(y.text())
+                try:
+                    x = int(x.text())
+                except ValueError:
+                    raise ValueError("Invalid integer for vehicle {}, row {}, column x: {}".format(vehicle, row, x.text()))
+
+                try:
+                    y = int(y.text())
+                except ValueError:
+                    raise ValueError("Invalid integer for vehicle {}, row {}, column y: {}".format(vehicle, row, y.text()))
+
                 if vehicle not in waypoints:
                     waypoints[vehicle] = [(x, y)]
                 else:
                     waypoints[vehicle].append((x, y))
+
+        return waypoints, total
+
+    def _send(self, tables):
+        """
+        Send the waypoints from all tables to the corresponding vehicles.
+        """
+
+        try:
+            waypoints, total = self._make_waypoints(tables)
+        except ValueError as e:
+            QtGui.QMessageBox.critical(self._controller.central_widget,
+                                       "Waypoint incorrect", e.message)
+            return
 
         # Create a progress dialog and send the waypoints to the vehicles.
         progress = QtGui.QProgressDialog(self._controller.central_widget)
