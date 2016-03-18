@@ -82,7 +82,10 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             table.removeRow(row)
 
     def _make_waypoints(self, tables):
-        # Create a list of waypoints (tuples) per vehicle.
+        """
+        Create a list of waypoints (tuples) per vehicle.
+        """
+
         waypoints = {}
         total = 0
         for index, table in enumerate(tables):
@@ -95,7 +98,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
                     raise ValueError("Missing coordinates for vehicle {}, row {} and no previous waypoint".format(vehicle, row))
 
                 if x is None:
-                    # If a table cell is empty, use the previous waypoints's 
+                    # If a table cell is empty, use the previous waypoint's 
                     # coordinates for the current waypoint.
                     x = previous[0]
                 else:
