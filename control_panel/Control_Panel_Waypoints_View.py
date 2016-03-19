@@ -153,24 +153,31 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         fn = QtGui.QFileDialog.getOpenFileName(self._controller.central_widget,
                                                "Import file", os.getcwd(),
                                                "JSON files (*.json)")
+        if fn == "":
+            return
 
         try:
             with open(fn, 'r') as import_file:
                 waypoints = json.load(import_file)
                 if isinstance(waypoints, list):
-                    waypoints = {
-                        1: [sensor_pairs[0] for sensor_pairs in waypoints],
-                        2: [sensor_pairs[1] for sensor_pairs in waypoints]
-                    }
+                    try:
+                        waypoints = {
+                            1: [sensor_pairs[0] for sensor_pairs in waypoints],
+                            2: [sensor_pairs[1] for sensor_pairs in waypoints]
+                        }
+                    except IndexError:
+                        raise ValueError("JSON list must contain sensor pairs")
                 elif not isinstance(waypoints, dict):
                     raise ValueError("Waypoints must be a JSON list or array")
         except IOError as e:
             message = "Could not open file '{}': {}".format(fn, e.strerror)
             QtGui.QMessageBox.critical(self._controller.central_widget,
                                        "File error", message)
+            return
         except ValueError as e:
             QtGui.QMessageBox.critical(self._controller.central_widget,
                                        "JSON error", e.message)
+            return
 
         for index, table in enumerate(tables):
             vehicle = str(index + 1)
@@ -192,6 +199,9 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         fn = QtGui.QFileDialog.getSaveFileName(self._controller.central_widget,
                                                "Export file", os.getcwd(),
                                                "JSON files (*.json)")
+        if fn == "":
+            return
+
         try:
             with open(fn, 'w') as export_file:
                 json.dump(waypoints, export_file)
