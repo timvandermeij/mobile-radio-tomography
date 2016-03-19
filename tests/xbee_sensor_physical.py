@@ -74,7 +74,7 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
         self.sensor._synchronized = True
 
         # The serial connection and sensor must be initialized.
-        self.sensor._setup()
+        self.sensor.setup()
         self.sensor._active = True
         self.assertIsInstance(self.sensor._serial_connection, serial.Serial)
         self.assertIsInstance(self.sensor._sensor, ZigBee)
@@ -138,7 +138,7 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
 
         # Activate the sensor and ignore any _send() calls as we are not
         # interested in the initialization calls.
-        self.sensor._setup()
+        self.sensor.setup()
         self.sensor._active = True
         mock_send.call_count = 0
 
@@ -197,7 +197,7 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
         self.sensor._joined = True
         self.sensor._synchronized = True
 
-        self.sensor._setup()
+        self.sensor.setup()
         self.sensor._active = True
 
         # Valid RX packets should be processed. Store the frame ID

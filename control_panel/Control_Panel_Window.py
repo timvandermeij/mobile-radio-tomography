@@ -1,5 +1,5 @@
 from PyQt4 import QtGui
-from Control_Panel_Controller import Control_Panel_Controller
+from Control_Panel_Controller import Control_Panel_Controller, Control_Panel_View_Name
 
 class Control_Panel_Window(QtGui.QMainWindow):
     def __init__(self, app):
@@ -29,6 +29,9 @@ class Control_Panel_Window(QtGui.QMainWindow):
 
         # Create a controller.
         self.controller = Control_Panel_Controller(app, central_widget, self)
+
+        # Show the loading view (default).
+        self.controller.show_view(Control_Panel_View_Name.LOADING)
 
     def closeEvent(self, event):
         """

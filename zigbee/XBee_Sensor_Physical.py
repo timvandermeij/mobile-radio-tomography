@@ -49,9 +49,9 @@ class XBee_Sensor_Physical(XBee_Sensor):
         for index, address in enumerate(self._sensors):
             self._sensors[index] = address.decode("string_escape")
 
-    def _setup(self):
+    def setup(self):
         """
-        Setup the serial connection and join the network.
+        Setup the serial connection and identify the sensor.
         """
 
         port = self.settings.get("port")
@@ -62,7 +62,8 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
         self._sensor = ZigBee(self._serial_connection, callback=self._receive)
         time.sleep(self.settings.get("startup_delay"))
-        self._join()
+
+        self._identify()
 
     def activate(self):
         """
@@ -73,7 +74,10 @@ class XBee_Sensor_Physical(XBee_Sensor):
         super(XBee_Sensor_Physical, self).activate()
 
         if not self._active:
-            self._setup()
+            if self._serial_connection is None:
+                self.setup()
+
+            self._join()
             self._active = True
             thread.start_new_thread(self._loop, ())
 
@@ -106,7 +110,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
         super(XBee_Sensor_Physical, self).deactivate()
 
-        if self._active:
+        if self._active or self._serial_connection is not None:
             self._active = False
             self._sensor.halt()
             self._serial_connection.close()
@@ -140,9 +144,9 @@ class XBee_Sensor_Physical(XBee_Sensor):
                     "to": to_id
                 })
 
-    def _join(self):
+    def _identify(self):
         """
-        Join the network and set this sensor's ID and address before sending.
+        Identify the sensor by fetching its node identifier and address.
         """
 
         response_delay = self.settings.get("response_delay")
@@ -156,6 +160,13 @@ class XBee_Sensor_Physical(XBee_Sensor):
             time.sleep(response_delay)
             self._sensor.send("at", command="SL")
             time.sleep(response_delay)
+
+    def _join(self):
+        """
+        Join the network and synchronize the clock if necessary.
+        """
+
+        response_delay = self.settings.get("response_delay")
 
         while not self._joined:
             self._sensor.send("at", command="AI")

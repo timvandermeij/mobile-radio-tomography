@@ -48,9 +48,6 @@ class Control_Panel_Controller(object):
 
         self.arguments.check_help()
 
-        # Show the loading view (default).
-        self.show_view(Control_Panel_View_Name.LOADING)
-
     def _get_location(self):
         return (0, 0)
 
@@ -106,7 +103,9 @@ class Control_Panel_Controller(object):
             self._current_view_name = name
             view.show()
         except Exception as e:
-            QtGui.QMessageBox.critical(self.central_widget, "Internal error", traceback.format_exc() + "\nThe application will now exit.")
+            QtGui.QMessageBox.critical(self.central_widget, "Internal error",
+                                       traceback.format_exc() + "\nThe application will now exit.")
+            self.window.close()
             sys.exit(1)
 
     def add_menu_bar(self):

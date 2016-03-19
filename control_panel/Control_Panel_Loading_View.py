@@ -1,3 +1,4 @@
+import sys
 from PyQt4 import QtCore, QtGui
 from Control_Panel_View import Control_Panel_View, Control_Panel_View_Name
 from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
@@ -43,8 +44,15 @@ class Control_Panel_Loading_View(Control_Panel_View):
             self._label.setText("Activating ground station XBee and wireless network...")
             self._label.repaint()
             self._controller.app.processEvents()
-            self._controller.xbee.activate()
 
-            self._controller.show_view(Control_Panel_View_Name.RECONSTRUCTION)
+            self._controller.xbee.setup()
+            if self._controller.xbee.id != 0:
+                QtGui.QMessageBox.critical(self._controller.central_widget, "XBee error",
+                                           "The inserted XBee device is not a ground station.")
+                self._controller.window.close()
+                sys.exit(1)
+
+            self._controller.xbee.activate()
+            self._controller.show_view(Control_Panel_View_Name.WAYPOINTS)
         except KeyError:
             QtCore.QTimer.singleShot(self._xbee_insertion_delay, lambda: self._insertion_loop())
