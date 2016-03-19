@@ -213,6 +213,7 @@
             "number_of_sensors": 2,
             "custom_packet_limit": 1,
             "loop_delay": 0.01,
+            "startup_delay": 1,
             "specifications": {
                 "memory_map_chunk": [
                     {
@@ -381,8 +382,7 @@
         "name": "XBee configurator",
         "parent": "xbee_base",
         "settings": {
-            "pan_id": 2015,
-            "startup_delay": 1
+            "pan_id": 2015
         }
     },
     "xbee_sensor_simulator": {
@@ -408,7 +408,6 @@
             "ground_station_delay": 0.1,
             "ntp_delay": 3,
             "response_delay": 0.3,
-            "startup_delay": 1,
             "synchronize": false
         }
     },
