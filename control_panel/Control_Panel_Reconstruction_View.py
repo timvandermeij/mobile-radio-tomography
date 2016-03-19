@@ -68,7 +68,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
         # Set the width and height of the label.
         control_panel_settings = self._controller.arguments.get_settings("control_panel")
-        self._viewer_width, self._viewer_height = control_panel_settings.get("viewer_dimensions")
+        self._viewer_width, self._viewer_height = control_panel_settings.get("reconstruction_viewer_dimensions")
         self._label.setFixedSize(self._viewer_width, self._viewer_height)
 
         # Create the reader.

@@ -23,6 +23,8 @@ class Control_Panel_Loading_View(Control_Panel_View):
         vbox.addStretch(1)
 
         # Wait for insertion of the ground station XBee.
+        control_panel_settings = self._controller.arguments.get_settings("control_panel")
+        self._xbee_insertion_delay = control_panel_settings.get("loading_xbee_insertion_delay") * 1000
         self._insertion_loop()
 
     def _insertion_loop(self):
@@ -35,6 +37,4 @@ class Control_Panel_Loading_View(Control_Panel_View):
             self._controller.usb_manager.get_xbee_device()
             self._controller.show_view(Control_Panel_View_Name.RECONSTRUCTION)
         except KeyError:
-            control_panel_settings = self._controller.arguments.get_settings("control_panel")
-            xbee_insertion_delay = control_panel_settings.get("xbee_insertion_delay") * 1000
-            QtCore.QTimer.singleShot(xbee_insertion_delay, lambda: self._insertion_loop())
+            QtCore.QTimer.singleShot(self._xbee_insertion_delay, lambda: self._insertion_loop())

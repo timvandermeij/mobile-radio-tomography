@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from functools import partial
+import sys
 import traceback
 from PyQt4 import QtGui
 from Control_Panel_View import Control_Panel_View_Name
@@ -95,7 +96,7 @@ class Control_Panel_Controller(object):
             view.show()
         except Exception as e:
             QtGui.QMessageBox.critical(self.central_widget, "Internal error", traceback.format_exc() + "\nThe application will now exit.")
-            self.window.close()
+            sys.exit(1)
 
     def add_menu_bar(self):
         """
