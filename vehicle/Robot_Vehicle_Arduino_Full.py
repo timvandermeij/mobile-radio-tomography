@@ -53,18 +53,19 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
         # Use the state loop for direct serial connection handling.
         line = self._serial_connection.readline()
         parts = line.lstrip('\0').rstrip().split(' ')
-        if len(parts) == 0:
-            # Empty message
-            return
 
-        if parts[0] == "LOCA": # At grid intersection location
-            self._location = (int(parts[1]), int(parts[2]))
-            self._direction = self._get_direction(parts[3])
-            self._state = Robot_State("intersection")
-        elif parts[0] == "GDIR": # Direction update
-            self._direction = self._get_direction(parts[1])
-        elif parts[0] == "ACKG": # "GOTO" acknowledgement
-            self._state = Robot_State("move")
+        try:
+            if parts[0] == "LOCA": # At grid intersection location
+                self._location = (int(parts[1]), int(parts[2]))
+                self._direction = self._get_direction(parts[3])
+                self._state = Robot_State("intersection")
+            elif parts[0] == "GDIR": # Direction update
+                self._direction = self._get_direction(parts[1])
+            elif parts[0] == "ACKG": # "GOTO" acknowledgement
+                self._state = Robot_State("move")
+        except IndexError:
+            # Ignore incomplete messages.
+            return
 
         print("Arduino: {}".format(' '.join(parts)))
 
