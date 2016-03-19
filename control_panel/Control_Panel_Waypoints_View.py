@@ -225,6 +225,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         self._progress.setMinimumDuration(0)
         self._progress.setCancelButtonText("Cancel")
         self._progress.canceled.connect(lambda: self._cancel())
+        self._progress.setWindowTitle("Sending waypoints")
         self._progress.setLabelText("Initializing...")
         self._progress.open()
 
