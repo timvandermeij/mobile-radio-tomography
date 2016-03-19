@@ -58,6 +58,9 @@
 // Maximum length of a serial input line that we ever receive
 #define SERIAL_INPUT 80
 
+// Length of a command code in the serial interface
+#define COMMAND_LENGTH 4
+
 ZumoBuzzer buzzer;
 ZumoReflectanceSensorArray reflectanceSensors;
 ZumoMotors motors;
@@ -148,24 +151,38 @@ void setup() {
 }
 
 void loop() {
-  // If we have serial input, then parse it as two coordinates.
+  // If we have serial input, then parse the message.
   if (Serial.available()) {
-    goto_row = Serial.parseInt();
-    goto_col = Serial.parseInt();
+    char command[COMMAND_LENGTH];
+    Serial.readBytes(command, COMMAND_LENGTH);
+    if (strcmp(command, "GOTO") == 0)
+    {
+      // Read two coordinates.
+      goto_row = Serial.parseInt();
+      goto_col = Serial.parseInt();
+    }
+    else if (strcmp(command, "DIRS") == 0)
+    {
+      Serial.read();
+      turn_dir(Serial.read());
+    }
 
     // Ignore the rest of the line, which might simply be a newline.
     char input[SERIAL_INPUT];
     Serial.readBytesUntil('\n', input, SERIAL_INPUT);
 
-    Serial.print("ACK ");
-    Serial.print(goto_row):
-    Serial.print(" ");
-    Serial.print(goto_col);
-    Serial.print("\n");
+    if (goto_row >= 0 && goto_col >= 0)
+    {
+      Serial.print("ACKG ");
+      Serial.print(goto_row):
+      Serial.print(" ");
+      Serial.print(goto_col);
+      Serial.print("\n");
 
-    zumo_goto(goto_row, goto_col);
-    goto_row = -1;
-    goto_col = -1;
+      zumo_goto(goto_row, goto_col);
+      goto_row = -1;
+      goto_col = -1;
+    }
   }
   delay(LOOP_DELAY);
 }
@@ -229,11 +246,6 @@ void goto_dir(char dir, int count) {
   if (dir == 'O') {
     return;
   }
-  Serial.print("GOTO ");
-  Serial.print(dir);
-  Serial.print(" ");
-  Serial.print(count);
-  Serial.print("\n");
   turn_to(dir);
   for (int i = 0; i < count; i++) {
     followSegment();
@@ -339,6 +351,9 @@ void turn_to(char dir) {
 
   // Store new direction
   zumo_direction = dir;
+  Serial.print("GDIR ");
+  Serial.print(dir);
+  Serial.print("\n");
 }
 
 // Turns according to the parameter dir, which should be
