@@ -49,6 +49,8 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
                                             self.location_callback,
                                             self.receive_callback,
                                             self.valid_callback)
+        self.sensor._setup()
+        self.sensor._active = True
 
     def test_initialization(self):
         # The ID of the sensor must be set.
