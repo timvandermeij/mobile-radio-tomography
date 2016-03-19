@@ -1,5 +1,6 @@
 from PyQt4 import QtCore, QtGui
 from Control_Panel_View import Control_Panel_View, Control_Panel_View_Name
+from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
 
 class Control_Panel_Loading_View(Control_Panel_View):
     def show(self):
@@ -33,8 +34,9 @@ class Control_Panel_Loading_View(Control_Panel_View):
         """
 
         try:
-            self._controller.usb_manager.index()
-            self._controller.usb_manager.get_xbee_device()
+            if isinstance(self._controller.xbee, XBee_Sensor_Physical):
+                self._controller.usb_manager.index()
+                self._controller.usb_manager.get_xbee_device()
 
             # We now know that a valid XBee device has been inserted.
             # Therefore update the label and proceed with activating the XBee.

@@ -10,6 +10,7 @@ from Control_Panel_Waypoints_View import Control_Panel_Waypoints_View
 from ..core.Thread_Manager import Thread_Manager
 from ..core.USB_Manager import USB_Manager
 from ..settings import Arguments
+from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
 
 class Control_Panel_Controller(object):
@@ -28,15 +29,24 @@ class Control_Panel_Controller(object):
         # Create arguments (for obtaining various settings in views)
         # and a USB manager (for checking insertion of XBee devices).
         # Initialize the XBee sensor for use by specific views.
-        self.arguments = Arguments("settings.json", [])
+        self.arguments = Arguments("settings.json", sys.argv[1:])
         self.thread_manager = Thread_Manager()
         self.usb_manager = USB_Manager()
         self.usb_manager.index()
-        self.xbee = XBee_Sensor_Physical(self.arguments, self.thread_manager,
-                                         self.usb_manager, self._get_location,
-                                         self._receive, self._location_valid)
+
+        settings = self.arguments.get_settings("control_panel")
+        if settings.get("controller_xbee_simulation"):
+            xbee_class = XBee_Sensor_Simulator
+        else:
+            xbee_class = XBee_Sensor_Physical
+
+        self.xbee = xbee_class(self.arguments, self.thread_manager,
+                               self.usb_manager, self._get_location,
+                               self._receive, self._location_valid)
 
         self._packet_callbacks = {}
+
+        self.arguments.check_help()
 
         # Show the loading view (default).
         self.show_view(Control_Panel_View_Name.LOADING)
