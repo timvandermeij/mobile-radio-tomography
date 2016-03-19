@@ -29,12 +29,21 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         self._next_timestamp = self.scheduler.get_next_timestamp()
         self._data = []
         self._queue = Queue.Queue()
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self._socket.bind((self.settings.get("ip"), self.settings.get("port") + self.id))
-        self._socket.setblocking(0)
         self._active = False
         self._loop_delay = self.settings.get("loop_delay")
+        self._ip = self.settings.get("ip")
+        self._port = self.settings.get("port")
+        self._socket = None
+
+    def setup(self):
+        """
+        Setup the socket connection.
+        """
+
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._socket.bind((self._ip, self._port + self.id))
+        self._socket.setblocking(0)
 
     def activate(self):
         """
@@ -44,8 +53,12 @@ class XBee_Sensor_Simulator(XBee_Sensor):
 
         super(XBee_Sensor_Simulator, self).activate()
 
-        self._active = True
-        thread.start_new_thread(self._loop, ())
+        if not self._active:
+            if self._socket is None:
+                self.setup()
+
+            self._active = True
+            thread.start_new_thread(self._loop, ())
 
     def _loop(self):
         """
@@ -80,8 +93,9 @@ class XBee_Sensor_Simulator(XBee_Sensor):
 
         super(XBee_Sensor_Simulator, self).deactivate()
 
-        self._active = False
-        self._socket.close()
+        if self._active or self._socket is not None:
+            self._active = False
+            self._socket.close()
 
     def enqueue(self, packet, to=None):
         """
@@ -117,20 +131,30 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         Send packets to all other sensors in the network.
         """
 
-        ip = self.settings.get("ip")
-        port = self.settings.get("port")
-
         for i in xrange(1, self.settings.get("number_of_sensors") + 1):
             if i == self.id:
                 continue
 
             packet = self.make_rssi_broadcast_packet()
             packet.set("sensor_id", self.id)
-            self._socket.sendto(packet.serialize(), (ip, port + i))
+            self._socket.sendto(packet.serialize(), (self._ip, self._port + i))
 
         # Send custom packets to their destination. Since the time slots are
         # limited in length, so is the number of custom packets we transfer
         # in each sweep.
+        self._send_custom_packets()
+
+        # Send the sweep data to the ground sensor.
+        for packet in self._data:
+            self._socket.sendto(packet.serialize(), (self._ip, self._port))
+
+        self._data = []
+
+    def _send_custom_packets(self):
+        """
+        Send custom packets to their destinations.
+        """
+
         limit = self.settings.get("custom_packet_limit")
         while not self._queue.empty():
             if limit == 0:
@@ -138,13 +162,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
 
             limit -= 1
             item = self._queue.get()
-            self._socket.sendto(item["packet"].serialize(), (ip, port + item["to"]))
-
-        # Send the sweep data to the ground sensor.
-        for packet in self._data:
-            self._socket.sendto(packet.serialize(), (ip, port))
-
-        self._data = []
+            self._socket.sendto(item["packet"].serialize(), (self._ip, self._port + item["to"]))
 
     def _receive(self, packet):
         """

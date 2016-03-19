@@ -2,8 +2,11 @@
     "control_panel": {
         "name": "Control panel",
         "settings": {
-            "viewer_dimensions": [500, 500],
-            "xbee_insertion_delay": 0.1
+            "controller_xbee_simulation": false,
+            "loading_xbee_insertion_delay": 0.1,
+            "reconstruction_viewer_dimensions": [500, 500],
+            "waypoints_max_retries": 5,
+            "waypoints_retry_interval": 500
         }
     },
     "distance_sensor_simulator": {
@@ -211,6 +214,7 @@
             "number_of_sensors": 2,
             "custom_packet_limit": 1,
             "loop_delay": 0.01,
+            "startup_delay": 1,
             "specifications": {
                 "memory_map_chunk": [
                     {
@@ -319,6 +323,58 @@
                         "name": "timestamp_4",
                         "format": "d"
                     }
+                ],
+                "waypoint_clear": [
+                    {
+                        "name": "id",
+                        "format": "B",
+                        "value": 5,
+                        "private": false
+                    },
+                    {
+                        "name": "to_id",
+                        "format": "B"
+                    }
+                ],
+                "waypoint_add": [
+                    {
+                        "name": "id",
+                        "format": "B",
+                        "value": 6,
+                        "private": false
+                    },
+                    {
+                        "name": "latitude",
+                        "format": "d"
+                    },
+                    {
+                        "name": "longitude",
+                        "format": "d"
+                    },
+                    {
+                        "name": "index",
+                        "format": "i"
+                    },
+                    {
+                        "name": "to_id",
+                        "format": "B"
+                    }
+                ],
+                "waypoint_ack": [
+                    {
+                        "name": "id",
+                        "format": "B",
+                        "value": 7,
+                        "private": false
+                    },
+                    {
+                        "name": "next_index",
+                        "format": "i"
+                    },
+                    {
+                        "name": "sensor_id",
+                        "format": "B"
+                    }
                 ]
             }
         }
@@ -327,8 +383,7 @@
         "name": "XBee configurator",
         "parent": "xbee_base",
         "settings": {
-            "pan_id": 2015,
-            "startup_delay": 1
+            "pan_id": 2015
         }
     },
     "xbee_sensor_simulator": {
@@ -351,9 +406,9 @@
                 "\\x00\\x13\\xa2\\x00@\\xe6o5",
                 "\\x00\\x13\\xa2\\x00@\\xe6n\\xb9"
             ],
+            "ground_station_delay": 0.1,
             "ntp_delay": 3,
             "response_delay": 0.3,
-            "startup_delay": 1,
             "synchronize": false
         }
     },

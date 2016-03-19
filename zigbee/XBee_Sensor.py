@@ -45,11 +45,20 @@ class XBee_Sensor(Threadable):
         self._receive_callback = receive_callback
         self._valid_callback = valid_callback
 
+    def setup(self):
+        raise NotImplementedError("Subclasses must implement `setup()`")
+
+    def _loop(self):
+        raise NotImplementedError("Subclasses must implement `_loop()`")
+
     def enqueue(self, packet, to=None):
         raise NotImplementedError("Subclasses must implement `enqueue(packet, to=None)`")
 
     def _send(self):
         raise NotImplementedError("Subclasses must implement `_send()`")
+
+    def _send_custom_packets(self):
+        raise NotImplementedError("Subclasses must implement `_send_custom_packets()`")
 
     def _receive(self, packet):
         raise NotImplementedError("Subclasses must implement `_receive(packet)`")

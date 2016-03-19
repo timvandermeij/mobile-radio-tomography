@@ -1,8 +1,9 @@
-from PyQt4 import QtCore
+from PyQt4 import QtCore, QtGui
 
 class Control_Panel_View_Name(object):
     LOADING = 1
     RECONSTRUCTION = 2
+    WAYPOINTS = 3
 
 class Control_Panel_View(object):
     def __init__(self, controller):
@@ -12,19 +13,43 @@ class Control_Panel_View(object):
 
         self._controller = controller
 
-    def clear(self):
+    def clear(self, layout=None):
         """
         Clear the view, thereby deleting any existing widgets.
         """
 
-        layout = self._controller.central_widget.layout()
+        menu_bar = self._controller.window._menu_bar
+        if menu_bar is not None:
+            menu_bar.hide()
 
-        # Delete all widgets in the layout.
+        toolbar = self._controller.window._toolbar
+        if toolbar is not None:
+            self._controller.window.removeToolBar(toolbar)
+            self._controller.window._toolbar = None
+
         if layout is not None:
-            for item in reversed(range(layout.count())):
-                widget = layout.itemAt(item).widget()
-                if widget is not None:
-                    widget.setParent(None)
+            for index in reversed(range(layout.count())):
+                item = layout.itemAt(index)
 
-        # Delete the layout itself.
-        QtCore.QObjectCleanupHandler().add(layout)
+                if isinstance(item, QtGui.QWidgetItem):
+                    item.widget().close()
+                else:
+                    self.clear(item.layout())
+
+            # Delete the layout itself.
+            QtCore.QObjectCleanupHandler().add(layout)
+
+    def _add_menu_bar(self):
+        """
+        Create a menu bar for the window.
+
+        Subclasses can extend this to add more custom menus and actions to
+        the menu bar. If they do so, then they must extend the `clear` method
+        with the following code to clear the entire menu bar:
+
+        if self._controller.window._menu_bar is not None:
+            self._controller.window._menu_bar.clear()
+            self._controller.window._menu_bar = None
+        """
+
+        self._controller.add_menu_bar()

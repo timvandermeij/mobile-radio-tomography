@@ -10,6 +10,7 @@ from dronekit import VehicleMode, LocationGlobal, LocationGlobalRelative, Locati
 from Memory_Map import Memory_Map
 from ..geometry.Geometry import Geometry_Spherical
 from ..vehicle.Robot_Vehicle import Robot_Vehicle
+from ..zigbee.XBee_Packet import XBee_Packet
 
 class Mission(object):
     """
@@ -690,6 +691,11 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
         return self.geometry.get_distance_meters(start, goal)
 
 class Mission_Infrared(Mission_Guided):
+    """
+    A mission that drives around with a `Robot_Vehicle` based on button presses
+    that are read using the `Infrared_Sensor`.
+    """
+
     def setup(self):
         super(Mission_Infrared, self).setup()
 
@@ -723,6 +729,11 @@ class Mission_Infrared(Mission_Guided):
         self.vehicle.set_rotate(1)
 
 class Mission_Cycle(Mission_Guided):
+    """
+    A mission that performs fan beam and straight line measurements on a grid
+    using a `Robot_Vehicle`.
+    """
+
     def setup(self):
         super(Mission_Guided, self).setup()
 
@@ -829,3 +840,74 @@ class Mission_Cycle(Mission_Guided):
 
         self.current_waypoint = waypoint
         self.vehicle.simple_goto(LocationLocal(waypoint[0], waypoint[1], 0.0))
+
+class Mission_XBee(Mission_Auto):
+    def setup(self):
+        super(Mission_XBee, self).setup()
+        self.environment.add_packet_action("waypoint_clear", self._clear_waypoints)
+        self.environment.add_packet_action("waypoint_add", self._add_waypoint)
+
+    def get_points(self):
+        return []
+
+    def _send_ack(self):
+        """
+        Send a "waypoint_ack" packet to the ground station.
+
+        This packet mentions which waypoint index we expect next, which is 0
+        when we do not have any waypoints anymore or the next unused index
+        otherwise.
+        """
+
+        xbee_sensor = self.environment.get_xbee_sensor()
+
+        ack_packet = XBee_Packet()
+        ack_packet.set("specification", "waypoint_ack")
+        ack_packet.set("next_index", self.vehicle.count_waypoints())
+        ack_packet.set("sensor_id", xbee_sensor.id)
+
+        xbee_sensor.enqueue(ack_packet, to=0)
+
+    def _clear_waypoints(self, packet):
+        """
+        Clear the mission waypoints after receiving a "waypoint_clear" packet.
+        """
+
+        xbee_sensor = self.environment.get_xbee_sensor()
+        if xbee_sensor.id != packet.get("to_id"):
+            # Ignore packets not meant for us.
+            return
+
+        self.clear_mission()
+        self._send_ack()
+
+    def _add_waypoint(self, packet):
+        """
+        Add a waypoint to the mission based on a "waypoint_add" packet.
+
+        The packet must have the XBee sensor ID in the "to_id" field and the
+        index must be the next waypoint index; otherwise, the waypoint is not
+        added to the vehicle's waypoints.
+        """
+
+        xbee_sensor = self.environment.get_xbee_sensor()
+        if xbee_sensor.id != packet.get("to_id"):
+            # Ignore packets not meant for us.
+            return
+
+        index = packet.get("index")
+        if index != self.vehicle.count_waypoints():
+            # Send a reply saying what index were are currently at and ignore 
+            # the packet, which may be duplicate or out of order.
+            self._send_ack()
+            return
+
+        latitude = packet.get("latitude")
+        longitude = packet.get("longitude")
+        if isinstance(self.geometry, Geometry_Spherical):
+            point = LocationGlobalRelative(latitude, longitude, self.altitude)
+        else:
+            point = LocationLocal(latitude, longitude, -self.altitude)
+
+        self.vehicle.add_waypoint(point)
+        self._send_ack()

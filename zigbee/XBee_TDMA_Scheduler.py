@@ -45,10 +45,14 @@ class XBee_TDMA_Scheduler(object):
         timestamp = float(packet.get("timestamp"))
 
         if from_sensor < self.id:
-            self.timestamp = timestamp + ((self.id - from_sensor) * slot_time)
+            timestamp = timestamp + ((self.id - from_sensor) * slot_time)
         else:
             # Calculate how much time remains to complete the current sweep.
             completed_round = (self.number_of_sensors - from_sensor + 1) * slot_time
-            self.timestamp = timestamp + completed_round + ((self.id - 1) * slot_time)
+            timestamp = timestamp + completed_round + ((self.id - 1) * slot_time)
+
+        # Only accept future timestamps.
+        if timestamp > self.timestamp:
+            self.timestamp = timestamp
 
         return self.timestamp

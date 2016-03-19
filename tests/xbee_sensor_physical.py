@@ -74,7 +74,8 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
         self.sensor._synchronized = True
 
         # The serial connection and sensor must be initialized.
-        self.sensor._setup()
+        self.sensor.setup()
+        self.sensor._active = True
         self.assertIsInstance(self.sensor._serial_connection, serial.Serial)
         self.assertIsInstance(self.sensor._sensor, ZigBee)
         self.assertEqual(self.sensor._node_identifier_set, True)
@@ -137,7 +138,8 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
 
         # Activate the sensor and ignore any _send() calls as we are not
         # interested in the initialization calls.
-        self.sensor._setup()
+        self.sensor.setup()
+        self.sensor._active = True
         mock_send.call_count = 0
 
         # Packets must be sent to all other sensors except the ground sensor
@@ -169,20 +171,37 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
                          self.settings.get("number_of_sensors"))
         self.assertNotIn(42, self.sensor._data)
 
-        # If the queue contains custom packets, some of them must be sent.
+        self.sensor.deactivate()
+
+    @patch("xbee.ZigBee.send")
+    def test_send_custom_packets(self, mock_send):
+        self.sensor._address = "sensor_{}".format(self.sensor_id)
+
+        # Set all status variables to True to avoid being stuck in
+        # the join loops. We cannot test the join process in the unit tests.
+        self.sensor._node_identifier_set = True
+        self.sensor._address_set = True
+        self.sensor._joined = True
+        self.sensor._synchronized = True
+
+        # Activate the sensor and ignore any _send() calls as we are not
+        # interested in the initialization calls.
+        self.sensor.setup()
+        self.sensor._active = True
         mock_send.call_count = 0
+
+        # If the queue contains custom packets, some of them must be sent.
         packet = XBee_Packet()
         packet.set("specification", "memory_map_chunk")
         packet.set("latitude", 123456789.12)
         packet.set("longitude", 123459678.34)
         self.sensor.enqueue(packet, to=2)
+
         queue_length_before = self.sensor._queue.qsize()
-        self.sensor._send()
+        self.sensor._send_custom_packets()
         custom_packet_limit = self.sensor.settings.get("custom_packet_limit")
         queue_length_after = max(0, queue_length_before - custom_packet_limit)
-        original_number_of_packets = self.settings.get("number_of_sensors") - 1
-        self.assertEqual(mock_send.call_count, original_number_of_packets +
-                         (queue_length_before - queue_length_after))
+        self.assertEqual(mock_send.call_count, (queue_length_before - queue_length_after))
         self.assertEqual(self.sensor._queue.qsize(), queue_length_after)
 
         self.sensor.deactivate()
@@ -195,7 +214,8 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
         self.sensor._joined = True
         self.sensor._synchronized = True
 
-        self.sensor._setup()
+        self.sensor.setup()
+        self.sensor._active = True
 
         # Valid RX packets should be processed. Store the frame ID
         # for the DB call test following this test.

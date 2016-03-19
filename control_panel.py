@@ -5,7 +5,7 @@ from PyQt4 import QtGui
 
 def main(argv):
     app = QtGui.QApplication(argv)
-    control_panel_window = Control_Panel_Window()
+    control_panel_window = Control_Panel_Window(app)
     control_panel_window.show()
     sys.exit(app.exec_())
 

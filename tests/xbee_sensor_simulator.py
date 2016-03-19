@@ -49,6 +49,8 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
                                             self.location_callback,
                                             self.receive_callback,
                                             self.valid_callback)
+        self.sensor.setup()
+        self.sensor._active = True
 
     def test_initialization(self):
         # The ID of the sensor must be set.
@@ -110,14 +112,16 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
         self.sensor._send()
         self.assertEqual(self.sensor._data, [])
 
+    def test_send_custom_packets(self):
         # If the queue contains packets, some of them must be sent.
         packet = XBee_Packet()
         packet.set("specification", "memory_map_chunk")
         packet.set("latitude", 123456789.12)
         packet.set("longitude", 123459678.34)
         self.sensor.enqueue(packet, to=2)
+
         queue_length_before = self.sensor._queue.qsize()
-        self.sensor._send()
+        self.sensor._send_custom_packets()
         custom_packet_limit = self.sensor.settings.get("custom_packet_limit")
         queue_length_after = max(0, queue_length_before - custom_packet_limit)
         self.assertEqual(self.sensor._queue.qsize(), queue_length_after)
