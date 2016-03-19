@@ -165,20 +165,22 @@ class XBee_Sensor_Physical(XBee_Sensor):
             # Synchronize the clock with the ground station's clock before
             # sending messages. This avoids clock skew caused by the fact that
             # the Raspberry Pi devices do not have an onboard real time clock.
-            while not self._synchronized:
-                packet = XBee_Packet()
-                packet.set("specification", "ntp")
-                packet.set("sensor_id", self.id)
-                packet.set("timestamp_1", time.time())
-                packet.set("timestamp_2", 0)
-                packet.set("timestamp_3", 0)
-                packet.set("timestamp_4", 0)
+            ntp_delay = self.settings.get("ntp_delay")
 
+            packet = XBee_Packet()
+            packet.set("specification", "ntp")
+            packet.set("sensor_id", self.id)
+            packet.set("timestamp_2", 0)
+            packet.set("timestamp_3", 0)
+            packet.set("timestamp_4", 0)
+
+            while not self._synchronized:
                 # Send the NTP packet to the ground station.
+                packet.set("timestamp_1", time.time())
                 self._sensor.send("tx", dest_addr_long=self._sensors[0],
                                   dest_addr="\xFF\xFE", frame_id="\x00",
                                   data=packet.serialize())
-                time.sleep(self.settings.get("ntp_delay"))
+                time.sleep(ntp_delay)
 
     def _ntp(self, packet):
         """
