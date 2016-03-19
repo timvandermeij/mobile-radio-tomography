@@ -164,7 +164,7 @@ void loop() {
     else if (strcmp(command, "DIRS") == 0)
     {
       Serial.read();
-      turn_dir(Serial.read());
+      turn_to(Serial.read());
     }
 
     // Ignore the rest of the line, which might simply be a newline.
@@ -174,7 +174,7 @@ void loop() {
     if (goto_row >= 0 && goto_col >= 0)
     {
       Serial.print("ACKG ");
-      Serial.print(goto_row):
+      Serial.print(goto_row);
       Serial.print(" ");
       Serial.print(goto_col);
       Serial.print("\n");
