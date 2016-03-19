@@ -8,6 +8,13 @@ class TestXBeeTDMAScheduler(SettingsTestCase):
     def setUp(self):
         self.id = 2
         self.settings = Settings("settings.json", "xbee_tdma_scheduler")
+
+        # We want to use a fixed number of sensors of eight for the
+        # unit tests. However, since everything gets the number of
+        # sensors from the settings and there are no separate settings
+        # for the unit tests, we manually change the setting here.
+        self.settings.settings["number_of_sensors"] = 8
+
         self.scheduler = XBee_TDMA_Scheduler(self.id, self.settings)
         self.number_of_sensors = self.settings.get("number_of_sensors")
         self.sweep_delay = self.settings.get("sweep_delay")
@@ -58,7 +65,7 @@ class TestXBeeTDMAScheduler(SettingsTestCase):
         calculated = self.scheduler.synchronize(packet)
         slot_time = float(self.sweep_delay) / self.number_of_sensors
         correct = packet.get("timestamp") + ((self.id - packet.get("sensor_id")) * slot_time)
-        self.assertAlmostEqual(calculated, correct, delta=0.1)
+        self.assertEqual(calculated, correct)
 
         # If the received packet is from a sensor with a higher ID than the
         # current sensor, then the next timestamp for the current sensor should
@@ -78,7 +85,6 @@ class TestXBeeTDMAScheduler(SettingsTestCase):
         packet.set("timestamp", time.time())
 
         calculated = self.scheduler.synchronize(packet)
-        slot_time = float(self.sweep_delay) / self.number_of_sensors
         completed_round = (self.number_of_sensors - packet.get("sensor_id") + 1) * slot_time
         correct = packet.get("timestamp") + completed_round + ((self.id - 1) * slot_time)
-        self.assertAlmostEqual(calculated, correct, delta=0.1)
+        self.assertEqual(calculated, correct)
