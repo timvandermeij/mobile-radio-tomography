@@ -8,6 +8,7 @@ from ..zigbee.XBee_Packet import XBee_Packet
 class Control_Panel_Waypoints_View(Control_Panel_View):
     def __init__(self, controller):
         super(Control_Panel_Waypoints_View, self).__init__(controller)
+
         settings = self._controller.arguments.get_settings("control_panel")
         self._max_retries = settings.get("waypoints_max_retries")
         self._retry_interval = settings.get("waypoints_retry_interval")
@@ -15,8 +16,8 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
     def clear(self, layout=None):
         super(Control_Panel_Waypoints_View, self).clear(layout)
+
         self._controller.remove_packet_callback("waypoint_ack")
-        self._controller.xbee.deactivate()
 
     def show(self):
         """
@@ -25,11 +26,6 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
         self._add_menu_bar()
         self._controller.add_packet_callback("waypoint_ack", self._receive_ack)
-        try:
-            self._controller.xbee.activate()
-            xbee_enabled = True
-        except KeyError:
-            xbee_enabled = False
 
         labels = []
         tables = []
@@ -62,7 +58,6 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         export_button = QtGui.QPushButton("Export")
         export_button.clicked.connect(lambda: self._export(tables))
         send_button = QtGui.QPushButton("Send")
-        send_button.setEnabled(xbee_enabled)
         send_button.clicked.connect(lambda: self._send(tables))
 
         # Create the layout and add the widgets.

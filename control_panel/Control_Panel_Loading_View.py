@@ -13,13 +13,13 @@ class Control_Panel_Loading_View(Control_Panel_View):
         progressBar.setMaximum(0)
 
         # Create a label.
-        label = QtGui.QLabel("Waiting for insertion of ground station XBee...")
+        self._label = QtGui.QLabel("Waiting for insertion of ground station XBee...")
 
         # Create the layout and add the widgets.
         vbox = QtGui.QVBoxLayout(self._controller.central_widget)
         vbox.addStretch(1)
         vbox.addWidget(progressBar)
-        vbox.addWidget(label)
+        vbox.addWidget(self._label)
         vbox.addStretch(1)
 
         # Wait for insertion of the ground station XBee.
@@ -35,6 +35,14 @@ class Control_Panel_Loading_View(Control_Panel_View):
         try:
             self._controller.usb_manager.index()
             self._controller.usb_manager.get_xbee_device()
+
+            # We now know that a valid XBee device has been inserted.
+            # Therefore update the label and proceed with activating the XBee.
+            self._label.setText("Activating ground station XBee and wireless network...")
+            self._label.repaint()
+            self._controller.app.processEvents()
+            self._controller.xbee.activate()
+
             self._controller.show_view(Control_Panel_View_Name.RECONSTRUCTION)
         except KeyError:
             QtCore.QTimer.singleShot(self._xbee_insertion_delay, lambda: self._insertion_loop())

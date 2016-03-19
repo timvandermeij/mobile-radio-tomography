@@ -13,11 +13,12 @@ from ..settings import Arguments
 from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
 
 class Control_Panel_Controller(object):
-    def __init__(self, central_widget, window):
+    def __init__(self, app, central_widget, window):
         """
         Initialize the control panel controller.
         """
 
+        self.app = app
         self.central_widget = central_widget
         self.window = window
         self._current_view = None

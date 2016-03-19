@@ -2,7 +2,7 @@ from PyQt4 import QtGui
 from Control_Panel_Controller import Control_Panel_Controller
 
 class Control_Panel_Window(QtGui.QMainWindow):
-    def __init__(self):
+    def __init__(self, app):
         """
         Initialize the control panel window.
         """
@@ -28,9 +28,14 @@ class Control_Panel_Window(QtGui.QMainWindow):
         self.setCentralWidget(central_widget)
 
         # Create a controller.
-        self.controller = Control_Panel_Controller(central_widget, self)
+        self.controller = Control_Panel_Controller(app, central_widget, self)
 
     def closeEvent(self, event):
+        """
+        Close the application and kill running threads and serial connections.
+        """
+
+        self.controller.xbee.deactivate()
         self.controller.thread_manager.destroy()
         self.controller.usb_manager.clear()
 
