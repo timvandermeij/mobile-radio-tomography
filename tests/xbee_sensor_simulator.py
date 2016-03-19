@@ -112,12 +112,14 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
         self.sensor._send()
         self.assertEqual(self.sensor._data, [])
 
+    def test_send_custom_packets(self):
         # If the queue contains packets, some of them must be sent.
         packet = XBee_Packet()
         packet.set("specification", "memory_map_chunk")
         packet.set("latitude", 123456789.12)
         packet.set("longitude", 123459678.34)
         self.sensor.enqueue(packet, to=2)
+
         queue_length_before = self.sensor._queue.qsize()
         self.sensor._send()
         custom_packet_limit = self.sensor.settings.get("custom_packet_limit")
