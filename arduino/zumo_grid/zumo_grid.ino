@@ -47,7 +47,7 @@
 #define OVERSHOOT(line_thickness)(((INCHES_TO_ZUNITS * (line_thickness)) / SPEED))
 
 // Baud rate of the serial interface
-#define BAUD_RATE 19200
+#define BAUD_RATE 9600
 
 // Pin number of the LED output pin, by Arduino pin numbering.
 #define LED_PIN 13
@@ -152,9 +152,10 @@ void setup() {
 
 void loop() {
   // If we have serial input, then parse the message.
-  if (Serial.available()) {
-    char command[COMMAND_LENGTH];
+  if (Serial.available() > COMMAND_LENGTH) {
+    char command[COMMAND_LENGTH+1];
     Serial.readBytes(command, COMMAND_LENGTH);
+    command[COMMAND_LENGTH] = '\0';
     if (strcmp(command, "GOTO") == 0)
     {
       // Read two coordinates.

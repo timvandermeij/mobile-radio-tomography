@@ -1,5 +1,6 @@
 from Robot_Vehicle_Arduino import Robot_Vehicle_Arduino
 from ..location.Line_Follower import Line_Follower_Direction
+import time
 
 class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
     """
@@ -16,6 +17,11 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
     def _setup_line_follower(self, thread_manager, usb_manager):
         # This class does not use the line follower.
         pass
+
+    def activate(self):
+        self._serial_connection.dtr = False
+        time.sleep(0.022)
+        super(Robot_Vehicle_Arduino_Full, self).activate()
 
     def _reset(self):
         # Send a DTR signal to reset the Arduino. According to a forum post at 
