@@ -55,6 +55,9 @@
 // Sleep delay in ms for each serial check loop
 #define LOOP_DELAY 10
 
+// Maximum length of a serial input line that we ever receive
+#define SERIAL_INPUT 80
+
 ZumoBuzzer buzzer;
 ZumoReflectanceSensorArray reflectanceSensors;
 ZumoMotors motors;
@@ -87,10 +90,16 @@ void setup() {
   reflectanceSensors.init();
 
   // Play a little welcome song to denote that the vehicle is ready and is
-  // waiting for a button press.
+  // waiting for a serial connection.
   buzzer.play(">f32>>d32");
 
-  button.waitForButton();
+  // Wait for connection to be started
+  while (!Serial.available()) {
+    delay(100);
+  }
+
+  char input[SERIAL_INPUT];
+  Serial.readBytesUntil('\n', input, SERIAL_INPUT);
 
   // Calibrate the Zumo by sweeping it from left to right
   for (int i = 0; i < 4; i ++)
@@ -100,7 +109,7 @@ void setup() {
     turn_direction *= -1;
 
     // Turn direction.
-	motor_speed = turn_direction * TURN_SPEED;
+    motor_speed = turn_direction * TURN_SPEED;
     motors.setSpeeds(motor_speed, -1 * motor_speed);
 
     // This while loop monitors line position
@@ -133,30 +142,30 @@ void setup() {
   turn('L');
 
   motors.setSpeeds(0, 0);
+
+  // Sound off buzzer to denote Zumo is ready to start.
+  buzzer.play("L16 cdegreg4");
 }
 
 void loop() {
+  // If we have serial input, then parse it as two coordinates.
   if (Serial.available()) {
-    char a = Serial.read();
-    if (a == '\r') {
-      Serial.println("End of line");
-    }
-    else if (goto_row < 0) {
-      goto_row = a - '0';
-      Serial.print("Row index: ");
-      Serial.print(goto_row);
-      Serial.print("\n");
-    }
-    else if (goto_col < 0) {
-      goto_col = a - '0';
-      Serial.print("Column index: ");
-      Serial.print(goto_col);
-      Serial.print("\n");
-      Serial.println("Going to coordinates...");
-      zumo_goto(goto_row, goto_col);
-      goto_row = -1;
-      goto_col = -1;
-    }
+    goto_row = Serial.parseInt();
+    goto_col = Serial.parseInt();
+
+    // Ignore the rest of the line, which might simply be a newline.
+    char input[SERIAL_INPUT];
+    Serial.readBytesUntil('\n', input, SERIAL_INPUT);
+
+    Serial.print("ACK ");
+    Serial.print(goto_row):
+    Serial.print(" ");
+    Serial.print(goto_col);
+    Serial.print("\n");
+
+    zumo_goto(goto_row, goto_col);
+    goto_row = -1;
+    goto_col = -1;
   }
   delay(LOOP_DELAY);
 }
@@ -165,11 +174,11 @@ void zumo_goto(int row, int col) {
   int nRows = row - cur_row;
   int nCols = col - cur_col;
 
-  Serial.print("Advancing ");
+  Serial.print("DIFF ");
   Serial.print(nRows);
-  Serial.print(" rows and ");
+  Serial.print(" ");
   Serial.print(nCols);
-  Serial.print(" columns\n");
+  Serial.print("\n");
 
   char row_dir, col_dir;
 
@@ -205,12 +214,11 @@ void zumo_goto(int row, int col) {
   cur_col = col;
   cur_row = row;
 
-  Serial.print("My position is: (");
+  Serial.print("LOCA ");
   Serial.print(row);
-  Serial.print(", ");
+  Serial.print(" ");
   Serial.print(col);
-  Serial.print(")\n");
-  Serial.print("I am now facing ");
+  Serial.print(" ");
   Serial.print(zumo_direction);
   Serial.print("\n");
 }
@@ -221,11 +229,11 @@ void goto_dir(char dir, int count) {
   if (dir == 'O') {
     return;
   }
-  Serial.print("Turning to direction: ");
+  Serial.print("GOTO ");
   Serial.print(dir);
-  Serial.print(" and driving ");
+  Serial.print(" ");
   Serial.print(count);
-  Serial.print(" grid cells\n");
+  Serial.print("\n");
   turn_to(dir);
   for (int i = 0; i < count; i++) {
     followSegment();
@@ -233,7 +241,9 @@ void goto_dir(char dir, int count) {
     motors.setSpeeds(SPEED, SPEED);
     delay(OVERSHOOT(LINE_THICKNESS*1.25));
     motors.setSpeeds(0,0);
-    Serial.println("Advanced one cell");
+    Serial.print("PASS ");
+    Serial.print(i);
+    Serial.print("\n");
   }
 }
 
@@ -347,11 +357,11 @@ void turn(char dir)
   switch (dir)
   {
     // Since we are using the sensors to coordinate turns instead of timing
-	// the turns, we can treat a left turn the same as a direction reversal:
-	// they differ only in whether the zumo will turn 90 degrees or 180 degrees
-	// before seeing the line under the sensor. If 'B' is passed to the turn
-	// function when there is a left turn available, then the Zumo will turn
-	// onto the left segment.
+    // the turns, we can treat a left turn the same as a direction reversal:
+    // they differ only in whether the zumo will turn 90 degrees or 180 degrees
+    // before seeing the line under the sensor. If 'B' is passed to the turn
+    // function when there is a left turn available, then the Zumo will turn
+    // onto the left segment.
     case 'L':
     case 'B':
       // Turn left.
@@ -421,22 +431,22 @@ void followSegment()
     // Compute the actual motor settings.  We never set either motor
     // to a negative value.
     if (power_difference > SPEED)
-	{
+    {
       power_difference = SPEED;
-	}
+    }
     else if (power_difference < -SPEED)
-	{
+    {
       power_difference = -SPEED;
-	}
+    }
 
     if (power_difference < 0)
-	{
+    {
       motors.setSpeeds(SPEED + power_difference, SPEED);
-	}
+    }
     else
-	{
+    {
       motors.setSpeeds(SPEED, SPEED - power_difference);
-	}
+    }
 
     // We use the inner four sensors (1, 2, 3, and 4) for
     // determining whether there is a line straight ahead, and the
@@ -444,8 +454,8 @@ void followSegment()
     // right.
 
     if (!ABOVE_LINE(sensors[0]) && !ABOVE_LINE(sensors[1]) &&
-	    !ABOVE_LINE(sensors[2]) && !ABOVE_LINE(sensors[3]) &&
-		!ABOVE_LINE(sensors[4]) && !ABOVE_LINE(sensors[5]))
+        !ABOVE_LINE(sensors[2]) && !ABOVE_LINE(sensors[3]) &&
+        !ABOVE_LINE(sensors[4]) && !ABOVE_LINE(sensors[5]))
     {
       // There is no line visible ahead, and we didn't see any
       // intersection.  Must be a dead end.
