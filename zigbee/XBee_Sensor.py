@@ -51,6 +51,9 @@ class XBee_Sensor(Threadable):
     def _send(self):
         raise NotImplementedError("Subclasses must implement `_send()`")
 
+    def _send_custom_packets(self):
+        raise NotImplementedError("Subclasses must implement `_send_custom_packets()`")
+
     def _receive(self, packet):
         raise NotImplementedError("Subclasses must implement `_receive(packet)`")
 
