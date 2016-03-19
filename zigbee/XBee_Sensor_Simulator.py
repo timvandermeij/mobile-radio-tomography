@@ -33,8 +33,13 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         self._loop_delay = self.settings.get("loop_delay")
         self._ip = self.settings.get("ip")
         self._port = self.settings.get("port")
+        self._socket = None
 
-    def _setup(self):
+    def setup(self):
+        """
+        Setup the socket connection.
+        """
+
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._socket.bind((self._ip, self._port + self.id))
@@ -49,7 +54,9 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         super(XBee_Sensor_Simulator, self).activate()
 
         if not self._active:
-            self._setup()
+            if self._socket is None:
+                self.setup()
+
             self._active = True
             thread.start_new_thread(self._loop, ())
 
@@ -86,7 +93,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
 
         super(XBee_Sensor_Simulator, self).deactivate()
 
-        if self._active:
+        if self._active or self._socket is not None:
             self._active = False
             self._socket.close()
 
