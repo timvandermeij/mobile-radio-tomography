@@ -45,6 +45,9 @@ class XBee_Sensor(Threadable):
         self._receive_callback = receive_callback
         self._valid_callback = valid_callback
 
+    def get_identity(self):
+        raise NotImplementedError("Subclasses must implement `get_identity()`")
+
     def setup(self):
         raise NotImplementedError("Subclasses must implement `setup()`")
 

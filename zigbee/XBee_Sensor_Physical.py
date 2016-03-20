@@ -49,6 +49,18 @@ class XBee_Sensor_Physical(XBee_Sensor):
         for index, address in enumerate(self._sensors):
             self._sensors[index] = address.decode("string_escape")
 
+    def get_identity(self):
+        """
+        Get the identity (ID, address and join status) of this sensor.
+        """
+
+        identity = {
+            "id": self.id,
+            "address": self._address,
+            "joined": self._joined
+        }
+        return identity
+
     def setup(self):
         """
         Setup the serial connection and identify the sensor.

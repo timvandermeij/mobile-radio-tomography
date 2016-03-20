@@ -35,6 +35,18 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         self._port = self.settings.get("port")
         self._socket = None
 
+    def get_identity(self):
+        """
+        Get the identity (ID, address and join status) of this sensor.
+        """
+
+        identity = {
+            "id": self.id,
+            "address": "{}:{}".format(self._ip, self._port),
+            "joined": True
+        }
+        return identity
+
     def setup(self):
         """
         Setup the socket connection.
