@@ -138,6 +138,16 @@ class XBee_Sensor_Simulator(XBee_Sensor):
                     "to": to_id
                 })
 
+    def discover(self, callback):
+        """
+        Discover other XBee devices in the network.
+
+        This method is only used on the ground station in the control panel
+        to refresh the status of the other XBee devices.
+        """
+
+        pass
+
     def _send(self):
         """
         Send packets to all other sensors in the network.

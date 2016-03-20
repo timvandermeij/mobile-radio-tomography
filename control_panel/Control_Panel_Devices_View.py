@@ -36,7 +36,6 @@ class Control_Panel_Devices_View(Control_Panel_View):
             XBee_Device("Vehicle 2", 2, XBee_Device_Category.END_DEVICE)
         ]
         self._refresh_ground_station()
-        self._fill()
 
         # Create the refresh button.
         refresh_button = QtGui.QPushButton("Refresh")
@@ -79,8 +78,6 @@ class Control_Panel_Devices_View(Control_Panel_View):
 
         self._refresh_ground_station()
         self._refresh_vehicles()
-        self._tree_view.clear()
-        self._fill()
 
     def _refresh_ground_station(self):
         """
@@ -93,10 +90,25 @@ class Control_Panel_Devices_View(Control_Panel_View):
         ground_station.address = identity["address"]
         ground_station.joined = identity["joined"]
 
+        self._tree_view.clear()
+        self._fill()
+
     def _refresh_vehicles(self):
         """
         Refresh the status of the vehicles.
         """
 
-        # TODO: Implement node discovery.
-        pass
+        self._controller.xbee.discover(self._refresh_vehicle)
+
+    def _refresh_vehicle(self, packet):
+        """
+        Refresh a single vehicle using information from in
+        node discovery XBee packet.
+        """
+
+        vehicle = self._devices[packet["id"]]
+        vehicle.address = packet["address"]
+        vehicle.joined = True
+
+        self._tree_view.clear()
+        self._fill()

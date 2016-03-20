@@ -57,6 +57,9 @@ class XBee_Sensor(Threadable):
     def enqueue(self, packet, to=None):
         raise NotImplementedError("Subclasses must implement `enqueue(packet, to=None)`")
 
+    def discover(self, callback):
+        raise NotImplementedError("Subclasses must implement `discover(callback)`")
+
     def _send(self):
         raise NotImplementedError("Subclasses must implement `_send()`")
 

@@ -58,11 +58,11 @@ class XBee_Sensor_Physical(XBee_Sensor):
         # Pretty print the address.
         address = "-"
         if self._address is not None:
-            address = "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x" % struct.unpack("BBBBBBBB", self._address)
+            address = self._format_address(self._address)
 
         identity = {
             "id": self.id,
-            "address": address.upper(),
+            "address": address,
             "joined": self._joined
         }
         return identity
@@ -161,6 +161,20 @@ class XBee_Sensor_Physical(XBee_Sensor):
                     "packet": copy.deepcopy(packet),
                     "to": to_id
                 })
+
+    def discover(self, callback):
+        """
+        Discover other XBee devices in the network.
+
+        This method is only used on the ground station in the control panel
+        to refresh the status of the other XBee devices.
+        """
+
+        if not hasattr(callback, "__call__"):
+            raise TypeError("Discovery callback is not callable")
+
+        self._discovery_callback = callback
+        self._sensor.send("at", command="ND")
 
     def _identify(self):
         """
@@ -359,3 +373,19 @@ class XBee_Sensor_Physical(XBee_Sensor):
                 # Association indicator has been received.
                 if raw_packet["parameter"] == "\x00":
                     self._joined = True
+            elif raw_packet["command"] == "ND":
+                # Node discovery packet has been received.
+                packet = raw_packet["parameter"]
+                data = {
+                    "id": int(packet["node_identifier"]),
+                    "address": self._format_address(packet["source_addr_long"])
+                }
+                self._discovery_callback(data)
+
+    def _format_address(self, address):
+        """
+        Pretty print a given address.
+        """
+
+        address = "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x" % struct.unpack("BBBBBBBB", address)
+        return address.upper()
