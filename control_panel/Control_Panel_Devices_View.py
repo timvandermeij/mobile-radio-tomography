@@ -6,12 +6,12 @@ class XBee_Device_Category(object):
     END_DEVICE = 2
 
 class XBee_Device(object):
-    def __init__(self, name, id, category, address, joined):
+    def __init__(self, name, id, category):
         self.name = name
         self.id = id
         self.category = category
-        self.address = address
-        self.joined = joined
+        self.address = None
+        self.joined = False
 
 class Control_Panel_Devices_View(Control_Panel_View):
     def show(self):
@@ -31,9 +31,9 @@ class Control_Panel_Devices_View(Control_Panel_View):
 
         # Fill the tree view with the devices.
         self._devices = [
-            XBee_Device("Ground station", 0, XBee_Device_Category.COORDINATOR, "12:34:56:78:9A:BC", True),
-            XBee_Device("Vehicle 1", 1, XBee_Device_Category.END_DEVICE, "DE:F1:23:45:67:89", False),
-            XBee_Device("Vehicle 2", 2, XBee_Device_Category.END_DEVICE, "AB:CD:EF:12:34:56", False)
+            XBee_Device("Ground station", 0, XBee_Device_Category.COORDINATOR),
+            XBee_Device("Vehicle 1", 1, XBee_Device_Category.END_DEVICE),
+            XBee_Device("Vehicle 2", 2, XBee_Device_Category.END_DEVICE)
         ]
         self._fill()
 
@@ -65,7 +65,7 @@ class Control_Panel_Devices_View(Control_Panel_View):
             item = QtGui.QTreeWidgetItem(self._tree_view, [device.name])
             item_id = QtGui.QTreeWidgetItem(item, ["ID", str(device.id)])
             item_category = QtGui.QTreeWidgetItem(item, ["Category", categories[device.category]])
-            item_address = QtGui.QTreeWidgetItem(item, ["Address", device.address])
+            item_address = QtGui.QTreeWidgetItem(item, ["Address", device.address if device.address is not None else "-"])
             item_joined = QtGui.QTreeWidgetItem(item, ["Joined", "Yes" if device.joined else "No"])
 
         # Expand all items in the tree view.
