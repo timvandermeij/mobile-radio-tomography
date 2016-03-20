@@ -146,7 +146,15 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         to refresh the status of the other XBee devices.
         """
 
-        pass
+        # The simulator does not use XBee device discovery because it does not
+        # use the actual XBee library that provides this functionality. We
+        # simulate the process by calling the callback with the packet manually.
+        for vehicle in [1, 2]:
+            packet = {
+                "id": self.id + vehicle,
+                "address": "{}:{}".format(self._ip, self._port + self.id + vehicle)
+            }
+            callback(packet)
 
     def _send(self):
         """
