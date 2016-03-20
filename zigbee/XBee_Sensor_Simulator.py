@@ -35,6 +35,18 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         self._port = self.settings.get("port")
         self._socket = None
 
+    def get_identity(self):
+        """
+        Get the identity (ID, address and join status) of this sensor.
+        """
+
+        identity = {
+            "id": self.id,
+            "address": "{}:{}".format(self._ip, self._port),
+            "joined": True
+        }
+        return identity
+
     def setup(self):
         """
         Setup the socket connection.
@@ -75,6 +87,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
                 try:
                     data = self._socket.recv(self.settings.get("buffer_size"))
                 except socket.error:
+                    time.sleep(self._loop_delay)
                     continue
 
                 # Unserialize the data (byte-encoded string).
@@ -125,6 +138,24 @@ class XBee_Sensor_Simulator(XBee_Sensor):
                     "packet": copy.deepcopy(packet),
                     "to": to_id
                 })
+
+    def discover(self, callback):
+        """
+        Discover other XBee devices in the network.
+
+        This method is only used on the ground station in the control panel
+        to refresh the status of the other XBee devices.
+        """
+
+        # The simulator does not use XBee device discovery because it does not
+        # use the actual XBee library that provides this functionality. We
+        # simulate the process by calling the callback with the packet manually.
+        for vehicle in xrange(1, self.settings.get("number_of_sensors") + 1):
+            packet = {
+                "id": self.id + vehicle,
+                "address": "{}:{}".format(self._ip, self._port + self.id + vehicle)
+            }
+            callback(packet)
 
     def _send(self):
         """

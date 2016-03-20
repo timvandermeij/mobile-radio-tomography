@@ -53,6 +53,6 @@ class Control_Panel_Loading_View(Control_Panel_View):
                 sys.exit(1)
 
             self._controller.xbee.activate()
-            self._controller.show_view(Control_Panel_View_Name.WAYPOINTS)
+            self._controller.show_view(Control_Panel_View_Name.DEVICES)
         except KeyError:
             QtCore.QTimer.singleShot(self._xbee_insertion_delay, lambda: self._insertion_loop())
