@@ -87,6 +87,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
                 try:
                     data = self._socket.recv(self.settings.get("buffer_size"))
                 except socket.error:
+                    time.sleep(self._loop_delay)
                     continue
 
                 # Unserialize the data (byte-encoded string).
