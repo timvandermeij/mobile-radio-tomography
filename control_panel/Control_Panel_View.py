@@ -1,9 +1,10 @@
 from PyQt4 import QtCore, QtGui
 
 class Control_Panel_View_Name(object):
-    LOADING = 1
-    RECONSTRUCTION = 2
-    WAYPOINTS = 3
+    DEVICES = 1
+    LOADING = 2
+    RECONSTRUCTION = 3
+    WAYPOINTS = 4
 
 class Control_Panel_View(object):
     def __init__(self, controller):

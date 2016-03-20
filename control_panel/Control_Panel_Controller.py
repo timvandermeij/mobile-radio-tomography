@@ -4,6 +4,7 @@ import sys
 import traceback
 from PyQt4 import QtGui
 from Control_Panel_View import Control_Panel_View_Name
+from Control_Panel_Devices_View import Control_Panel_Devices_View
 from Control_Panel_Loading_View import Control_Panel_Loading_View
 from Control_Panel_Reconstruction_View import Control_Panel_Reconstruction_View
 from Control_Panel_Waypoints_View import Control_Panel_Waypoints_View
@@ -89,6 +90,7 @@ class Control_Panel_Controller(object):
             self._view_actions[name].setChecked(True)
 
         views = {
+            Control_Panel_View_Name.DEVICES: Control_Panel_Devices_View,
             Control_Panel_View_Name.LOADING: Control_Panel_Loading_View,
             Control_Panel_View_Name.RECONSTRUCTION: Control_Panel_Reconstruction_View,
             Control_Panel_View_Name.WAYPOINTS: Control_Panel_Waypoints_View
@@ -121,6 +123,7 @@ class Control_Panel_Controller(object):
 
         # Views that are visible in the menu and their action labels.
         view_names = OrderedDict([
+            (Control_Panel_View_Name.DEVICES, "Devices"),
             (Control_Panel_View_Name.RECONSTRUCTION, "Reconstruction"),
             (Control_Panel_View_Name.WAYPOINTS, "Waypoints")
         ])
