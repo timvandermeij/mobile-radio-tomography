@@ -114,6 +114,15 @@ void setup() {
   // Calibrate the Zumo by sweeping it from left to right
   for (int i = 0; i < 4; i ++)
   {
+    // Allow skipping calibration, if the user can press
+    // the button that is. This usually means that the
+    // motors are disabled for testing purposes, and
+    // we would be unable to get through calibration.
+    if (button.isPressed())
+    {
+      break;
+    }
+
     // Zumo will turn clockwise if turn_direction = 1.
     // If turn_direction = -1 Zumo will turn counter-clockwise.
     turn_direction *= -1;
@@ -126,6 +135,11 @@ void setup() {
     // until the turn is complete.
     while (count < 2)
     {
+      if (button.isPressed())
+      {
+        break;
+      }
+
       reflectanceSensors.calibrate();
       reflectanceSensors.readLine(sensors);
       if (turn_direction < 0)
@@ -166,6 +180,7 @@ void loop() {
     read_string(command, COMMAND_LENGTH);
     if (strcmp(command, "GOTO") == 0)
     {
+      // Go to specific grid coordinates.
       // Read two coordinates.
       goto_row = read_int();
       goto_col = read_int();
@@ -177,8 +192,18 @@ void loop() {
     }
     else if (strcmp(command, "DIRS") == 0)
     {
+      // Change direction
       safe_read();
       turn_to(safe_read());
+    }
+    else if (strcmp(command, "HOME") == 0)
+    {
+      // Override current location and direction.
+      // Use for setting home location at start.
+      cur_row = read_int();
+      cur_col = read_int();
+      safe_read();
+      zumo_direction = safe_read();
     }
 
     // Ignore the rest of the line, which might simply be a newline.

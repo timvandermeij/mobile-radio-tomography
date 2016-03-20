@@ -22,6 +22,7 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
         self._serial_connection.dtr = False
         time.sleep(0.022)
         super(Robot_Vehicle_Arduino_Full, self).activate()
+        self._update_home_location()
 
     def _reset(self):
         # Send a DTR signal to reset the Arduino. According to a forum post at 
@@ -30,6 +31,16 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
         self._serial_connection.dtr = False
         time.sleep(0.022)
         self._serial_connection.dtr = True
+
+    def _update_home_location(self):
+        # Format a "home location" command
+        # Only use this when starting.
+        self._serial_connection.write("HOME {} {} {}\n".format(self._home_location[0], self._home_location[1], self._get_zumo_direction(self._direction)))
+
+    @Robot_Vehicle_Arduino.home_location.setter
+    def home_location(self, value):
+        Robot_Vehicle_Arduino.home_location.__set__(self, value)
+        self._update_home_location()
 
     def _get_direction(self, zumo_direction):
         if zumo_direction == 'N':
@@ -78,7 +89,7 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
         self._check_intersection()
 
     def _set_direction(self, target_direction, rotate_direction=0):
-        # Format as a command "set direction"
+        # Format a "set direction" command
         self._serial_connection.write("DIRS {} {}\n".format(self._get_zumo_direction(target_direction), rotate_direction))
 
     def _goto_waypoint(self, next_waypoint):
