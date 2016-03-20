@@ -5,6 +5,7 @@
 #include <ZumoMotors.h>
 #include <ZumoBuzzer.h>
 #include <Pushbutton.h>
+#include <SoftwareSerial.h>
 
 // SENSOR_THRESHOLD is a value to compare reflectance sensor
 // readings to to decide if the sensor is over a black line
@@ -61,10 +62,20 @@
 // Length of a command code in the serial interface
 #define COMMAND_LENGTH 4
 
+// RX pin of the serial interface
+#define RX_PIN 6
+
+// TX pin of the serial interface
+#define TX_PIN A1
+
+// Serial loop waiting delay when no data is available
+#define SERIAL_DELAY 10
+
 ZumoBuzzer buzzer;
 ZumoReflectanceSensorArray reflectanceSensors;
 ZumoMotors motors;
 Pushbutton button(ZUMO_BUTTON);
+SoftwareSerial softSerial(RX_PIN, TX_PIN);
 
 // current row and column
 int cur_row, cur_col;
@@ -80,7 +91,7 @@ void setup() {
   // current direction
   zumo_direction = 'N';
 
-  Serial.begin(BAUD_RATE);
+  softSerial.begin(BAUD_RATE);
 
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH);
@@ -96,13 +107,9 @@ void setup() {
   // waiting for a serial connection.
   buzzer.play(">f32>>d32");
 
-  // Wait for connection to be started
-  while (!Serial.available()) {
-    delay(100);
-  }
+  ignore_input();
 
-  char input[SERIAL_INPUT];
-  Serial.readBytesUntil('\n', input, SERIAL_INPUT);
+  digitalWrite(LED_PIN, LOW);
 
   // Calibrate the Zumo by sweeping it from left to right
   for (int i = 0; i < 4; i ++)
@@ -146,39 +153,44 @@ void setup() {
 
   motors.setSpeeds(0, 0);
 
+  digitalWrite(LED_PIN, HIGH);
+
   // Sound off buzzer to denote Zumo is ready to start.
   buzzer.play("L16 cdegreg4");
 }
 
 void loop() {
   // If we have serial input, then parse the message.
-  if (Serial.available() > COMMAND_LENGTH) {
+  if (softSerial.available() > COMMAND_LENGTH) {
     char command[COMMAND_LENGTH+1];
-    Serial.readBytes(command, COMMAND_LENGTH);
-    command[COMMAND_LENGTH] = '\0';
+    read_string(command, COMMAND_LENGTH);
     if (strcmp(command, "GOTO") == 0)
     {
       // Read two coordinates.
-      goto_row = Serial.parseInt();
-      goto_col = Serial.parseInt();
+      goto_row = read_int();
+      goto_col = read_int();
+      softSerial.print("GOTO ");
+      softSerial.print(goto_row);
+      softSerial.print(" ");
+      softSerial.print(goto_col);
+      softSerial.print("\n");
     }
     else if (strcmp(command, "DIRS") == 0)
     {
-      Serial.read();
-      turn_to(Serial.read());
+      safe_read();
+      turn_to(safe_read());
     }
 
     // Ignore the rest of the line, which might simply be a newline.
-    char input[SERIAL_INPUT];
-    Serial.readBytesUntil('\n', input, SERIAL_INPUT);
+    ignore_input();
 
     if (goto_row >= 0 && goto_col >= 0)
     {
-      Serial.print("ACKG ");
-      Serial.print(goto_row);
-      Serial.print(" ");
-      Serial.print(goto_col);
-      Serial.print("\n");
+      softSerial.print("ACKG ");
+      softSerial.print(goto_row);
+      softSerial.print(" ");
+      softSerial.print(goto_col);
+      softSerial.print("\n");
 
       zumo_goto(goto_row, goto_col);
       goto_row = -1;
@@ -188,15 +200,81 @@ void loop() {
   delay(LOOP_DELAY);
 }
 
+char safe_read() {
+  while (!softSerial.available()) {
+    delay(SERIAL_DELAY);
+  }
+  return softSerial.read();
+}
+
+char safe_peek() {
+  while (!softSerial.available()) {
+    delay(SERIAL_DELAY);
+  }
+  return softSerial.peek();
+}
+
+void ignore_input() {
+  // Ignore input until end of line
+  char c = safe_read();
+  while (c != '\n') {
+    c = safe_read();
+  }
+}
+
+void read_string(char buffer[], int length) {
+  // Read a string of at most length from the serial
+  // interface, and put the string into the buffer.
+  // We read until this length, or when we read
+  // a newline. The newline is not added to the buffer.
+  // The buffer must be at least size length+1, and
+  // is filled with the read characters and a '\0' pad.
+  int i = 0;
+  char c = '\0';
+  while (i < length && c != '\n') {
+    c = safe_read();
+    buffer[i] = c;
+    i++;
+  }
+  buffer[i] = '\0';
+}
+
+int read_int() {
+  // Read an integer from the serial interface, and
+  // return its value. Leading non-digits are skipped,
+  // and this function returns -1 if no digits are
+  // read before a newline is reached. Otherwise, the
+  // digits are parsed into an integer. The parsing
+  // stops when a non-digit is found. This non-digit
+  // is left in the serial stream.
+  int res = 0;
+  char c = safe_peek();
+  // Ignore leading non-integers
+  while ((c < '0' || c > '9') && c != '\n') {
+    softSerial.read();
+    c = safe_peek();
+  }
+  if (c == '\n') {
+    return -1;
+  }
+  // Parse integers until first non-digit
+  while (c >= '0' && c <= '9') {
+    softSerial.read();
+    res = res * 10 + (c - '0');
+    c = safe_peek();
+  }
+  return res;
+}
+
 void zumo_goto(int row, int col) {
   int nRows = row - cur_row;
   int nCols = col - cur_col;
 
-  Serial.print("DIFF ");
-  Serial.print(nRows);
-  Serial.print(" ");
-  Serial.print(nCols);
-  Serial.print("\n");
+  softSerial.print("DIFF ");
+  softSerial.print(nRows);
+  softSerial.print(" ");
+  softSerial.print(nCols);
+  softSerial.print("\n");
 
   char row_dir, col_dir;
 
@@ -232,13 +310,13 @@ void zumo_goto(int row, int col) {
   cur_col = col;
   cur_row = row;
 
-  Serial.print("LOCA ");
-  Serial.print(row);
-  Serial.print(" ");
-  Serial.print(col);
-  Serial.print(" ");
-  Serial.print(zumo_direction);
-  Serial.print("\n");
+  softSerial.print("LOCA ");
+  softSerial.print(row);
+  softSerial.print(" ");
+  softSerial.print(col);
+  softSerial.print(" ");
+  softSerial.print(zumo_direction);
+  softSerial.print("\n");
 }
 
 
@@ -254,9 +332,9 @@ void goto_dir(char dir, int count) {
     motors.setSpeeds(SPEED, SPEED);
     delay(OVERSHOOT(LINE_THICKNESS*1.25));
     motors.setSpeeds(0,0);
-    Serial.print("PASS ");
-    Serial.print(i);
-    Serial.print("\n");
+    softSerial.print("PASS ");
+    softSerial.print(i);
+    softSerial.print("\n");
   }
 }
 
@@ -352,9 +430,9 @@ void turn_to(char dir) {
 
   // Store new direction
   zumo_direction = dir;
-  Serial.print("GDIR ");
-  Serial.print(dir);
-  Serial.print("\n");
+  softSerial.print("GDIR ");
+  softSerial.print(dir);
+  softSerial.print("\n");
 }
 
 // Turns according to the parameter dir, which should be
