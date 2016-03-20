@@ -38,14 +38,6 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
         self._controller.window._toolbar = toolbar
 
-    def _reconstruction_start(self, reconstructor):
-        """
-        Start the reconstruction process.
-        """
-
-        self.clear()
-        self.show()
-
         # Create the label for the image.
         self._label = QtGui.QLabel()
 
@@ -59,6 +51,11 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         hbox.addStretch(1)
         hbox.addLayout(vbox)
         hbox.addStretch(1)
+
+    def _reconstruction_start(self, reconstructor):
+        """
+        Start the reconstruction process.
+        """
 
         # Fetch the settings for the reconstruction.
         reconstruction_settings = self._controller.arguments.get_settings("reconstruction")
