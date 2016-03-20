@@ -35,6 +35,7 @@ class Control_Panel_Devices_View(Control_Panel_View):
             XBee_Device("Vehicle 1", 1, XBee_Device_Category.END_DEVICE),
             XBee_Device("Vehicle 2", 2, XBee_Device_Category.END_DEVICE)
         ]
+        self._refresh_ground_station()
         self._fill()
 
         # Create the refresh button.
@@ -76,7 +77,18 @@ class Control_Panel_Devices_View(Control_Panel_View):
         Refresh the status of the ground station and the vehicles.
         """
 
-        # TODO: update ground station status
+        self._refresh_ground_station()
         # TODO: update vehicle status using node discovery
         self._tree_view.clear()
         self._fill()
+
+    def _refresh_ground_station(self):
+        """
+        Refresh the status of the ground station.
+        """
+
+        identity = self._controller.xbee.get_identity()
+
+        ground_station = self._devices[0]
+        ground_station.address = identity["address"]
+        ground_station.joined = identity["joined"]

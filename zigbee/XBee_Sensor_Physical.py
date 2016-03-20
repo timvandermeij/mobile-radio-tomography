@@ -1,10 +1,11 @@
+import copy
 import os
+import Queue
+import random
 import subprocess
+import struct
 import thread
 import time
-import random
-import copy
-import Queue
 from xbee import ZigBee
 from XBee_Packet import XBee_Packet
 from XBee_Sensor import XBee_Sensor
@@ -54,9 +55,12 @@ class XBee_Sensor_Physical(XBee_Sensor):
         Get the identity (ID, address and join status) of this sensor.
         """
 
+        # Pretty print the address.
+        address = "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x" % struct.unpack("BBBBBBBB", self._address)
+
         identity = {
             "id": self.id,
-            "address": self._address,
+            "address": address.upper(),
             "joined": self._joined
         }
         return identity
