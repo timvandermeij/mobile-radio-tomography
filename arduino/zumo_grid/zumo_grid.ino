@@ -162,8 +162,11 @@ void setup() {
     last_status = 0;
   }
 
-  // Turn left.
-  turn('L');
+  if (!button.isPressed())
+  {
+    // Turn left.
+    turn('L');
+  }
 
   motors.setSpeeds(0, 0);
 
@@ -184,11 +187,6 @@ void loop() {
       // Read two coordinates.
       goto_row = read_int();
       goto_col = read_int();
-      softSerial.print("GOTO ");
-      softSerial.print(goto_row);
-      softSerial.print(" ");
-      softSerial.print(goto_col);
-      softSerial.print("\n");
     }
     else if (strcmp(command, "DIRS") == 0)
     {
