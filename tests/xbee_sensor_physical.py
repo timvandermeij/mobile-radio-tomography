@@ -65,6 +65,14 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
         self.assertIsInstance(self.sensor._queue, Queue.Queue)
         self.assertEqual(self.sensor._queue.qsize(), 0)
 
+    def test_get_identity(self):
+        # The identity of the device must be returned as a dictionary.
+        identity = self.sensor.get_identity()
+        self.assertIsInstance(identity, dict)
+        self.assertEqual(identity["id"], self.sensor_id)
+        self.assertEqual(identity["address"], "-")
+        self.assertEqual(identity["joined"], False)
+
     def test_setup(self):
         # Set all status variables to True to avoid being stuck in
         # the join loops. We cannot test the join process in the unit tests.

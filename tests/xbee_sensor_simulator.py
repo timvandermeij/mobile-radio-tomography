@@ -37,7 +37,7 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
         self.patcher = patch.dict('sys.modules', modules)
         self.patcher.start()
 
-        self.id = 1
+        self.sensor_id = 1
         self.arguments = Arguments("settings.json", [
             "--warnings", "--xbee-id", "1"
         ])
@@ -54,7 +54,7 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
 
     def test_initialization(self):
         # The ID of the sensor must be set.
-        self.assertEqual(self.sensor.id, self.id)
+        self.assertEqual(self.sensor.id, self.sensor_id)
 
         # The next timestamp must be set.
         self.assertNotEqual(self.sensor._next_timestamp, 0)
@@ -70,6 +70,14 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
         # The custom packet queue must be empty.
         self.assertIsInstance(self.sensor._queue, Queue.Queue)
         self.assertEqual(self.sensor._queue.qsize(), 0)
+
+    def test_get_identity(self):
+        # The identity of the device must be returned as a dictionary.
+        identity = self.sensor.get_identity()
+        self.assertIsInstance(identity, dict)
+        self.assertEqual(identity["id"], self.sensor_id)
+        self.assertEqual(identity["address"], "{}:{}".format(self.sensor._ip, self.sensor._port))
+        self.assertEqual(identity["joined"], True)
 
     def test_enqueue(self):
         # Packets that are not XBee_Packet objects should be refused.

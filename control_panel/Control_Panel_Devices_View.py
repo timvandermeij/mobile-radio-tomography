@@ -10,7 +10,7 @@ class XBee_Device(object):
         self.name = name
         self.id = id
         self.category = category
-        self.address = None
+        self.address = "-"
         self.joined = False
 
 class Control_Panel_Devices_View(Control_Panel_View):
@@ -66,7 +66,7 @@ class Control_Panel_Devices_View(Control_Panel_View):
             item = QtGui.QTreeWidgetItem(self._tree_view, [device.name])
             item_id = QtGui.QTreeWidgetItem(item, ["ID", str(device.id)])
             item_category = QtGui.QTreeWidgetItem(item, ["Category", categories[device.category]])
-            item_address = QtGui.QTreeWidgetItem(item, ["Address", device.address if device.address is not None else "-"])
+            item_address = QtGui.QTreeWidgetItem(item, ["Address", device.address])
             item_joined = QtGui.QTreeWidgetItem(item, ["Joined", "Yes" if device.joined else "No"])
 
         # Expand all items in the tree view.
@@ -78,7 +78,7 @@ class Control_Panel_Devices_View(Control_Panel_View):
         """
 
         self._refresh_ground_station()
-        # TODO: update vehicle status using node discovery
+        self._refresh_vehicles()
         self._tree_view.clear()
         self._fill()
 
@@ -92,3 +92,11 @@ class Control_Panel_Devices_View(Control_Panel_View):
         ground_station = self._devices[0]
         ground_station.address = identity["address"]
         ground_station.joined = identity["joined"]
+
+    def _refresh_vehicles(self):
+        """
+        Refresh the status of the vehicles.
+        """
+
+        # TODO: Implement node discovery.
+        pass

@@ -56,7 +56,9 @@ class XBee_Sensor_Physical(XBee_Sensor):
         """
 
         # Pretty print the address.
-        address = "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x" % struct.unpack("BBBBBBBB", self._address)
+        address = "-"
+        if self._address is not None:
+            address = "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x" % struct.unpack("BBBBBBBB", self._address)
 
         identity = {
             "id": self.id,
