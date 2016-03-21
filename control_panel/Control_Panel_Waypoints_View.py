@@ -264,7 +264,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             # Enqueue a packet indicating that waypoint sending
             # for this vehicle is done.
             packet = XBee_Packet()
-            packet.set("specification", "waypoints_done")
+            packet.set("specification", "waypoint_done")
             packet.set("to_id", vehicle)
             self._controller.xbee.enqueue(packet, to=vehicle)
 

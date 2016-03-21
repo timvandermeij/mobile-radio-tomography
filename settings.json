@@ -376,7 +376,7 @@
                         "format": "B"
                     }
                 ],
-                "waypoints_done": [
+                "waypoint_done": [
                     {
                         "name": "id",
                         "format": "B",
