@@ -58,6 +58,7 @@ class XBee_Sensor(Threadable):
         self._data = {}
         self._queue = Queue.Queue()
         self._loop_delay = self._settings.get("loop_delay")
+        self._custom_packet_delay = self._settings.get("custom_packet_delay")
         self._active = False
         self._joined = False
         self._started = False
