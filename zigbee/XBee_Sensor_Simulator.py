@@ -53,9 +53,17 @@ class XBee_Sensor_Simulator(XBee_Sensor):
 
         try:
             while self._active:
-                if self._id > 0 and time.time() >= self._next_timestamp:
+                # If the sensor has been activated, this loop will only send
+                # enqueued custom packets. If the sensor has been started, we
+                # stop sending custom packets and start performing signal
+                # strength measurements.
+                if not self._started:
+                    self._send_custom_packets()
+                    time.sleep(self._custom_packet_delay)
+                elif self._id > 0 and time.time() >= self._next_timestamp:
                     self._next_timestamp = self._scheduler.get_next_timestamp()
                     self._send()
+                    time.sleep(self._loop_delay)
 
                 # Check if there is data to be processed.
                 try:
@@ -68,8 +76,6 @@ class XBee_Sensor_Simulator(XBee_Sensor):
                 packet = XBee_Packet()
                 packet.unserialize(data)
                 self._receive(packet)
-
-                time.sleep(self._loop_delay)
         except:
             super(XBee_Sensor_Simulator, self).interrupt()
 

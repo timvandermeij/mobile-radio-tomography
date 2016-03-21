@@ -26,10 +26,10 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._synchronized = False
 
         # Prepare the packet and sensor data.
+        self._custom_packet_delay = self._settings.get("custom_packet_delay")
         self._custom_packet_limit = self._settings.get("custom_packet_limit")
         self._number_of_sensors = self._settings.get("number_of_sensors")
         self._sensors = self._settings.get("sensors")
-        self._ground_station_delay = self._settings.get("ground_station_delay")
         for index, address in enumerate(self._sensors):
             self._sensors[index] = address.decode("string_escape")
 
@@ -72,18 +72,22 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
         try:
             while self._active:
+                # Ensure that the sensor has joined the network.
                 if not self._joined:
+                    time.sleep(self._loop_delay)
                     continue
 
-                if self._id > 0 and time.time() >= self._next_timestamp:
+                # If the sensor has been activated, this loop will only send
+                # enqueued custom packets. If the sensor has been started, we
+                # stop sending custom packets and start performing signal
+                # strength measurements.
+                if not self._started:
+                    self._send_custom_packets()
+                    time.sleep(self._custom_packet_delay)
+                elif self._id > 0 and time.time() >= self._next_timestamp:
                     self._next_timestamp = self._scheduler.get_next_timestamp()
                     self._send()
-                elif self._id == 0:
-                    # The ground station is only allowed to send custom packets.
-                    self._send_custom_packets()
-                    time.sleep(self._ground_station_delay)
-
-                time.sleep(self._loop_delay)
+                    time.sleep(self._loop_delay)
         except:
             super(XBee_Sensor_Physical, self).interrupt()
 

@@ -213,6 +213,7 @@
         "settings": {
             "number_of_sensors": 2,
             "xbee_id": 0,
+            "custom_packet_delay": 0.1,
             "custom_packet_limit": 1,
             "loop_delay": 0.01,
             "startup_delay": 1,
@@ -418,7 +419,6 @@
                 "\\x00\\x13\\xa2\\x00@\\xe6o5",
                 "\\x00\\x13\\xa2\\x00@\\xe6n\\xb9"
             ],
-            "ground_station_delay": 0.1,
             "ntp_delay": 3,
             "response_delay": 0.3,
             "synchronize": false

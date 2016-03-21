@@ -60,6 +60,7 @@ class XBee_Sensor(Threadable):
         self._loop_delay = self._settings.get("loop_delay")
         self._active = False
         self._joined = False
+        self._started = False
 
         self._usb_manager = usb_manager
         self._location_callback = location_callback
@@ -80,6 +81,20 @@ class XBee_Sensor(Threadable):
 
     def setup(self):
         raise NotImplementedError("Subclasses must implement `setup()`")
+
+    def start(self):
+        """
+        Start the signal strength measurements (and no longer send custom packets).
+        """
+
+        self._started = True
+
+    def stop(self):
+        """
+        Stop the signal strength measurements (and send custom packets).
+        """
+
+        self._started = False
 
     def _loop(self):
         raise NotImplementedError("Subclasses must implement `_loop()`")
