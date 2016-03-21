@@ -91,6 +91,8 @@ void setup() {
   // current direction
   zumo_direction = 'N';
 
+  motors.setSpeeds(0, 0);
+
   softSerial.begin(BAUD_RATE);
 
   pinMode(LED_PIN, OUTPUT);
@@ -203,6 +205,14 @@ void loop() {
       cur_col = read_int();
       safe_read();
       zumo_direction = safe_read();
+
+      softSerial.print("ACKH ");
+      softSerial.print(cur_row);
+      softSerial.print(" ");
+      softSerial.print(cur_col);
+      softSerial.print(" ");
+      softSerial.print(zumo_direction);
+      softSerial.print("\n");
     }
 
     // Ignore the rest of the line, which might simply be a newline.
