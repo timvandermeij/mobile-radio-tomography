@@ -105,12 +105,19 @@ class Monitor(object):
     def sleep(self):
         time.sleep(self.step_delay)
 
+    def start(self):
+        self.mission.start()
+
+        xbee_sensor = self.environment.get_xbee_sensor()
+        if xbee_sensor is not None:
+            xbee_sensor.start()
+
     def stop(self):
         self.mission.stop()
 
         xbee_sensor = self.environment.get_xbee_sensor()
         if xbee_sensor is not None:
-            xbee_sensor.deactivate()
+            xbee_sensor.stop()
 
         if self.plot:
             self.plot.close()
