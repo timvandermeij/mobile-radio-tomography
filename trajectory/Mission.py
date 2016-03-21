@@ -732,7 +732,7 @@ class Mission_Infrared_Grid(Mission_Infrared):
             return
 
         location = self.vehicle.location
-        new_location = LocationLocal(location.north + self._diff[0], location.east + self._diff[1])
+        new_location = LocationLocal(location.north + self._diff[0], location.east + self._diff[1], -self.altitude)
         self.vehicle.simple_goto(new_location)
         self._diff = [0, 0]
 
