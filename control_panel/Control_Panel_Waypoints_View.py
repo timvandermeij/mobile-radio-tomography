@@ -261,6 +261,13 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
     def _send_one(self, vehicle):
         index = self._indexes[vehicle]
         if len(self._waypoints[vehicle]) <= index:
+            # Enqueue a packet indicating that waypoint sending
+            # for this vehicle is done.
+            packet = XBee_Packet()
+            packet.set("specification", "waypoints_done")
+            packet.set("to_id", vehicle)
+            self._controller.xbee.enqueue(packet, to=vehicle)
+
             self._update_value()
             return
 
