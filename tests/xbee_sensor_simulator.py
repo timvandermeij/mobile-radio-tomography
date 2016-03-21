@@ -155,4 +155,4 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
         # After deactivation the socket should be closed.
         self.sensor.deactivate()
         with self.assertRaises(socket.error):
-            self.sensor._socket.sendto("foo", ("127.0.0.1", 100))
+            self.sensor._sensor.sendto("foo", ("127.0.0.1", 100))

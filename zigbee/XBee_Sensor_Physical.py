@@ -26,7 +26,6 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._address_set = False
         self._joined = False
         self._synchronized = False
-        self._sensor = None
         self._address = None
         self._data = {}
 

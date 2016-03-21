@@ -49,6 +49,7 @@ class XBee_Sensor(Threadable):
         else:
             raise ValueError("'arguments' must be an instance of Arguments")
 
+        self._sensor = None
         self._id = self._settings.get("xbee_id")
         self._next_timestamp = 0
         self._scheduler = XBee_TDMA_Scheduler(self._id, arguments)
