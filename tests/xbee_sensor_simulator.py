@@ -65,7 +65,7 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
         self.assertTrue(hasattr(self.sensor._valid_callback, "__call__"))
 
         # The sweep data list must be empty.
-        self.assertEqual(self.sensor._data, [])
+        self.assertEqual(self.sensor._data, {})
 
         # The custom packet queue must be empty.
         self.assertIsInstance(self.sensor._queue, Queue.Queue)
@@ -118,7 +118,7 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
     def test_send(self):
         # After sending, the sweep data list must be empty.
         self.sensor._send()
-        self.assertEqual(self.sensor._data, [])
+        self.assertEqual(self.sensor._data, {})
 
     def test_send_custom_packets(self):
         # If the queue contains packets, some of them must be sent.

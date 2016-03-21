@@ -18,7 +18,6 @@ class XBee_Sensor_Simulator(XBee_Sensor):
                                                     location_callback, receive_callback, valid_callback)
 
         self._joined = True
-        self._data = []
         self._ip = self._settings.get("ip")
         self._port = self._settings.get("port")
 
@@ -122,10 +121,10 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         self._send_custom_packets()
 
         # Send the sweep data to the ground sensor.
-        for packet in self._data:
+        for frame_id in self._data.keys():
+            packet = self._data[frame_id]
             self._sensor.sendto(packet.serialize(), (self._ip, self._port))
-
-        self._data = []
+            self._data.pop(frame_id)
 
     def _send_custom_packets(self):
         """
@@ -153,7 +152,8 @@ class XBee_Sensor_Simulator(XBee_Sensor):
                 # Create and complete the packet for the ground station.
                 ground_station_packet = self.make_rssi_ground_station_packet(packet)
                 ground_station_packet.set("rssi", random.randint(0, 60))
-                self._data.append(ground_station_packet)
+                frame_id = chr(random.randint(1, 255))
+                self._data[frame_id] = ground_station_packet
             else:
                 print("> Ground station received {}".format(packet.get_all()))
 

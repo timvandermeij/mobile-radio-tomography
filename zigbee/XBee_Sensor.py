@@ -55,6 +55,7 @@ class XBee_Sensor(Threadable):
         self._address = None
         self._next_timestamp = 0
         self._scheduler = XBee_TDMA_Scheduler(self._id, arguments)
+        self._data = {}
         self._queue = Queue.Queue()
         self._loop_delay = self._settings.get("loop_delay")
         self._active = False

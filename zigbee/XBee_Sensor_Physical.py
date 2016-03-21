@@ -24,7 +24,6 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._node_identifier_set = False
         self._address_set = False
         self._synchronized = False
-        self._data = {}
 
         # Prepare the packet and sensor data.
         self._custom_packet_limit = self._settings.get("custom_packet_limit")
