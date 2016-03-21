@@ -24,8 +24,8 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         else:
             raise ValueError("'arguments' must be an instance of Arguments")
 
-        self.id = self.settings.get("xbee_id")
-        self._scheduler = XBee_TDMA_Scheduler(self.id, arguments)
+        self._id = self.settings.get("xbee_id")
+        self._scheduler = XBee_TDMA_Scheduler(self._id, arguments)
         self._next_timestamp = self._scheduler.get_next_timestamp()
         self._data = []
         self._queue = Queue.Queue()
@@ -41,7 +41,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         """
 
         identity = {
-            "id": self.id,
+            "id": self._id,
             "address": "{}:{}".format(self._ip, self._port),
             "joined": True
         }
@@ -54,7 +54,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
 
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self._socket.bind((self._ip, self._port + self.id))
+        self._socket.bind((self._ip, self._port + self._id))
         self._socket.setblocking(0)
 
     def activate(self):
@@ -79,7 +79,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
 
         try:
             while self._active:
-                if self.id > 0 and time.time() >= self._next_timestamp:
+                if self._id > 0 and time.time() >= self._next_timestamp:
                     self._next_timestamp = self._scheduler.get_next_timestamp()
                     self._send()
 
@@ -131,7 +131,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             # the packet to all sensors in the network except for ourself
             # and the ground sensor.
             for to_id in xrange(1, self.settings.get("number_of_sensors") + 1):
-                if to_id == self.id:
+                if to_id == self._id:
                     continue
 
                 self._queue.put({
@@ -152,8 +152,8 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         # simulate the process by calling the callback with the packet manually.
         for vehicle in xrange(1, self.settings.get("number_of_sensors") + 1):
             packet = {
-                "id": self.id + vehicle,
-                "address": "{}:{}".format(self._ip, self._port + self.id + vehicle)
+                "id": self._id + vehicle,
+                "address": "{}:{}".format(self._ip, self._port + self._id + vehicle)
             }
             callback(packet)
 
@@ -163,11 +163,11 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         """
 
         for i in xrange(1, self.settings.get("number_of_sensors") + 1):
-            if i == self.id:
+            if i == self._id:
                 continue
 
             packet = self.make_rssi_broadcast_packet()
-            packet.set("sensor_id", self.id)
+            packet.set("sensor_id", self._id)
             self._socket.sendto(packet.serialize(), (self._ip, self._port + i))
 
         # Send custom packets to their destination. Since the time slots are
@@ -201,7 +201,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         """
 
         if not self.check_receive(packet):
-            if self.id > 0:
+            if self._id > 0:
                 self._next_timestamp = self._scheduler.synchronize(packet)
 
                 # Create and complete the packet for the ground station.

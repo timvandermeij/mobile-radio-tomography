@@ -46,10 +46,10 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
                                            self.location_callback,
                                            self.receive_callback,
                                            self.valid_callback)
-        self.sensor.id = self.sensor_id
+        self.sensor._id = self.sensor_id
 
     def test_initialization(self):
-        self.assertEqual(self.sensor.id, self.sensor_id)
+        self.assertEqual(self.sensor._id, self.sensor_id)
         self.assertTrue(hasattr(self.sensor._location_callback, "__call__"))
         self.assertTrue(hasattr(self.sensor._receive_callback, "__call__"))
         self.assertTrue(hasattr(self.sensor._valid_callback, "__call__"))
@@ -317,7 +317,7 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
             "parameter": "4"
         }
         self.sensor._receive(raw_packet)
-        self.assertEqual(self.sensor.id, 4)
+        self.assertEqual(self.sensor._id, 4)
         self.assertEqual(self.sensor._scheduler.id, 4)
         self.assertEqual(self.sensor._node_identifier_set, True)
 

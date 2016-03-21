@@ -40,7 +40,7 @@ def main(argv):
         timestamp = 0
         while True:
             # Enqueue a custom packet at a fixed interval.
-            if xbee_sensor.id > 0 and time.time() > timestamp:
+            if xbee_sensor._id > 0 and time.time() > timestamp:
                 timestamp = time.time() + 8
                 packet = XBee_Packet()
                 packet.set("specification", "memory_map_chunk")

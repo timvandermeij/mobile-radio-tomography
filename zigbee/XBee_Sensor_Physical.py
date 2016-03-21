@@ -27,8 +27,8 @@ class XBee_Sensor_Physical(XBee_Sensor):
         else:
             raise ValueError("'settings' must be an instance of Arguments")
 
-        self.id = 0
-        self._scheduler = XBee_TDMA_Scheduler(self.id, arguments)
+        self._id = 0
+        self._scheduler = XBee_TDMA_Scheduler(self._id, arguments)
         self._next_timestamp = 0
         self._serial_connection = None
         self._node_identifier_set = False
@@ -61,7 +61,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
             address = self._format_address(self._address)
 
         identity = {
-            "id": self.id,
+            "id": self._id,
             "address": address,
             "joined": self._joined
         }
@@ -109,10 +109,10 @@ class XBee_Sensor_Physical(XBee_Sensor):
                 if not self._joined:
                     continue
 
-                if self.id > 0 and time.time() >= self._next_timestamp:
+                if self._id > 0 and time.time() >= self._next_timestamp:
                     self._next_timestamp = self._scheduler.get_next_timestamp()
                     self._send()
-                elif self.id == 0:
+                elif self._id == 0:
                     # The ground station is only allowed to send custom packets.
                     self._send_custom_packets()
                     time.sleep(self._ground_station_delay)
@@ -154,7 +154,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
             # the packet to all sensors in the network except for ourself
             # and the ground sensor.
             for to_id in xrange(1, self.settings.get("number_of_sensors") + 1):
-                if to_id == self.id:
+                if to_id == self._id:
                     continue
 
                 self._queue.put({
@@ -204,7 +204,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
             self._sensor.send("at", command="AI")
             time.sleep(response_delay)
 
-        if self.id > 0 and self.settings.get("synchronize"):
+        if self._id > 0 and self.settings.get("synchronize"):
             # Synchronize the clock with the ground station's clock before
             # sending messages. This avoids clock skew caused by the fact that
             # the Raspberry Pi devices do not have an onboard real time clock.
@@ -212,7 +212,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
             packet = XBee_Packet()
             packet.set("specification", "ntp")
-            packet.set("sensor_id", self.id)
+            packet.set("sensor_id", self._id)
             packet.set("timestamp_2", 0)
             packet.set("timestamp_3", 0)
             packet.set("timestamp_4", 0)
@@ -258,10 +258,10 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
         # Create and send the RSSI broadcast packets.
         packet = self.make_rssi_broadcast_packet()
-        packet.set("sensor_id", self.id)
+        packet.set("sensor_id", self._id)
 
         for index in xrange(1, self._number_of_sensors + 1):
-            if index == self.id:
+            if index == self._id:
                 continue
 
             self._sensor.send("tx", dest_addr_long=self._sensors[index],
@@ -327,7 +327,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
                 return
 
-            if self.id == 0:
+            if self._id == 0:
                 print("[{}] Ground station received {}".format(time.time(), packet.get_all()))
                 return
 
@@ -366,8 +366,8 @@ class XBee_Sensor_Physical(XBee_Sensor):
                     self._address_set = True
             elif raw_packet["command"] == "NI":
                 # Node identifier has been received.
-                self.id = int(raw_packet["parameter"])
-                self._scheduler.id = self.id
+                self._id = int(raw_packet["parameter"])
+                self._scheduler.id = self._id
                 self._node_identifier_set = True
             elif raw_packet["command"] == "AI":
                 # Association indicator has been received.
