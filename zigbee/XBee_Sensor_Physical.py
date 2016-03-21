@@ -1,4 +1,3 @@
-import copy
 import os
 import random
 import subprocess
@@ -100,35 +99,6 @@ class XBee_Sensor_Physical(XBee_Sensor):
             self._active = False
             self._sensor.halt()
             self._serial_connection.close()
-
-    def enqueue(self, packet, to=None):
-        """
-        Enqueue a custom packet to send to another XBee device.
-        """
-
-        if not isinstance(packet, XBee_Packet):
-            raise TypeError("Only XBee_Packet objects can be enqueued")
-
-        if packet.is_private():
-            raise ValueError("Private packets cannot be enqueued")
-
-        if to != None:
-            self._queue.put({
-                "packet": packet,
-                "to": to
-            })
-        else:
-            # No destination ID has been provided, therefore we broadcast
-            # the packet to all sensors in the network except for ourself
-            # and the ground sensor.
-            for to_id in xrange(1, self._settings.get("number_of_sensors") + 1):
-                if to_id == self._id:
-                    continue
-
-                self._queue.put({
-                    "packet": copy.deepcopy(packet),
-                    "to": to_id
-                })
 
     def discover(self, callback):
         """
