@@ -115,11 +115,6 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             packet.set("sensor_id", self._id)
             self._sensor.sendto(packet.serialize(), (self._ip, self._port + i))
 
-        # Send custom packets to their destination. Since the time slots are
-        # limited in length, so is the number of custom packets we transfer
-        # in each sweep.
-        self._send_custom_packets()
-
         # Send the sweep data to the ground sensor.
         for frame_id in self._data.keys():
             packet = self._data[frame_id]

@@ -205,11 +205,6 @@ class XBee_Sensor_Physical(XBee_Sensor):
                               dest_addr="\xFF\xFE", frame_id="\x00",
                               data=packet.serialize())
 
-        # Send custom packets to their destinations. Since the time slots
-        # are limited in length, so is the number of custom packets we
-        # send in each sweep.
-        self._send_custom_packets()
-
         # Send the sweep data to the ground sensor and clear the list
         # for the next round.
         for frame_id in self._data.keys():
