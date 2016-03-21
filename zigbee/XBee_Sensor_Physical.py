@@ -1,6 +1,5 @@
 import copy
 import os
-import Queue
 import random
 import subprocess
 import struct
@@ -30,14 +29,11 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._sensor = None
         self._address = None
         self._data = {}
-        self._queue = Queue.Queue()
-        self._active = False
 
         # Prepare the packet and sensor data.
         self._custom_packet_limit = self._settings.get("custom_packet_limit")
         self._number_of_sensors = self._settings.get("number_of_sensors")
         self._sensors = self._settings.get("sensors")
-        self._loop_delay = self._settings.get("loop_delay")
         self._ground_station_delay = self._settings.get("ground_station_delay")
         for index, address in enumerate(self._sensors):
             self._sensors[index] = address.decode("string_escape")

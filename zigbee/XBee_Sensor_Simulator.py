@@ -1,9 +1,8 @@
+import copy
+import random
+import socket
 import thread
 import time
-import socket
-import random
-import copy
-import Queue
 from XBee_Packet import XBee_Packet
 from XBee_Sensor import XBee_Sensor
 
@@ -20,9 +19,6 @@ class XBee_Sensor_Simulator(XBee_Sensor):
                                                     location_callback, receive_callback, valid_callback)
 
         self._data = []
-        self._queue = Queue.Queue()
-        self._active = False
-        self._loop_delay = self._settings.get("loop_delay")
         self._ip = self._settings.get("ip")
         self._port = self._settings.get("port")
         self._socket = None

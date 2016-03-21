@@ -1,3 +1,4 @@
+import Queue
 import time
 from ..core.Threadable import Threadable
 from ..settings import Arguments
@@ -51,6 +52,9 @@ class XBee_Sensor(Threadable):
         self._id = self._settings.get("xbee_id")
         self._next_timestamp = 0
         self._scheduler = XBee_TDMA_Scheduler(self._id, arguments)
+        self._queue = Queue.Queue()
+        self._loop_delay = self._settings.get("loop_delay")
+        self._active = False
 
         self._usb_manager = usb_manager
         self._location_callback = location_callback
