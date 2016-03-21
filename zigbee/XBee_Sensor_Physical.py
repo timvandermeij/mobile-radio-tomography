@@ -27,7 +27,6 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
         # Prepare the packet and sensor data.
         self._custom_packet_delay = self._settings.get("custom_packet_delay")
-        self._custom_packet_limit = self._settings.get("custom_packet_limit")
         self._number_of_sensors = self._settings.get("number_of_sensors")
         self._sensors = self._settings.get("sensors")
         for index, address in enumerate(self._sensors):
@@ -227,12 +226,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
         Send custom packets to their destinations.
         """
 
-        limit = self._custom_packet_limit
         while not self._queue.empty():
-            if limit == 0:
-                break
-
-            limit -= 1
             item = self._queue.get()
             self._sensor.send("tx", dest_addr_long=self._sensors[item["to"]],
                               dest_addr="\xFF\xFE", frame_id="\x00",

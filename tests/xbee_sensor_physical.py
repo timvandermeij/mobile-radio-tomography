@@ -205,12 +205,10 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
         packet.set("longitude", 123459678.34)
         self.sensor.enqueue(packet, to=2)
 
-        queue_length_before = self.sensor._queue.qsize()
+        queue_length = self.sensor._queue.qsize()
         self.sensor._send_custom_packets()
-        custom_packet_limit = self.settings.get("custom_packet_limit")
-        queue_length_after = max(0, queue_length_before - custom_packet_limit)
-        self.assertEqual(mock_send.call_count, (queue_length_before - queue_length_after))
-        self.assertEqual(self.sensor._queue.qsize(), queue_length_after)
+        self.assertEqual(mock_send.call_count, queue_length)
+        self.assertEqual(self.sensor._queue.qsize(), 0)
 
         self.sensor.deactivate()
 

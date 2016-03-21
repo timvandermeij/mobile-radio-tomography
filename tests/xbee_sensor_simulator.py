@@ -128,11 +128,8 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
         packet.set("longitude", 123459678.34)
         self.sensor.enqueue(packet, to=2)
 
-        queue_length_before = self.sensor._queue.qsize()
         self.sensor._send_custom_packets()
-        custom_packet_limit = self.settings.get("custom_packet_limit")
-        queue_length_after = max(0, queue_length_before - custom_packet_limit)
-        self.assertEqual(self.sensor._queue.qsize(), queue_length_after)
+        self.assertEqual(self.sensor._queue.qsize(), 0)
 
     def test_receive(self):
         # Create a packet from sensor 2 to the current sensor.

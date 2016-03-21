@@ -132,12 +132,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         Send custom packets to their destinations.
         """
 
-        limit = self._settings.get("custom_packet_limit")
         while not self._queue.empty():
-            if limit == 0:
-                break
-
-            limit -= 1
             item = self._queue.get()
             self._sensor.sendto(item["packet"].serialize(), (self._ip, self._port + item["to"]))
 
