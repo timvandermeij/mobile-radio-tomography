@@ -214,6 +214,12 @@ void loop() {
       softSerial.print(zumo_direction);
       softSerial.print("\n");
     }
+    else if (strcmp(command, "SPDS") == 0)
+    {
+      int motor1 = read_int();
+      int motor2 = read_int();
+      motors.setSpeeds(motor1, motor2);
+    }
 
     // Ignore the rest of the line, which might simply be a newline.
     ignore_input();
@@ -282,9 +288,13 @@ int read_int() {
   // stops when a non-digit is found. This non-digit
   // is left in the serial stream.
   int res = 0;
+  int sign = 1;
   char c = safe_peek();
   // Ignore leading non-integers
   while ((c < '0' || c > '9') && c != '\n') {
+    if (c == '-') {
+      sign = -1 * sign;
+    }
     softSerial.read();
     c = safe_peek();
   }
@@ -297,7 +307,7 @@ int read_int() {
     res = res * 10 + (c - '0');
     c = safe_peek();
   }
-  return res;
+  return sign * res;
 }
 
 void zumo_goto(int row, int col) {
