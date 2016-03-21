@@ -114,9 +114,11 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
         # Packets that do not contain a destination should be broadcasted.
         # We subtract one because we do not send to ourself.
         packet = XBee_Packet()
-        packet.set("specification", "memory_map_chunk")
+        packet.set("specification", "waypoint_add")
         packet.set("latitude", 123456789.12)
         packet.set("longitude", 123459678.34)
+        packet.set("index", 22)
+        packet.set("to_id", 2)
         self.sensor.enqueue(packet)
         self.assertEqual(self.sensor._queue.qsize(),
                          self.settings.get("number_of_sensors") - 1)
@@ -124,9 +126,11 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
 
         # Valid packets should be enqueued.
         packet = XBee_Packet()
-        packet.set("specification", "memory_map_chunk")
+        packet.set("specification", "waypoint_add")
         packet.set("latitude", 123456789.12)
         packet.set("longitude", 123459678.34)
+        packet.set("index", 22)
+        packet.set("to_id", 2)
         self.sensor.enqueue(packet, to=2)
         self.assertEqual(self.sensor._queue.get(), {
             "packet": packet,
@@ -200,9 +204,11 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
 
         # If the queue contains custom packets, some of them must be sent.
         packet = XBee_Packet()
-        packet.set("specification", "memory_map_chunk")
+        packet.set("specification", "waypoint_add")
         packet.set("latitude", 123456789.12)
         packet.set("longitude", 123459678.34)
+        packet.set("index", 22)
+        packet.set("to_id", 2)
         self.sensor.enqueue(packet, to=2)
 
         queue_length = self.sensor._queue.qsize()

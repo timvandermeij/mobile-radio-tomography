@@ -217,22 +217,6 @@
             "loop_delay": 0.01,
             "startup_delay": 1,
             "specifications": {
-                "memory_map_chunk": [
-                    {
-                        "name": "id",
-                        "format": "B",
-                        "value": 1,
-                        "private": false
-                    },
-                    {
-                        "name": "latitude",
-                        "format": "d"
-                    },
-                    {
-                        "name": "longitude",
-                        "format": "d"
-                    }
-                ],
                 "rssi_broadcast": [
                     {
                         "name": "id",

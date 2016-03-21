@@ -29,7 +29,7 @@ class TestXBeePacket(unittest.TestCase):
 
         # When a valid specification is set, the private property
         # must be updated.
-        self.packet.set("specification", "memory_map_chunk")
+        self.packet.set("specification", "waypoint_add")
         self.assertFalse(self.packet._private)
 
     def test_unset(self):
@@ -70,17 +70,19 @@ class TestXBeePacket(unittest.TestCase):
             self.packet.serialize()
 
         # All fields from the specification must be provided.
-        self.packet.set("specification", "memory_map_chunk")
+        self.packet.set("specification", "waypoint_add")
         with self.assertRaises(KeyError):
             self.packet.serialize()
 
         # When all fields are provided, the specification field must be
         # unset and the packed message must be valid.
-        self.packet.set("specification", "memory_map_chunk")
+        self.packet.set("specification", "waypoint_add")
         self.packet.set("latitude", 123456789.12)
         self.packet.set("longitude", 123496785.34)
+        self.packet.set("index", 22)
+        self.packet.set("to_id", 2)
         packed_message = self.packet.serialize()
-        self.assertEqual(packed_message, "\x01H\xe1zT4o\x9dA\xf6(\\E\xa5q\x9dA")
+        self.assertEqual(packed_message, "\x06H\xe1zT4o\x9dA\xf6(\\E\xa5q\x9dA\x16\x00\x00\x00\x02")
 
     def test_unserialize(self):
         # Empty strings must be refused.
@@ -92,11 +94,13 @@ class TestXBeePacket(unittest.TestCase):
             self.packet.unserialize("\xFF\x01")
 
         # Valid messages must be unpacked.
-        self.packet.unserialize("\x01H\xe1zT4o\x9dA\xf6(\\E\xa5q\x9dA")
+        self.packet.unserialize("\x06H\xe1zT4o\x9dA\xf6(\\E\xa5q\x9dA\x16\x00\x00\x00\x02")
         self.assertEqual(self.packet._contents, {
-            "specification": "memory_map_chunk",
+            "specification": "waypoint_add",
             "latitude": 123456789.12,
-            "longitude": 123496785.34
+            "longitude": 123496785.34,
+            "index": 22,
+            "to_id": 2
         })
         self.assertFalse(self.packet._private)
 
