@@ -846,6 +846,14 @@ class Mission_XBee(Mission_Auto):
         super(Mission_XBee, self).setup()
         self.environment.add_packet_action("waypoint_clear", self._clear_waypoints)
         self.environment.add_packet_action("waypoint_add", self._add_waypoint)
+        self.environment.add_packet_action("waypoint_done", self._complete_waypoints)
+
+        self._waypoints_complete = False
+        while not self._waypoints_complete:
+            time.sleep(1)
+
+    def _complete_waypoints(self):
+        self._waypoints_complete = True
 
     def get_points(self):
         return []
