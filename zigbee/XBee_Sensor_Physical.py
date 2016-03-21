@@ -85,7 +85,8 @@ class XBee_Sensor_Physical(XBee_Sensor):
                 elif self._id > 0 and time.time() >= self._next_timestamp:
                     self._next_timestamp = self._scheduler.get_next_timestamp()
                     self._send()
-                    time.sleep(self._loop_delay)
+
+                time.sleep(self._loop_delay)
         except:
             super(XBee_Sensor_Physical, self).interrupt()
 
