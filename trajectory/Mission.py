@@ -724,7 +724,7 @@ class Mission_Infrared(Mission_Guided):
 
 class Mission_Infrared_Grid(Mission_Infrared):
     def setup(self):
-        super(Mission_Infrared, self).setup()
+        super(Mission_Infrared_Grid, self).setup()
         self._diff = (0, 0)
 
     def _release(self):
