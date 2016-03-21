@@ -16,7 +16,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
     def __init__(self, arguments, thread_manager, usb_manager,
                  location_callback, receive_callback, valid_callback):
         """
-        Initialize the sensor.
+        Initialize the physical XBee sensor.
         """
 
         super(XBee_Sensor_Physical, self).__init__(thread_manager, usb_manager,

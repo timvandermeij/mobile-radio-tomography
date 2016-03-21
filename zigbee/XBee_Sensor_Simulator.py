@@ -13,7 +13,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
     def __init__(self, arguments, thread_manager, usb_manager,
                  location_callback, receive_callback, valid_callback):
         """
-        Initialize the sensor with a unique, non-blocking UDP socket.
+        Initialize the simulated XBee sensor.
         """
 
         super(XBee_Sensor_Simulator, self).__init__(thread_manager, usb_manager,
@@ -49,7 +49,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
 
     def setup(self):
         """
-        Setup the socket connection.
+        Setup a unique, non-blocking UDP socket connection.
         """
 
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
