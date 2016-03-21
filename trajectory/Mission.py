@@ -725,7 +725,7 @@ class Mission_Infrared(Mission_Guided):
 class Mission_Infrared_Grid(Mission_Infrared):
     def setup(self):
         super(Mission_Infrared_Grid, self).setup()
-        self._diff = (0, 0)
+        self._diff = [0, 0]
 
     def _release(self):
         if self._diff[0] == 0 and self._diff[1] == 0:
@@ -733,7 +733,7 @@ class Mission_Infrared_Grid(Mission_Infrared):
 
         location = self.vehicle.location
         self.vehicle.simple_goto(location.north + self._diff[0], location.east + self._diff[1])
-        self._diff = (0, 0)
+        self._diff = [0, 0]
 
     def _up(self):
         self._diff[0] = 1
