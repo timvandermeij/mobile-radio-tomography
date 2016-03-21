@@ -849,10 +849,22 @@ class Mission_XBee(Mission_Auto):
         self.environment.add_packet_action("waypoint_done", self._complete_waypoints)
 
         self._waypoints_complete = False
+
+    def arm_and_takeoff(self):
+        # Wait until all the waypoints have been received before arming.
         while not self._waypoints_complete:
             time.sleep(1)
 
-    def _complete_waypoints(self):
+        super(Mission_XBee, self).arm_and_takeoff()
+
+    def _complete_waypoints(self, packet):
+        xbee_sensor = self.environment.get_xbee_sensor()
+        if xbee_sensor.id != packet.get("to_id"):
+            # Ignore packets not meant for us.
+            return
+
+        print('Waypoints complete!')
+
         self._waypoints_complete = True
 
     def get_points(self):
