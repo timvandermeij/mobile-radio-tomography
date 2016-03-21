@@ -41,14 +41,15 @@ def main(argv):
         xbee_sensor.activate()
 
         # Enqueue a custom packet.
-        packet = XBee_Packet()
-        packet.set("specification", "waypoint_add")
-        packet.set("latitude", 123456789.12)
-        packet.set("longitude", 123459678.34)
-        packet.set("index", 22)
-        packet.set("to_id", 2)
-        xbee_sensor.enqueue(packet)
-        time.sleep(1)
+        if xbee_sensor._id == 0:
+            packet = XBee_Packet()
+            packet.set("specification", "waypoint_add")
+            packet.set("latitude", 123456789.12)
+            packet.set("longitude", 123459678.34)
+            packet.set("index", 22)
+            packet.set("to_id", 2)
+            xbee_sensor.enqueue(packet)
+            time.sleep(1)
 
         # Start the signal strength measurements.
         xbee_sensor.start()
