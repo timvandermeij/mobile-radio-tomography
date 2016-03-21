@@ -9,8 +9,6 @@ import time
 from xbee import ZigBee
 from XBee_Packet import XBee_Packet
 from XBee_Sensor import XBee_Sensor
-from XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
-from ..settings import Arguments
 
 class XBee_Sensor_Physical(XBee_Sensor):
     def __init__(self, arguments, thread_manager, usb_manager,
@@ -19,17 +17,11 @@ class XBee_Sensor_Physical(XBee_Sensor):
         Initialize the physical XBee sensor.
         """
 
-        super(XBee_Sensor_Physical, self).__init__(thread_manager, usb_manager,
+        self._type = "xbee_sensor_physical"
+
+        super(XBee_Sensor_Physical, self).__init__(arguments, thread_manager, usb_manager,
                                                    location_callback, receive_callback, valid_callback)
 
-        if isinstance(arguments, Arguments):
-            self.settings = arguments.get_settings("xbee_sensor_physical")
-        else:
-            raise ValueError("'settings' must be an instance of Arguments")
-
-        self._id = 0
-        self._scheduler = XBee_TDMA_Scheduler(self._id, arguments)
-        self._next_timestamp = 0
         self._serial_connection = None
         self._node_identifier_set = False
         self._address_set = False
@@ -42,11 +34,11 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._active = False
 
         # Prepare the packet and sensor data.
-        self._custom_packet_limit = self.settings.get("custom_packet_limit")
-        self._number_of_sensors = self.settings.get("number_of_sensors")
-        self._sensors = self.settings.get("sensors")
-        self._loop_delay = self.settings.get("loop_delay")
-        self._ground_station_delay = self.settings.get("ground_station_delay")
+        self._custom_packet_limit = self._settings.get("custom_packet_limit")
+        self._number_of_sensors = self._settings.get("number_of_sensors")
+        self._sensors = self._settings.get("sensors")
+        self._loop_delay = self._settings.get("loop_delay")
+        self._ground_station_delay = self._settings.get("ground_station_delay")
         for index, address in enumerate(self._sensors):
             self._sensors[index] = address.decode("string_escape")
 
@@ -72,14 +64,14 @@ class XBee_Sensor_Physical(XBee_Sensor):
         Setup the serial connection and identify the sensor.
         """
 
-        port = self.settings.get("port")
+        port = self._settings.get("port")
         if port != "":
             self._serial_connection = self._usb_manager.get_xbee_device(port)
         else:
             self._serial_connection = self._usb_manager.get_xbee_device()
 
         self._sensor = ZigBee(self._serial_connection, callback=self._receive)
-        time.sleep(self.settings.get("startup_delay"))
+        time.sleep(self._settings.get("startup_delay"))
 
         self._identify()
 
@@ -153,7 +145,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
             # No destination ID has been provided, therefore we broadcast
             # the packet to all sensors in the network except for ourself
             # and the ground sensor.
-            for to_id in xrange(1, self.settings.get("number_of_sensors") + 1):
+            for to_id in xrange(1, self._settings.get("number_of_sensors") + 1):
                 if to_id == self._id:
                     continue
 
@@ -181,7 +173,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
         Identify the sensor by fetching its node identifier and address.
         """
 
-        response_delay = self.settings.get("response_delay")
+        response_delay = self._settings.get("response_delay")
 
         while not self._node_identifier_set:
             self._sensor.send("at", command="NI")
@@ -198,17 +190,17 @@ class XBee_Sensor_Physical(XBee_Sensor):
         Join the network and synchronize the clock if necessary.
         """
 
-        response_delay = self.settings.get("response_delay")
+        response_delay = self._settings.get("response_delay")
 
         while not self._joined:
             self._sensor.send("at", command="AI")
             time.sleep(response_delay)
 
-        if self._id > 0 and self.settings.get("synchronize"):
+        if self._id > 0 and self._settings.get("synchronize"):
             # Synchronize the clock with the ground station's clock before
             # sending messages. This avoids clock skew caused by the fact that
             # the Raspberry Pi devices do not have an onboard real time clock.
-            ntp_delay = self.settings.get("ntp_delay")
+            ntp_delay = self._settings.get("ntp_delay")
 
             packet = XBee_Packet()
             packet.set("specification", "ntp")

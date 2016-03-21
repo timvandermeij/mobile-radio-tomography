@@ -6,8 +6,6 @@ import copy
 import Queue
 from XBee_Packet import XBee_Packet
 from XBee_Sensor import XBee_Sensor
-from XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
-from ..settings import Arguments
 
 class XBee_Sensor_Simulator(XBee_Sensor):
     def __init__(self, arguments, thread_manager, usb_manager,
@@ -16,23 +14,17 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         Initialize the simulated XBee sensor.
         """
 
-        super(XBee_Sensor_Simulator, self).__init__(thread_manager, usb_manager,
+        self._type = "xbee_sensor_simulator"
+
+        super(XBee_Sensor_Simulator, self).__init__(arguments, thread_manager, usb_manager,
                                                     location_callback, receive_callback, valid_callback)
 
-        if isinstance(arguments, Arguments):
-            self.settings = arguments.get_settings("xbee_sensor_simulator")
-        else:
-            raise ValueError("'arguments' must be an instance of Arguments")
-
-        self._id = self.settings.get("xbee_id")
-        self._scheduler = XBee_TDMA_Scheduler(self._id, arguments)
-        self._next_timestamp = self._scheduler.get_next_timestamp()
         self._data = []
         self._queue = Queue.Queue()
         self._active = False
-        self._loop_delay = self.settings.get("loop_delay")
-        self._ip = self.settings.get("ip")
-        self._port = self.settings.get("port")
+        self._loop_delay = self._settings.get("loop_delay")
+        self._ip = self._settings.get("ip")
+        self._port = self._settings.get("port")
         self._socket = None
 
     def get_identity(self):
@@ -85,7 +77,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
 
                 # Check if there is data to be processed.
                 try:
-                    data = self._socket.recv(self.settings.get("buffer_size"))
+                    data = self._socket.recv(self._settings.get("buffer_size"))
                 except socket.error:
                     time.sleep(self._loop_delay)
                     continue
@@ -130,7 +122,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             # No destination ID has been provided, therefore we broadcast
             # the packet to all sensors in the network except for ourself
             # and the ground sensor.
-            for to_id in xrange(1, self.settings.get("number_of_sensors") + 1):
+            for to_id in xrange(1, self._settings.get("number_of_sensors") + 1):
                 if to_id == self._id:
                     continue
 
@@ -150,7 +142,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         # The simulator does not use XBee device discovery because it does not
         # use the actual XBee library that provides this functionality. We
         # simulate the process by calling the callback with the packet manually.
-        for vehicle in xrange(1, self.settings.get("number_of_sensors") + 1):
+        for vehicle in xrange(1, self._settings.get("number_of_sensors") + 1):
             packet = {
                 "id": self._id + vehicle,
                 "address": "{}:{}".format(self._ip, self._port + self._id + vehicle)
@@ -162,7 +154,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         Send packets to all other sensors in the network.
         """
 
-        for i in xrange(1, self.settings.get("number_of_sensors") + 1):
+        for i in xrange(1, self._settings.get("number_of_sensors") + 1):
             if i == self._id:
                 continue
 
@@ -186,7 +178,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         Send custom packets to their destinations.
         """
 
-        limit = self.settings.get("custom_packet_limit")
+        limit = self._settings.get("custom_packet_limit")
         while not self._queue.empty():
             if limit == 0:
                 break

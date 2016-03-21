@@ -1,6 +1,8 @@
 import time
 from ..core.Threadable import Threadable
+from ..settings import Arguments
 from XBee_Packet import XBee_Packet
+from XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 
 class XBee_Sensor(Threadable):
     """
@@ -10,7 +12,8 @@ class XBee_Sensor(Threadable):
     and contains common code for the simulated and physical specializations.
     """
 
-    def __init__(self, thread_manager, usb_manager, location_callback, receive_callback, valid_callback):
+    def __init__(self, arguments, thread_manager, usb_manager, location_callback,
+                 receive_callback, valid_callback):
         """
         Set up the XBee sensor.
 
@@ -39,6 +42,15 @@ class XBee_Sensor(Threadable):
 
         if not hasattr(valid_callback, "__call__"):
             raise TypeError("Valid location callback is not callable")
+
+        if isinstance(arguments, Arguments):
+            self._settings = arguments.get_settings(self._type)
+        else:
+            raise ValueError("'arguments' must be an instance of Arguments")
+
+        self._id = self._settings.get("xbee_id")
+        self._next_timestamp = 0
+        self._scheduler = XBee_TDMA_Scheduler(self._id, arguments)
 
         self._usb_manager = usb_manager
         self._location_callback = location_callback
