@@ -107,6 +107,7 @@ void setup() {
   // waiting for a serial connection.
   buzzer.play(">f32>>d32");
 
+  // Wait for serial interface.
   ignore_input();
 
   digitalWrite(LED_PIN, LOW);

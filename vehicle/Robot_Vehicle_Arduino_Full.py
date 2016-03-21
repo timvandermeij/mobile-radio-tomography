@@ -19,18 +19,22 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
         pass
 
     def activate(self):
+        # Send a DTR signal to turn on the Arduino via the RESET line. 
+        # According to a forum post at 
+        # http://forum.arduino.cc/index.php?topic=38981.msg287027#msg287027 and 
+        # the ATmega328P datasheet, we need to send a low DTR to turn on the 
+        # vehicle, and the pulse needs to be at least 2.5 microseconds to get 
+        # through. We add more time (22 milliseconds) for it to reset and start 
+        # the serial connection.
         self._serial_connection.dtr = False
         time.sleep(0.022)
         super(Robot_Vehicle_Arduino_Full, self).activate()
         self._update_home_location()
 
     def _reset(self):
-        # Send a DTR signal to reset the Arduino. According to a forum post at 
-        # http://forum.arduino.cc/index.php?topic=38981.msg287027#msg287027 we 
-        # need to send a low DTR for at least 22 ms to get a reset through.
-        self._serial_connection.dtr = False
-        time.sleep(0.022)
+        # Send a DTR signal to turn off the Arduino. See the activate method.
         self._serial_connection.dtr = True
+        time.sleep(0.022)
 
     def _update_home_location(self):
         # Format a "home location" command
