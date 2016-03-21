@@ -212,6 +212,7 @@
         "name": "XBee base",
         "settings": {
             "number_of_sensors": 2,
+            "xbee_id": 0,
             "custom_packet_limit": 1,
             "loop_delay": 0.01,
             "startup_delay": 1,
@@ -404,8 +405,7 @@
         "settings": {
             "ip": "127.0.0.1",
             "port": 3233,
-            "buffer_size": 256,
-            "xbee_id": 0
+            "buffer_size": 256
         }
     },
     "xbee_sensor_physical": {

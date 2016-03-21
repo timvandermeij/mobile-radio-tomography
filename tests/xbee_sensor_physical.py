@@ -46,10 +46,10 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
                                            self.location_callback,
                                            self.receive_callback,
                                            self.valid_callback)
-        self.sensor.id = self.sensor_id
+        self.sensor._id = self.sensor_id
 
     def test_initialization(self):
-        self.assertEqual(self.sensor.id, self.sensor_id)
+        self.assertEqual(self.sensor._id, self.sensor_id)
         self.assertTrue(hasattr(self.sensor._location_callback, "__call__"))
         self.assertTrue(hasattr(self.sensor._receive_callback, "__call__"))
         self.assertTrue(hasattr(self.sensor._valid_callback, "__call__"))
@@ -207,7 +207,7 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
 
         queue_length_before = self.sensor._queue.qsize()
         self.sensor._send_custom_packets()
-        custom_packet_limit = self.sensor.settings.get("custom_packet_limit")
+        custom_packet_limit = self.settings.get("custom_packet_limit")
         queue_length_after = max(0, queue_length_before - custom_packet_limit)
         self.assertEqual(mock_send.call_count, (queue_length_before - queue_length_after))
         self.assertEqual(self.sensor._queue.qsize(), queue_length_after)
@@ -317,8 +317,8 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
             "parameter": "4"
         }
         self.sensor._receive(raw_packet)
-        self.assertEqual(self.sensor.id, 4)
-        self.assertEqual(self.sensor.scheduler.id, 4)
+        self.assertEqual(self.sensor._id, 4)
+        self.assertEqual(self.sensor._scheduler.id, 4)
         self.assertEqual(self.sensor._node_identifier_set, True)
 
         # AT response AI failure packets should be processed.

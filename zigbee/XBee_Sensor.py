@@ -1,6 +1,10 @@
+import copy
+import Queue
 import time
 from ..core.Threadable import Threadable
+from ..settings import Arguments
 from XBee_Packet import XBee_Packet
+from XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 
 class XBee_Sensor(Threadable):
     """
@@ -10,7 +14,8 @@ class XBee_Sensor(Threadable):
     and contains common code for the simulated and physical specializations.
     """
 
-    def __init__(self, thread_manager, usb_manager, location_callback, receive_callback, valid_callback):
+    def __init__(self, arguments, thread_manager, usb_manager, location_callback,
+                 receive_callback, valid_callback):
         """
         Set up the XBee sensor.
 
@@ -40,13 +45,38 @@ class XBee_Sensor(Threadable):
         if not hasattr(valid_callback, "__call__"):
             raise TypeError("Valid location callback is not callable")
 
+        if isinstance(arguments, Arguments):
+            self._settings = arguments.get_settings(self._type)
+        else:
+            raise ValueError("'arguments' must be an instance of Arguments")
+
+        self._sensor = None
+        self._id = self._settings.get("xbee_id")
+        self._address = None
+        self._next_timestamp = 0
+        self._scheduler = XBee_TDMA_Scheduler(self._id, arguments)
+        self._data = {}
+        self._queue = Queue.Queue()
+        self._loop_delay = self._settings.get("loop_delay")
+        self._active = False
+        self._joined = False
+
         self._usb_manager = usb_manager
         self._location_callback = location_callback
         self._receive_callback = receive_callback
         self._valid_callback = valid_callback
 
     def get_identity(self):
-        raise NotImplementedError("Subclasses must implement `get_identity()`")
+        """
+        Get the identity (ID, address and join status) of this sensor.
+        """
+
+        identity = {
+            "id": self._id,
+            "address": self._format_address(self._address),
+            "joined": self._joined
+        }
+        return identity
 
     def setup(self):
         raise NotImplementedError("Subclasses must implement `setup()`")
@@ -55,7 +85,33 @@ class XBee_Sensor(Threadable):
         raise NotImplementedError("Subclasses must implement `_loop()`")
 
     def enqueue(self, packet, to=None):
-        raise NotImplementedError("Subclasses must implement `enqueue(packet, to=None)`")
+        """
+        Enqueue a custom packet to send to another XBee device.
+        """
+
+        if not isinstance(packet, XBee_Packet):
+            raise TypeError("Only XBee_Packet objects can be enqueued")
+
+        if packet.is_private():
+            raise ValueError("Private packets cannot be enqueued")
+
+        if to != None:
+            self._queue.put({
+                "packet": packet,
+                "to": to
+            })
+        else:
+            # No destination ID has been provided, therefore we broadcast
+            # the packet to all sensors in the network except for ourself
+            # and the ground sensor.
+            for to_id in xrange(1, self._settings.get("number_of_sensors") + 1):
+                if to_id == self._id:
+                    continue
+
+                self._queue.put({
+                    "packet": copy.deepcopy(packet),
+                    "to": to_id
+                })
 
     def discover(self, callback):
         raise NotImplementedError("Subclasses must implement `discover(callback)`")
@@ -68,6 +124,9 @@ class XBee_Sensor(Threadable):
 
     def _receive(self, packet):
         raise NotImplementedError("Subclasses must implement `_receive(packet)`")
+
+    def _format_address(self, address):
+        raise NotImplementedError("Subclasses must implement `_format_address(address)`")
 
     def check_receive(self, packet):
         """

@@ -54,10 +54,10 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
 
     def test_initialization(self):
         # The ID of the sensor must be set.
-        self.assertEqual(self.sensor.id, self.sensor_id)
+        self.assertEqual(self.sensor._id, self.sensor_id)
 
-        # The next timestamp must be set.
-        self.assertNotEqual(self.sensor._next_timestamp, 0)
+        # The next timestamp must be zero.
+        self.assertEqual(self.sensor._next_timestamp, 0)
 
         # The location, receive and valid callbacks must be set.
         self.assertTrue(hasattr(self.sensor._location_callback, "__call__"))
@@ -65,7 +65,7 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
         self.assertTrue(hasattr(self.sensor._valid_callback, "__call__"))
 
         # The sweep data list must be empty.
-        self.assertEqual(self.sensor._data, [])
+        self.assertEqual(self.sensor._data, {})
 
         # The custom packet queue must be empty.
         self.assertIsInstance(self.sensor._queue, Queue.Queue)
@@ -118,7 +118,7 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
     def test_send(self):
         # After sending, the sweep data list must be empty.
         self.sensor._send()
-        self.assertEqual(self.sensor._data, [])
+        self.assertEqual(self.sensor._data, {})
 
     def test_send_custom_packets(self):
         # If the queue contains packets, some of them must be sent.
@@ -130,7 +130,7 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
 
         queue_length_before = self.sensor._queue.qsize()
         self.sensor._send_custom_packets()
-        custom_packet_limit = self.sensor.settings.get("custom_packet_limit")
+        custom_packet_limit = self.settings.get("custom_packet_limit")
         queue_length_after = max(0, queue_length_before - custom_packet_limit)
         self.assertEqual(self.sensor._queue.qsize(), queue_length_after)
 
@@ -149,10 +149,10 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
         copied_packet = copy.deepcopy(packet)
         self.sensor._receive(packet)
         self.assertEqual(self.sensor._next_timestamp,
-                         self.sensor.scheduler.synchronize(copied_packet))
+                         self.sensor._scheduler.synchronize(copied_packet))
 
     def test_deactivate(self):
         # After deactivation the socket should be closed.
         self.sensor.deactivate()
         with self.assertRaises(socket.error):
-            self.sensor._socket.sendto("foo", ("127.0.0.1", 100))
+            self.sensor._sensor.sendto("foo", ("127.0.0.1", 100))
