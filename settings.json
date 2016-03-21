@@ -375,6 +375,18 @@
                         "name": "sensor_id",
                         "format": "B"
                     }
+                ],
+                "waypoint_done": [
+                    {
+                        "name": "id",
+                        "format": "B",
+                        "value": 8,
+                        "private": false
+                    },
+                    {
+                        "name": "to_id",
+                        "format": "B"
+                    }
                 ]
             }
         }

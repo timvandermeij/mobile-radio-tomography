@@ -35,7 +35,7 @@ class Control_Panel_Devices_View(Control_Panel_View):
             XBee_Device("Vehicle 1", 1, XBee_Device_Category.END_DEVICE),
             XBee_Device("Vehicle 2", 2, XBee_Device_Category.END_DEVICE)
         ]
-        self._refresh_ground_station()
+        self._refresh()
 
         # Create the refresh button.
         refresh_button = QtGui.QPushButton("Refresh")
