@@ -51,11 +51,13 @@ class XBee_Sensor(Threadable):
 
         self._sensor = None
         self._id = self._settings.get("xbee_id")
+        self._address = None
         self._next_timestamp = 0
         self._scheduler = XBee_TDMA_Scheduler(self._id, arguments)
         self._queue = Queue.Queue()
         self._loop_delay = self._settings.get("loop_delay")
         self._active = False
+        self._joined = False
 
         self._usb_manager = usb_manager
         self._location_callback = location_callback
@@ -63,7 +65,16 @@ class XBee_Sensor(Threadable):
         self._valid_callback = valid_callback
 
     def get_identity(self):
-        raise NotImplementedError("Subclasses must implement `get_identity()`")
+        """
+        Get the identity (ID, address and join status) of this sensor.
+        """
+
+        identity = {
+            "id": self._id,
+            "address": self._format_address(self._address),
+            "joined": self._joined
+        }
+        return identity
 
     def setup(self):
         raise NotImplementedError("Subclasses must implement `setup()`")
@@ -85,6 +96,9 @@ class XBee_Sensor(Threadable):
 
     def _receive(self, packet):
         raise NotImplementedError("Subclasses must implement `_receive(packet)`")
+
+    def _format_address(self, address):
+        raise NotImplementedError("Subclasses must implement `_format_address(address)`")
 
     def check_receive(self, packet):
         """

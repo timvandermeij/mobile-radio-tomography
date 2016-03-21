@@ -18,21 +18,10 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         super(XBee_Sensor_Simulator, self).__init__(arguments, thread_manager, usb_manager,
                                                     location_callback, receive_callback, valid_callback)
 
+        self._joined = True
         self._data = []
         self._ip = self._settings.get("ip")
         self._port = self._settings.get("port")
-
-    def get_identity(self):
-        """
-        Get the identity (ID, address and join status) of this sensor.
-        """
-
-        identity = {
-            "id": self._id,
-            "address": "{}:{}".format(self._ip, self._port),
-            "joined": True
-        }
-        return identity
 
     def setup(self):
         """
@@ -197,3 +186,11 @@ class XBee_Sensor_Simulator(XBee_Sensor):
                 self._data.append(ground_station_packet)
             else:
                 print("> Ground station received {}".format(packet.get_all()))
+
+    def _format_address(self, address):
+        """
+        Pretty print a given address.
+        """
+
+        address = "{}:{}".format(self._ip, self._port)
+        return address.upper()

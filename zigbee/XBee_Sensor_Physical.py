@@ -24,9 +24,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._serial_connection = None
         self._node_identifier_set = False
         self._address_set = False
-        self._joined = False
         self._synchronized = False
-        self._address = None
         self._data = {}
 
         # Prepare the packet and sensor data.
@@ -36,23 +34,6 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._ground_station_delay = self._settings.get("ground_station_delay")
         for index, address in enumerate(self._sensors):
             self._sensors[index] = address.decode("string_escape")
-
-    def get_identity(self):
-        """
-        Get the identity (ID, address and join status) of this sensor.
-        """
-
-        # Pretty print the address.
-        address = "-"
-        if self._address is not None:
-            address = self._format_address(self._address)
-
-        identity = {
-            "id": self._id,
-            "address": address,
-            "joined": self._joined
-        }
-        return identity
 
     def setup(self):
         """
@@ -373,6 +354,9 @@ class XBee_Sensor_Physical(XBee_Sensor):
         """
         Pretty print a given address.
         """
+
+        if address is None:
+            return "-"
 
         address = "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x" % struct.unpack("BBBBBBBB", address)
         return address.upper()
