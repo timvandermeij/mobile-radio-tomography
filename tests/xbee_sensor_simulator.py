@@ -149,7 +149,7 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
         copied_packet = copy.deepcopy(packet)
         self.sensor._receive(packet)
         self.assertEqual(self.sensor._next_timestamp,
-                         self.sensor.scheduler.synchronize(copied_packet))
+                         self.sensor._scheduler.synchronize(copied_packet))
 
     def test_deactivate(self):
         # After deactivation the socket should be closed.

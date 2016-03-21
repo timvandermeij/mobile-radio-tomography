@@ -318,7 +318,7 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
         }
         self.sensor._receive(raw_packet)
         self.assertEqual(self.sensor.id, 4)
-        self.assertEqual(self.sensor.scheduler.id, 4)
+        self.assertEqual(self.sensor._scheduler.id, 4)
         self.assertEqual(self.sensor._node_identifier_set, True)
 
         # AT response AI failure packets should be processed.

@@ -28,7 +28,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
             raise ValueError("'settings' must be an instance of Arguments")
 
         self.id = 0
-        self.scheduler = XBee_TDMA_Scheduler(self.id, arguments)
+        self._scheduler = XBee_TDMA_Scheduler(self.id, arguments)
         self._next_timestamp = 0
         self._serial_connection = None
         self._node_identifier_set = False
@@ -110,7 +110,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
                     continue
 
                 if self.id > 0 and time.time() >= self._next_timestamp:
-                    self._next_timestamp = self.scheduler.get_next_timestamp()
+                    self._next_timestamp = self._scheduler.get_next_timestamp()
                     self._send()
                 elif self.id == 0:
                     # The ground station is only allowed to send custom packets.
@@ -332,7 +332,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
                 return
 
             # Synchronize the scheduler using the timestamp in the packet.
-            self._next_timestamp = self.scheduler.synchronize(packet)
+            self._next_timestamp = self._scheduler.synchronize(packet)
 
             # Create the packet for the ground station.
             ground_station_packet = self.make_rssi_ground_station_packet(packet)
@@ -367,7 +367,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
             elif raw_packet["command"] == "NI":
                 # Node identifier has been received.
                 self.id = int(raw_packet["parameter"])
-                self.scheduler.id = self.id
+                self._scheduler.id = self.id
                 self._node_identifier_set = True
             elif raw_packet["command"] == "AI":
                 # Association indicator has been received.

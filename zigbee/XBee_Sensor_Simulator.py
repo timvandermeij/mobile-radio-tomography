@@ -25,8 +25,8 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             raise ValueError("'arguments' must be an instance of Arguments")
 
         self.id = self.settings.get("xbee_id")
-        self.scheduler = XBee_TDMA_Scheduler(self.id, arguments)
-        self._next_timestamp = self.scheduler.get_next_timestamp()
+        self._scheduler = XBee_TDMA_Scheduler(self.id, arguments)
+        self._next_timestamp = self._scheduler.get_next_timestamp()
         self._data = []
         self._queue = Queue.Queue()
         self._active = False
@@ -80,7 +80,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         try:
             while self._active:
                 if self.id > 0 and time.time() >= self._next_timestamp:
-                    self._next_timestamp = self.scheduler.get_next_timestamp()
+                    self._next_timestamp = self._scheduler.get_next_timestamp()
                     self._send()
 
                 # Check if there is data to be processed.
@@ -202,7 +202,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
 
         if not self.check_receive(packet):
             if self.id > 0:
-                self._next_timestamp = self.scheduler.synchronize(packet)
+                self._next_timestamp = self._scheduler.synchronize(packet)
 
                 # Create and complete the packet for the ground station.
                 ground_station_packet = self.make_rssi_ground_station_packet(packet)
