@@ -56,8 +56,8 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
         # The ID of the sensor must be set.
         self.assertEqual(self.sensor._id, self.sensor_id)
 
-        # The next timestamp must be set.
-        self.assertNotEqual(self.sensor._next_timestamp, 0)
+        # The next timestamp must be zero.
+        self.assertEqual(self.sensor._next_timestamp, 0)
 
         # The location, receive and valid callbacks must be set.
         self.assertTrue(hasattr(self.sensor._location_callback, "__call__"))
@@ -130,7 +130,7 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
 
         queue_length_before = self.sensor._queue.qsize()
         self.sensor._send_custom_packets()
-        custom_packet_limit = self.sensor.settings.get("custom_packet_limit")
+        custom_packet_limit = self.settings.get("custom_packet_limit")
         queue_length_after = max(0, queue_length_before - custom_packet_limit)
         self.assertEqual(self.sensor._queue.qsize(), queue_length_after)
 
