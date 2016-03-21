@@ -85,9 +85,6 @@ class Monitor(object):
 
             i = i + 1
 
-        if xbee_sensor:
-            xbee_sensor.activate()
-
         # Display the current memory map interactively.
         if self.plot:
             self.plot.plot_lines(self.mission.get_waypoints())
