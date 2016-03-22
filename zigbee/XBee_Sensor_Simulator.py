@@ -34,7 +34,6 @@ class XBee_Sensor_Simulator(XBee_Sensor):
     def activate(self):
         """
         Activate the sensor to send and receive packets.
-        The ground sensor (with ID 0) can only receive packets.
         """
 
         super(XBee_Sensor_Simulator, self).activate()

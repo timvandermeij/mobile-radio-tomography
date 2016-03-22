@@ -49,8 +49,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
     def activate(self):
         """
-        Activate the sensor by sending a packet if it is not a ground station.
-        The sensor always receives packets asynchronously.
+        Activate the sensor to send and receive packets.
         """
 
         super(XBee_Sensor_Physical, self).activate()
