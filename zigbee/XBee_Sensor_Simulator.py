@@ -132,11 +132,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         Send a TX frame to another sensor.
         """
 
-        if not isinstance(packet, XBee_Packet):
-            raise ValueError("Invalid packet specified")
-
-        if to is None:
-            raise ValueError("Invalid destination specified: {}".format(to))
+        super(XBee_Sensor_Simulator, self)._send_tx_frame(packet, to)
 
         self._sensor.sendto(packet.serialize(), (self._ip, self._port + to))
 

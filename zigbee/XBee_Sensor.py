@@ -145,7 +145,15 @@ class XBee_Sensor(Threadable):
             self._send_tx_frame(item["packet"], item["to"])
 
     def _send_tx_frame(self, packet, to=None):
-        raise NotImplementedError("Subclasses must implement `_send_tx_frame(packet, to=None)`")
+        """
+        Send a TX frame to another sensor.
+        """
+
+        if not isinstance(packet, XBee_Packet):
+            raise ValueError("Invalid packet specified")
+
+        if to is None:
+            raise ValueError("Invalid destination specified: {}".format(to))
 
     def _receive(self, packet):
         raise NotImplementedError("Subclasses must implement `_receive(packet)`")

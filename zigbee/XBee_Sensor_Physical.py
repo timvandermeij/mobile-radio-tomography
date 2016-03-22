@@ -219,11 +219,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
         Send a TX frame to another sensor.
         """
 
-        if not isinstance(packet, XBee_Packet):
-            raise ValueError("Invalid packet specified")
-
-        if to is None:
-            raise ValueError("Invalid destination specified: {}".format(to))
+        super(XBee_Sensor_Physical, self)._send_tx_frame(packet, to)
 
         self._sensor.send("tx", dest_addr_long=self._sensors[to], dest_addr="\xFF\xFE",
                           frame_id="\x00", data=packet.serialize())
