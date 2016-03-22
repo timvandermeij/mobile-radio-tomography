@@ -122,6 +122,10 @@ class Robot_Vehicle(Vehicle):
                     # In AUTO mode, immediately try to move to the next 
                     # waypoint, or rotate in the right direction.
                     self._move_waypoint(self._current_waypoint + 1)
+                else:
+                    # In other modes, stop at the current waypoint until we 
+                    # have a new waypoint.
+                    self.set_speeds(0, 0)
             elif self._mode.name == "AUTO" or self._mode.name == "GUIDED":
                 # We reached an intersection or we are at an intersection and 
                 # maybe have a next waypoint. Check whether we need to rotate 
@@ -185,6 +189,7 @@ class Robot_Vehicle(Vehicle):
         self._mode = value
         if value.name == "RTL":
             self._waypoints = [self._home_location]
+            self._current_waypoint = -1
         elif value.name == "HALT":
             self._running = False
 

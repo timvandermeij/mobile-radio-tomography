@@ -7,8 +7,9 @@ from ..vehicle.Vehicle import Vehicle
 from core_thread_manager import ThreadableTestCase
 from core_usb_manager import USBManagerTestCase
 from geometry import LocationTestCase
+from settings import SettingsTestCase
 
-class TestVehicle(LocationTestCase, ThreadableTestCase, USBManagerTestCase):
+class TestVehicle(LocationTestCase, SettingsTestCase, ThreadableTestCase, USBManagerTestCase):
     def setUp(self):
         super(TestVehicle, self).setUp()
         self.arguments = Arguments("settings.json", [
