@@ -160,9 +160,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
             while not self._synchronized:
                 # Send the NTP packet to the ground station.
                 packet.set("timestamp_1", time.time())
-                self._sensor.send("tx", dest_addr_long=self._sensors[0],
-                                  dest_addr="\xFF\xFE", frame_id="\x00",
-                                  data=packet.serialize())
+                self._send_tx_frame(packet, 0)
                 time.sleep(ntp_delay)
 
     def _ntp(self, packet):
@@ -204,9 +202,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
             if index == self._id:
                 continue
 
-            self._sensor.send("tx", dest_addr_long=self._sensors[index],
-                              dest_addr="\xFF\xFE", frame_id="\x00",
-                              data=packet.serialize())
+            self._send_tx_frame(packet, index)
 
         # Send the sweep data to the ground sensor and clear the list
         # for the next round.
@@ -215,10 +211,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
             if packet.get("rssi") is None:
                 continue
 
-            self._sensor.send("tx", dest_addr_long=self._sensors[0],
-                              dest_addr="\xFF\xFE", frame_id="\x00",
-                              data=packet.serialize())
-
+            self._send_tx_frame(packet, 0)
             self._data.pop(frame_id)
 
     def _send_custom_packets(self):
@@ -228,9 +221,21 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
         while not self._queue.empty():
             item = self._queue.get()
-            self._sensor.send("tx", dest_addr_long=self._sensors[item["to"]],
-                              dest_addr="\xFF\xFE", frame_id="\x00",
-                              data=item["packet"].serialize())
+            self._send_tx_frame(item["packet"], item["to"])
+
+    def _send_tx_frame(self, packet, to=None):
+        """
+        Send a TX frame to another sensor.
+        """
+
+        if not isinstance(packet, XBee_Packet):
+            raise ValueError("Invalid packet specified")
+
+        if to is None:
+            raise ValueError("Invalid destination specified: {}".format(to))
+
+        self._sensor.send("tx", dest_addr_long=self._sensors[to], dest_addr="\xFF\xFE",
+                          frame_id="\x00", data=packet.serialize())
 
     def _receive(self, raw_packet):
         """
@@ -248,9 +253,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
                 if packet.get("timestamp_2") == 0:
                     packet.set("timestamp_2", time.time())
                     packet.set("timestamp_3", time.time())
-                    self._sensor.send("tx", dest_addr_long=self._sensors[packet.get("sensor_id")],
-                                      dest_addr="\xFF\xFE", frame_id="\x00",
-                                      data=packet.serialize())
+                    self._send_tx_frame(packet, packet.get("sensor_id"))
                 else:
                     packet.set("timestamp_4", time.time())
                     self._ntp(packet)

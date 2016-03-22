@@ -119,12 +119,12 @@ class XBee_Sensor_Simulator(XBee_Sensor):
 
             packet = self._make_rssi_broadcast_packet()
             packet.set("sensor_id", self._id)
-            self._sensor.sendto(packet.serialize(), (self._ip, self._port + i))
+            self._send_tx_frame(packet, i)
 
         # Send the sweep data to the ground sensor.
         for frame_id in self._data.keys():
             packet = self._data[frame_id]
-            self._sensor.sendto(packet.serialize(), (self._ip, self._port))
+            self._send_tx_frame(packet, 0)
             self._data.pop(frame_id)
 
     def _send_custom_packets(self):
@@ -134,7 +134,20 @@ class XBee_Sensor_Simulator(XBee_Sensor):
 
         while not self._queue.empty():
             item = self._queue.get()
-            self._sensor.sendto(item["packet"].serialize(), (self._ip, self._port + item["to"]))
+            self._send_tx_frame(item["packet"], item["to"])
+
+    def _send_tx_frame(self, packet, to=None):
+        """
+        Send a TX frame to another sensor.
+        """
+
+        if not isinstance(packet, XBee_Packet):
+            raise ValueError("Invalid packet specified")
+
+        if to is None:
+            raise ValueError("Invalid destination specified: {}".format(to))
+
+        self._sensor.sendto(packet.serialize(), (self._ip, self._port + to))
 
     def _receive(self, packet):
         """
