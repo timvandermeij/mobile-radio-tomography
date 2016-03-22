@@ -1,0 +1,144 @@
+\documentclass{article}
+
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\parindent=0pt
+\frenchspacing
+
+\usepackage[none]{hyphenat}
+\usepackage{parskip}
+\usepackage[hyphens]{url}
+\usepackage{hyperref}
+
+\hypersetup{colorlinks, citecolor=red, filecolor=red, linkcolor=black, urlcolor=blue}
+
+\begin{document}
+
+\title{Setting up the Zumo robot}
+\author{Leon Helwerda}
+\date{\today}
+
+\maketitle
+
+\section{Introduction}
+
+The Zumo has documentation that does require some searching in case one wants 
+to connect it differently than one usually would (with only an Arduino on the 
+Zumo Shield). Since we might want to do certain processing on the Raspberry Pi, 
+or maybe even remove the Arduino out of the equation, we need to know which 
+pins are used for what specifically and forward information to the Pi. The Zumo 
+has a software library, written in C and Arduino code, that offer more details 
+about the pin uses. Additionally, documentation and data sheets corresponding 
+the individual parts also provide more information.
+
+\section{Pin numbering}
+The following pin numbers are useful to know for the Zumo Shield robot. We will 
+have to make appropriate connections from an Arduino (which corresponds nicely 
+with the shield) or a Raspberry Pi (which then has its own numbering). One can 
+also solder an additional array of pins on the shield to forward signals from 
+the Arduino to the Pi.
+
+There exists a difference between analog and digital pins in numbering, but as 
+far as it seems both can be used for normal purposes.
+
+The following pins are used for various components and interfaces with the Zumo 
+Shield and Arduino Uno:
+
+\begin{itemize}
+  \item LEDs: two red/blue power LEDS with no pin control, one yellow LED 
+        controllable using pin 13.
+  \item Push buttons: a reset button that is connected to the RST pin. Usually 
+        this is connected to a RESET pin on the Arduino. Note that we can add 
+        other peripherals to the RST pin to cause the Arduino to reset, or 
+        connect it to a DTR line of a serial connection to reset it from the 
+        Raspberry Pi. Be sure that there is not too much power on this line and 
+        do not power it when the Zumo itself is not powered, otherwise the 
+        brown-out detection will kick in and cause a reset loop. \\
+        Aside from the reset button, there is a user button that is connected 
+        to pin 12.
+  \item Motor: pins 7 (left) and 8 (right) are for direction. A low signal 
+        causes a motor to drive forward, and a high signal drives it backward.  
+        Pins and pins 9 and 10 are for motor speed. The speeds are sent as PWM 
+        values that are between 0 (no throttle) and 255 (maximum speed). The 
+        Zumo libraries use 0 to 400 and convert that using a multiplier 
+        $51/80$, unless 20KHz PWM is used.
+  \item Buzzer: can be used to play simple sounds by passing PWM values. Can be 
+        controlled using pin 3 or pin 6, depending on the Arduino being used. 
+        By default, the buzzer is disconnected, but it can be connected by 
+        replacing the blue shorting block from its default horizontal position 
+        to the one marked as 3/328P (Uno) or the one marked with 6/32U4 
+        (Leonardo), respectively. The Zumo buzzer library can be used to play 
+        more complicated songs.
+  \item Battery monitor: One can monitor the battery voltage of the Zumo shield 
+        using the A1 analog pin, but only if the jumper in the middle of the 
+        board is connected by soldering a line between the A1 and Battery Level 
+        holes. Otherwise, one can use A1 for other purposes.
+  \item Inertial sensors: a combined accelerometer and magnetometer (compass) 
+        as well as a gyroscope are connected via I2C. By default, these are 
+        disconnected, but they can be forwarded to the SDA and SCL pins on the 
+        bottom right of the board, close to LED13. Arduino versions older than 
+        Uno R3 do not have these pins, which could allow us to connect them to 
+        the Raspberry Pi, for example to achieve another external sensor which 
+        could work with EKF2. On the Arduino Uno R3, the SDA and SCL pins are 
+        duplicated to analog pins A4 and A5, respectively.
+  \item I2C: pins 2 and 3 (Leonardo), or analog pins A4 and A5 (Uno), for 
+        forwarding SDA and SCL respectively of a mounted Arduino. These pins 
+        can have different purposes, including a connection with the 
+        compass/gyroscope or a control line to the reflectance sensor array. 
+        The sensor array can use a shorting block to determine which one to 
+        use, which means it uses the pin that is not already in use for I2C.
+  \item RX/TX: pins 0 and 1 for forwarding serial communication with a mounted 
+        Arduino. One can also use any free pin with SoftwareSerial to use 
+        a different UART RX/TX connection. For example, when using an Uno R3 
+        with the battery level jumper disconnected, pins 6 and A1 can be freely 
+        used for RX/TX.
+  \item Reflectance sensor array: Six IR sensors and additional status LEDs. 
+        Depending on how a shorting block is placed on top right of the sensor 
+        array, one can enable or disable the sensors using a pin. If the block 
+        is near to the Zumo shield then pin 2 is connected to LEDON, if it is 
+        away from the shield with a bare pin visible, then pin A4 is connected 
+        to LEDON. Send a high signal to the correct pin to enable the sensor 
+        array, and a low signal to disable again; the visible red status LEDs 
+        should show this. \\
+        The IR sensors themselves are read from left to right, when facing the 
+        forward driving direction with the shorting block in the back of the 
+        array, as pins 4, A3, 11, A0, A2, and 5. \\
+        All pins are forwarded via the front expansion board to the pins with 
+        extenders placed on the Arduino mount. The sensor pins are both input 
+        and output pins. In order to start a measurement, send a HIGH to all 
+        pins and set them to be output pins for about 10 microseconds, then 
+        make them input pins and set to LOW to disable pull-up resistors. The 
+        pins will then send each send a pulse whose length determines the 
+        blackness of the surface. A zero length pulse means completely white; 
+        a pulse approaching infinite length (always 1) means completely black. 
+        One should use a timeout of e.g. 2000 microseconds and consider all 
+        pulse lengths above a certain threshold (e.g. 300 microseconds) to be 
+        black.
+\end{itemize}  
+
+\section{References}
+
+\begin{itemize}
+  \item
+    Zumo pin numbering: \url{https://www.pololu.com/docs/0J57/5}
+  \item Arduino Uno pinout diagram: \url{http://i.stack.imgur.com/EsQpm.png}
+  \item Arduino internal numbering details:
+    \url{https://github.com/arduino/Arduino/blob/master/hardware/arduino/avr/variants/standard/pins_arduino.h#L50}:
+  \item \url{https://www.pololu.com/picture/view/0J5572} labeled image of the 
+        Zumo shield pins.
+  \item \url{https://www.pololu.com/docs/0J57/3.c} explains how to solder the 
+        battery level monitor jumper and how to read the battery voltage.
+  \item Reflectance sensor array pin numbering:
+    \url{https://github.com/pololu/zumo-shield/blob/master/ZumoReflectanceSensorArray/ZumoReflectanceSensorArray.h#L152}
+  \item
+    Documentation of the reflectance sensor array: 
+    \url{https://www.pololu.com/docs/0J57/2.c}
+  \item
+    \url{https://github.com/pololu/zumo-shield/blob/master/QTRSensors/QTRSensors.cpp}
+  \item Zumo schematic:
+    \url{https://www.pololu.com/file/download/zumo-shield-v1_2-schematic.pdf?file_id=0J779}
+  \item Arduino Uno schematic:
+    \url{https://www.arduino.cc/en/uploads/Main/Arduino_Uno_Rev3-schematic.pdf}
+  \item Arduino Uno: \url{https://www.arduino.cc/en/Main/ArduinoBoardUno}
+\end{itemize}
+
+\end{document}

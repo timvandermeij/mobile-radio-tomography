@@ -1,0 +1,215 @@
+\documentclass{article}
+
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\parindent=0pt
+\frenchspacing
+
+\usepackage[none]{hyphenat}
+\usepackage{parskip}
+\usepackage[hyphens]{url}
+\usepackage{hyperref}
+\usepackage{booktabs}
+
+\hypersetup{colorlinks, citecolor=red, filecolor=red, linkcolor=black, urlcolor=blue}
+
+\newcommand{\navio}{Navio$\stackrel{}{+}$}
+
+\begin{document}
+
+\title{Setting up the \navio{} flight controller hardware}
+\author{Leon Helwerda}
+\date{\today}
+
+\maketitle
+
+\section{Introduction}
+This document describes setting up the \navio{} flight controller, connecting 
+it to the Raspberry Pi and making it act as the autopilot for our mission 
+scripts. The setup procedure is partially based on the 
+\href{http://docs.emlid.com/navio/Navio-APM/hardware-setup-navio-plus/}{setup 
+instructions} by Emlid.
+
+\section{Setup}
+How to connect the \navio{} to the Raspberry Pi:
+
+\begin{itemize}
+  \item Remove the case from the Raspberry Pi. Remove the microSD card. Lower 
+        the base of the case slowly, although one will need to use more force 
+        than one is comfortable with. Start from the hardest long side, the one 
+        *without* mini-USB and other ports. Work your way around the base until 
+        it can be lifted out of it, then remove the top part so that the Pi 
+        motherboard is completely free.
+  \item Install the 4 gold-colored spacers using the small black screws. This 
+        can be done manually without any tools, but for some of the screws we 
+        might want to use a small screwdriver (hexagonal screw drive socket) 
+        for secure fastening.
+  \item Connect the extension header to the 40-pin GPIO ports. It should fit 
+        tight.
+  \item Place the \navio{} on top of the Raspberry Pi so that the extension 
+        header fits through the holes and fills them completely. Fix it onto 
+        the spacers using 4 more black screws.
+  \item Remember to add the microSD card back in the Pi port.
+\end{itemize}
+
+Removal is basically undoing the steps in reverse order. Removing the \navio{} 
+from the GPIO extender and the extenders from the Pi might be tricky when the 
+pins are connected tightly, so be sure not to pull it on one side too much.
+
+It is recommended to have a way to protect the entire circuit from air and 
+other flows. You can use a 3D-printed case, or use an own, larger protective 
+shield. The latter option has the advantage that we can extend it with other 
+modules without problem. This will be important when we run missions in open 
+air, where UV can also mess up the barometer.
+
+\section{Power source}
+For testing, we can power the Raspberry Pi and \navio{} using the micro-USB 
+port. It might be possible to power it with the current battery pack via the 
+power port of the \navio{}, but we need to be safe with this. During actual 
+flight, the \navio{} powers the Pi using a redundant power module on this port. 
+The power module needs a battery and an ESC/PDB, both using XT60 ports.
+
+For the servo rail, we need to connect a distinct power source to power the 
+servos. For testing, we can also power the servo rail, \navio{} and Pi from the 
+servo rail, as long as only one power source is connected. The \navio{} shield 
+protects itself and the Pi in case two distinct power sources are used. This is 
+to prevent the servos from stealing too much power during actual flight. 
+Certain drones and rovers have a BEC that should be connected here.
+
+\section{GPS}
+Connect the MCX GPS antenna on the golden connector on the board. Note that it 
+seems very hard to remove the antenna afterward. Be sure not to destroy the 
+connector when doing so.
+
+Note that this simple antenna will easily not receive any GPS info inside 
+buildings because there are no visible antennas (no GPS lock). To debug this, 
+there are some useful tools in the \href{https://github.com/emlid/Navio}{Navio 
+GitHub repository}. There is a simple GPS example that displays data in 
+a readable way, and there is a tool to convert the GPS SPI interface to a PTY 
+allowing it to be viewed in a screen or passed to a GPSd daemon. One can also 
+install the uBlox configuration/inspection utility known as u-center, although 
+it only works on Windows. It is possible to use a virtual machine with network 
+sharing such that the Pi, host laptop and virtual machine are all in the same 
+private subnet.
+
+\section{ArduPilot}
+Navio+ uses its own fork of ArduPilot for the flight controller. This work with 
+the Raspberry Pi and sends motor control signals via GPIO through the \navio{}.
+Follow the \href{http://docs.emlid.com/navio/Navio-APM/building-from-sources/}{ 
+installation instructions} to get it working. Cross-compiling is difficult to 
+set up, and building on the Raspberry Pi is quite slow but at least works. We 
+have a specific fork with a branch for our own changes for the Raspberry Pi and 
+\navio{}, for example to make compilation work on Arch Linux ARM or to make EKF 
+local positioning work.
+
+Follow these steps to make a build:
+
+\begin{verbatim}
+$ git clone https://github.com/lhelwerd/ardupilot.git -b navio-rpi
+$ cd ardupilot
+$ cd APMrover2
+$ make navio
+$ cp /tmp/ArduPilot.build/APMrover2.elf ~
+\end{verbatim}
+
+To speed up download, one can also pass {\tt --single-branch} to the first 
+command. The compilation builds a Linux ELF binary, which we store in the home 
+directory with the final command. One can also pass a build root different from 
+the temporary (in-memory) directory by prefixing {\tt 
+BUILDROOT=~/ardupilot/build} to the {\tt make} command, and adjusting the final 
+command accordingly. This has the advantage that recompiling is faster, such as 
+when manually debugging the software or updating it with {\tt git pull}. This 
+is because partial object files that have not changed since then are not lost 
+after a reboot. It might also be possible to use pure Linux builds (and maybe 
+even cross-compiled ones), but the Navio build contains specific components for 
+the Raspberry Pi and \navio{}, so it is recommended to use this build.
+
+\section{Distance sensor}
+
+To connect the distance sensor to the \navio{}, we use the UART port. An 
+example cable connection setup is shown in Table~\ref{tab:navio_distance}.
+
+\begin{table}[h!]
+  \centering
+  \begin{tabular}{llllll}
+    \toprule
+    Forwarded GPIO & \navio{} & DF13 port   & Male-to-male & Breadboard 
+    & Distance sensor \\
+    board pin      & pin name & cable color & cable color  & cable color
+    & pin name        \\
+    \midrule
+    (2) & 5V & Red & Green & Red & POWER \\
+    (8) & TX & White & Nothing & & \\
+    (10) & RX & Blue & Nothing & & \\
+    11 & IO17 & Yellow & Light blue & Yellow & Trigger \\
+    12 & IO18 & Green & Purple & Green & Echo \\
+    (6) & GND & Black & Gray & Blue & GND \\
+    \bottomrule
+  \end{tabular}
+  \caption{Example connection setup for distance sensor on \navio{}}
+  \label{tab:navio_distance}
+\end{table}
+
+After setting this us, start the distance sensor test script with
+{\tt sudo python2 distance\_sensor\_physical.py --trigger-pin 11 --echo-pin 
+12}.
+
+After testing that it works, change the settings to use these pins by default 
+for the mission scripts.
+
+\section{Startup}
+We have to start up the mission script or MAVLink ground station {\it before} 
+we start the autopilot. This is because the flight controller will otherwise 
+spew read errors if it cannot send its messages somewhere else. The ground 
+station can run on the Pi or on a connected laptop (during development). The 
+ground station connection  and can be realized using mavproxy or a full-fledged 
+Mission Planner. For the former, ensure that the mavproxy Python library is 
+installed and the path to {\tt mavproxy.py}, such as {\tt /root/.local/bin/}, 
+is in the {\tt \$PATH} environment variable of the user running that command 
+(the root user in the case of the Pi, as shown below).
+
+Take heed of the following notes while setting up the autopilot:
+
+\begin{itemize}
+  \item For all commands using {\tt su} below, enter the root password (root), 
+        while for {\tt sudo}, enter the sudoer password (alarm).
+  \item Here, we prefix normal commands with {\tt \$}, commands run as su with 
+        {\tt \#} and key presses with {\tt >}.
+  \item Replace the IP addresses {\tt 10.42.0.10} below if we are using another 
+        Pi.
+\end{itemize}
+
+The following commands and key presses set up for the flight controller and 
+ground station on one and the same Pi:
+
+\begin{verbatim}
+$ cd ~
+$ screen
+> CTRL-a c (to open another window)
+$ su
+# export PATH="$PATH:/root/.local/bin"
+# mavproxy.py --master 10.42.0.10:14550
+> CTRL-a p (to toggle to the previous window)
+$ sudo ./APMrover2.elf -A udp:10.42.0.10:14550
+\end{verbatim}
+
+Toggle back to the next window with {\tt > CTRL-a n} and one should see startup 
+messages. To replace the MAVLink with out mission script, run {\tt python 
+mission\_basic.py --connect 10.42.0.10:14550} instead. Make sure that all the 
+settings are correct.
+
+If running the ground station on the computer, follow these steps {\it first}:
+\begin{itemize}
+  \item Make sure that the ModemManager package is not installed, remove it if 
+        possible.
+  \item If the computer has a firewall, either temporarily disable it or allow 
+        connections on port 14550 for TCP {\it and} UDP.
+  \item Start the ground station. Note the use of the IP address of the master. 
+        Use {\tt mavproxy.py --master 10.42.0.1:14550 --console} to start it on 
+        the laptop. One can also start the APM Planner 2.
+\end{itemize}
+
+Then on the Pi, run the command {\tt sudo ./APMrover2.elf -A 
+udp:10.42.0.1:14550}. Note the difference in IP addresses from the commands in 
+the earlier example.
+
+\end{document}

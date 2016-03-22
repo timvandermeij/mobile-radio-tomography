@@ -12,6 +12,7 @@
 \hypersetup{colorlinks, citecolor=red, filecolor=red, linkcolor=black, urlcolor=blue}
 
 \newcommand{\arch}{{\color{red} (Arch)}}
+\newcommand{\navio}{Navio$\stackrel{}{+}$}
 
 \begin{document}
 
@@ -188,7 +189,8 @@ over.
           \url{http://www.element14.com/community/servlet/JiveServlet/previewBody/73950-102-4-309126/GPIO_Pi2.png}
           for an overview of the GPIO pins for the Raspberry Pi model 2B and
           \url{http://pi4j.com/images/j8header-photo.png} for how the pins are
-          numbered.
+          numbered. For connecting the distance sensor to the \navio{}, see the 
+          file related to that setup.
     \item Connect to the device via SSH using {\tt ssh alarm@10.42.0.*}, become
           root user using {\tt su} and run {\tt pacman -S gcc sudo}.
     \item Run {\tt vim /etc/sudoers}, copy the root user line under ``User
@@ -197,30 +199,33 @@ over.
     \item Run {\tt pip2 install rpi.gpio} (still as root).
     \item Run {\tt su alarm} and place the file {\tt raspberry-pi/vimrc} in
           {\tt $\sim$/.vimrc}.
-    \item Run the distance sensor script with {\tt python2 distance\_sensor\_physical.py}
+    \item Run the distance sensor test script with {\tt python2 
+          distance\_sensor\_physical.py}
           and distance measurements should be displayed continuously.
 \end{itemize}
 
 \section{Autostart configuration steps}
-After booting the Raspberry Pi we immediately want to run the physical XBee
-sensor code instead of starting the script manually using an ethernet cable
-every time. To maintain control over the process we wish to run the process
-in a detached screen. To achieve all this, the following actions have to be
-performed:
+After booting the Raspberry Pi we immediately want to run the mission script 
+instead of starting the script manually using an ethernet cable every time. To 
+maintain control over the process we wish to run the process in a detached 
+screen. To achieve all this, the following actions have to be performed:
 
 \begin{itemize}
     \item Make sure that the repository is cloned in
           {\tt /home/alarm/mobile-radio-tomography}. If not, edit
           {\tt raspberry-pi/mobile-radio-tomography.service} to set the
-          correct path.
+          correct path, and change the path in {\tt raspberry-pi-start.sh}.
     \item Become root: {\tt su}.
     \item Place the file {\tt raspberry-pi/mobile-radio-tomography.service} in
           {\tt /etc/systemd/system}.
     \item Run {\tt systemctl enable mobile-radio-tomography.service}.
-    \item Reboot the device: {\tt reboot}. After rebooting, the physical
-          XBee sensor should be running. Verify this by checking if the LEDs on
-          the XBee sensor are blinking and if running {\tt screen -r sensor}
-          opens the detached screen.
+    \item Reboot the device: {\tt reboot}. After rebooting, the mission script 
+          should be running. Depending on settings, one can verify this by 
+          checking if the LEDs on the XBee sensor are blinking, if the 
+          serial/direct interface to the robot vehicle is active or if the 
+          autopilot is starting. One can also log in and check that running 
+          {\tt screen -r sensor} opens the detached screen, or check whether 
+          log files appear in the {\tt logs} directory.
 \end{itemize}
 
 \section{References}
