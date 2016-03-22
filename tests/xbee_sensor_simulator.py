@@ -54,7 +54,7 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
 
     def test_initialization(self):
         # The ID of the sensor must be set.
-        self.assertEqual(self.sensor._id, self.sensor_id)
+        self.assertEqual(self.sensor.id, self.sensor_id)
 
         # The next timestamp must be zero.
         self.assertEqual(self.sensor._next_timestamp, 0)

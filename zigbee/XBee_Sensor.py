@@ -68,6 +68,10 @@ class XBee_Sensor(Threadable):
         self._receive_callback = receive_callback
         self._valid_callback = valid_callback
 
+    @property
+    def id(self):
+        return self._id
+
     def get_identity(self):
         """
         Get the identity (ID, address and join status) of this sensor.
