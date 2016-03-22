@@ -100,10 +100,9 @@ class Robot_Vehicle(Vehicle):
             if self._state.current_direction == self._state.target_direction:
                 # When we are done rotating, stand still again before 
                 # determining our next moves.
+                self._direction = self._state.current_direction
                 self._state = Robot_State("intersection")
                 self.set_speeds(0, 0)
-
-                self._direction = self._state.current_direction
                 self._line_follower.set_direction(self._direction)
         elif self._state.name == "move":
             if self._last_diverged_time is not None:
@@ -302,7 +301,7 @@ class Robot_Vehicle(Vehicle):
     def attitude(self):
         yaw = self._get_yaw()
 
-        return Attitude(0.0, 0.0, yaw)
+        return Attitude(0.0, yaw, 0.0)
 
     def set_yaw(self, heading, relative=False, direction=1):
         if not self._at_intersection():
