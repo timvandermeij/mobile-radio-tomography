@@ -5,7 +5,6 @@ from __init__ import __package__
 from core.Thread_Manager import Thread_Manager
 from core.USB_Manager import USB_Manager
 from settings import Arguments
-from zigbee.XBee_Packet import XBee_Packet
 from zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
 
 def get_location():
@@ -20,7 +19,7 @@ def receive_packet(packet):
     Handle a custom packet that has been sent to this sensor.
     """
 
-    print("> Custom packet received: {}".format(packet.get_all()))
+    pass
 
 def location_valid(other_valid=None):
     return True
@@ -39,19 +38,6 @@ def main(argv):
         arguments.check_help()
 
         xbee_sensor.activate()
-
-        # Enqueue a custom packet.
-        if xbee_sensor._id == 0:
-            packet = XBee_Packet()
-            packet.set("specification", "waypoint_add")
-            packet.set("latitude", 123456789.12)
-            packet.set("longitude", 123459678.34)
-            packet.set("index", 22)
-            packet.set("to_id", 2)
-            xbee_sensor.enqueue(packet)
-            time.sleep(1)
-
-        # Start the signal strength measurements.
         xbee_sensor.start()
 
         while True:

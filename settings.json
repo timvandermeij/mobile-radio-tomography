@@ -411,7 +411,7 @@
         "name": "XBee TDMA scheduler",
         "parent": "xbee_base",
         "settings": {
-            "sweep_delay": 0.5
+            "sweep_delay": 0.4
         }
     }
 }
