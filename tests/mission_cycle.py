@@ -25,10 +25,6 @@ class TestMissionCycle(ThreadableTestCase, USBManagerTestCase, LocationTestCase,
         settings = self.arguments.get_settings("mission")
         self.mission = Mission_Cycle(self.environment, settings)
 
-    def tearDown(self):
-        super(TestMissionCycle, self).tearDown()
-        self.vehicle.deactivate()
-
     def test_setup(self):
         with patch('sys.stdout'):
             self.mission.setup()

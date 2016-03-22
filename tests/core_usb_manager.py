@@ -46,6 +46,7 @@ class USBManagerTestCase(unittest.TestCase):
     def tearDown(self):
         super(USBManagerTestCase, self).tearDown()
 
+        self.usb_manager.clear()
         os.close(self._slave)
 
 class TestCoreUSBManager(USBManagerTestCase):
