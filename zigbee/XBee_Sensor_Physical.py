@@ -197,7 +197,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
         """
 
         # Create and send the RSSI broadcast packets.
-        packet = self.make_rssi_broadcast_packet()
+        packet = self._make_rssi_broadcast_packet()
         packet.set("sensor_id", self._id)
 
         for index in xrange(1, self._number_of_sensors + 1):
@@ -241,7 +241,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
             packet = XBee_Packet()
             packet.unserialize(raw_packet["rf_data"])
 
-            if self.check_receive(packet):
+            if self._check_receive(packet):
                 return
 
             if packet.get("specification") == "ntp":
@@ -265,7 +265,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
             self._next_timestamp = self._scheduler.synchronize(packet)
 
             # Create the packet for the ground station.
-            ground_station_packet = self.make_rssi_ground_station_packet(packet)
+            ground_station_packet = self._make_rssi_ground_station_packet(packet)
 
             # Generate a frame ID to be able to match this packet and the
             # associated RSSI (DB command) request.

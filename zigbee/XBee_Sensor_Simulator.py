@@ -117,7 +117,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             if i == self._id:
                 continue
 
-            packet = self.make_rssi_broadcast_packet()
+            packet = self._make_rssi_broadcast_packet()
             packet.set("sensor_id", self._id)
             self._sensor.sendto(packet.serialize(), (self._ip, self._port + i))
 
@@ -141,12 +141,12 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         Receive and process packets from all other sensors in the network.
         """
 
-        if not self.check_receive(packet):
+        if not self._check_receive(packet):
             if self._id > 0:
                 self._next_timestamp = self._scheduler.synchronize(packet)
 
                 # Create and complete the packet for the ground station.
-                ground_station_packet = self.make_rssi_ground_station_packet(packet)
+                ground_station_packet = self._make_rssi_ground_station_packet(packet)
                 ground_station_packet.set("rssi", random.randint(0, 60))
                 frame_id = chr(random.randint(1, 255))
                 self._data[frame_id] = ground_station_packet

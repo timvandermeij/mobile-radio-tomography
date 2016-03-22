@@ -144,7 +144,7 @@ class XBee_Sensor(Threadable):
     def _format_address(self, address):
         raise NotImplementedError("Subclasses must implement `_format_address(address)`")
 
-    def check_receive(self, packet):
+    def _check_receive(self, packet):
         """
         Check whether the given `packet` should be given to the receive callback
         rather than handling it internally.
@@ -159,7 +159,7 @@ class XBee_Sensor(Threadable):
 
         return False
 
-    def make_rssi_broadcast_packet(self):
+    def _make_rssi_broadcast_packet(self):
         """
         Create an XBee_Packet object containing current location data.
 
@@ -176,7 +176,7 @@ class XBee_Sensor(Threadable):
 
         return packet
 
-    def make_rssi_ground_station_packet(self, rssi_packet):
+    def _make_rssi_ground_station_packet(self, rssi_packet):
         """
         Create an XBee_Packet object containing location data of the current
         XBee and data from an XBee_Packet `rssi_packet`. The `rssi_packet`
