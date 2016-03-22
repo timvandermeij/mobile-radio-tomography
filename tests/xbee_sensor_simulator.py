@@ -54,7 +54,7 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
 
     def test_initialization(self):
         # The ID of the sensor must be set.
-        self.assertEqual(self.sensor._id, self.sensor_id)
+        self.assertEqual(self.sensor.id, self.sensor_id)
 
         # The next timestamp must be zero.
         self.assertEqual(self.sensor._next_timestamp, 0)
@@ -96,9 +96,11 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
         # Packets that do not contain a destination should be broadcasted.
         # We subtract one because we do not send to ourself.
         packet = XBee_Packet()
-        packet.set("specification", "memory_map_chunk")
+        packet.set("specification", "waypoint_add")
         packet.set("latitude", 123456789.12)
         packet.set("longitude", 123459678.34)
+        packet.set("index", 22)
+        packet.set("to_id", 2)
         self.sensor.enqueue(packet)
         self.assertEqual(self.sensor._queue.qsize(),
                          self.settings.get("number_of_sensors") - 1)
@@ -106,9 +108,11 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
 
         # Valid packets should be enqueued.
         packet = XBee_Packet()
-        packet.set("specification", "memory_map_chunk")
+        packet.set("specification", "waypoint_add")
         packet.set("latitude", 123456789.12)
         packet.set("longitude", 123459678.34)
+        packet.set("index", 22)
+        packet.set("to_id", 2)
         self.sensor.enqueue(packet, to=2)
         self.assertEqual(self.sensor._queue.get(), {
             "packet": packet,
@@ -123,16 +127,15 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
     def test_send_custom_packets(self):
         # If the queue contains packets, some of them must be sent.
         packet = XBee_Packet()
-        packet.set("specification", "memory_map_chunk")
+        packet.set("specification", "waypoint_add")
         packet.set("latitude", 123456789.12)
         packet.set("longitude", 123459678.34)
+        packet.set("index", 22)
+        packet.set("to_id", 2)
         self.sensor.enqueue(packet, to=2)
 
-        queue_length_before = self.sensor._queue.qsize()
         self.sensor._send_custom_packets()
-        custom_packet_limit = self.settings.get("custom_packet_limit")
-        queue_length_after = max(0, queue_length_before - custom_packet_limit)
-        self.assertEqual(self.sensor._queue.qsize(), queue_length_after)
+        self.assertEqual(self.sensor._queue.qsize(), 0)
 
     def test_receive(self):
         # Create a packet from sensor 2 to the current sensor.

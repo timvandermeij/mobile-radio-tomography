@@ -213,26 +213,10 @@
         "settings": {
             "number_of_sensors": 2,
             "xbee_id": 0,
-            "custom_packet_limit": 1,
+            "custom_packet_delay": 0.1,
             "loop_delay": 0.01,
             "startup_delay": 1,
             "specifications": {
-                "memory_map_chunk": [
-                    {
-                        "name": "id",
-                        "format": "B",
-                        "value": 1,
-                        "private": false
-                    },
-                    {
-                        "name": "latitude",
-                        "format": "d"
-                    },
-                    {
-                        "name": "longitude",
-                        "format": "d"
-                    }
-                ],
                 "rssi_broadcast": [
                     {
                         "name": "id",
@@ -418,7 +402,6 @@
                 "\\x00\\x13\\xa2\\x00@\\xe6o5",
                 "\\x00\\x13\\xa2\\x00@\\xe6n\\xb9"
             ],
-            "ground_station_delay": 0.1,
             "ntp_delay": 3,
             "response_delay": 0.3,
             "synchronize": false
@@ -428,7 +411,7 @@
         "name": "XBee TDMA scheduler",
         "parent": "xbee_base",
         "settings": {
-            "sweep_delay": 0.5
+            "sweep_delay": 0.4
         }
     }
 }

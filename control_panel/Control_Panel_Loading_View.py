@@ -46,7 +46,7 @@ class Control_Panel_Loading_View(Control_Panel_View):
             self._controller.app.processEvents()
 
             self._controller.xbee.setup()
-            if self._controller.xbee._id != 0:
+            if self._controller.xbee.id != 0:
                 QtGui.QMessageBox.critical(self._controller.central_widget, "XBee error",
                                            "The inserted XBee device is not a ground station.")
                 self._controller.window.close()

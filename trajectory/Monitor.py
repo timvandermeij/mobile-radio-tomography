@@ -1,6 +1,4 @@
 import time
-from dronekit import LocationGlobalRelative
-from ..zigbee.XBee_Packet import XBee_Packet
 
 class Monitor(object):
     """
@@ -33,7 +31,6 @@ class Monitor(object):
         return self.settings.get("viewer")
 
     def setup(self):
-        self.environment.add_packet_action("memory_map_chunk", self.add_memory_map)
         self.memory_map = self.mission.get_memory_map()
 
         if self.settings.get("plot"):
@@ -83,19 +80,10 @@ class Monitor(object):
                     # the angle's direction. This is again a "cheat" for 
                     # checking if walls get visualized correctly.
                     sensor.draw_current_edge(self.plot.get_plot(), self.memory_map, self.colors[i % len(self.colors)])
-                if xbee_sensor:
-                    packet = XBee_Packet()
-                    packet.set("specification", "memory_map_chunk")
-                    packet.set("latitude", location.lat)
-                    packet.set("longitude", location.lon)
-                    xbee_sensor.enqueue(packet)
 
                 print("=== [!] Distance to object: {} m (yaw {}, pitch {}) ===".format(sensor_distance, yaw, pitch))
 
             i = i + 1
-
-        if xbee_sensor:
-            xbee_sensor.activate()
 
         # Display the current memory map interactively.
         if self.plot:
@@ -117,21 +105,19 @@ class Monitor(object):
     def sleep(self):
         time.sleep(self.step_delay)
 
-    def add_memory_map(self, packet):
-        loc = LocationGlobalRelative(packet.get("latitude"), packet.get("longitude"), 0.0)
-        idx = self.memory_map.get_index(loc)
-        print("Received location {}, index {} from other vehicle".format(loc, idx))
-        try:
-            self.memory_map.set(idx, 1)
-        except KeyError:
-            pass
+    def start(self):
+        self.mission.start()
+
+        xbee_sensor = self.environment.get_xbee_sensor()
+        if xbee_sensor is not None:
+            xbee_sensor.start()
 
     def stop(self):
         self.mission.stop()
 
         xbee_sensor = self.environment.get_xbee_sensor()
         if xbee_sensor is not None:
-            xbee_sensor.deactivate()
+            xbee_sensor.stop()
 
         if self.plot:
             self.plot.close()

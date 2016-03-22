@@ -34,7 +34,6 @@ class XBee_Sensor_Simulator(XBee_Sensor):
     def activate(self):
         """
         Activate the sensor to send and receive packets.
-        The ground sensor (with ID 0) can only receive packets.
         """
 
         super(XBee_Sensor_Simulator, self).activate()
@@ -53,9 +52,17 @@ class XBee_Sensor_Simulator(XBee_Sensor):
 
         try:
             while self._active:
-                if self._id > 0 and time.time() >= self._next_timestamp:
+                # If the sensor has been activated, this loop will only send
+                # enqueued custom packets. If the sensor has been started, we
+                # stop sending custom packets and start performing signal
+                # strength measurements.
+                if not self._started:
+                    self._send_custom_packets()
+                    time.sleep(self._custom_packet_delay)
+                elif self._id > 0 and time.time() >= self._next_timestamp:
                     self._next_timestamp = self._scheduler.get_next_timestamp()
                     self._send()
+                    time.sleep(self._loop_delay)
 
                 # Check if there is data to be processed.
                 try:
@@ -68,8 +75,6 @@ class XBee_Sensor_Simulator(XBee_Sensor):
                 packet = XBee_Packet()
                 packet.unserialize(data)
                 self._receive(packet)
-
-                time.sleep(self._loop_delay)
         except:
             super(XBee_Sensor_Simulator, self).interrupt()
 
@@ -111,46 +116,36 @@ class XBee_Sensor_Simulator(XBee_Sensor):
             if i == self._id:
                 continue
 
-            packet = self.make_rssi_broadcast_packet()
+            packet = self._make_rssi_broadcast_packet()
             packet.set("sensor_id", self._id)
-            self._sensor.sendto(packet.serialize(), (self._ip, self._port + i))
-
-        # Send custom packets to their destination. Since the time slots are
-        # limited in length, so is the number of custom packets we transfer
-        # in each sweep.
-        self._send_custom_packets()
+            self._send_tx_frame(packet, i)
 
         # Send the sweep data to the ground sensor.
         for frame_id in self._data.keys():
             packet = self._data[frame_id]
-            self._sensor.sendto(packet.serialize(), (self._ip, self._port))
+            self._send_tx_frame(packet, 0)
             self._data.pop(frame_id)
 
-    def _send_custom_packets(self):
+    def _send_tx_frame(self, packet, to=None):
         """
-        Send custom packets to their destinations.
+        Send a TX frame to another sensor.
         """
 
-        limit = self._settings.get("custom_packet_limit")
-        while not self._queue.empty():
-            if limit == 0:
-                break
+        super(XBee_Sensor_Simulator, self)._send_tx_frame(packet, to)
 
-            limit -= 1
-            item = self._queue.get()
-            self._sensor.sendto(item["packet"].serialize(), (self._ip, self._port + item["to"]))
+        self._sensor.sendto(packet.serialize(), (self._ip, self._port + to))
 
     def _receive(self, packet):
         """
         Receive and process packets from all other sensors in the network.
         """
 
-        if not self.check_receive(packet):
+        if not self._check_receive(packet):
             if self._id > 0:
                 self._next_timestamp = self._scheduler.synchronize(packet)
 
                 # Create and complete the packet for the ground station.
-                ground_station_packet = self.make_rssi_ground_station_packet(packet)
+                ground_station_packet = self._make_rssi_ground_station_packet(packet)
                 ground_station_packet.set("rssi", random.randint(0, 60))
                 frame_id = chr(random.randint(1, 255))
                 self._data[frame_id] = ground_station_packet

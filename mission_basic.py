@@ -62,7 +62,7 @@ class Setup(object):
 
     def start(self):
         print("Starting mission")
-        self.mission.start()
+        self.monitor.start()
 
         # Monitor mission
         try:

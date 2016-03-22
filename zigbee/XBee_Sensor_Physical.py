@@ -26,10 +26,8 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._synchronized = False
 
         # Prepare the packet and sensor data.
-        self._custom_packet_limit = self._settings.get("custom_packet_limit")
         self._number_of_sensors = self._settings.get("number_of_sensors")
         self._sensors = self._settings.get("sensors")
-        self._ground_station_delay = self._settings.get("ground_station_delay")
         for index, address in enumerate(self._sensors):
             self._sensors[index] = address.decode("string_escape")
 
@@ -51,8 +49,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
     def activate(self):
         """
-        Activate the sensor by sending a packet if it is not a ground station.
-        The sensor always receives packets asynchronously.
+        Activate the sensor to send and receive packets.
         """
 
         super(XBee_Sensor_Physical, self).activate()
@@ -72,16 +69,21 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
         try:
             while self._active:
+                # Ensure that the sensor has joined the network.
                 if not self._joined:
+                    time.sleep(self._loop_delay)
                     continue
 
-                if self._id > 0 and time.time() >= self._next_timestamp:
+                # If the sensor has been activated, this loop will only send
+                # enqueued custom packets. If the sensor has been started, we
+                # stop sending custom packets and start performing signal
+                # strength measurements.
+                if not self._started:
+                    self._send_custom_packets()
+                    time.sleep(self._custom_packet_delay)
+                elif self._id > 0 and time.time() >= self._next_timestamp:
                     self._next_timestamp = self._scheduler.get_next_timestamp()
                     self._send()
-                elif self._id == 0:
-                    # The ground station is only allowed to send custom packets.
-                    self._send_custom_packets()
-                    time.sleep(self._ground_station_delay)
 
                 time.sleep(self._loop_delay)
         except:
@@ -157,9 +159,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
             while not self._synchronized:
                 # Send the NTP packet to the ground station.
                 packet.set("timestamp_1", time.time())
-                self._sensor.send("tx", dest_addr_long=self._sensors[0],
-                                  dest_addr="\xFF\xFE", frame_id="\x00",
-                                  data=packet.serialize())
+                self._send_tx_frame(packet, 0)
                 time.sleep(ntp_delay)
 
     def _ntp(self, packet):
@@ -194,21 +194,14 @@ class XBee_Sensor_Physical(XBee_Sensor):
         """
 
         # Create and send the RSSI broadcast packets.
-        packet = self.make_rssi_broadcast_packet()
+        packet = self._make_rssi_broadcast_packet()
         packet.set("sensor_id", self._id)
 
         for index in xrange(1, self._number_of_sensors + 1):
             if index == self._id:
                 continue
 
-            self._sensor.send("tx", dest_addr_long=self._sensors[index],
-                              dest_addr="\xFF\xFE", frame_id="\x00",
-                              data=packet.serialize())
-
-        # Send custom packets to their destinations. Since the time slots
-        # are limited in length, so is the number of custom packets we
-        # send in each sweep.
-        self._send_custom_packets()
+            self._send_tx_frame(packet, index)
 
         # Send the sweep data to the ground sensor and clear the list
         # for the next round.
@@ -217,27 +210,18 @@ class XBee_Sensor_Physical(XBee_Sensor):
             if packet.get("rssi") is None:
                 continue
 
-            self._sensor.send("tx", dest_addr_long=self._sensors[0],
-                              dest_addr="\xFF\xFE", frame_id="\x00",
-                              data=packet.serialize())
-
+            self._send_tx_frame(packet, 0)
             self._data.pop(frame_id)
 
-    def _send_custom_packets(self):
+    def _send_tx_frame(self, packet, to=None):
         """
-        Send custom packets to their destinations.
+        Send a TX frame to another sensor.
         """
 
-        limit = self._custom_packet_limit
-        while not self._queue.empty():
-            if limit == 0:
-                break
+        super(XBee_Sensor_Physical, self)._send_tx_frame(packet, to)
 
-            limit -= 1
-            item = self._queue.get()
-            self._sensor.send("tx", dest_addr_long=self._sensors[item["to"]],
-                              dest_addr="\xFF\xFE", frame_id="\x00",
-                              data=item["packet"].serialize())
+        self._sensor.send("tx", dest_addr_long=self._sensors[to], dest_addr="\xFF\xFE",
+                          frame_id="\x00", data=packet.serialize())
 
     def _receive(self, raw_packet):
         """
@@ -248,16 +232,14 @@ class XBee_Sensor_Physical(XBee_Sensor):
             packet = XBee_Packet()
             packet.unserialize(raw_packet["rf_data"])
 
-            if self.check_receive(packet):
+            if self._check_receive(packet):
                 return
 
             if packet.get("specification") == "ntp":
                 if packet.get("timestamp_2") == 0:
                     packet.set("timestamp_2", time.time())
                     packet.set("timestamp_3", time.time())
-                    self._sensor.send("tx", dest_addr_long=self._sensors[packet.get("sensor_id")],
-                                      dest_addr="\xFF\xFE", frame_id="\x00",
-                                      data=packet.serialize())
+                    self._send_tx_frame(packet, packet.get("sensor_id"))
                 else:
                     packet.set("timestamp_4", time.time())
                     self._ntp(packet)
@@ -272,7 +254,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
             self._next_timestamp = self._scheduler.synchronize(packet)
 
             # Create the packet for the ground station.
-            ground_station_packet = self.make_rssi_ground_station_packet(packet)
+            ground_station_packet = self._make_rssi_ground_station_packet(packet)
 
             # Generate a frame ID to be able to match this packet and the
             # associated RSSI (DB command) request.

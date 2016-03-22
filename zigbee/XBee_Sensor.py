@@ -58,13 +58,19 @@ class XBee_Sensor(Threadable):
         self._data = {}
         self._queue = Queue.Queue()
         self._loop_delay = self._settings.get("loop_delay")
+        self._custom_packet_delay = self._settings.get("custom_packet_delay")
         self._active = False
         self._joined = False
+        self._started = False
 
         self._usb_manager = usb_manager
         self._location_callback = location_callback
         self._receive_callback = receive_callback
         self._valid_callback = valid_callback
+
+    @property
+    def id(self):
+        return self._id
 
     def get_identity(self):
         """
@@ -80,6 +86,20 @@ class XBee_Sensor(Threadable):
 
     def setup(self):
         raise NotImplementedError("Subclasses must implement `setup()`")
+
+    def start(self):
+        """
+        Start the signal strength measurements (and no longer send custom packets).
+        """
+
+        self._started = True
+
+    def stop(self):
+        """
+        Stop the signal strength measurements (and send custom packets).
+        """
+
+        self._started = False
 
     def _loop(self):
         raise NotImplementedError("Subclasses must implement `_loop()`")
@@ -120,7 +140,24 @@ class XBee_Sensor(Threadable):
         raise NotImplementedError("Subclasses must implement `_send()`")
 
     def _send_custom_packets(self):
-        raise NotImplementedError("Subclasses must implement `_send_custom_packets()`")
+        """
+        Send custom packets to their destinations.
+        """
+
+        while not self._queue.empty():
+            item = self._queue.get()
+            self._send_tx_frame(item["packet"], item["to"])
+
+    def _send_tx_frame(self, packet, to=None):
+        """
+        Send a TX frame to another sensor.
+        """
+
+        if not isinstance(packet, XBee_Packet):
+            raise ValueError("Invalid packet specified")
+
+        if to is None:
+            raise ValueError("Invalid destination specified: {}".format(to))
 
     def _receive(self, packet):
         raise NotImplementedError("Subclasses must implement `_receive(packet)`")
@@ -128,7 +165,7 @@ class XBee_Sensor(Threadable):
     def _format_address(self, address):
         raise NotImplementedError("Subclasses must implement `_format_address(address)`")
 
-    def check_receive(self, packet):
+    def _check_receive(self, packet):
         """
         Check whether the given `packet` should be given to the receive callback
         rather than handling it internally.
@@ -143,7 +180,7 @@ class XBee_Sensor(Threadable):
 
         return False
 
-    def make_rssi_broadcast_packet(self):
+    def _make_rssi_broadcast_packet(self):
         """
         Create an XBee_Packet object containing current location data.
 
@@ -160,7 +197,7 @@ class XBee_Sensor(Threadable):
 
         return packet
 
-    def make_rssi_ground_station_packet(self, rssi_packet):
+    def _make_rssi_ground_station_packet(self, rssi_packet):
         """
         Create an XBee_Packet object containing location data of the current
         XBee and data from an XBee_Packet `rssi_packet`. The `rssi_packet`
