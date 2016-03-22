@@ -885,7 +885,7 @@ class Mission_XBee(Mission_Auto):
 
     def _complete_waypoints(self, packet):
         xbee_sensor = self.environment.get_xbee_sensor()
-        if xbee_sensor.id != packet.get("to_id"):
+        if xbee_sensor._id != packet.get("to_id"):
             # Ignore packets not meant for us.
             return
 
@@ -910,7 +910,7 @@ class Mission_XBee(Mission_Auto):
         ack_packet = XBee_Packet()
         ack_packet.set("specification", "waypoint_ack")
         ack_packet.set("next_index", self.vehicle.count_waypoints())
-        ack_packet.set("sensor_id", xbee_sensor.id)
+        ack_packet.set("sensor_id", xbee_sensor._id)
 
         xbee_sensor.enqueue(ack_packet, to=0)
 
@@ -920,7 +920,7 @@ class Mission_XBee(Mission_Auto):
         """
 
         xbee_sensor = self.environment.get_xbee_sensor()
-        if xbee_sensor.id != packet.get("to_id"):
+        if xbee_sensor._id != packet.get("to_id"):
             # Ignore packets not meant for us.
             return
 
@@ -937,7 +937,7 @@ class Mission_XBee(Mission_Auto):
         """
 
         xbee_sensor = self.environment.get_xbee_sensor()
-        if xbee_sensor.id != packet.get("to_id"):
+        if xbee_sensor._id != packet.get("to_id"):
             # Ignore packets not meant for us.
             return
 
