@@ -34,41 +34,34 @@ class Robot_Vehicle(Vehicle):
     def __init__(self, arguments, geometry, thread_manager, usb_manager):
         super(Robot_Vehicle, self).__init__(arguments, geometry, thread_manager, usb_manager)
 
-        settings = arguments.get_settings("vehicle_robot")
+        self.arguments = arguments
+        self.settings = self.arguments.get_settings("vehicle_robot")
 
         self._move_speed = 0.0
 
         # Speed ratio of the current move speed when we diverge from a line.
-        self._diverged_speed = settings.get("diverged_speed")
+        self._diverged_speed = self.settings.get("diverged_speed")
         # Time in seconds to keep adjusted speed when we diverge from a line.
-        self._diverged_time = settings.get("diverged_time")
+        self._diverged_time = self.settings.get("diverged_time")
         self._last_diverged_time = None
 
         # Speed in m/s to use when we rotate on an intersection.
-        self._rotate_speed = settings.get("rotate_speed")
+        self._rotate_speed = self.settings.get("rotate_speed")
 
         # The home location coordinates of the robot. The robot should be 
         # placed at the intersection corresponding to these coordinates to 
         # begin with.
-        self._home_location = tuple(settings.get("home_location"))
+        self._home_location = tuple(self.settings.get("home_location"))
         self._location = self._home_location
         # The starting direction of the robot. The robot should be aligned with 
         # this direction to begin with.
-        self._direction = settings.get("home_direction")
+        self._direction = self.settings.get("home_direction")
 
-        if self._line_follower_class is None:
-            raise NotImplementedError("Subclasses must provide a `_line_follower_class` property")
-
-        # The delay of the sensor reading loop in the line follower thread.
-        line_follower_delay = settings.get("line_follower_delay")
-        self._line_follower = self._line_follower_class(
-            self._home_location, self._direction,
-            self.line_follower_callback, arguments,
-            thread_manager, usb_manager, line_follower_delay
-        )
+        self._line_follower = None
+        self._setup_line_follower(thread_manager, usb_manager)
 
         # The delay of the robot vehicle state loop.
-        self._loop_delay = settings.get("vehicle_delay")
+        self._loop_delay = self.settings.get("vehicle_delay")
 
         self._waypoints = []
         self._current_waypoint = -1
@@ -80,6 +73,18 @@ class Robot_Vehicle(Vehicle):
         # - rotate: The robot is rotating at an intersection. See
         #   Robot_State_Rotate
         self._state = Robot_State("intersection")
+
+    def _setup_line_follower(self, thread_manager, usb_manager):
+        if self._line_follower_class is None:
+            raise NotImplementedError("Subclasses must provide a `_line_follower_class` property")
+
+        # The delay of the sensor reading loop in the line follower thread.
+        line_follower_delay = self.settings.get("line_follower_delay")
+        self._line_follower = self._line_follower_class(
+            self._home_location, self._direction,
+            self.line_follower_callback, self.arguments,
+            thread_manager, usb_manager, line_follower_delay
+        )
         self._line_follower.set_state(Line_Follower_State.AT_INTERSECTION)
 
     def _state_loop(self):
@@ -106,7 +111,11 @@ class Robot_Vehicle(Vehicle):
                 if diff >= self._diverged_time:
                     self.set_speeds(self.speed, self.speed)
                     self._last_diverged_time = None
-        elif self._state.name == "intersection":
+        else:
+            self._check_intersection()
+
+    def _check_intersection(self):
+        if self._state.name == "intersection":
             if self._at_current_waypoint():
                 # We reached the current waypoint.
                 if self._mode.name == "AUTO":
@@ -191,13 +200,16 @@ class Robot_Vehicle(Vehicle):
             self.deactivate()
 
     def activate(self):
+        if self._line_follower is not None:
+            self._line_follower.activate()
+
         self._running = True
-        self._line_follower.activate()
         thread.start_new_thread(self._state_loop, ())
 
     def deactivate(self):
         self._running = False
-        self._line_follower.deactivate()
+        if self._line_follower is not None:
+            self._line_follower.deactivate()
 
     def add_waypoint(self, location):
         if isinstance(location, LocationLocal):
@@ -339,15 +351,21 @@ class Robot_Vehicle(Vehicle):
 
             return
 
-        next_waypoint = self._waypoints[waypoint]
+        if self._goto_waypoint(self._waypoints[waypoint]):
+            self._current_waypoint = waypoint
+
+    def _goto_waypoint(self, next_waypoint):
         next_direction = self._next_direction(next_waypoint)
         if next_direction == self._direction:
             # Start moving in the given direction
             self._state = Robot_State("move")
-            self._current_waypoint = waypoint
             self.set_speeds(self.speed, self.speed)
+            return True
         else:
+            # Move to the correct direction, which is not yet part of moving to 
+            # the waypoint.
             self._set_direction(next_direction)
+            return False
 
     def _next_direction(self, waypoint):
         up = waypoint[0] - self._location[0]

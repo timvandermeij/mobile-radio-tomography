@@ -1,6 +1,7 @@
 import glob
 import os
-from subprocess import call, check_output
+import unittest
+from subprocess import check_output
 
 class Test_Run(object):
     def __init__(self):
@@ -14,10 +15,12 @@ class Test_Run(object):
         Execute the unit tests.
         """
 
-        return_code = call(["python2", "-m", "unittest", "discover",
-                            "-s", "tests", "-p", "*.py", "-t", ".."])
+        loader = unittest.TestLoader()
+        tests = loader.discover("tests", pattern="*.py", top_level_dir="..")
+        runner = unittest.runner.TextTestRunner()
+        result = runner.run(tests)
 
-        if return_code != 0:
+        if not result.wasSuccessful():
             self._failed = True
 
     def execute_unused_imports_check(self):

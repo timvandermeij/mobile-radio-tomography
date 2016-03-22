@@ -9,7 +9,13 @@ from ..trajectory.Servo import Servo
 
 class Robot_Vehicle_Arduino(Robot_Vehicle):
     """
-    Robot vehicle that is connected via a serial interface via an Arduino.
+    Robot vehicle that is connected via a serial interface to an Arduino.
+
+    To be used with the "zumo_serial" Arduino program.
+
+    The Arduino passes through reflectance sensor measurements which are read by
+    the `Line_Follower_Arduino` class, while the `Robot_Vehicle_Arduino` sends
+    motor speeds to the Arduino that are passed through to the motor control.
     """
 
     _line_follower_class = Line_Follower_Arduino
@@ -28,7 +34,7 @@ class Robot_Vehicle_Arduino(Robot_Vehicle):
         # numbers are dummy.
         self._speed_servos = [Servo(i, self._speeds, self._speed_pwms) for i in range(2)]
 
-        self._serial_connection = self._line_follower.get_serial_connection()
+        self._serial_connection = usb_manager.get_ttl_device()
         self._current_speed = (0, 0, True, True)
 
     def setup(self):
@@ -43,10 +49,25 @@ class Robot_Vehicle_Arduino(Robot_Vehicle):
         self._serial_connection.write("START\n")
         self._serial_connection.flush()
 
-    def deactivate(self):
+    def _reset(self):
         # Turn off motors.
         self.set_speeds(0, 0)
+
+    def deactivate(self):
+        self._reset()
         super(Robot_Vehicle_Arduino, self).deactivate()
+
+    def _format_speeds(self, left_speed, right_speed, left_forward, right_forward):
+        output = ""
+        for i, speed, forward in [(0, left_speed, left_forward), (1, right_speed, right_forward)]:
+            if not forward:
+                speed = -speed
+
+            pwm = self._speed_servos[i].get_pwm(speed)
+            self._speed_servos[i].set_current_pwm(pwm)
+            output += "{} ".format(int(pwm))
+
+        return output.strip()
 
     def set_speeds(self, left_speed, right_speed, left_forward=True, right_forward=True):
         new_speed = (left_speed, right_speed, left_forward, right_forward)
@@ -57,16 +78,9 @@ class Robot_Vehicle_Arduino(Robot_Vehicle):
             return
 
         self._current_speed = new_speed
-        output = ""
-        for i, speed, forward in [(0, left_speed, left_forward), (1, right_speed, right_forward)]:
-            if not forward:
-                speed = -speed
+        output = self._format_speeds(*new_speed)
 
-            pwm = self._speed_servos[i].get_pwm(speed)
-            self._speed_servos[i].set_current_pwm(pwm)
-            output += "{} ".format(int(pwm))
-
-        self._serial_connection.write("{}\n".format(output.strip()))
+        self._serial_connection.write("{}\n".format(output))
 
     def set_servo(self, servo, pwm):
         if RPIO is not None:

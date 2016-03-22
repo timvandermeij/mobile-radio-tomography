@@ -19,9 +19,9 @@ class USBManagerTestCase(unittest.TestCase):
         self.usb_manager = USB_Manager()
 
         # Create a virtual serial port.
-        master, slave = pty.openpty()
-        self.master = os.fdopen(master)
-        self.port = os.ttyname(slave)
+        self._master, self._slave = pty.openpty()
+        self.master = os.fdopen(self._master)
+        self.port = os.ttyname(self._slave)
 
         # Mock the method for obtaining devices.
         mock_obtain_devices = MagicMock(return_value=[
@@ -42,6 +42,11 @@ class USBManagerTestCase(unittest.TestCase):
             }
         ])
         self.usb_manager._obtain_devices = mock_obtain_devices
+
+    def tearDown(self):
+        super(USBManagerTestCase, self).tearDown()
+
+        os.close(self._slave)
 
 class TestCoreUSBManager(USBManagerTestCase):
     def test_initialization(self):

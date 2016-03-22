@@ -114,27 +114,33 @@ over.
     \item Run {\tt su} to become the root superuser. Use the password ``root''.
     \item Edit {\tt /etc/ssh/sshd\_config} and set {\tt PermitRootLogin} to the 
           value {\tt yes} to allow root login from SSH\@.
-    \item Edit {\tt /etc/dhcpcd.conf} to assign a static IP address for the
-          Raspberry Pi device. Add the following section at the bottom of the
-          file:
+    \item Disable the DHCP service using {\tt sudo systemctl disable 
+          dhcpcd@.service}. After this, edit {\tt 
+          /etc/systemd/network/eth0.network} so that its contents are the 
+          following lines:
 
-          {\tt interface eth0} \\
-          {\tt static ip\_address=10.42.0.10/24} \\
-          {\tt static routers=10.42.0.1} \\
-          {\tt static domain\_name\_servers=10.42.0.1 8.8.8.8}
+          {\tt [Match]} \\
+          {\tt Name=eth0} \\
 
-          This is for the first Raspberry Pi. For the second device, change
-          10.42.0.10 to 10.42.0.11. If after this change you cannot SSH into 
-          the device, run {\tt nmap -sP 10.42.0.0/24} on your computer to 
-          determine which IP address was assigned to the device.
-    \item Create a directory {\tt mkdir /etc/systemd/system/dhcpcd@.service.d} 
-          and go to that directory with {\tt cd 
-          /etc/systemd/system/dhcpcd@.service.d}. Then edit {\tt timeout.conf} 
-          to add the following lines:
+          {\tt [Network]} \\
+          {\tt Address=10.42.0.10/24} \\
+          {\tt Gateway=10.42.0.1}
 
-          {\tt [Service]} \\
-          {\tt ExecStart=} \\
-          {\tt ExecStart=/usr/bin/dhcpcd -w -q -t 5 \%I}
+          This ensures that the private IP address is always the same. This 
+          example is for the first Raspberry Pi. For the second device, change 
+          {\tt 10.42.0.10} to {\tt 10.42.0.11}, and so on. If at any moment 
+          after these changes you cannot SSH into the device, run {\tt nmap -sP 
+          10.42.0.10/24} on the laptop to determine which IP the device 
+          assigned itself.
+    \item Create a file {\tt /etc/modprobe.d/wireless.conf} to add the 
+          following line:
+
+          {\tt blacklist cfg80211}
+
+          This disables the wireless kernel module, which we do not use since 
+          the Raspberry Pi 2 has no built-in wireless support and the XBees do 
+          not need it. It causes a lot of spam in the kernel logs, so it is 
+          better to blacklist it.
     \item Edit {\tt /boot/cmdline.txt} to remove the recently added IP part.
           After that, reboot the Raspberry Pi device.
     \item On your laptop, edit the old link-local connection. Change the type 
