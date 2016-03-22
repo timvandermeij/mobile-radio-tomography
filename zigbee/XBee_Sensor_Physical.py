@@ -214,15 +214,6 @@ class XBee_Sensor_Physical(XBee_Sensor):
             self._send_tx_frame(packet, 0)
             self._data.pop(frame_id)
 
-    def _send_custom_packets(self):
-        """
-        Send custom packets to their destinations.
-        """
-
-        while not self._queue.empty():
-            item = self._queue.get()
-            self._send_tx_frame(item["packet"], item["to"])
-
     def _send_tx_frame(self, packet, to=None):
         """
         Send a TX frame to another sensor.
