@@ -100,10 +100,9 @@ class Robot_Vehicle(Vehicle):
             if self._state.current_direction == self._state.target_direction:
                 # When we are done rotating, stand still again before 
                 # determining our next moves.
+                self._direction = self._state.current_direction
                 self._state = Robot_State("intersection")
                 self.set_speeds(0, 0)
-
-                self._direction = self._state.current_direction
                 self._line_follower.set_direction(self._direction)
         elif self._state.name == "move":
             if self._last_diverged_time is not None:
@@ -122,6 +121,10 @@ class Robot_Vehicle(Vehicle):
                     # In AUTO mode, immediately try to move to the next 
                     # waypoint, or rotate in the right direction.
                     self._move_waypoint(self._current_waypoint + 1)
+                else:
+                    # In other modes, stop at the current waypoint until we 
+                    # have a new waypoint.
+                    self.set_speeds(0, 0)
             elif self._mode.name == "AUTO" or self._mode.name == "GUIDED":
                 # We reached an intersection or we are at an intersection and 
                 # maybe have a next waypoint. Check whether we need to rotate 
@@ -185,6 +188,7 @@ class Robot_Vehicle(Vehicle):
         self._mode = value
         if value.name == "RTL":
             self._waypoints = [self._home_location]
+            self._current_waypoint = -1
         elif value.name == "HALT":
             self._running = False
 
@@ -297,7 +301,7 @@ class Robot_Vehicle(Vehicle):
     def attitude(self):
         yaw = self._get_yaw()
 
-        return Attitude(0.0, 0.0, yaw)
+        return Attitude(0.0, yaw, 0.0)
 
     def set_yaw(self, heading, relative=False, direction=1):
         if not self._at_intersection():

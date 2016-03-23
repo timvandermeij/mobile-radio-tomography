@@ -80,31 +80,29 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
         self._check_intersection()
 
     def _serial_loop(self):
-        while self._running:
-            try:
+        try:
+            while self._running:
                 line = self._serial_connection.readline()
-            except:
+                parts = line.lstrip('\0').rstrip().split(' ')
+
+                try:
+                    if parts[0] == "LOCA": # At grid intersection location
+                        self._location = (int(parts[1]), int(parts[2]))
+                        self._direction = self._get_direction(parts[3])
+                        self._state = Robot_State("intersection")
+                    elif parts[0] == "GDIR": # Direction update
+                        self._direction = self._get_direction(parts[1])
+                    elif parts[0] == "ACKG": # "GOTO" acknowledgement
+                        self._state = Robot_State("move")
+                except IndexError:
+                    # Ignore incomplete messages.
+                    time.sleep(self._loop_delay)
+                    continue
+
+                print("Arduino: {}".format(' '.join(parts)))
                 time.sleep(self._loop_delay)
-                continue
-
-            parts = line.lstrip('\0').rstrip().split(' ')
-
-            try:
-                if parts[0] == "LOCA": # At grid intersection location
-                    self._location = (int(parts[1]), int(parts[2]))
-                    self._direction = self._get_direction(parts[3])
-                    self._state = Robot_State("intersection")
-                elif parts[0] == "GDIR": # Direction update
-                    self._direction = self._get_direction(parts[1])
-                elif parts[0] == "ACKG": # "GOTO" acknowledgement
-                    self._state = Robot_State("move")
-            except IndexError:
-                # Ignore incomplete messages.
-                time.sleep(self._loop_delay)
-                continue
-
-            print("Arduino: {}".format(' '.join(parts)))
-            time.sleep(self._loop_delay)
+        except:
+            super(Robot_Vehicle_Arduino_Full, self).interrupt()
 
     def _set_direction(self, target_direction, rotate_direction=0):
         # Format a "set direction" command
