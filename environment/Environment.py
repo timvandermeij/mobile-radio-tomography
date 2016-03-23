@@ -17,8 +17,8 @@ class Environment(object):
     _sensor_class = None
 
     @classmethod
-    def setup(self, arguments, geometry_class=None, vehicle=None, thread_manager=None,
-              usb_manager=None, simulated=None):
+    def setup(self, arguments, geometry_class=None, vehicle=None,
+              thread_manager=None, usb_manager=None, simulated=None):
         """
         Create an Environment object or simulated environment.
 
