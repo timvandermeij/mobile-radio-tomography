@@ -6,21 +6,37 @@
                 "help": "Whether to use a simulated XBee sensor for the ground station, effectively skipping the loading view",
                 "type": "bool",
                 "default": false
-            },
+            }
+        }
+    },
+    "control_panel_loading": {
+        "name": "Control panel (loading view)",
+        "settings": {
             "loading_xbee_insertion_delay": {
-                "help": "Frequency in seconds to check for a newly inserted XBee in the loading view",
+                "help": "Frequency in seconds to check for a newly inserted XBee",
                 "type": "float",
                 "min": 0.0,
                 "default": 0.1
-            },
+            }
+        }
+    },
+    "control_panel_reconstruction": {
+        "name": "Control panel (reconstruction view)",
+        "parent": "reconstruction",
+        "settings": {
             "reconstruction_viewer_dimensions": {
-                "help": "Size in pixels for the width and height respectively of the reconstruction view",
+                "help": "Size in pixels for the width and height respectively of the viewer",
                 "type": "tuple",
                 "length": 2,
                 "subtype": "int",
                 "min": 0,
                 "default": [500, 500]
-            },
+            }
+        }
+    },
+    "control_panel_waypoints": {
+        "name": "Control panel (waypoints view)",
+        "settings": {
             "waypoints_max_retries": {
                 "help": "Number of retries for every waypoint packet sent to a vehicle",
                 "type": "int",

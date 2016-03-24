@@ -7,12 +7,13 @@ class Control_Panel_View_Name(object):
     WAYPOINTS = 4
 
 class Control_Panel_View(object):
-    def __init__(self, controller):
+    def __init__(self, controller, settings):
         """
         Initialize the control panel view.
         """
 
         self._controller = controller
+        self._settings = settings
 
     def clear(self, layout=None):
         """

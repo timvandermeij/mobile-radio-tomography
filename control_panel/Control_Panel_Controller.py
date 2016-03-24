@@ -30,7 +30,7 @@ class Control_Panel_Controller(object):
         # Create arguments (for obtaining various settings in views)
         # and a USB manager (for checking insertion of XBee devices).
         # Initialize the XBee sensor for use by specific views.
-        self.arguments = Arguments("settings.json", sys.argv[1:])
+        self.arguments = Arguments("settings.json", self._get_arguments())
         self.thread_manager = Thread_Manager()
         self.usb_manager = USB_Manager()
         self.usb_manager.index()
@@ -47,7 +47,25 @@ class Control_Panel_Controller(object):
 
         self._packet_callbacks = {}
 
+        self._view_settings = {
+            Control_Panel_View_Name.DEVICES: settings,
+            Control_Panel_View_Name.LOADING: self.arguments.get_settings("control_panel_loading"),
+            Control_Panel_View_Name.RECONSTRUCTION: self.arguments.get_settings("control_panel_reconstruction"),
+            Control_Panel_View_Name.WAYPOINTS: self.arguments.get_settings("control_panel_waypoints")
+        }
+
         self.arguments.check_help()
+
+    def _get_arguments(self):
+        argv = []
+        for i, arg in enumerate(self.app.arguments()):
+            arg = str(arg)
+            if arg.startswith('--') or arg == '-h':
+                argv.append(arg)
+            elif i == 0 and not arg.startswith('-'):
+                argv.append(arg)
+
+        return argv
 
     def _get_location(self):
         return (0, 0)
@@ -100,7 +118,7 @@ class Control_Panel_Controller(object):
             if name not in views:
                 raise ValueError("Unknown view name specified.")
 
-            view = views[name](self)
+            view = views[name](self, self._view_settings[name])
             self._current_view = view
             self._current_view_name = name
             view.show()

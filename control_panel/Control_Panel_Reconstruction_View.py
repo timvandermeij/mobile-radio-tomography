@@ -58,18 +58,16 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         """
 
         # Fetch the settings for the reconstruction.
-        reconstruction_settings = self._controller.arguments.get_settings("reconstruction")
-        self._pause_time = reconstruction_settings.get("pause_time") * 1000
-        self._cmap = reconstruction_settings.get("cmap")
-        self._interpolation = reconstruction_settings.get("interpolation")
+        self._pause_time = self._settings.get("pause_time") * 1000
+        self._cmap = self._settings.get("cmap")
+        self._interpolation = self._settings.get("interpolation")
 
         # Set the width and height of the label.
-        control_panel_settings = self._controller.arguments.get_settings("control_panel")
-        self._viewer_width, self._viewer_height = control_panel_settings.get("reconstruction_viewer_dimensions")
+        self._viewer_width, self._viewer_height = self._settings.get("reconstruction_viewer_dimensions")
         self._label.setFixedSize(self._viewer_width, self._viewer_height)
 
         # Create the reader.
-        filename = reconstruction_settings.get("filename")
+        filename = self._settings.get("filename")
         self._reader = Dump_Reader("assets/reconstruction_{}.json".format(filename))
 
         # Create the reconstructor.
