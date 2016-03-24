@@ -6,7 +6,8 @@ class Arguments(object):
     Read settings from command line arguments and pass them along to Settings objects.
     """
 
-    def __init__(self, default_settings_file, argv, **kwargs):
+    def __init__(self, default_settings_file, argv,
+                 defaults_file=Settings.DEFAULTS_FILE, **kwargs):
         # Handle settings file manually since we might otherwise eat argument 
         # options that were meant for something else.
         if len(argv) > 0 and not argv[0].startswith('-'):
@@ -15,6 +16,7 @@ class Arguments(object):
             self.settings_file = default_settings_file
 
         self.argv = argv
+        self.defaults_file = defaults_file
         # We disable help here so that partial parses do not yet respond to 
         # --help. After all the settings files have registered themselves in 
         # the Arguments handler, we can display help for all the groups using 
@@ -32,7 +34,9 @@ class Arguments(object):
         if group in self.groups:
             return self.groups[group]
 
-        settings = Settings(self.settings_file, group, self)
+        settings = Settings(self.settings_file, group,
+                            arguments=self, defaults_file=self.defaults_file)
+
         self._parse_settings(group, settings)
         self.groups[group] = settings
         return self.groups[group]

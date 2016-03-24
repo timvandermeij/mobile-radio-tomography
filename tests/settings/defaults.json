@@ -1,0 +1,33 @@
+{
+    "foo": {
+        "name": "Foo component",
+        "settings": {
+            "bar": {
+                "type": "int",
+                "default": 2
+            },
+            "baz": {
+                "type": "bool",
+                "default": true
+            },
+            "long_name": {
+                "type": "string",
+                "default": "some_text"
+            },
+            "items": {
+                "type": "list",
+                "default": [1, 2, 3]
+            }
+        }
+    },
+    "child": {
+        "name": "Child component",
+        "parent": "foo",
+        "settings": {
+            "baz": {
+                "type": "bool",
+                "default": false
+            }
+        }
+    }
+}

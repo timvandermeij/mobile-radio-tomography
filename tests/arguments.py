@@ -1,30 +1,40 @@
 from mock import patch
 from StringIO import StringIO
-from ..settings import Arguments
+from ..settings import Arguments, Settings
 from settings import SettingsTestCase
 
 class TestArguments(SettingsTestCase):
     def test_default_settings(self):
-        arguments = Arguments("tests/invalid.json", ["tests/settings.json"])
+        arguments = Arguments("tests/settings/invalid.json", [
+            "tests/settings/settings.json"
+        ], defaults_file="tests/settings/defaults.json")
         # Command line input for settings file is initialized immediately
-        self.assertEqual(arguments.settings_file, "tests/settings.json")
+        self.assertEqual(arguments.settings_file, "tests/settings/settings.json")
+        self.assertEqual(arguments.defaults_file, "tests/settings/defaults.json")
         settings = arguments.get_settings("foo")
+        self.assertIsInstance(settings, Settings)
         self.assertEqual(settings.get("bar"), 2)
 
     def test_settings(self):
-        arguments = Arguments("tests/settings.json", ['--bar', '5', '--no-baz', '--long-name', 'my_text', '--items', '4', '5', '--other'])
+        arguments = Arguments("tests/settings/settings.json", [
+            '--bar', '5', '--no-baz', '--long-name', 'my_text',
+            '--items', '4', '5', '--other'
+        ], defaults_file="tests/settings/defaults.json")
         settings = arguments.get_settings("foo")
         # We get the same object every time
         self.assertEqual(id(settings), id(arguments.get_settings("foo")))
-        # Command line arguments override values in JSON.
+        # Command line arguments override values in both settings and defaults 
+        # JSON files.
         self.assertEqual(settings.get("bar"), 5)
         self.assertEqual(settings.get("baz"), False)
         self.assertEqual(settings.get("long_name"), "my_text")
-        self.assertEqual(settings.get("items"), [4,5])
+        self.assertEqual(settings.get("items"), [4, 5])
+        # Arguments left to parse that may be part of another component
         self.assertEqual(arguments.argv, ['--other'])
 
     def test_check_help(self):
-        arguments = Arguments("tests/settings.json", ['--help'])
+        arguments = Arguments("tests/settings/settings.json", ['--help'],
+                              defaults_file="tests/settings/defaults.json")
         settings = arguments.get_settings("foo")
 
         # Buffer help output so it doesn't mess up the test output and we can 
@@ -41,7 +51,8 @@ class TestArguments(SettingsTestCase):
         self.assertRegexpMatches(output.getvalue(), r"Foo component \(foo\)")
 
     def test_nonexistent_settings(self):
-        arguments = Arguments("tests/settings.json", ['--qux', '42'])
+        arguments = Arguments("tests/settings/settings.json", ['--qux', '42'],
+                              defaults_file="tests/settings/defaults.json")
 
         # Buffer help output so it doesn't mess up the test output and we can 
         # actually test whether it prints help.
