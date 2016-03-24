@@ -6,7 +6,7 @@
             "loading_xbee_insertion_delay": 0.1,
             "reconstruction_viewer_dimensions": [500, 500],
             "waypoints_max_retries": 5,
-            "waypoints_retry_interval": 500
+            "waypoints_retry_interval": 0.5
         }
     },
     "distance_sensor_simulator": {

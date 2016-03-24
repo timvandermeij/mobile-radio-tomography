@@ -237,7 +237,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         self._timers = {}
         for vehicle in waypoints:
             timer = QtCore.QTimer()
-            timer.setInterval(self._retry_interval)
+            timer.setInterval(self._retry_interval * 1000)
             timer.setSingleShot(True)
             # Bind timeout signal to retry for the current vehicle.
             timer.timeout.connect(partial(self._retry, vehicle))
