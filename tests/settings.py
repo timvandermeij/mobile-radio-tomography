@@ -75,7 +75,9 @@ class TestSettings(SettingsTestCase):
             "bar": {
                 "type": "int",
                 "default": 2,
-                "value": 2
+                "value": 2,
+                "min": 1,
+                "max": 42
             },
             "baz": {
                 "type": "bool",
@@ -85,12 +87,14 @@ class TestSettings(SettingsTestCase):
             "long_name": {
                 "type": "string",
                 "default": "some_text",
-                "value": "new_text"
+                "value": "new_text",
+                "required": True
             },
             "items": {
                 "type": "list",
                 "default": [1, 2, 3],
-                "value": [1, 2, 3]
+                "value": [1, 2, 3],
+                "subtype": "int"
             }
         }
         for key, value in settings.get_info():
@@ -124,6 +128,37 @@ class TestSettings(SettingsTestCase):
                             defaults_file="tests/settings/defaults.json")
         with self.assertRaises(KeyError):
             settings.set("new", "added")
+
+    def test_empty_set(self):
+        settings = Settings("tests/settings/settings.json", "foo",
+                            defaults_file="tests/settings/defaults.json")
+        with self.assertRaisesRegexp(ValueError, "nonempty"):
+            settings.set("long_name", "")
+
+    def test_min_max_set(self):
+        settings = Settings("tests/settings/settings.json", "foo",
+                            defaults_file="tests/settings/defaults.json")
+        with self.assertRaisesRegexp(ValueError, "at least 1"):
+            settings.set("bar", 0)
+        with self.assertRaisesRegexp(ValueError, "at most 42"):
+            settings.set("bar", 100)
+
+    def test_format_set(self):
+        settings = Settings("tests/settings/settings.json", "child",
+                            defaults_file="tests/settings/defaults.json")
+        settings.set("test", "empty")
+        self.assertEqual(settings.get("test"), "tests/settings/empty.json")
+        settings.set("test", "tests/settings/defaults.json")
+        self.assertEqual(settings.get("test"), "tests/settings/defaults.json")
+        with self.assertRaisesRegexp(ValueError, "existing file"):
+            settings.set("test", "invalid")
+
+        settings.set("setters", "tests/settings/empty.json")
+        self.assertEqual(settings.get("setters"), "empty")
+        settings.set("setters", "defaults")
+        self.assertEqual(settings.get("setters"), "defaults")
+        with self.assertRaisesRegexp(ValueError, "match the format"):
+            settings.set("setters", "tests/settings.py")
 
     def test_parent(self):
         settings = Settings("tests/settings/empty.json", "child",

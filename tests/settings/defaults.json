@@ -4,6 +4,8 @@
         "settings": {
             "bar": {
                 "type": "int",
+                "min": 1,
+                "max": 42,
                 "default": 2
             },
             "baz": {
@@ -12,11 +14,13 @@
             },
             "long_name": {
                 "type": "string",
-                "default": "some_text"
+                "default": "some_text",
+                "required": true
             },
             "items": {
                 "type": "list",
-                "default": [1, 2, 3]
+                "default": [1, 2, 3],
+                "subtype": "int"
             }
         }
     },
@@ -27,6 +31,18 @@
             "baz": {
                 "type": "bool",
                 "default": false
+            },
+            "test": {
+                "type": "file",
+                "format": "tests/settings/{}.json",
+                "required": false,
+                "default": null
+            },
+            "setters": {
+                "type": "file",
+                "format": "tests/settings/{}.json",
+                "required": true,
+                "default": "tests/settings/settings.json"
             }
         }
     }

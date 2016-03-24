@@ -5,6 +5,8 @@ import time
 
 from ..settings import Arguments
 
+__all__ = ["NSGA", "SMS_EMOA"]
+
 class Algorithm(object):
     """
     Evolutionary Multiobjective Optimization algorithm

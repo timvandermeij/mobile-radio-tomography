@@ -1,5 +1,6 @@
-import os
 import json
+import os
+import re
 
 class Settings(object):
     DEFAULTS_FILE = 'settings/defaults.json'
@@ -110,4 +111,44 @@ class Settings(object):
 
             raise KeyError("Setting '{}' for component '{}' not found.".format(key, self.component_name))
 
-        self.settings[key]["value"] = value
+        data = self.settings[key]
+
+        # A required value must be nonempty (not None and not a value that 
+        # evaluates to false according to its type)
+        required = "required" in data and data["required"]
+        if required and not value:
+            raise ValueError("Setting '{}' for component '{}' must be nonempty, not '{}'".format(key, self.component_name, value))
+
+        # Numerical type-specific: check minimum and maximum value constraint
+        if "min" in data and value < data["min"]:
+            raise ValueError("Setting '{}' for component '{}' must be at least {}, not {}".format(key, self.component_name, data["min"], value))
+        if "max" in data and value > data["max"]:
+            raise ValueError("Setting '{}' for component '{}' must be at most {}, not {}".format(key, self.component_name, data["max"], value))
+
+        # File type: If we have a formatter and have a file name, we can do 
+        # multiple things:
+        # - For required settings, we ensure that the file exists and matches
+        #   the given format. The resulting value will just be the part that is 
+        #   filled in the format. We refuse nonexistent or nonconforming files.
+        # - For non-required strings, we check whether the file exists. If only
+        #   part to be filled in the format is given, we convert the resulting 
+        #   value to the full path. We refuse nonexistent files, but full file 
+        #   names not conforming to the format are allowed.
+        if data["type"] == "file" and "format" in data and value is not None:
+            if os.path.isfile(value):
+                if required:
+                    regex = re.escape(data["format"]).replace("\\{\\}", "(.*)")
+                    match = re.match(regex, value)
+                    if match:
+                        value = match.group(1)
+                    else:
+                        raise ValueError("Setting '{}' for component '{}' must match the format '{}', value '{}' does not".format(key, self.component_name, data["format"].format("*"), value))
+            else:
+                full_value = data["format"].format(value)
+                if os.path.isfile(full_value):
+                    if not required:
+                        value = full_value
+                else:
+                    raise ValueError("Setting '{}' for component '{}' must be given an existing file, not '{}'".format(key, self.component_name, value))
+
+        data["value"] = value

@@ -16,10 +16,11 @@ class TestVehicleRobotVehicle(LocationTestCase, SettingsTestCase, ThreadableTest
     def setUp(self):
         super(TestVehicleRobotVehicle, self).setUp()
         self.arguments = Arguments("settings.json", [
-            "--vehicle-class", "Robot_Vehicle", "--home-location", "0", "0",
-            "--home-direction", "0", "--diverged-speed", "0.5",
-            "--rotate-speed", "0.2"
+            "--home-location", "0", "0", "--home-direction", "0",
+            "--diverged-speed", "0.5", "--rotate-speed", "0.2"
         ])
+        self.settings = self.arguments.get_settings("vehicle")
+        self.settings.set("vehicle_class", "Robot_Vehicle")
 
         Robot_Vehicle._setup_line_follower = MagicMock()
 

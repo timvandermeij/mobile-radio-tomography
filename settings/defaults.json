@@ -618,7 +618,8 @@
                 "help": "Pixel interpolation for the reconstruction display",
                 "type": "string",
                 "required": false,
-                "keys": ["matplotlib.image", "AxesImage", "_interpd"]
+                "keys": ["matplotlib.image", "AxesImage", "_interpd"],
+                "default": "hamming"
             }
         }
     },
@@ -729,6 +730,8 @@
             },
             "sensors": {
                 "help": "XBee addresses of all devices in the network, ordered by their identifier",
+                "type": "list",
+                "subtype": "string",
                 "default": [
                     "\\x00\\x13\\xa2\\x00@\\xe6n\\xbd",
                     "\\x00\\x13\\xa2\\x00@\\xe6o5",
