@@ -1,0 +1,769 @@
+{
+    "control_panel": {
+        "name": "Control panel",
+        "settings": {
+            "controller_xbee_simulation": {
+                "help": "Whether to use a simulated XBee sensor for the ground station, effectively skipping the loading view",
+                "type": "bool",
+                "default": false
+            },
+            "loading_xbee_insertion_delay": {
+                "help": "Frequency in seconds to check for a newly inserted XBee in the loading view",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.1
+            },
+            "reconstruction_viewer_dimensions": {
+                "help": "Size in pixels for the width and height respectively of the reconstruction view",
+                "type": "tuple",
+                "length": 2,
+                "subtype": "int",
+                "min": 0,
+                "default": [500, 500]
+            },
+            "waypoints_max_retries": {
+                "help": "Number of retries for every waypoint packet sent to a vehicle",
+                "type": "int",
+                "min": 1,
+                "default": 5
+            },
+            "waypoints_retry_interval": {
+                "help": "Frequency in seconds to retry sending a waypoint packet to a vehicle",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.5
+            }
+        }
+    },
+    "distance_sensor_simulator": {
+        "name": "Distance sensor (simulator)",
+        "settings": {
+            "altitude_margin": {
+                "help": "Difference in altitude in meters at which simple objects are still visible",
+                "type": "float",
+                "min": 0.0,
+                "default": 2.5
+            },
+            "angle_margin": {
+                "help": "Difference in angle in degrees at which simple objects are still visible",
+                "type": "float",
+                "min": 0.0,
+                "default": 5.0
+            },
+            "maximum_distance": {
+                "help": "Maximum distance in meters at which an object is still visible",
+                "type": "float",
+                "min": 0.0,
+                "default": 1000.0
+            }
+        }
+    },
+    "distance_sensor_physical": {
+        "name": "Distance sensor (physical)",
+        "settings": {
+            "trigger_pin": {
+                "help": "GPIO board pin to use for the HC-SR04 trigger pin",
+                "type": "int",
+                "min": 1,
+                "default": 13
+            },
+            "echo_pin": {
+                "help": "GPIO board pin to use for the HC-SR04 echo pin",
+                "type": "int",
+                "min": 1,
+                "default": 11
+            },
+            "trigger_delay": {
+                "help": "Time in seconds to wait for the trigger pin to become active",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.00001
+            },
+            "interval_delay": {
+                "help": "Time in seconds to wait after making the pins ready for measurements",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.5
+            },
+            "speed_of_sound": {
+                "help": "Speed of sound in cm/s",
+                "type": "float",
+                "min": 0,
+                "default": 34320
+            }
+        }
+    },
+    "infrared_sensor": {
+        "name": "Infrared sensor",
+        "settings": {
+            "remote": {
+                "help": "Remote control configuration name. The program must run as root if a new remote is used",
+                "type": "string",
+                "required": true,
+                "format": "control/remotes/{}.lircrc",
+                "default": "Sony_RM-SRB5"
+            },
+            "program": {
+                "help": "Program name",
+                "type": "string",
+                "required": true,
+                "default": "mobile-radio-tomography"
+            },
+            "buttons": {
+                "help": "Registered buttons",
+                "type": "list",
+                "subtype": "string",
+                "default": ["start", "stop", "up", "down", "left", "right"]
+            },
+            "wait_delay": {
+                "help": "Delay in seconds for the infrared sensor thread",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.05
+            }
+        }
+    },
+    "line_follower_base": {
+        "name": "Line follower base",
+        "settings": {
+            "readable_leds": {
+                "help": "LED list indices to be used by the line follower",
+                "type": "list",
+                "length": 4,
+                "subtype": "int",
+                "min": 0,
+                "default": [0, 2, 3, 5]
+            },
+            "line_threshold": {
+                "help": "Threshold in measurement us above which a LED measurement is considered black",
+                "type": "int",
+                "min": 0,
+                "default": 300
+            }
+        }
+    },
+    "line_follower_raspberry_pi": {
+        "name": "Line follower (Raspberry Pi)",
+        "parent": "line_follower_base",
+        "settings": {
+            "led_pins": {
+                "help": "Raspberry Pi GPIO pins for the measurement LEDs",
+                "type": "list",
+                "subtype": "int",
+                "min": 1,
+                "default": [29, 31, 32, 33, 35, 36]
+            },
+            "emitter_pin": {
+                "help": "Raspberry Pi GPIO pin for the emitter signal",
+                "type": "int",
+                "min": 1,
+                "default": 37
+            },
+            "write_delay": {
+                "help": "Delay in seconds to wait after changing the emitter signal",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.0002
+            },
+            "max_value": {
+                "help": "Maximum value read from the measurements in us",
+                "type": "int",
+                "min": 0,
+                "default": 1023
+            },
+            "charge_delay": {
+                "help": "Delay in seconds to wait after charging the measurement pins",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.00001
+            }
+        }
+    },
+    "line_follower_arduino": {
+        "name": "Line follower (Arduino)",
+        "parent": "line_follower_base",
+        "settings": {
+            "serial_flow_control": {
+                "help": "Whether to enable RTS/CTS flow control for the serial connection",
+                "type": "bool",
+                "default": false
+            }
+        }
+    },
+    "mission": {
+        "name": "Drone trajectory mission data",
+        "settings": {
+            "altitude_undershoot": {
+                "help": "Ratio of requested altitude which is allowed for takeoff altitude",
+                "type": "float",
+                "min": 0.0,
+                "max": 1.0,
+                "default": 0.95
+            },
+            "closeness": {
+                "help": "Difference in meters at which we consider locations to be equal for waypoints, too close to detected objects, or in other mission movements. Set to 0 to disable",
+                "type": "float",
+                "min": 0.0,
+                "default": 2.0
+            },
+            "farness": {
+                "help": "Distance in meters above which we are uninterested in detected objects",
+                "type": "float",
+                "min": 0.0,
+                "default": 100.0
+            },
+            "mission_delay": {
+                "help": "Delay in seconds to ensure that vehicle mission information is displayed cleanly",
+                "type": "float",
+                "min": 0.0,
+                "default": 2.0
+            },
+            "altitude": {
+                "help": "Altitude in meters to take off to. Ignored for ground vehicles",
+                "type": "float",
+                "default": 4.0
+            },
+            "padding": {
+                "help": "The space around the vehicle's center (where the distance sensor is) in which we do not want to have other objects. Used for additional padding aside from the closeness in certain calculations",
+                "type": "float",
+                "min": 0.0,
+                "default": 4.0
+            },
+            "speed": {
+                "help": "Movement speed in m/s",
+                "type": "float",
+                "min": 0.0,
+                "default": 2.5
+            },
+            "space_size": {
+                "help": "Size in meters of one dimension of the part of the space that the vehicle is allowed to be in",
+                "type": "float",
+                "min": 0.0,
+                "default": 100.0
+            },
+            "resolution": {
+                "help": "The number of entries in the memory map per meter in one dimension",
+                "type": "int",
+                "min": 1,
+                "default": 1
+            },
+            "yaw_step": {
+                "help": "Difference of angle in degrees to change the yaw with in steps of some missions",
+                "type": "float",
+                "default": 10.0
+            },
+            "mission_class": {
+                "help": "Mission class to use for the mission",
+                "type": "class",
+                "module": "trajectory.Mission",
+                "default": "Mission_Browse"
+            }
+        }
+    },
+    "mission_monitor": {
+        "name": "Mission monitoring",
+        "settings": {
+            "step_delay": {
+                "help": "Delay in seconds to wait before monitoring again",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.5
+            },
+            "plot": {
+                "help": "Whether to display an interactive plot of the memory map. Requires matplotlib",
+                "type": "bool",
+                "default": true
+            },
+            "viewer": {
+                "help": "Whether to display a viewer of the current vehicle's sight. Requires pyglet and a simulated environment",
+                "type": "bool",
+                "default": true
+            }
+        }
+    },
+    "environment": {
+        "name": "Vehicle environment",
+        "settings": {
+            "geometry_class": {
+                "help": "Geometry to use for location calculations",
+                "type": "class",
+                "module": "geometry.Geometry",
+                "default": "Geometry_Spherical"
+            },
+            "distance_sensors": {
+                "help": "Yaw angle in degrees for each distance sensor",
+                "type": "list",
+                "subtype": "float",
+                "default": [0.0]
+            },
+            "servo_pins": {
+                "help": "Servo pin number and duty cycle ranges for the servo rail.\nEach item contains the following keys and values:\n- 'pin': a pin number of the servo rail or GPIO port\n- 'angles': a tuple of minimum and maximum angles in degrees that the servo can turn to\n- 'pwm': a tuple of minimum and maximum PWM values (duty cycle)",
+                "type": "list",
+                "subtype": "dict",
+                "default": [
+                    {
+                        "pin": 7,
+                        "angles": [0,360],
+                        "pwm": [1000,2000]
+                    }
+                ]
+            },
+            "xbee_type": {
+                "help": "XBee sensor class type",
+                "type": "string",
+                "options": ["physical", "simulator"],
+                "required": false,
+                "default": ""
+            },
+            "infrared_sensor": {
+                "help": "Whether to use the infrared sensor for starting and stopping mission",
+                "type": "bool",
+                "default": true
+            },
+            "scenefile": {
+                "help": "VRML file to import as simulated environment",
+                "type": "file",
+                "format": "tests/vrml/{}.vrml",
+                "required": false,
+                "default": null
+            },
+            "translation": {
+                "help": "Differences in meters to offset the simulated environment with",
+                "type": "tuple",
+                "length": 3,
+                "subtype": "float",
+                "default": [0.0,0.0,0.0]
+            },
+            "location_check": {
+                "help": "Whether to enable collision check in simulated environment",
+                "type": "bool",
+                "default": false
+            }
+        }
+    },
+    "environment_viewer": {
+        "name": "Environment 3D scene viewer",
+        "settings": {
+            "max_points": {
+                "help": "Maximum number of recently detected points to keep in the viewer",
+                "type": "int",
+                "min": 0,
+                "default": 200
+            }
+        }
+    },
+    "environment_viewer_interactive": {
+        "name": "Interactive environment 3D scene viewer",
+        "parent": "environment_viewer",
+        "settings": {
+            "camera_speed": {
+                "help": "Speed in m/s to move the camera while strafing. Negative value causes inverted controls",
+                "type": "float",
+                "default": 5.0
+            },
+            "rotate_speed": {
+                "help": "Speed in degrees/s to rotate the camera. Negative value causes inverted controls",
+                "type": "float",
+                "default": 90.0
+            }
+        }
+    },
+    "vehicle": {
+        "name": "Vehicle interface",
+        "settings": {
+            "vehicle_class": {
+                "help": "Vehicle backend to use",
+                "type": "class",
+                "module": "vehicle",
+                "default": "Mock_Vehicle"
+            }
+        }
+    },
+    "vehicle_dronekit": {
+        "name": "Dronekit vehicle backend",
+        "settings": {
+            "connect": {
+                "help": "MAVLink connection string to the autopilot master",
+                "type": "string",
+                "default": "127.0.0.1:14550"
+            },
+            "mavlink_baud_rate": {
+                "help": "Baud rate for the MAVLink connection",
+                "type": "int",
+                "min": 0,
+                "default": 115200
+            },
+            "vehicle_simulation": {
+                "help": "Whether to run the vehicle in a simulator rather than a physical environment",
+                "type": "bool",
+                "default": true
+            },
+            "gps": {
+                "help": "Whether to wait for a GPS signal before starting",
+                "type": "bool",
+                "default": true
+            }
+        }
+    },
+    "vehicle_robot": {
+        "name": "Base robot vehicle",
+        "settings": {
+            "diverged_speed": {
+                "help": "Ratio of the current move speed to adapt when the vehicle diverges from a line",
+                "type": "float",
+                "min": 0.0,
+                "max": 1.0,
+                "default": 0.25
+            },
+            "diverged_time": {
+                "help": "Time in seconds to keep adjusted speed when the vehicle diverges from a line",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.2
+            },
+            "rotate_speed": {
+                "help": "Speed in m/s to use when the vehicle rotates on an intersection",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.30
+            },
+            "vehicle_delay": {
+                "help": "Delay in seconds of the robot vehicle state loop",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.05
+            },
+            "line_follower_delay": {
+                "help": "Delay of the sensor reading loop in the line follower thread",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.01
+            },
+            "home_location": {
+                "help": "Home location coordinates of the vehicle. The vehicle should be placed at the intersection corresponding to these coordinates to begin with",
+                "type": "tuple",
+                "length": 2,
+                "subtype": "int",
+                "min": 0,
+                "default": [0, 0]
+            },
+            "home_direction": {
+                "help": "The starting direction of the robot. The robot should be aligned with this direction to begin with",
+                "type": "int",
+                "options": [0, 1, 2, 3],
+                "default": 0
+            }
+        }
+    },
+    "vehicle_robot_raspberry_pi": {
+        "name": "Robot vehicle directly connected to a Raspberry Pi",
+        "settings": {
+            "direction_pins": {
+                "help": "Motor direction GPIO pins",
+                "type": "tuple",
+                "length": 2,
+                "subtype": "int",
+                "min": 1,
+                "default": [16, 18]
+            },
+            "speed_pins": {
+                "help": "Motor speed GPIO pins",
+                "type": "tuple",
+                "length": 2,
+                "subtype": "int",
+                "default": [24, 26]
+            },
+            "speed_pwms": {
+                "help": "PWM range for both motors (minimum and maximum value)",
+                "type": "tuple",
+                "length": 2,
+                "subtype": "int",
+                "min": 0,
+                "default": [0, 255]
+            },
+            "speeds": {
+                "help": "Speed range for both motors in m/s",
+                "type": "tuple",
+                "length": 2,
+                "subtype": "float",
+                "min": 0.0,
+                "default": [0, 0.60]
+            }
+        }
+    },
+    "vehicle_robot_arduino": {
+        "name": "Robot vehicle connected through an Arduino with a serial connection",
+        "settings": {
+            "speed_pwms": {
+                "help": "PWM range for both motors (minimum and maximum values)",
+                "type": "tuple",
+                "length": 2,
+                "subtype": "int",
+                "default": [-400, 400]
+            },
+            "speeds": {
+                "help": "Speed range for both motors in m/s",
+                "type": "tuple",
+                "length": 2,
+                "subtype": "float",
+                "default": [-0.60, 0.60]
+            }
+        }
+    },
+    "planning": {
+        "name": "Base trajectory planning",
+        "settings": {
+            "algorithm_class": {
+                "help": "The evolutionary algorithm to use for the planning problem. Can be given with dashes instead of underscores and with lowercase letters",
+                "type": "class",
+                "module": "planning.Algorithm",
+                "replace": ["abcdefghijklmnopqrstuvwxyz-", "ABCDEFGHIJKLMNOPQRSTUVWXYZ_"],
+                "default": "SMS-EMOA"
+            },
+            "discrete": {
+                "help": "Whether to use discrete grid cells instead of allowing measurements to happen anywhere",
+                "type": "bool",
+                "default": false
+            }
+        }
+    },
+    "planning_algorithm": {
+        "name": "Evolutionary multiobjective optimization algorithm",
+        "settings": {
+            "population_size": {
+                "help": "Number of individuals to use during optimization. Afterward, at most this number of nondominated solutions is presented",
+                "type": "int",
+                "min": 1,
+                "default": 15
+            },
+            "iteration_limit": {
+                "help": "Number of iterations to run optimization for",
+                "type": "int",
+                "min": 0,
+                "default": 100
+            },
+            "iteration_debug": {
+                "help": "Number of iterations to show a progress report every  so often",
+                "type": "int",
+                "min": 1,
+                "default": 100
+            },
+            "step_size": {
+                "help": "Step sizes for the problem variables. Can be given in various lengths that are extended to the correct size",
+                "type": "list",
+                "subtype": "float",
+                "min": 0.0,
+                "default": [0.5]
+            }
+        }
+    },
+    "planning_problem": {
+        "name": "Reconstruction trajectory planning problem",
+        "settings": {
+            "number_of_measurements": {
+                "help": "Maximum number of measurements to perform", 
+                "type": "int",
+                "min": 1,
+                "default": 20
+            },
+            "network_size": {
+                "help": "Dimensions of the total space wherein the network lies, in number of grid cells",
+                "type": "tuple",
+                "length": 2,
+                "subtype": "int",
+                "min": 1,
+                "default": [64, 64]
+            },
+            "network_padding": {
+                "help": "Number of full cells for each dimension and on every side where the vehicles are allowed to drive around the network",
+                "type": "tuple",
+                "length": 2,
+                "subtype": "int",
+                "min": 0,
+                "default": [0, 0]
+            },
+            "unsnappable_rate": {
+                "help": "Ratio of the number of measurements that are allowed to be useless in the reconstruction problem and thus are discarded",
+                "type": "float",
+                "min": 0.0,
+                "max": 1.0,
+                "default": 0.5
+            }
+        }
+    },
+    "reconstruction": {
+        "name": "Reconstruction",
+        "settings": {
+            "filename": {
+                "help": "Filename part to use for dump reconstruction",
+                "type": "file",
+                "format": "assets/reconstruction_{}.json",
+                "required": true,
+                "default": "static"
+            },
+            "pause_time": {
+                "help": "Delay in seconds to wait before showing the next frame of a dump reconstruction",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.5
+            },
+            "cmap": {
+                "help": "Color map for the reconstruction display. Must be a valid matplotlib colormap",
+                "type": "string",
+                "required": true,
+                "keys": ["matplotlib.cm", "datad"],
+                "default": "pink"
+            },
+            "interpolation": {
+                "help": "Pixel interpolation for the reconstruction display",
+                "type": "string",
+                "required": false,
+                "keys": ["matplotlib.image", "AxesImage", "_interpd"]
+            }
+        }
+    },
+    "reconstruction_weight_matrix": {
+        "name": "Reconstruction weight matrix",
+        "settings": {
+            "distance_lambda": {
+                "help": "Width of an ellipse in the measurement model",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.3
+            }
+        }
+    },
+    "reconstruction_truncated_svd_reconstructor": {
+        "name": "Reconstruction truncated SVD reconstructor",
+        "settings": {
+            "singular_values": {
+                "help": "Number of singular values to compute",
+                "type": "int",
+                "min": 1,
+                "default": 3
+            }
+        }
+    },
+    "xbee_base": {
+        "name": "XBee base",
+        "settings": {
+            "number_of_sensors": {
+                "help": "Number of vehicle sensors in the network, not counting the ground station",
+                "type": "int",
+                "min": 0,
+                "default": 2
+            },
+            "xbee_id": {
+                "help": "Identifier of the current XBee. Overridden by the physical sensor",
+                "type": "int",
+                "min": 0,
+                "default": 0
+            },
+            "custom_packet_delay": {
+                "help": "Delay in seconds between sending custom packets when not measuring",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.1
+            },
+            "loop_delay": {
+                "help": "Delay in seconds for each sensor loop",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.01
+            },
+            "startup_delay": {
+                "help": "Delay in seconds to wait after initializing the sensor",
+                "type": "float",
+                "min": 0.0,
+                "default": 1.0
+            }
+        }
+    },
+    "xbee_configurator": {
+        "name": "XBee configurator",
+        "parent": "xbee_base",
+        "settings": {
+            "pan_id": {
+                "help": "Personal area network identifier",
+                "type": "int",
+                "min": 0,
+                "max": 65535,
+                "default": 2015
+            }
+        }
+    },
+    "xbee_sensor_simulator": {
+        "name": "XBee sensor (simulator)",
+        "parent": "xbee_base",
+        "settings": {
+            "ip": {
+                "help": "IP address to connect the socket to",
+                "type": "string",
+                "required": false,
+                "default": "127.0.0.1"
+            },
+            "port": {
+                "help": "Network port to connect the socket to",
+                "type": "int",
+                "min": 0,
+                "max": 65535,
+                "default": 3233
+            },
+            "buffer_size": {
+                "help": "Size of the buffer to read at most from the socket each time",
+                "type": "int",
+                "min": 1,
+                "default": 256
+            }
+        }
+    },
+    "xbee_sensor_physical": {
+        "name": "XBee sensor (physical)",
+        "parent": "xbee_base",
+        "settings": {
+            "port": {
+                "help": "Device name or port of the XBee to use. This overrides the USB manager detection",
+                "type": "string",
+                "required": false,
+                "default": ""
+            },
+            "sensors": {
+                "help": "XBee addresses of all devices in the network, ordered by their identifier",
+                "default": [
+                    "\\x00\\x13\\xa2\\x00@\\xe6n\\xbd",
+                    "\\x00\\x13\\xa2\\x00@\\xe6o5",
+                    "\\x00\\x13\\xa2\\x00@\\xe6n\\xb9"
+                ]
+            },
+            "ntp_delay": {
+                "help": "Delay in seconds to wait before retrying a synchronization attempt",
+                "type": "float",
+                "min": 0.0,
+                "default": 3.0
+            },
+            "response_delay": {
+                "help": "Delay in seconds to wait for a response to a command sent to the current XBee device",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.3
+            },
+            "synchronize": {
+                "help": "Whether to synchronize the clock using an NTP algorithm. Needed for TDMA scheduling to work correctly. The program must run as root to do so",
+                "type": "bool",
+                "default": false
+            }
+        }
+    },
+    "xbee_tdma_scheduler": {
+        "name": "XBee TDMA scheduler",
+        "parent": "xbee_base",
+        "settings": {
+            "sweep_delay": {
+                "help": "Delay in seconds for each sweep",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.4
+            }
+        }
+    }
+}
