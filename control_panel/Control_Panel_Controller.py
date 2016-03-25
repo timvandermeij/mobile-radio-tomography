@@ -7,6 +7,7 @@ from Control_Panel_View import Control_Panel_View_Name
 from Control_Panel_Devices_View import Control_Panel_Devices_View
 from Control_Panel_Loading_View import Control_Panel_Loading_View
 from Control_Panel_Reconstruction_View import Control_Panel_Reconstruction_View
+from Control_Panel_Settings_View import Control_Panel_Settings_View
 from Control_Panel_Waypoints_View import Control_Panel_Waypoints_View
 from ..core.Thread_Manager import Thread_Manager
 from ..core.USB_Manager import USB_Manager
@@ -51,7 +52,8 @@ class Control_Panel_Controller(object):
             Control_Panel_View_Name.DEVICES: settings,
             Control_Panel_View_Name.LOADING: self.arguments.get_settings("control_panel_loading"),
             Control_Panel_View_Name.RECONSTRUCTION: self.arguments.get_settings("control_panel_reconstruction"),
-            Control_Panel_View_Name.WAYPOINTS: self.arguments.get_settings("control_panel_waypoints")
+            Control_Panel_View_Name.WAYPOINTS: self.arguments.get_settings("control_panel_waypoints"),
+            Control_Panel_View_Name.SETTINGS: settings
         }
 
         self.arguments.check_help()
@@ -111,7 +113,8 @@ class Control_Panel_Controller(object):
             Control_Panel_View_Name.DEVICES: Control_Panel_Devices_View,
             Control_Panel_View_Name.LOADING: Control_Panel_Loading_View,
             Control_Panel_View_Name.RECONSTRUCTION: Control_Panel_Reconstruction_View,
-            Control_Panel_View_Name.WAYPOINTS: Control_Panel_Waypoints_View
+            Control_Panel_View_Name.WAYPOINTS: Control_Panel_Waypoints_View,
+            Control_Panel_View_Name.SETTINGS: Control_Panel_Settings_View
         }
 
         try:
@@ -143,7 +146,8 @@ class Control_Panel_Controller(object):
         view_names = OrderedDict([
             (Control_Panel_View_Name.DEVICES, "Devices"),
             (Control_Panel_View_Name.RECONSTRUCTION, "Reconstruction"),
-            (Control_Panel_View_Name.WAYPOINTS, "Waypoints")
+            (Control_Panel_View_Name.WAYPOINTS, "Waypoints"),
+            (Control_Panel_View_Name.SETTINGS, "Settings")
         ])
 
         view_menu = self.window._menu_bar.addMenu("View")

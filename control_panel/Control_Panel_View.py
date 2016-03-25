@@ -5,6 +5,7 @@ class Control_Panel_View_Name(object):
     LOADING = 2
     RECONSTRUCTION = 3
     WAYPOINTS = 4
+    SETTINGS = 5
 
 class Control_Panel_View(object):
     def __init__(self, controller, settings):
@@ -14,6 +15,9 @@ class Control_Panel_View(object):
 
         self._controller = controller
         self._settings = settings
+
+    def show(self):
+        raise NotImplementedError("Subclasses must implement `show()`")
 
     def clear(self, layout=None):
         """
