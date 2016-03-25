@@ -26,6 +26,9 @@ class Arguments(object):
         # Arguments.check_help.
         self.parser = ArgumentParser(add_help=False, **kwargs)
         self.groups = {}
+
+        self._done_help = False
+
         self._type_names = {
             "int": int,
             "float": float,
@@ -55,8 +58,9 @@ class Arguments(object):
         return self.groups[group]
 
     def _parse_settings(self, group, settings):
-        self._add_arguments(group, settings)
-        self._fill_settings(settings)
+        if not self._done_help:
+            self._add_arguments(group, settings)
+            self._fill_settings(settings)
 
     def _get_keys(self, location):
         """
@@ -73,11 +77,25 @@ class Arguments(object):
         if hasattr(data, "__all__"):
             return data.__all__
 
-        return data.__dict__.keys()
+        return dir(data)
 
-    def _make_help(self, key):
+    def get_help(self, key, info):
+        if "help" in info:
+            return info["help"]
+
         parts = key.split('_')
         return ' '.join([parts[0].title()] + parts[1:])
+
+    def get_choices(self, info):
+        if "options" in info:
+            return info["options"]
+        if "keys" in info:
+            return self._get_keys(info["keys"])
+        if "module" in info:
+            package = __package__.split('.')[0]
+            return self._get_keys(["{}.{}".format(package, info["module"])])
+
+        return None
 
     def _add_arguments(self, group, settings):
         """
@@ -92,15 +110,11 @@ class Arguments(object):
             kw = {
                 "dest": key,
                 "default": info["value"],
-                "help": info["help"] if "help" in info else self._make_help(key)
+                "help": self.get_help(key, info),
             }
-            if "options" in info:
-                kw["choices"] = info["options"]
-            elif "keys" in info:
-                kw["choices"] = self._get_keys(info["keys"])
-            elif "module" in info:
-                package = __package__.split('.')[0]
-                kw["choices"] = self._get_keys(["{}.{}".format(package, info["module"])])
+            choices = self.get_choices(info)
+            if choices is not None:
+                kw["choices"] = choices
 
             opt = key.replace('_', '-')
             if info["type"] in ("list", "tuple"):
@@ -156,3 +170,4 @@ class Arguments(object):
 
         self.parser.add_argument('-h', '--help', action='help', help="Show this help message and exit")
         self.parser.parse_args(self.argv)
+        self._done_help = True

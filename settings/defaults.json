@@ -316,6 +316,24 @@
                 "help": "Servo pin number and duty cycle ranges for the servo rail.\nEach item contains the following keys and values:\n- 'pin': a pin number of the servo rail or GPIO port\n- 'angles': a tuple of minimum and maximum angles in degrees that the servo can turn to\n- 'pwm': a tuple of minimum and maximum PWM values (duty cycle)",
                 "type": "list",
                 "subtype": "dict",
+                "dictinfo": {
+                    "pin": {
+                        "type": "int",
+                        "min": 1
+                    },
+                    "angles": {
+                        "type": "tuple",
+                        "length": 2,
+                        "subtype": "int",
+                        "min": 0,
+                        "max": 360
+                    },
+                    "pwm": {
+                        "type": "tuple",
+                        "length": 2,
+                        "subtype": "int"
+                    }
+                },
                 "default": [
                     {
                         "pin": 7,
@@ -372,12 +390,12 @@
         "name": "Interactive environment 3D scene viewer",
         "parent": "environment_viewer",
         "settings": {
-            "camera_speed": {
+            "camera_move_speed": {
                 "help": "Speed in m/s to move the camera while strafing. Negative value causes inverted controls",
                 "type": "float",
                 "default": 5.0
             },
-            "rotate_speed": {
+            "camera_rotate_speed": {
                 "help": "Speed in degrees/s to rotate the camera. Negative value causes inverted controls",
                 "type": "float",
                 "default": 90.0
