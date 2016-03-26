@@ -253,7 +253,10 @@ class TextFormWidget(QtGui.QLineEdit, FormWidget):
             if state != QtGui.QValidator.Acceptable:
                 return self.info["value"]
 
-        return str(self.text())
+        if text.isEmpty():
+            return None
+
+        return str(text)
 
     def reset_value(self):
         self.setText(self.format_value(self.info["value"]))
@@ -388,7 +391,10 @@ class NumericFormWidget(TextFormWidget):
     def get_value(self):
         text = super(NumericFormWidget, self).get_value()
         if self._caster is not None:
-            return self._caster(text)
+            try:
+                return self._caster(text)
+            except (TypeError, ValueError):
+                pass
 
         return text
 

@@ -114,7 +114,7 @@
         "settings": {
             "remote": {
                 "help": "Remote control configuration name. The program must run as root if a new remote is used",
-                "type": "string",
+                "type": "file",
                 "required": true,
                 "format": "control/remotes/{}.lircrc",
                 "default": "Sony_RM-SRB5"
