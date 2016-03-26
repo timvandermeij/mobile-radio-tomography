@@ -11,16 +11,19 @@ class Thread_Manager(object):
 
         self._threads = {}
 
-    def register(self, name, thread):
+    def register(self, name, threadable):
         """
-        Register a thread.
+        Register a `Threadable` object by its `name`.
         """
 
-        self._threads[name] = thread
+        self._threads[name] = threadable
 
     def unregister(self, name):
         """
-        Unregister a thread.
+        Unregister a thread given its `name`.
+
+        A `name` for a `Threadable` object that is currently not registered is
+        ignored.
         """
 
         if name not in self._threads:
@@ -38,8 +41,8 @@ class Thread_Manager(object):
         if sys.exc_info() != (None, None, None):
             self.log("main thread")
 
-        for name, thread in self._threads.items():
-            thread.deactivate()
+        for name, threadable in self._threads.items():
+            threadable.deactivate()
 
     def interrupt(self, name):
         """
