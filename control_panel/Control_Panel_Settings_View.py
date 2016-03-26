@@ -139,6 +139,7 @@ class Control_Panel_Settings_View(Control_Panel_View):
     def _filter(self, text):
         self._best_matches = {}
         for i, component in enumerate(self._components):
+            text = text.toLower()
             if text == "":
                 hidden = False
             elif self._match_component(i, component, text):
@@ -161,7 +162,7 @@ class Control_Panel_Settings_View(Control_Panel_View):
             return True
 
         settings = self._controller.arguments.get_settings(component)
-        if text in settings.name:
+        if text in settings.name.lower():
             self._best_matches[index] = True
             return True
 
