@@ -114,6 +114,7 @@ class TestCoreThreadManager(ThreadableTestCase):
         logger_mock = MagicMock()
         patcher = patch.object(logging, 'getLogger', Mock(return_value=logger_mock))
         patcher.start()
+        self.assertFalse(hasattr(self.thread_manager, "_logger"))
         self.thread_manager.log("'foo' source")
         self.assertEqual(self.thread_manager._logger, logger_mock)
         logger_mock.setLevel.assert_called_once_with(logging.DEBUG)
