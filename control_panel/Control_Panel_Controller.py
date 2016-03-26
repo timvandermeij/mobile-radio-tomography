@@ -48,13 +48,14 @@ class Control_Panel_Controller(object):
 
         self._packet_callbacks = {}
 
-        self._view_settings = {
-            Control_Panel_View_Name.DEVICES: settings,
-            Control_Panel_View_Name.LOADING: self.arguments.get_settings("control_panel_loading"),
-            Control_Panel_View_Name.RECONSTRUCTION: self.arguments.get_settings("control_panel_reconstruction"),
-            Control_Panel_View_Name.WAYPOINTS: self.arguments.get_settings("control_panel_waypoints"),
-            Control_Panel_View_Name.SETTINGS: settings
+        self._view_components = {
+            Control_Panel_View_Name.DEVICES: "control_panel",
+            Control_Panel_View_Name.LOADING: "control_panel_loading",
+            Control_Panel_View_Name.RECONSTRUCTION: "control_panel_reconstruction",
+            Control_Panel_View_Name.WAYPOINTS: "control_panel_waypoints",
+            Control_Panel_View_Name.SETTINGS: "control_panel"
         }
+        self.load_settings()
 
         self.arguments.check_help()
 
@@ -68,6 +69,11 @@ class Control_Panel_Controller(object):
                 argv.append(arg)
 
         return argv
+
+    def load_settings(self):
+        self._view_settings = {}
+        for view, component in self._view_components.iteritems():
+            self._view_settings[view] = self.arguments.get_settings(component)
 
     def _get_location(self):
         return (0, 0)

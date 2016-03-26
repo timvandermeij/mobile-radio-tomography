@@ -1,3 +1,4 @@
+import json
 from PyQt4 import QtGui
 from Control_Panel_View import Control_Panel_View
 from Control_Panel_Widgets import QLineEditClear, SettingsWidget
@@ -48,6 +49,7 @@ class Control_Panel_Settings_View(Control_Panel_View):
         filterInput.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Maximum)
 
         saveButton = QtGui.QPushButton("Save")
+        saveButton.clicked.connect(self._save)
 
         hbox_buttons = QtGui.QHBoxLayout()
         hbox_buttons.addWidget(filterInput)
@@ -69,6 +71,58 @@ class Control_Panel_Settings_View(Control_Panel_View):
     def _goto_parent(self, parent):
         i = self._components.index(parent)
         self._listWidget.setCurrentRow(i)
+
+    def _save(self):
+        flat_settings = {}
+        for i, widget in enumerate(self._widgets):
+            if widget is not None:
+                flat_settings.update(widget.get_values())
+
+        pretty_json = json.dumps(flat_settings, indent=4, sort_keys=True)
+
+        dialog = QtGui.QDialog(self._controller.central_widget)
+        dialog.setWindowTitle("Confirm save")
+
+        textEdit = QtGui.QTextEdit()
+        textEdit.setPlainText(pretty_json)
+        textEdit.setReadOnly(True)
+
+        groundCheckBox = QtGui.QCheckBox("Ground station")
+        groundCheckBox.setChecked(True)
+        vehicleCheckBoxes = {}
+        for vehicle in [1,2]:
+            vehicleCheckBox = QtGui.QCheckBox("Vehicle {}".format(vehicle))
+            vehicleCheckBox.setChecked(True)
+            vehicleCheckBoxes[vehicle] = vehicleCheckBox
+
+        boxLayout = QtGui.QVBoxLayout()
+        boxLayout.addWidget(groundCheckBox)
+        for vehicle in [1,2]:
+            boxLayout.addWidget(vehicleCheckBoxes[vehicle])
+
+        groupBox = QtGui.QGroupBox("Save locations")
+        groupBox.setLayout(boxLayout)
+
+        dialogButtons = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel)
+        dialogButtons.accepted.connect(dialog.accept)
+        dialogButtons.rejected.connect(dialog.reject)
+
+        dialogLayout = QtGui.QVBoxLayout()
+        dialogLayout.addWidget(textEdit)
+        dialogLayout.addWidget(groupBox)
+        dialogLayout.addWidget(dialogButtons)
+
+        dialog.setLayout(dialogLayout)
+
+        result = dialog.exec_()
+        if result == QtGui.QDialog.Accepted:
+            if groundCheckBox.isChecked():
+                with open('settings.json', 'w') as f:
+                    f.write(pretty_json)
+
+                Settings.settings_files = {}
+                self._controller.arguments.groups = {}
+                self._controller.load_settings()
 
     def _scroll_to_match(self):
         index = self._listWidget.currentRow()

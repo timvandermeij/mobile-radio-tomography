@@ -83,6 +83,7 @@ class SettingsWidget(QtGui.QWidget):
         self._settings = self._arguments.get_settings(self._component)
 
         self._widgets = {}
+        self._value_widgets = {}
 
         layout = QtGui.QVBoxLayout()
 
@@ -132,6 +133,7 @@ class SettingsWidget(QtGui.QWidget):
             groupBox.setLayout(formLayout)
             layout.addWidget(groupBox)
 
+            self._value_widgets[key] = valueWidget
             self._widgets[key] = groupBox
 
         self.setLayout(layout)
@@ -159,6 +161,14 @@ class SettingsWidget(QtGui.QWidget):
 
         return widget
 
+    def get_values(self):
+        values = {}
+        for key, widget in self._value_widgets.iteritems():
+            if not widget.is_value_default():
+                values[key] = widget.get_value()
+
+        return values
+
     def _trigger_parent_clicked(self):
         self.parentClicked.emit(self._settings.parent.component_name)
 
@@ -176,27 +186,39 @@ class FormWidget(QtGui.QWidget):
     def get_value(self):
         raise NotImplementedError("Subclasses must implement `get_value`")
 
+    def reset_value(self):
+        raise NotImplementedError("Subclasses must implement `reset_value`")
+
     def is_value_changed(self):
-        raise NotImplementedError("Subclasses must implement `is_value_changed`")
+        return self.get_value() != self.info["value"]
+
+    def is_value_default(self):
+        return self.get_value() == self.info["default"]
 
 class BooleanFormWidget(FormWidget):
     def setup_form(self):
-        enabledButton = QtGui.QRadioButton("Enabled")
-        disabledButton = QtGui.QRadioButton("Disabled")
+        self._enabledButton = QtGui.QRadioButton("Enabled")
+        self._disabledButton = QtGui.QRadioButton("Disabled")
 
-        enabledButton.setChecked(self.info["value"])
-        disabledButton.setChecked(not self.info["value"])
+        self.reset_value()
 
         buttonGroup = QtGui.QButtonGroup()
-        buttonGroup.addButton(enabledButton)
-        buttonGroup.addButton(disabledButton)
+        buttonGroup.addButton(self._enabledButton)
+        buttonGroup.addButton(self._disabledButton)
 
         buttonLayout = QtGui.QVBoxLayout()
         buttonLayout.setContentsMargins(0, 0, 0, 0)
-        buttonLayout.addWidget(enabledButton)
-        buttonLayout.addWidget(disabledButton)
+        buttonLayout.addWidget(self._enabledButton)
+        buttonLayout.addWidget(self._disabledButton)
 
         self.setLayout(buttonLayout)
+
+    def get_value(self):
+        return self._enabledButton.isChecked()
+
+    def reset_value(self):
+        self._enabledButton.setChecked(self.info["value"])
+        self._disabledButton.setChecked(not self.info["value"])
 
 class TextFormWidget(QtGui.QLineEdit, FormWidget):
     def __init__(self, form, key, info, *a, **kw):
@@ -222,6 +244,16 @@ class TextFormWidget(QtGui.QLineEdit, FormWidget):
             self.textChanged.connect(self._validate)
         else:
             self.textChanged.disconnect(self._validate)
+
+    def get_value(self):
+        text = self.text()
+        validator = self.validator()
+        if validator is not None:
+            state, pos = validator.validate(text, 0)
+            if state != QtGui.QValidator.Acceptable:
+                return self.info["value"]
+
+        return str(self.text())
 
     def reset_value(self):
         self.setText(self.format_value(self.info["value"]))
@@ -327,6 +359,7 @@ class FileFormWidget(TextFormWidget):
 class NumericFormWidget(TextFormWidget):
     def setup_form(self):
         self._formatter = None
+        self._caster = None
         super(NumericFormWidget, self).setup_form()
 
     def setValidator(self, v):
@@ -344,10 +377,20 @@ class NumericFormWidget(TextFormWidget):
         self.reset_value()
 
     def format_value(self, value):
-        if self._formatter:
+        if self._formatter is not None:
             return self._formatter(value)
 
         return super(NumericFormWidget, self).format_value(value)
+
+    def set_caster(self, caster):
+        self._caster = caster
+
+    def get_value(self):
+        text = super(NumericFormWidget, self).get_value()
+        if self._caster is not None:
+            return self._caster(text)
+
+        return text
 
 class NumericSliderFormWidget(FormWidget):
     def setup_form(self):
@@ -376,6 +419,12 @@ class NumericSliderFormWidget(FormWidget):
 
     def set_formatter(self, formatter):
         self._valueWidget.set_formatter(formatter)
+
+    def set_caster(self, caster):
+        self._valueWidget.set_caster(caster)
+
+    def get_value(self):
+        return self._valueWidget.get_value()
 
     def _slider_to_value(self, value):
         minimum = self._slider.minimum()
@@ -408,6 +457,7 @@ class IntegerFormWidget(NumericSliderFormWidget):
     def setup_form(self):
         super(IntegerFormWidget, self).setup_form()
         self.set_formatter(self.format_value)
+        self.set_caster(int)
         self.setValidator(QtGui.QIntValidator())
 
         if self.has_slider():
@@ -422,6 +472,7 @@ class FloatFormWidget(NumericSliderFormWidget):
     def setup_form(self):
         super(FloatFormWidget, self).setup_form()
         self.set_formatter(self.format_value)
+        self.set_caster(float)
         self.setValidator(QtGui.QDoubleValidator())
         if self.has_slider():
             slider = QtGui.QSlider(QtCore.Qt.Horizontal)
@@ -445,10 +496,12 @@ class ListFormWidget(FormWidget):
 
         self._layout.setContentsMargins(0, 0, 0, 0)
 
+        self._sub_widgets = []
+
         value = self._format_list(self.info["value"])
         default = self._format_list(self.info["default"])
         for sub_value, sub_default in itertools.izip_longest(value, default):
-            self._add_to_list(sub_value, sub_default)
+            self._add_to_list(sub_value=sub_value, sub_default=sub_default)
 
         if "length" not in self.info:
             addButton = QtGui.QToolButton()
@@ -456,7 +509,7 @@ class ListFormWidget(FormWidget):
             addButton.setText("Add item")
             addButton.setToolTip("Add another item element to the list")
             addButton.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
-            addButton.clicked.connect(lambda: self._add_to_list(position=self._layout.count()-1))
+            addButton.clicked.connect(self._add_to_list)
             self._layout.addWidget(addButton)
 
         self.setLayout(self._layout)
@@ -470,9 +523,8 @@ class ListFormWidget(FormWidget):
 
         return value
 
-    def _add_to_list(self, sub_value=None, sub_default=None, position=-1):
-        if position == -1:
-            position = self._layout.count()
+    def _add_to_list(self, checked=False, sub_value=None, sub_default=None):
+        position = len(self._sub_widgets)
 
         sub_info = self.info.copy()
         sub_info["type"] = sub_info.pop("subtype")
@@ -482,6 +534,8 @@ class ListFormWidget(FormWidget):
         sub_info["value"] = sub_value
         sub_info["default"] = sub_default
         sub_widget = self.form.make_value_widget("{}-{}".format(self.key, position), sub_info)
+
+        self._sub_widgets.append(sub_widget)
 
         if "length" in self.info:
             self._layout.insertWidget(position, sub_widget)
@@ -507,9 +561,15 @@ class ListFormWidget(FormWidget):
         removeButton.close()
         itemLayout.deleteLater()
         self._layout.invalidate()
+        self._sub_widgets.remove(sub_widget)
+
+    def get_value(self):
+        return [sub_widget.get_value() for sub_widget in self._sub_widgets]
 
 class DictFormWidget(FormWidget):
     def setup_form(self):
+        self._sub_widgets = {}
+
         formLayout = QtGui.QFormLayout()
         for key, value_info in self.info["dictinfo"].iteritems():
             sub_info = value_info.copy()
@@ -521,10 +581,16 @@ class DictFormWidget(FormWidget):
 
             key_text = "{} ({}):".format(key, self.form.format_type(sub_info))
             keyLabel = QtGui.QLabel(key_text)
+
             subWidget = self.form.make_value_widget("{}-{}".format(self.key, key), sub_info)
             formLayout.addRow(keyLabel, subWidget)
 
+            self._sub_widgets[key] = subWidget
+
         self.setLayout(formLayout)
+
+    def get_value(self):
+        return dict((key, subWidget.get_value()) for (key, subWidget) in self._sub_widgets.iteritems())
 
 class ChoicesFormWidget(QtGui.QComboBox, FormWidget):
     __init__ = FormWidget.__init__
@@ -538,3 +604,6 @@ class ChoicesFormWidget(QtGui.QComboBox, FormWidget):
             self.addItem(str(choice))
             if choice == self.info["value"]:
                 self.setCurrentIndex(i)
+
+    def get_value(self):
+        return str(self.currentText())
