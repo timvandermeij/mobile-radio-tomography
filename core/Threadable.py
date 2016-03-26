@@ -25,4 +25,5 @@ class Threadable(object):
         """
         Interrupt the main thread.
         """
+
         self._thread_manager.interrupt(self._name)

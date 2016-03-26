@@ -76,11 +76,11 @@ class TestCoreThreadManager(ThreadableTestCase):
 
     @patch.object(Thread_Manager, 'log')
     def test_destroy_log(self, log_mock):
-        # The destroy does not call log outside an exception context.
+        # The `destroy` method does not call `log` outside an exception context.
         self.thread_manager.destroy()
         self.assertEqual(log_mock.call_count, 0)
 
-        # When destroy is in an exception handling block, log is called.
+        # If `destroy` is called in an exception handling block, `log` is called.
         try:
             raise RuntimeError("Exception must be handled in this test")
         except:
@@ -101,8 +101,7 @@ class TestCoreThreadManager(ThreadableTestCase):
     @patch.object(thread, 'interrupt_main')
     @patch.object(Thread_Manager, 'log')
     def test_interrupt_registered(self, log_mock, interrupt_mock):
-        # An registered thread has its error logged and interrupts the main 
-        # thread.
+        # A registered thread has its error logged and interrupts the main thread.
         mock_thread = Mock_Thread(self.thread_manager)
         self.thread_manager.register("mock_thread", mock_thread)
         mock_thread.interrupt()
