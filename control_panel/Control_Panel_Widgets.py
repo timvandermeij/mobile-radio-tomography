@@ -1,4 +1,6 @@
 import itertools
+import os
+import re
 from PyQt4 import QtCore, QtGui
 
 # Ported from https://github.com/Frodox/qt-line-edit-with-clear-button
@@ -8,33 +10,46 @@ class QLineEditClear(QtGui.QLineEdit):
     def __init__(self, *a, **kw):
         super(QLineEditClear, self).__init__(*a, **kw)
 
-        self.clearButton = QtGui.QToolButton(self)
+        self.clearButton = QLineEditToolButton(self)
         self.clearButton.setIcon(QtGui.QIcon("assets/edit-clear.png"))
-        self.clearButton.setCursor(QtCore.Qt.ArrowCursor)
-        self.clearButton.setStyleSheet("QToolButton { border: none; padding: 0px; }")
         self.clearButton.hide()
 
         self.clearButton.clicked.connect(self.clear)
         self.textChanged.connect(self.updateCloseButton)
 
-        frameWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth)
-        width = self.clearButton.sizeHint().width() + frameWidth + 1
-        self.setStyleSheet("QLineEdit {{ padding-right: {}px; }}".format(width))
-
-        msz = self.minimumSizeHint()
-        # Source assumed square icon here, but we do not.
-        fill = frameWidth * 2 + 2
-        self.setMinimumSize(max(msz.width(), self.clearButton.width() + fill),
-                            max(msz.height(), self.clearButton.height() + fill))
-
     def resizeEvent(self, event):
-        size = self.clearButton.sizeHint()
-        frameWidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth)
-        self.clearButton.move(self.rect().right() - frameWidth - size.width(),
-                              (self.rect().bottom() + 1 - size.height())/2)
+        self.clearButton.resizeEvent(event)
 
     def updateCloseButton(self, text):
         self.clearButton.setVisible(not text.isEmpty())
+
+class QLineEditToolButton(QtGui.QToolButton):
+    def __init__(self, parent, *a, **kw):
+        super(QLineEditToolButton, self).__init__(parent, *a, **kw)
+
+        self.setCursor(QtCore.Qt.ArrowCursor)
+        self.setStyleSheet("QToolButton { border: none; padding: 0px; }")
+
+        frameWidth = self._getParentFrameWidth()
+        width = self.sizeHint().width() + frameWidth + 1
+        parent.setStyleSheet("padding-right: {}px;".format(width))
+
+        msz = parent.minimumSizeHint()
+        # Source assumed square icon here, but we do not.
+        fill = frameWidth * 2 + 2
+        parent.setMinimumSize(max(msz.width(), self.width() + fill),
+                              max(msz.height(), self.height() + fill))
+
+    def _getParentFrameWidth(self):
+        return self.parent().style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth)
+
+    def resizeEvent(self, event):
+        size = self.sizeHint()
+        frameWidth = self._getParentFrameWidth()
+        rect = self.parent().rect()
+        self.move(rect.right() - frameWidth - size.width(),
+                  (rect.bottom() + 1 - size.height())/2)
+
 
 class SettingsWidget(QtGui.QWidget):
     parentClicked = QtCore.pyqtSignal(str, name='parentClicked')
@@ -56,7 +71,7 @@ class SettingsWidget(QtGui.QWidget):
             "float": FloatFormWidget,
             "bool": BooleanFormWidget,
             "string": TextFormWidget, # Unless "choices" is supplied
-            "file": TextFormWidget,
+            "file": FileFormWidget,
             "class": TextFormWidget, # Unless "choices" is supplied
             "list": ListFormWidget,
             "tuple": ListFormWidget,
@@ -108,7 +123,7 @@ class SettingsWidget(QtGui.QWidget):
             description.setWordWrap(True)
             formLayout.addRow(descriptionLabel, description)
 
-            valueWidget = self.make_value_widget(info)
+            valueWidget = self.make_value_widget(key, info)
 
             valueLabel = QtGui.QLabel("Value:")
             formLayout.addRow(valueLabel, valueWidget)
@@ -121,6 +136,9 @@ class SettingsWidget(QtGui.QWidget):
 
         self.setLayout(layout)
 
+    def get_settings(self):
+        return self._settings
+
     def get_setting_widget(self, key):
         if key not in self._widgets:
             raise KeyError("Setting '{}' in component '{}' does not have a widget.".format(key, self._component))
@@ -130,14 +148,14 @@ class SettingsWidget(QtGui.QWidget):
     def format_type(self, info):
         return self._type_names[info["type"]]
 
-    def make_value_widget(self, info):
+    def make_value_widget(self, key, info):
         choices = self._arguments.get_choices(info)
         if choices is not None:
-            widget = ChoicesFormWidget(self, info)
+            widget = ChoicesFormWidget(self, key, info)
             widget.add_choices(choices)
         else:
             widget_type = self._type_widgets[info["type"]]
-            widget = widget_type(self, info)
+            widget = widget_type(self, key, info)
 
         return widget
 
@@ -145,9 +163,10 @@ class SettingsWidget(QtGui.QWidget):
         self.parentClicked.emit(self._settings.parent.component_name)
 
 class FormWidget(QtGui.QWidget):
-    def __init__(self, form, info, *a, **kw):
+    def __init__(self, form, key, info, *a, **kw):
         super(FormWidget, self).__init__(*a, **kw)
         self.form = form
+        self.key = key
         self.info = info
         self.setup_form()
 
@@ -180,7 +199,7 @@ class BooleanFormWidget(FormWidget):
         self.setLayout(buttonLayout)
 
 class TextFormWidget(QtGui.QLineEdit, FormWidget):
-    def __init__(self, form, info, *a, **kw):
+    def __init__(self, form, key, info, *a, **kw):
         # Qt does not understand the concept of multiple inheritance, since it 
         # is written in C++. Therefore, the QLineEdit must be the first class 
         # we inherit from, otherwise setText (a slot method) does not function.
@@ -189,17 +208,121 @@ class TextFormWidget(QtGui.QLineEdit, FormWidget):
         # See http://trevorius.com/scrapbook/python/pyqt-multiple-inheritance/ 
         # for more details.
         QtGui.QLineEdit.__init__(self, *a, **kw)
-        FormWidget.__init__(self, form, info, *a, **kw)
+        FormWidget.__init__(self, form, key, info, *a, **kw)
 
     def setup_form(self):
         self.reset_value()
         self.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Fixed)
+        self.editingFinished.connect(self._format)
+
+    def setValidator(self, v):
+        super(TextFormWidget, self).setValidator(v)
+        validator = self.validator()
+        if validator is not None:
+            self.textChanged.connect(self._validate)
+        else:
+            self.textChanged.disconnect(self._validate)
 
     def reset_value(self):
         self.setText(self.format_value(self.info["value"]))
 
+    def _format(self):
+        self.setText(self.format_value(self.text()))
+
     def format_value(self, value):
         return str(value) if value is not None else ""
+
+    def _update_stylesheet(self, color):
+        decl = "background-color: "
+        styleSheet = str(self.styleSheet())
+        newSheet, count = re.subn("({})(.*)(;)".format(decl), r"\1{}\3".format(color), styleSheet)
+        if count == 0:
+            newSheet = styleSheet + decl + color + ";"
+
+        self.setStyleSheet(newSheet)
+
+    def _validate(self, text):
+        pos = self.cursorPosition()
+        state, newpos = self.validator().validate(text, pos)
+        if state != QtGui.QValidator.Acceptable:
+            color = "#fd6464"
+        else:
+            color = "#32fe32"
+
+        self._update_stylesheet(color)
+
+        if newpos != pos:
+            self.setCursorPosition(pos)
+
+class FileFormatValidator(QtGui.QRegExpValidator):
+    def __init__(self, form_widget, *a, **kw):
+        super(FileFormatValidator, self).__init__(*a, **kw)
+        self.form_widget = form_widget
+        self.key = self.form_widget.key
+        self.info = self.form_widget.info
+        self.required = "required" in self.info and self.info["required"]
+        self.settings = self.form_widget.form.get_settings()
+
+        regexp = self.settings.make_format_regex(self.info["format"])
+        self.setRegExp(QtCore.QRegExp(regexp))
+
+    def validate(self, input, pos):
+        if input == "":
+            input = None
+
+        try:
+            self.settings.check_format(self.key, self.info, input)
+            return QtGui.QValidator.Acceptable, pos
+        except ValueError as e:
+            return QtGui.QValidator.Intermediate, pos
+
+class FileFormWidget(TextFormWidget):
+    def setup_form(self):
+        super(FileFormWidget, self).setup_form()
+
+        self.openButton = QLineEditToolButton(self)
+        self.openButton.setIcon(QtGui.QIcon("assets/file-open.png"))
+
+        self.openButton.clicked.connect(self._open_file)
+
+        if "format" in self.info:
+            self.setValidator(FileFormatValidator(self))
+
+    def format_value(self, value):
+        if value is None or value == "":
+            return ""
+
+        if "format" in self.info:
+            try:
+                return self.form.get_settings().check_format(self.key, self.info, value)
+            except ValueError:
+                pass
+
+        return value
+
+    def _open_file(self):
+        if "format" in self.info:
+            directory, file_format = os.path.split(self.info["format"])
+            file_type = os.path.splitext(file_format)[1]
+            file_filter = "{} files (*{})".format(file_type[1:].upper(), file_type)
+        else:
+            directory = ""
+            file_filter = ""
+
+        work_dir = os.getcwd() + "/"
+        file_name = QtGui.QFileDialog.getOpenFileName(self, "Select file",
+                                                      work_dir + directory,
+                                                      file_filter)
+
+        if file_name == "":
+            return
+
+        file_name = os.path.relpath(str(file_name), work_dir)
+
+        self.setText(self.format_value(file_name))
+
+    def resizeEvent(self, event):
+        self.openButton.resizeEvent(event)
 
 class NumericFormWidget(TextFormWidget):
     def setup_form(self):
@@ -216,10 +339,6 @@ class NumericFormWidget(TextFormWidget):
             if "max" in self.info:
                 validator.setTop(self.info["max"])
 
-            self.textChanged.connect(self._validate)
-        else:
-            self.textChanged.disconnect(self._validate)
-
     def set_formatter(self, formatter):
         self._formatter = formatter
         self.reset_value()
@@ -230,20 +349,9 @@ class NumericFormWidget(TextFormWidget):
 
         return super(NumericFormWidget, self).format_value(value)
 
-    def _validate(self, text):
-        pos = self.cursorPosition()
-        state, newpos = self.validator().validate(text, pos)
-        if state != QtGui.QValidator.Acceptable:
-            self.setStyleSheet("background-color: rgba(255, 0, 0, 60%)")
-        else:
-            self.setStyleSheet("background-color: rgba(0, 255, 0, 80%)")
-
-        if newpos != pos:
-            self.setCursorPosition(pos)
-
 class NumericSliderFormWidget(FormWidget):
     def setup_form(self):
-        self._valueWidget = NumericFormWidget(self.form, self.info)
+        self._valueWidget = NumericFormWidget(self.form, "{}-num".format(self.key), self.info)
 
         self._layout = QtGui.QHBoxLayout()
         self._layout.setContentsMargins(0, 0, 0, 0)
@@ -363,6 +471,9 @@ class ListFormWidget(FormWidget):
         return value
 
     def _add_to_list(self, sub_value=None, sub_default=None, position=-1):
+        if position == -1:
+            position = self._layout.count()
+
         sub_info = self.info.copy()
         sub_info["type"] = sub_info.pop("subtype")
         if "length" in sub_info:
@@ -370,7 +481,7 @@ class ListFormWidget(FormWidget):
 
         sub_info["value"] = sub_value
         sub_info["default"] = sub_default
-        sub_widget = self.form.make_value_widget(sub_info)
+        sub_widget = self.form.make_value_widget("{}-{}".format(self.key, position), sub_info)
 
         if "length" in self.info:
             self._layout.insertWidget(position, sub_widget)
@@ -410,7 +521,7 @@ class DictFormWidget(FormWidget):
 
             key_text = "{} ({}):".format(key, self.form.format_type(sub_info))
             keyLabel = QtGui.QLabel(key_text)
-            subWidget = self.form.make_value_widget(sub_info)
+            subWidget = self.form.make_value_widget("{}-{}".format(self.key, key), sub_info)
             formLayout.addRow(keyLabel, subWidget)
 
         self.setLayout(formLayout)

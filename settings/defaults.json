@@ -357,7 +357,7 @@
             "scenefile": {
                 "help": "VRML file to import as simulated environment",
                 "type": "file",
-                "format": "tests/vrml/{}.vrml",
+                "format": "tests/vrml/{}.wrl",
                 "required": false,
                 "default": null
             },

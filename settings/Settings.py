@@ -113,17 +113,25 @@ class Settings(object):
 
         data = self.settings[key]
 
-        # A required value must be nonempty (not None and not a value that 
-        # evaluates to false according to its type)
-        required = "required" in data and data["required"]
-        if required and not value:
-            raise ValueError("Setting '{}' for component '{}' must be nonempty, not '{}'".format(key, self.component_name, value))
+        value = self.check_format(key, data, value)
 
         # Numerical type-specific: check minimum and maximum value constraint
         if "min" in data and value < data["min"]:
             raise ValueError("Setting '{}' for component '{}' must be at least {}, not {}".format(key, self.component_name, data["min"], value))
         if "max" in data and value > data["max"]:
             raise ValueError("Setting '{}' for component '{}' must be at most {}, not {}".format(key, self.component_name, data["max"], value))
+
+        data["value"] = value
+
+    def make_format_regex(self, format):
+        return re.escape(format).replace("\\{\\}", "(.*)")
+
+    def check_format(self, key, data, value):
+        # A required value must be nonempty (not None and not a value that 
+        # evaluates to false according to its type)
+        required = "required" in data and data["required"]
+        if required and not value:
+            raise ValueError("Setting '{}' for component '{}' must be nonempty, not '{}'".format(key, self.component_name, value))
 
         # File type: If we have a formatter and have a file name, we can do 
         # multiple things:
@@ -137,18 +145,18 @@ class Settings(object):
         if data["type"] == "file" and "format" in data and value is not None:
             if os.path.isfile(value):
                 if required:
-                    regex = re.escape(data["format"]).replace("\\{\\}", "(.*)")
+                    regex = self.make_format_regex(data["format"])
                     match = re.match(regex, value)
                     if match:
-                        value = match.group(1)
+                        return match.group(1)
                     else:
                         raise ValueError("Setting '{}' for component '{}' must match the format '{}', value '{}' does not".format(key, self.component_name, data["format"].format("*"), value))
             else:
                 full_value = data["format"].format(value)
                 if os.path.isfile(full_value):
                     if not required:
-                        value = full_value
+                        return full_value
                 else:
                     raise ValueError("Setting '{}' for component '{}' must be given an existing file, not '{}'".format(key, self.component_name, value))
 
-        data["value"] = value
+        return value
