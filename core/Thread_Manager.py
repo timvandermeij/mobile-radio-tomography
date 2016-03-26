@@ -1,5 +1,6 @@
 import datetime
 import logging
+import sys
 import thread
 
 class Thread_Manager(object):
@@ -32,7 +33,11 @@ class Thread_Manager(object):
         Destroy all registered threads by deactivating them.
         """
 
-        self.log("main thread")
+        # Log the destroy call only if it is being called from an except clause
+        # to prevent "None" spam in the logs.
+        if sys.exc_info() != (None, None, None):
+            self.log("main thread")
+
         for name, thread in self._threads.items():
             thread.deactivate()
 
