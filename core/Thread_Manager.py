@@ -1,5 +1,6 @@
 import datetime
 import logging
+import thread
 
 class Thread_Manager(object):
     def __init__(self):
@@ -34,6 +35,21 @@ class Thread_Manager(object):
         self.log("main thread")
         for name, thread in self._threads.items():
             thread.deactivate()
+
+    def interrupt(self, name):
+        """
+        Handle an exception on a registered thread.
+
+        This method interrupts the main thread and logs the exception.
+        """
+
+        self.log("'{}' thread".format(name))
+
+        # Do not interrupt the main thread if the thread is not registered.
+        # This prevents stale threads that have long been deactivated and 
+        # unregistered from causing interrupts or segmentation faults.
+        if name in self._threads:
+            thread.interrupt_main()
 
     def log(self, source):
         """
