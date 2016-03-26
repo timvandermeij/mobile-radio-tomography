@@ -81,7 +81,7 @@ class TestMissionCycle(ThreadableTestCase, USBManagerTestCase, LocationTestCase,
         self.assertEqual(self.vehicle._waypoints, [(1,0)])
         self.assertEqual(self.vehicle._state.name, "move")
         self.assertEqual(self.vehicle.get_waypoint(), LocationLocal(1,0,0))
-        self.assertNotEqual(self.master.readline(), "")
+        self.assertNotEqual(self._ttl_device.readline(), "")
 
         self.vehicle._location = (1,0)
         self.vehicle._state = Robot_State("intersection")
