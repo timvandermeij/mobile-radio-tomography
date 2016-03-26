@@ -97,7 +97,6 @@ class SettingsWidget(QtGui.QWidget):
 
         if self._settings.parent is not None:
             parentButton = QtGui.QCommandLinkButton(self._settings.parent.name, "Go to parent ({})".format(self._settings.parent.component_name))
-            parentButton.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
             parentButton.clicked.connect(self._trigger_parent_clicked)
 
             layout.addWidget(parentButton)
@@ -121,6 +120,7 @@ class SettingsWidget(QtGui.QWidget):
             descriptionLabel = QtGui.QLabel("Description:")
             descriptionLabel.setAlignment(QtCore.Qt.AlignTop)
             description = QtGui.QLabel(self._arguments.get_help(key, info))
+            description.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
             description.setWordWrap(True)
             formLayout.addRow(descriptionLabel, description)
 
@@ -234,7 +234,6 @@ class TextFormWidget(QtGui.QLineEdit, FormWidget):
 
     def setup_form(self):
         self.reset_value()
-        self.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Fixed)
         self.editingFinished.connect(self._format)
 
     def setValidator(self, v):
@@ -345,6 +344,8 @@ class FileFormWidget(TextFormWidget):
             file_filter = ""
 
         work_dir = os.getcwd() + "/"
+
+        self.setStyleSheet("")
         file_name = QtGui.QFileDialog.getOpenFileName(self, "Select file",
                                                       work_dir + directory,
                                                       file_filter)

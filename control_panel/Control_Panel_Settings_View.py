@@ -24,6 +24,7 @@ class Control_Panel_Settings_View(Control_Panel_View):
         self._listWidget = QtGui.QListWidget()
         self._listWidget.addItems([defaults[c]["name"] for c in self._components])
         self._listWidget.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Expanding)
+        self._listWidget.setCurrentRow(0)
 
         self._stackedLayout = QtGui.QStackedLayout()
 
@@ -137,9 +138,9 @@ class Control_Panel_Settings_View(Control_Panel_View):
             self._stackedLayout.currentWidget().ensureWidgetVisible(widget)
 
     def _filter(self, text):
+        text = text.toLower()
         self._best_matches = {}
         for i, component in enumerate(self._components):
-            text = text.toLower()
             if text == "":
                 hidden = False
             elif self._match_component(i, component, text):
@@ -180,11 +181,11 @@ class Control_Panel_Settings_View(Control_Panel_View):
         return False
 
     def _match_setting(self, key, info, text):
-        if text in key:
+        if text in key.lower():
             return Setting_Filter_Match.KEY
-        if text in str(info["value"]):
+        if text in str(info["value"]).lower():
             return Setting_Filter_Match.VALUE
-        if text in info["help"]:
+        if text in info["help"].lower():
             return Setting_Filter_Match.HELP
 
         return Setting_Filter_Match.NONE
