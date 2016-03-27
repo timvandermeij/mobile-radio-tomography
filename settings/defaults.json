@@ -737,7 +737,7 @@
                 "required": false,
                 "default": "127.0.0.1"
             },
-            "port": {
+            "socket_port": {
                 "help": "Network port to connect the socket to",
                 "type": "int",
                 "min": 0,
