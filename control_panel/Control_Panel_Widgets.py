@@ -231,6 +231,7 @@ class TextFormWidget(QtGui.QLineEdit, FormWidget):
         # for more details.
         QtGui.QLineEdit.__init__(self, *a, **kw)
         FormWidget.__init__(self, form, key, info, *a, **kw)
+        self._background_color = ""
 
     def setup_form(self):
         self.reset_value()
@@ -266,14 +267,24 @@ class TextFormWidget(QtGui.QLineEdit, FormWidget):
     def format_value(self, value):
         return str(value) if value is not None else ""
 
-    def _update_stylesheet(self, color):
+    def set_background_color(self, color):
+        self._background_color = color
+
         decl = "background-color: "
         styleSheet = str(self.styleSheet())
-        newSheet, count = re.subn("({})(.*)(;)".format(decl), r"\1{}\3".format(color), styleSheet)
-        if count == 0:
+        if color == "":
+            replace = ""
+        else:
+            replace = r"\1{}\3".format(color)
+
+        newSheet, count = re.subn("({})(.*)(;)".format(decl), replace, styleSheet)
+        if count == 0 and color != "":
             newSheet = styleSheet + decl + color + ";"
 
         self.setStyleSheet(newSheet)
+
+    def get_background_color(self):
+        return self._background_color
 
     def _validate(self, text):
         pos = self.cursorPosition()
@@ -283,7 +294,7 @@ class TextFormWidget(QtGui.QLineEdit, FormWidget):
         else:
             color = "#32fe32"
 
-        self._update_stylesheet(color)
+        self.set_background_color(color)
 
         if newpos != pos:
             self.setCursorPosition(pos)
@@ -345,12 +356,14 @@ class FileFormWidget(TextFormWidget):
 
         work_dir = os.getcwd() + "/"
 
-        self.setStyleSheet("")
+        color = self.get_background_color()
+        self.set_background_color("")
         file_name = QtGui.QFileDialog.getOpenFileName(self, "Select file",
                                                       work_dir + directory,
                                                       file_filter)
 
         if file_name == "":
+            self.set_background_color(color)
             return
 
         file_name = os.path.relpath(str(file_name), work_dir)
