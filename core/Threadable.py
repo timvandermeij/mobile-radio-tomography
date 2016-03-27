@@ -1,5 +1,3 @@
-import thread
-
 class Threadable(object):
     def __init__(self, name, thread_manager):
         """
@@ -28,5 +26,4 @@ class Threadable(object):
         Interrupt the main thread.
         """
 
-        self._thread_manager.log("'{}' thread".format(self._name))
-        thread.interrupt_main()
+        self._thread_manager.interrupt(self._name)

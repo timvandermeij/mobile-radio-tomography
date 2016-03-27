@@ -1,5 +1,7 @@
 import datetime
 import logging
+import sys
+import thread
 
 class Thread_Manager(object):
     def __init__(self):
@@ -9,16 +11,19 @@ class Thread_Manager(object):
 
         self._threads = {}
 
-    def register(self, name, thread):
+    def register(self, name, threadable):
         """
-        Register a thread.
+        Register a `Threadable` object by its `name`.
         """
 
-        self._threads[name] = thread
+        self._threads[name] = threadable
 
     def unregister(self, name):
         """
-        Unregister a thread.
+        Unregister a thread given its `name`.
+
+        A `name` for a `Threadable` object that is currently not registered is
+        ignored.
         """
 
         if name not in self._threads:
@@ -31,9 +36,28 @@ class Thread_Manager(object):
         Destroy all registered threads by deactivating them.
         """
 
-        self.log("main thread")
-        for name, thread in self._threads.items():
-            thread.deactivate()
+        # Log the destroy call only if it is being called from an except clause
+        # to prevent "None" spam in the logs.
+        if sys.exc_info() != (None, None, None):
+            self.log("main thread")
+
+        for name, threadable in self._threads.items():
+            threadable.deactivate()
+
+    def interrupt(self, name):
+        """
+        Handle an exception on a registered thread.
+
+        This method interrupts the main thread and logs the exception.
+        """
+
+        self.log("'{}' thread".format(name))
+
+        # Do not interrupt the main thread if the thread is not registered.
+        # This prevents stale threads that have long been deactivated and 
+        # unregistered from causing interrupts or segmentation faults.
+        if name in self._threads:
+            thread.interrupt_main()
 
     def log(self, source):
         """

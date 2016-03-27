@@ -2,6 +2,7 @@ import itertools
 from mock import patch
 from dronekit import LocationLocal
 from ..environment.Environment import Environment
+from ..location.Line_Follower import Line_Follower
 from ..trajectory.Mission import Mission_Cycle
 from ..vehicle.Robot_Vehicle import Robot_State
 from ..settings import Arguments
@@ -63,7 +64,8 @@ class TestMissionCycle(ThreadableTestCase, USBManagerTestCase, LocationTestCase,
             (0,2), (0,2), (0,2), (0,2)
         ])
 
-    def test_step(self):
+    @patch.object(Line_Follower, "_loop")
+    def test_step(self, line_follower_arduino_read_mock):
         with patch('sys.stdout'):
             self.mission.setup()
             self.mission.arm_and_takeoff()
@@ -81,7 +83,7 @@ class TestMissionCycle(ThreadableTestCase, USBManagerTestCase, LocationTestCase,
         self.assertEqual(self.vehicle._waypoints, [(1,0)])
         self.assertEqual(self.vehicle._state.name, "move")
         self.assertEqual(self.vehicle.get_waypoint(), LocationLocal(1,0,0))
-        self.assertNotEqual(self.master.readline(), "")
+        self.assertNotEqual(self._ttl_device.readline(), "")
 
         self.vehicle._location = (1,0)
         self.vehicle._state = Robot_State("intersection")

@@ -11,7 +11,7 @@ class TestXBeeConfigurator(USBManagerTestCase, SettingsTestCase):
     def setUp(self):
         super(TestXBeeConfigurator, self).setUp()
 
-        self.arguments = Arguments("settings.json", ["--port={}".format(self.port)])
+        self.arguments = Arguments("settings.json", ["--port", self._xbee_port])
         self.settings = self.arguments.get_settings("xbee_configurator")
 
         self.usb_manager.index()
@@ -19,7 +19,7 @@ class TestXBeeConfigurator(USBManagerTestCase, SettingsTestCase):
 
     def test_initialization(self):
         self.assertIsInstance(self.configurator._serial_connection, serial.Serial)
-        self.assertEqual(self.configurator._serial_connection.port, self.port)
+        self.assertEqual(self.configurator._serial_connection.port, self._xbee_port)
         self.assertEqual(self.configurator._serial_connection.baudrate,
                          USB_Device_Baud_Rate.XBEE)
         self.assertIsInstance(self.configurator._sensor, ZigBee)

@@ -47,11 +47,14 @@ class Test_Run(object):
 
     def clear_logs_directory(self):
         """
-        Clear the logs directory.
+        Print all logs and clear the logs directory.
         """
 
         files = glob.glob("logs/*.log")
         for file in files:
+            with open(file) as f:
+                print(f.read())
+
             os.remove(file)
 
 def main():

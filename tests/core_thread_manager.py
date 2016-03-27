@@ -1,5 +1,7 @@
+import logging
+import thread
 import unittest
-from mock import patch
+from mock import patch, call, Mock, MagicMock
 from ..core.Threadable import Threadable
 from ..core.Thread_Manager import Thread_Manager
 
@@ -71,3 +73,55 @@ class TestCoreThreadManager(ThreadableTestCase):
         self.thread_manager.register("mock_thread", mock_thread)
         self.thread_manager.destroy()
         self.assertTrue(mock_thread_deactivate.called)
+
+    @patch.object(Thread_Manager, 'log')
+    def test_destroy_log(self, log_mock):
+        # The `destroy` method does not call `log` outside an exception context.
+        self.thread_manager.destroy()
+        self.assertEqual(log_mock.call_count, 0)
+
+        # If `destroy` is called in an exception handling block, `log` is called.
+        try:
+            raise RuntimeError("Exception must be handled in this test")
+        except:
+            self.thread_manager.destroy()
+
+        log_mock.assert_called_once_with("main thread")
+
+    @patch.object(thread, 'interrupt_main')
+    @patch.object(Thread_Manager, 'log')
+    def test_interrupt_unregistered(self, log_mock, interrupt_mock):
+        # An unregistered thread has its error logged, but does not interrupt 
+        # the main thread.
+        mock_thread = Mock_Thread(self.thread_manager)
+        mock_thread.interrupt()
+        log_mock.assert_called_once_with("'mock_thread' thread")
+        self.assertEqual(interrupt_mock.call_count, 0)
+
+    @patch.object(thread, 'interrupt_main')
+    @patch.object(Thread_Manager, 'log')
+    def test_interrupt_registered(self, log_mock, interrupt_mock):
+        # A registered thread has its error logged and interrupts the main thread.
+        mock_thread = Mock_Thread(self.thread_manager)
+        self.thread_manager.register("mock_thread", mock_thread)
+        mock_thread.interrupt()
+        log_mock.assert_called_once_with("'mock_thread' thread")
+        self.assertEqual(interrupt_mock.call_count, 1)
+
+    def test_log(self):
+        # Test lazy initialization of logger.
+        logger_mock = MagicMock()
+        patcher = patch.object(logging, 'getLogger', Mock(return_value=logger_mock))
+        patcher.start()
+        self.assertFalse(hasattr(self.thread_manager, "_logger"))
+        self.thread_manager.log("'foo' source")
+        self.assertEqual(self.thread_manager._logger, logger_mock)
+        logger_mock.setLevel.assert_called_once_with(logging.DEBUG)
+        self.assertEqual(logger_mock.addHandler.call_count, 1)
+
+        # Test that all calls are logged.
+        self.thread_manager.log("'bar' source")
+        self.assertEqual(logger_mock.exception.call_count, 2)
+        logger_mock.exception.assert_has_calls([call("'foo' source"), call("'bar' source")])
+
+        patcher.stop()

@@ -32,7 +32,7 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
         self.sensor_id = 1
 
         self.arguments = Arguments("settings.json", [
-            "--port", self.port,
+            "--port", self._xbee_port,
             "--sensors", "sensor_0", "sensor_1", "sensor_2", "sensor_3",
             "sensor_4", "sensor_5", "sensor_6", "sensor_7", "sensor_8"
         ])
