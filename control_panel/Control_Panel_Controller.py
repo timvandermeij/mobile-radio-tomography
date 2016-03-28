@@ -49,7 +49,7 @@ class Control_Panel_Controller(object):
         self._packet_callbacks = {}
 
         self._view_components = {
-            Control_Panel_View_Name.DEVICES: "control_panel",
+            Control_Panel_View_Name.DEVICES: "control_panel_devices",
             Control_Panel_View_Name.LOADING: "control_panel_loading",
             Control_Panel_View_Name.RECONSTRUCTION: "control_panel_reconstruction",
             Control_Panel_View_Name.WAYPOINTS: "control_panel_waypoints",

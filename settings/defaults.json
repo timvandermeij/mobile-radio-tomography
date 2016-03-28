@@ -20,6 +20,17 @@
             }
         }
     },
+    "control_panel_devices": {
+        "name": "Control panel (devices view)",
+        "settings": {
+            "devices_discover_delay": {
+                "help": "Frequency in seconds to handle a discovered XBee device",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.5
+            }
+        }
+    },
     "control_panel_reconstruction": {
         "name": "Control panel (reconstruction view)",
         "parent": "reconstruction",
