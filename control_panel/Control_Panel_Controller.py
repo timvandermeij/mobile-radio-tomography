@@ -55,6 +55,7 @@ class Control_Panel_Controller(object):
             Control_Panel_View_Name.WAYPOINTS: "control_panel_waypoints",
             Control_Panel_View_Name.SETTINGS: "control_panel"
         }
+        self._view_data = dict([(name, {}) for name in self._view_components.iterkeys()])
         self.load_settings()
 
         self.arguments.check_help()
@@ -108,6 +109,7 @@ class Control_Panel_Controller(object):
             return
 
         if self._current_view is not None:
+            self._view_data[self._current_view_name] = self._current_view.save()
             self._current_view.clear(self.central_widget.layout())
 
         if self._current_view_name in self._view_actions:
@@ -130,6 +132,7 @@ class Control_Panel_Controller(object):
             view = views[name](self, self._view_settings[name])
             self._current_view = view
             self._current_view_name = name
+            view.load(self._view_data[name])
             view.show()
         except Exception as e:
             QtGui.QMessageBox.critical(self.central_widget, "Internal error",

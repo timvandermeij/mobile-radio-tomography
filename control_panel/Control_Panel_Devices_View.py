@@ -14,6 +14,24 @@ class XBee_Device(object):
         self.joined = False
 
 class Control_Panel_Devices_View(Control_Panel_View):
+    def load(self, data):
+        if "devices" in data:
+            self._devices = data["devices"]
+            return
+
+        self._devices = [
+            XBee_Device("Ground station", 0, XBee_Device_Category.COORDINATOR)
+        ]
+
+        for index in xrange(1, self._controller.xbee.number_of_sensors + 1):
+            self._devices.append(XBee_Device("Vehicle {}".format(index), index,
+                                             XBee_Device_Category.END_DEVICE))
+
+    def save(self):
+        return {
+            "devices": self._devices
+        }
+
     def show(self):
         """
         Show the devices view.
@@ -35,11 +53,6 @@ class Control_Panel_Devices_View(Control_Panel_View):
 
         # Refresh immediately to fill the tree view with the devices and to 
         # discover any vehicles that are already connected.
-        self._devices = [
-            XBee_Device("Ground station", 0, XBee_Device_Category.COORDINATOR),
-            XBee_Device("Vehicle 1", 1, XBee_Device_Category.END_DEVICE),
-            XBee_Device("Vehicle 2", 2, XBee_Device_Category.END_DEVICE)
-        ]
         self._refresh()
 
         # Create the refresh button.
