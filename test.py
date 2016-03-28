@@ -8,6 +8,10 @@ class Test_Run(object):
         self._failed = False
 
     def is_passed(self):
+        """
+        Check whether all the test run parts succeeded.
+        """
+
         return not self._failed
 
     def execute_unit_tests(self):
@@ -26,6 +30,9 @@ class Test_Run(object):
     def execute_unused_imports_check(self):
         """
         Execute the unused imports check.
+
+        Returns a list of unused imports, and causes the test to fail in case
+        there are unused imports.
         """
 
         excludes = ["__package__", "scipy.sparse.linalg"]
@@ -45,6 +52,24 @@ class Test_Run(object):
 
         return unused_imports
 
+    def read_logs_directory(self):
+        """
+        Read all logs in the logs directory.
+
+        Returns the concatenared file contents of all the logs.
+        """
+
+        files = glob.glob("logs/*.log")
+        log_contents = ""
+        for file in files:
+            with open(file) as f:
+                contents = f.read().rstrip('\n')
+                if contents != "":
+                    log_contents += contents + "\n"
+                    self._failed = True
+
+        return log_contents
+
     def clear_logs_directory(self):
         """
         Print all logs and clear the logs directory.
@@ -52,13 +77,11 @@ class Test_Run(object):
 
         files = glob.glob("logs/*.log")
         for file in files:
-            with open(file) as f:
-                print(f.read())
-
             os.remove(file)
 
 def main():
     test_run = Test_Run()
+    test_run.clear_logs_directory()
 
     print("> Executing unit tests")
     test_run.execute_unit_tests()
@@ -68,7 +91,12 @@ def main():
     for unused_import in unused_imports:
         print("Unused import found: {}".format(unused_import))
 
-    print("> Clearing the logs directory")
+    print("> Cleaning up the logs directory")
+    log_contents = test_run.read_logs_directory()
+    if log_contents != "":
+        print("Exception logs found:")
+        print(log_contents)
+
     test_run.clear_logs_directory()
 
     if not test_run.is_passed():
