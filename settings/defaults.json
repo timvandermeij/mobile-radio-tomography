@@ -151,7 +151,7 @@
                 "default": [0, 2, 3, 5]
             },
             "line_threshold": {
-                "help": "Threshold in measurement us above which a LED measurement is considered black",
+                "help": "Threshold in microseconds above which a LED measurement is considered black",
                 "type": "int",
                 "min": 0,
                 "default": 300
@@ -182,7 +182,7 @@
                 "default": 0.0002
             },
             "max_value": {
-                "help": "Maximum value read from the measurements in us",
+                "help": "Maximum value read from the line follower in microseconds",
                 "type": "int",
                 "min": 0,
                 "default": 1023
@@ -577,7 +577,7 @@
                 "default": 100
             },
             "iteration_debug": {
-                "help": "Number of iterations to show a progress report every  so often",
+                "help": "Number of iterations to show a progress report every so often",
                 "type": "int",
                 "min": 1,
                 "default": 100

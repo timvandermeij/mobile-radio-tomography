@@ -20,6 +20,7 @@ class Arguments(object):
 
         self.argv = argv
         self.defaults_file = defaults_file
+
         # We disable help here so that partial parses do not yet respond to 
         # --help. After all the settings files have registered themselves in 
         # the Arguments handler, we can display help for all the groups using 

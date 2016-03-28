@@ -286,9 +286,9 @@ class TextFormWidget(QtGui.QLineEdit, FormWidget):
         pos = self.cursorPosition()
         state, newpos = self.validator().validate(text, pos)
         if state != QtGui.QValidator.Acceptable:
-            color = "#fd6464"
+            color = "#FA6969"
         else:
-            color = "#32fe32"
+            color = "#8BD672"
 
         self.set_background_color(color)
 

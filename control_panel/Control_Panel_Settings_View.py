@@ -44,7 +44,7 @@ class Control_Panel_Settings_View(Control_Panel_View):
         hbox_stacks.addLayout(self._stackedLayout)
 
         filterInput = QLineEditClear()
-        filterInput.setPlaceholderText("Search settings")
+        filterInput.setPlaceholderText("Search...")
         filterInput.textChanged.connect(lambda text: self._filter(text))
         filterInput.setFixedWidth(self._listWidget.sizeHint().width())
         filterInput.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Maximum)

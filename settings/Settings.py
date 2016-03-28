@@ -3,7 +3,7 @@ import os
 import re
 
 class Settings(object):
-    DEFAULTS_FILE = 'settings/defaults.json'
+    DEFAULTS_FILE = "settings/defaults.json"
     settings_files = {}
 
     @classmethod

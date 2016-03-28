@@ -2,11 +2,8 @@ import json
 import struct
 
 class XBee_Packet(object):
-    """
-    Packet type specifications loaded from the JSON file.
-
-    The specifications are cached between packets.
-    """
+    # Packet type specifications loaded from the JSON file.
+    # The specifications are cached between packets.
     _specifications = None
 
     def __init__(self):
@@ -17,8 +14,8 @@ class XBee_Packet(object):
         """
 
         if self._specifications is None:
-            with open('zigbee/specifications.json') as f:
-                self._specifications = json.load(f)
+            with open("zigbee/specifications.json") as specifications_file:
+                self._specifications = json.load(specifications_file)
 
         self._private = True
         self._contents = {}

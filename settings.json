@@ -1,2 +1,5 @@
 {
+    "algorithm_class": "NSGA", 
+    "controller_xbee_simulation": true, 
+    "mission_class": "Mission_Search"
 }
