@@ -330,8 +330,8 @@ class Viewer_Interactive(Viewer):
 
         self.sensors = self.environment.get_distance_sensors()
 
-        self.camera_speed = self.settings.get("camera_speed") # meters/second
-        self.rotate_speed = self.settings.get("rotate_speed") # degrees/second
+        self.camera_speed = self.settings.get("camera_move_speed")
+        self.rotate_speed = self.settings.get("camera_rotate_speed")
 
         self.current_object = -1
         self.current_face = -1

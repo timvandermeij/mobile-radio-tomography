@@ -7,6 +7,7 @@ from Control_Panel_View import Control_Panel_View_Name
 from Control_Panel_Devices_View import Control_Panel_Devices_View
 from Control_Panel_Loading_View import Control_Panel_Loading_View
 from Control_Panel_Reconstruction_View import Control_Panel_Reconstruction_View
+from Control_Panel_Settings_View import Control_Panel_Settings_View
 from Control_Panel_Waypoints_View import Control_Panel_Waypoints_View
 from ..core.Thread_Manager import Thread_Manager
 from ..core.USB_Manager import USB_Manager
@@ -30,7 +31,7 @@ class Control_Panel_Controller(object):
         # Create arguments (for obtaining various settings in views)
         # and a USB manager (for checking insertion of XBee devices).
         # Initialize the XBee sensor for use by specific views.
-        self.arguments = Arguments("settings.json", sys.argv[1:])
+        self.arguments = Arguments("settings.json", self._get_arguments())
         self.thread_manager = Thread_Manager()
         self.usb_manager = USB_Manager()
         self.usb_manager.index()
@@ -47,7 +48,32 @@ class Control_Panel_Controller(object):
 
         self._packet_callbacks = {}
 
+        self._view_components = {
+            Control_Panel_View_Name.DEVICES: "control_panel",
+            Control_Panel_View_Name.LOADING: "control_panel_loading",
+            Control_Panel_View_Name.RECONSTRUCTION: "control_panel_reconstruction",
+            Control_Panel_View_Name.WAYPOINTS: "control_panel_waypoints",
+            Control_Panel_View_Name.SETTINGS: "control_panel"
+        }
+        self.load_settings()
+
         self.arguments.check_help()
+
+    def _get_arguments(self):
+        argv = []
+        for i, arg in enumerate(self.app.arguments()):
+            arg = str(arg)
+            if arg.startswith('--') or arg == '-h':
+                argv.append(arg)
+            elif i == 0 and not arg.startswith('-'):
+                argv.append(arg)
+
+        return argv
+
+    def load_settings(self):
+        self._view_settings = {}
+        for view, component in self._view_components.iteritems():
+            self._view_settings[view] = self.arguments.get_settings(component)
 
     def _get_location(self):
         return (0, 0)
@@ -93,14 +119,15 @@ class Control_Panel_Controller(object):
             Control_Panel_View_Name.DEVICES: Control_Panel_Devices_View,
             Control_Panel_View_Name.LOADING: Control_Panel_Loading_View,
             Control_Panel_View_Name.RECONSTRUCTION: Control_Panel_Reconstruction_View,
-            Control_Panel_View_Name.WAYPOINTS: Control_Panel_Waypoints_View
+            Control_Panel_View_Name.WAYPOINTS: Control_Panel_Waypoints_View,
+            Control_Panel_View_Name.SETTINGS: Control_Panel_Settings_View
         }
 
         try:
             if name not in views:
                 raise ValueError("Unknown view name specified.")
 
-            view = views[name](self)
+            view = views[name](self, self._view_settings[name])
             self._current_view = view
             self._current_view_name = name
             view.show()
@@ -125,7 +152,8 @@ class Control_Panel_Controller(object):
         view_names = OrderedDict([
             (Control_Panel_View_Name.DEVICES, "Devices"),
             (Control_Panel_View_Name.RECONSTRUCTION, "Reconstruction"),
-            (Control_Panel_View_Name.WAYPOINTS, "Waypoints")
+            (Control_Panel_View_Name.WAYPOINTS, "Waypoints"),
+            (Control_Panel_View_Name.SETTINGS, "Settings")
         ])
 
         view_menu = self.window._menu_bar.addMenu("View")

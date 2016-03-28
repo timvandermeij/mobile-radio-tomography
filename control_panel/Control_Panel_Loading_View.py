@@ -25,8 +25,7 @@ class Control_Panel_Loading_View(Control_Panel_View):
         vbox.addStretch(1)
 
         # Wait for insertion of the ground station XBee.
-        control_panel_settings = self._controller.arguments.get_settings("control_panel")
-        self._xbee_insertion_delay = control_panel_settings.get("loading_xbee_insertion_delay") * 1000
+        self._xbee_insertion_delay = self._settings.get("loading_xbee_insertion_delay") * 1000
         self._insertion_loop()
 
     def _insertion_loop(self):

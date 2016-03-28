@@ -4,6 +4,8 @@ import itertools
 import numpy as np
 from dronekit import Locations, LocationLocal, LocationGlobal, LocationGlobalRelative
 
+__all__ = ["Geometry", "Geometry_Spherical"]
+
 class Geometry(object):
     """
     Geometry utility functions

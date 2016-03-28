@@ -57,7 +57,7 @@ def main(argv):
 
     arguments = Arguments("settings.json", argv)
     settings = arguments.get_settings("planning")
-    algo = settings.get("algorithm_class").upper().replace('-','_')
+    algo = settings.get("algorithm_class")
 
     if settings.get("discrete"):
         problem = Reconstruction_Plan_Discrete(arguments)

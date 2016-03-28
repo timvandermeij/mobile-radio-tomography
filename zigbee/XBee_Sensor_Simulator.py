@@ -19,7 +19,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
 
         self._joined = True
         self._ip = self._settings.get("ip")
-        self._port = self._settings.get("port")
+        self._port = self._settings.get("socket_port")
 
     def setup(self):
         """

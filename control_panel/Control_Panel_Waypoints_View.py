@@ -6,12 +6,11 @@ from Control_Panel_View import Control_Panel_View
 from ..zigbee.XBee_Packet import XBee_Packet
 
 class Control_Panel_Waypoints_View(Control_Panel_View):
-    def __init__(self, controller):
-        super(Control_Panel_Waypoints_View, self).__init__(controller)
+    def __init__(self, controller, settings):
+        super(Control_Panel_Waypoints_View, self).__init__(controller, settings)
 
-        settings = self._controller.arguments.get_settings("control_panel")
-        self._max_retries = settings.get("waypoints_max_retries")
-        self._retry_interval = settings.get("waypoints_retry_interval")
+        self._max_retries = self._settings.get("waypoints_max_retries")
+        self._retry_interval = self._settings.get("waypoints_retry_interval")
         self._clear_send()
 
     def clear(self, layout=None):
@@ -237,7 +236,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         self._timers = {}
         for vehicle in waypoints:
             timer = QtCore.QTimer()
-            timer.setInterval(self._retry_interval)
+            timer.setInterval(self._retry_interval * 1000)
             timer.setSingleShot(True)
             # Bind timeout signal to retry for the current vehicle.
             timer.timeout.connect(partial(self._retry, vehicle))

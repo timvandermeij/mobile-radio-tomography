@@ -12,9 +12,9 @@ from settings import SettingsTestCase
 class TestVehicle(LocationTestCase, SettingsTestCase, ThreadableTestCase, USBManagerTestCase):
     def setUp(self):
         super(TestVehicle, self).setUp()
-        self.arguments = Arguments("settings.json", [
-            "--vehicle-class", "Vehicle"
-        ])
+        self.arguments = Arguments("settings.json", [])
+        self.settings = self.arguments.get_settings("vehicle")
+        self.settings.set("vehicle_class", "Vehicle")
         self.geometry = Geometry()
         self.thread_manager = Thread_Manager()
         self.vehicle = Vehicle.create(self.arguments, self.geometry,

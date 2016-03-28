@@ -12,6 +12,13 @@ from ..geometry.Geometry import Geometry_Spherical
 from ..vehicle.Robot_Vehicle import Robot_Vehicle
 from ..zigbee.XBee_Packet import XBee_Packet
 
+# We only list usable missions here, not base classes.
+__all__ = [
+    "Mission_Square", "Mission_Forward", "Mission_Browse", "Mission_Search",
+    "Mission_Pathfind", "Mission_Infrared", "Mission_Infrared_Grid",
+    "Mission_Cycle", "Mission_XBee"
+]
+
 class Mission(object):
     """
     Mission trajactory utilities.
