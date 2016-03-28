@@ -69,6 +69,8 @@ class Control_Panel_Settings_View(Control_Panel_View):
             self._widgets[index].parentClicked.connect(self._goto_parent)
             self._containers[index].setWidget(self._widgets[index])
 
+        self._scroll_to_match()
+
     def _goto_parent(self, parent):
         i = self._components.index(parent)
         self._listWidget.setCurrentRow(i)
