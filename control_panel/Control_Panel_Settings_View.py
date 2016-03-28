@@ -15,7 +15,8 @@ class Control_Panel_Settings_View(Control_Panel_View):
         self._add_menu_bar()
 
         defaults = Settings.get_settings(Settings.DEFAULTS_FILE)
-        self._components = sorted(component for component in defaults.iterkeys())
+        self._components = [keys for keys, values in sorted(defaults.iteritems(),
+                                                            key=lambda (k, v): v["name"])]
 
         self._containers = []
         self._widgets = [None for c in self._components]

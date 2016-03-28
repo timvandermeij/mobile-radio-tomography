@@ -169,7 +169,6 @@
                 "type": "list",
                 "subtype": "int",
                 "min": 1,
-                "max": 40,
                 "default": [29, 31, 32, 33, 35, 36]
             },
             "emitter_pin": {
@@ -487,7 +486,7 @@
                 "default": [0, 0]
             },
             "home_direction": {
-                "help": "The starting direction of the robot. The robot should be aligned with this direction to begin with.",
+                "help": "The starting direction of the robot. The robot should be aligned with this direction to begin with. 0 is up, 1 is right, 2 is down and 3 is left.",
                 "type": "int",
                 "options": [0, 1, 2, 3],
                 "default": 0

@@ -8,6 +8,7 @@ class Line_Follower_Direction(object):
 
     The cardinal directions are enumerated clockwise starting from up.
     """
+
     UP = 0
     RIGHT = 1
     DOWN = 2
