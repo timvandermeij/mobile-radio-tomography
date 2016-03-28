@@ -25,7 +25,7 @@
         "parent": "reconstruction",
         "settings": {
             "reconstruction_viewer_dimensions": {
-                "help": "Size in pixels for the width and height respectively of the viewer",
+                "help": "Size in pixels for the width and height, respectively, of the viewer",
                 "type": "tuple",
                 "length": 2,
                 "subtype": "int",
@@ -115,7 +115,7 @@
         "name": "Infrared sensor",
         "settings": {
             "remote": {
-                "help": "Remote control configuration name. The program must run as root if a new remote is used",
+                "help": "Remote control configuration name. The program must run as root if a new remote is used.",
                 "type": "file",
                 "required": true,
                 "format": "control/remotes/{}.lircrc",
@@ -221,7 +221,7 @@
                 "default": 0.95
             },
             "closeness": {
-                "help": "Difference in meters at which we consider locations to be equal for waypoints, too close to detected objects, or in other mission movements. Set to 0 to disable",
+                "help": "Difference in meters at which we consider locations to be equal for waypoints, too close to detected objects, or in other mission movements. Set to 0 to disable.",
                 "type": "float",
                 "min": 0.0,
                 "default": 2.0
@@ -239,12 +239,12 @@
                 "default": 2.0
             },
             "altitude": {
-                "help": "Altitude in meters to take off to. Ignored for ground vehicles",
+                "help": "Altitude in meters to take off to. Ignored for ground vehicles.",
                 "type": "float",
                 "default": 4.0
             },
             "padding": {
-                "help": "The space around the vehicle's center (where the distance sensor is) in which we do not want to have other objects. Used for additional padding aside from the closeness in certain calculations",
+                "help": "The space around the vehicle's center (where the distance sensor is) in which we do not want to have other objects. Used for additional padding aside from the closeness in certain calculations.",
                 "type": "float",
                 "min": 0.0,
                 "default": 4.0
@@ -290,12 +290,12 @@
                 "default": 0.5
             },
             "plot": {
-                "help": "Whether to display an interactive plot of the memory map. Requires matplotlib",
+                "help": "Whether to display an interactive plot of the memory map (requires matplotlib)",
                 "type": "bool",
                 "default": true
             },
             "viewer": {
-                "help": "Whether to display a viewer of the current vehicle's sight. Requires pyglet and a simulated environment",
+                "help": "Whether to display a viewer of the current vehicle's sight (requires pyglet and a simulated environment)",
                 "type": "bool",
                 "default": true
             }
@@ -355,7 +355,7 @@
                 "default": ""
             },
             "infrared_sensor": {
-                "help": "Whether to use the infrared sensor for starting and stopping mission",
+                "help": "Whether to use the infrared sensor for starting and stopping a mission",
                 "type": "bool",
                 "default": true
             },
@@ -374,7 +374,7 @@
                 "default": [0.0,0.0,0.0]
             },
             "location_check": {
-                "help": "Whether to enable collision check in simulated environment",
+                "help": "Whether to enable collision checks in a simulated environment",
                 "type": "bool",
                 "default": false
             }
@@ -396,12 +396,12 @@
         "parent": "environment_viewer",
         "settings": {
             "camera_move_speed": {
-                "help": "Speed in m/s to move the camera while strafing. Negative value causes inverted controls",
+                "help": "Speed in m/s to move the camera while strafing. Negative value causes inverted controls.",
                 "type": "float",
                 "default": 5.0
             },
             "camera_rotate_speed": {
-                "help": "Speed in degrees/s to rotate the camera. Negative value causes inverted controls",
+                "help": "Speed in degrees/s to rotate the camera. Negative value causes inverted controls.",
                 "type": "float",
                 "default": 90.0
             }
@@ -479,7 +479,7 @@
                 "default": 0.01
             },
             "home_location": {
-                "help": "Home location coordinates of the vehicle. The vehicle should be placed at the intersection corresponding to these coordinates to begin with",
+                "help": "Home location coordinates of the vehicle. The vehicle should be placed at the intersection corresponding to these coordinates to begin with.",
                 "type": "tuple",
                 "length": 2,
                 "subtype": "int",
@@ -487,7 +487,7 @@
                 "default": [0, 0]
             },
             "home_direction": {
-                "help": "The starting direction of the robot. The robot should be aligned with this direction to begin with",
+                "help": "The starting direction of the robot. The robot should be aligned with this direction to begin with.",
                 "type": "int",
                 "options": [0, 1, 2, 3],
                 "default": 0
@@ -556,7 +556,7 @@
         "name": "Base trajectory planning",
         "settings": {
             "algorithm_class": {
-                "help": "The evolutionary algorithm to use for the planning problem. Can be given with dashes instead of underscores and with lowercase letters",
+                "help": "The evolutionary algorithm to use for the planning problem. It can be given with dashes instead of underscores and with lowercase letters.",
                 "type": "class",
                 "module": "planning.Algorithm",
                 "replace": ["abcdefghijklmnopqrstuvwxyz-", "ABCDEFGHIJKLMNOPQRSTUVWXYZ_"],
@@ -573,7 +573,7 @@
         "name": "Evolutionary multiobjective optimization algorithm",
         "settings": {
             "population_size": {
-                "help": "Number of individuals to use during optimization. Afterward, at most this number of nondominated solutions is presented",
+                "help": "Number of individuals to use during optimization. Afterward, at most this number of nondominated solutions is presented.",
                 "type": "int",
                 "min": 1,
                 "default": 15
@@ -591,7 +591,7 @@
                 "default": 100
             },
             "step_size": {
-                "help": "Step sizes for the problem variables. Can be given in various lengths that are extended to the correct size",
+                "help": "Step sizes for the problem variables. It can be given in various lengths that are extended to the correct size.",
                 "type": "list",
                 "subtype": "float",
                 "min": 0.0,
@@ -650,7 +650,7 @@
                 "default": 0.5
             },
             "cmap": {
-                "help": "Color map for the reconstruction display. Must be a valid matplotlib colormap",
+                "help": "Color map for the reconstruction display. It must be a valid matplotlib colormap.",
                 "type": "string",
                 "required": true,
                 "keys": ["matplotlib.cm", "datad"],
@@ -697,7 +697,7 @@
                 "default": 2
             },
             "xbee_id": {
-                "help": "Identifier of the current XBee. Overridden by the physical sensor",
+                "help": "Identifier of the current XBee (overridden by the physical sensor)",
                 "type": "int",
                 "min": 0,
                 "default": 0
@@ -765,7 +765,7 @@
         "parent": "xbee_base",
         "settings": {
             "port": {
-                "help": "Device name or port of the XBee to use. This overrides the USB manager detection",
+                "help": "Device name or port of the XBee to use. This overrides the USB manager detection.",
                 "type": "string",
                 "required": false,
                 "default": ""
@@ -793,7 +793,7 @@
                 "default": 0.3
             },
             "synchronize": {
-                "help": "Whether to synchronize the clock using an NTP algorithm. Needed for TDMA scheduling to work correctly. The program must run as root to do so",
+                "help": "Whether to synchronize the clock using the NTP algorithm, which is required for TDMA scheduling to work correctly. The program must run as root to do so.",
                 "type": "bool",
                 "default": false
             }
