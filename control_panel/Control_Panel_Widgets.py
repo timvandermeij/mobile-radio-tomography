@@ -1,4 +1,3 @@
-import itertools
 import os
 import re
 from PyQt4 import QtCore, QtGui
@@ -522,11 +521,10 @@ class ListFormWidget(FormWidget):
 
         self._sub_widgets = []
 
-        value = self._format_list(self.info["value"])
-        default = self._format_list(self.info["default"])
-        for i, sub_value in enumerate(value):
-            sub_default = default[i] if len(default) > i else None
-            self._add_to_list(sub_value=sub_value, sub_default=sub_default)
+        self._values = self._format_list(self.info["value"])
+        self._defaults = self._format_list(self.info["default"])
+        for i in range(len(self._values)):
+            self._add_to_list()
 
         if "length" not in self.info:
             addButton = QtGui.QToolButton()
@@ -548,8 +546,18 @@ class ListFormWidget(FormWidget):
 
         return value
 
-    def _add_to_list(self, checked=False, sub_value=None, sub_default=None):
+    def _add_to_list(self, checked=False):
         position = len(self._sub_widgets)
+
+        if len(self._values) > position:
+            sub_value = self._values[position]
+        else:
+            sub_value = None
+
+        if len(self._defaults) > position:
+            sub_default = self._defaults[position]
+        else:
+            sub_default = None
 
         sub_info = self.info.copy()
         sub_info["type"] = sub_info.pop("subtype")
