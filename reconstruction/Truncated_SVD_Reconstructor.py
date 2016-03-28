@@ -13,7 +13,7 @@ class Truncated_SVD_Reconstructor(Reconstructor):
         super(Truncated_SVD_Reconstructor, self).__init__(settings)
 
         if isinstance(settings, Arguments):
-            settings = settings.get_settings("reconstruction_truncated_svd_reconstructor")
+            settings = settings.get_settings("reconstruction_truncated_svd")
         elif not isinstance(settings, Settings):
             raise ValueError("'settings' must be an instance of Settings or Arguments")
 

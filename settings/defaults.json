@@ -81,12 +81,14 @@
                 "help": "GPIO board pin to use for the HC-SR04 trigger pin",
                 "type": "int",
                 "min": 1,
+                "max": 40,
                 "default": 13
             },
             "echo_pin": {
                 "help": "GPIO board pin to use for the HC-SR04 echo pin",
                 "type": "int",
                 "min": 1,
+                "max": 40,
                 "default": 11
             },
             "trigger_delay": {
@@ -167,12 +169,14 @@
                 "type": "list",
                 "subtype": "int",
                 "min": 1,
+                "max": 40,
                 "default": [29, 31, 32, 33, 35, 36]
             },
             "emitter_pin": {
                 "help": "Raspberry Pi GPIO pin for the emitter signal",
                 "type": "int",
                 "min": 1,
+                "max": 40,
                 "default": 37
             },
             "write_delay": {
@@ -319,7 +323,8 @@
                 "dictinfo": {
                     "pin": {
                         "type": "int",
-                        "min": 1
+                        "min": 1,
+                        "max": 40
                     },
                     "angles": {
                         "type": "tuple",
@@ -498,6 +503,7 @@
                 "length": 2,
                 "subtype": "int",
                 "min": 1,
+                "max": 40,
                 "default": [16, 18]
             },
             "speed_pins": {
@@ -505,6 +511,8 @@
                 "type": "tuple",
                 "length": 2,
                 "subtype": "int",
+                "min": 1,
+                "max": 40,
                 "default": [24, 26]
             },
             "speed_pwms": {
@@ -658,7 +666,7 @@
         }
     },
     "reconstruction_weight_matrix": {
-        "name": "Reconstruction weight matrix",
+        "name": "Reconstruction (weight matrix)",
         "settings": {
             "distance_lambda": {
                 "help": "Width of an ellipse in the measurement model",
@@ -668,8 +676,8 @@
             }
         }
     },
-    "reconstruction_truncated_svd_reconstructor": {
-        "name": "Reconstruction truncated SVD reconstructor",
+    "reconstruction_truncated_svd": {
+        "name": "Reconstruction (truncated SVD)",
         "settings": {
             "singular_values": {
                 "help": "Number of singular values to compute",
