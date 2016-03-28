@@ -253,9 +253,6 @@ class TextFormWidget(QtGui.QLineEdit, FormWidget):
             if state != QtGui.QValidator.Acceptable:
                 return self.info["value"]
 
-        if text.isEmpty():
-            return None
-
         return str(text)
 
     def reset_value(self):
@@ -344,6 +341,13 @@ class FileFormWidget(TextFormWidget):
                 pass
 
         return value
+
+    def get_value(self):
+        text = super(FileFormWidget, self).get_value()
+        if text == "":
+            return None
+
+        return text
 
     def _open_file(self):
         if "format" in self.info:
@@ -520,7 +524,8 @@ class ListFormWidget(FormWidget):
 
         value = self._format_list(self.info["value"])
         default = self._format_list(self.info["default"])
-        for sub_value, sub_default in itertools.izip_longest(value, default):
+        for i, sub_value in enumerate(value):
+            sub_default = default[i] if len(default) > i else None
             self._add_to_list(sub_value=sub_value, sub_default=sub_default)
 
         if "length" not in self.info:
