@@ -52,6 +52,7 @@ class XBee_Sensor(Threadable):
 
         self._sensor = None
         self._id = self._settings.get("xbee_id")
+        self._number_of_sensors = self._settings.get("number_of_sensors")
         self._address = None
         self._next_timestamp = 0
         self._scheduler = XBee_TDMA_Scheduler(self._id, arguments)
@@ -71,6 +72,10 @@ class XBee_Sensor(Threadable):
     @property
     def id(self):
         return self._id
+
+    @property
+    def number_of_sensors(self):
+        return self._number_of_sensors
 
     def get_identity(self):
         """
@@ -124,7 +129,7 @@ class XBee_Sensor(Threadable):
             # No destination ID has been provided, therefore we broadcast
             # the packet to all sensors in the network except for ourself
             # and the ground sensor.
-            for to_id in xrange(1, self._settings.get("number_of_sensors") + 1):
+            for to_id in xrange(1, self._number_of_sensors + 1):
                 if to_id == self._id:
                     continue
 
