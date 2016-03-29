@@ -570,7 +570,7 @@
                 "type": "class",
                 "module": "planning.Algorithm",
                 "replace": ["abcdefghijklmnopqrstuvwxyz-", "ABCDEFGHIJKLMNOPQRSTUVWXYZ_"],
-                "default": "SMS-EMOA"
+                "default": "SMS_EMOA"
             },
             "discrete": {
                 "help": "Whether to use discrete grid cells instead of allowing measurements to happen anywhere",
