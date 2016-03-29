@@ -2,7 +2,7 @@ import Queue
 from ..zigbee.XBee_Packet import XBee_Packet
 
 class Buffer(object):
-    def __init__(self):
+    def __init__(self, options=None):
         """
         Initialize the buffer object.
         """
