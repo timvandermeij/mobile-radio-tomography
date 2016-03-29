@@ -141,8 +141,8 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
                         data.append(item.text())
 
                 if all(item is None for item in data) and not previous:
-                    # If the first table row is completely empty, then this 
-                    # vehicle has no waypoints. Ignore this silently.
+                    # If the first table row is completely empty, then silently 
+                    # ignore this row.
                     continue
 
                 if any(item is None for item in data) and not previous:
@@ -351,7 +351,17 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         self._update_value()
 
     def _update_labels(self):
-        self._progress.setLabelText("\n".join("Vehicle {}: {}{}".format(vehicle, label, " ({} attempts remaining)".format(self._retry_counts[vehicle]) if self._retry_counts[vehicle] < self._max_retries else "") for vehicle, label in self._labels.iteritems()))
+        labels = []
+        for vehicle in sorted(self._labels.iterkeys()):
+            label = self._labels[vehicle]
+            if self._retry_counts[vehicle] < self._max_retries:
+                retry = " ({} attempts remaining)".format(self._retry_counts[vehicle])
+            else:
+                retry = ""
+
+            labels.append("Vehicle {}: {}{}".format(vehicle, label, retry))
+
+        self._progress.setLabelText("\n".join(labels))
 
     def _update_value(self):
         self._progress.setValue(max(0, min(self._total, sum(self._indexes.values()))))
