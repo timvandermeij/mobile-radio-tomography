@@ -3,7 +3,7 @@ matplotlib.use("Qt4Agg")
 import matplotlib.pyplot as plt
 from PyQt4 import QtGui, QtCore
 from Control_Panel_View import Control_Panel_View
-from ..reconstruction.Dump_Reader import Dump_Reader
+from ..reconstruction.Dump_Buffer import Dump_Buffer
 from ..reconstruction.Weight_Matrix import Weight_Matrix
 from ..reconstruction.Least_Squares_Reconstructor import Least_Squares_Reconstructor
 from ..reconstruction.SVD_Reconstructor import SVD_Reconstructor
@@ -66,9 +66,11 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._viewer_width, self._viewer_height = self._settings.get("reconstruction_viewer_dimensions")
         self._label.setFixedSize(self._viewer_width, self._viewer_height)
 
-        # Create the reader.
-        filename = self._settings.get("filename")
-        self._reader = Dump_Reader("assets/reconstruction_{}.json".format(filename))
+        # Create the buffer.
+        options = {
+            "filename": "assets/reconstruction_{}.json".format(self._settings.get("filename"))
+        }
+        self._buffer = Dump_Buffer(options)
 
         # Create the reconstructor.
         reconstructors = {
@@ -80,12 +82,12 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._reconstructor = reconstructor_class(self._controller.arguments)
 
         # Create the weight matrix.
-        self._weight_matrix = Weight_Matrix(self._controller.arguments, self._reader.get_origin(),
-                                            self._reader.get_size())
+        self._weight_matrix = Weight_Matrix(self._controller.arguments, self._buffer.origin,
+                                            self._buffer.size)
 
         # Execute the reconstruction and visualization.
         self._rssi = []
-        self._width, self._height = self._reader.get_size()
+        self._width, self._height = self._buffer.size
         self._figure = plt.figure(frameon=False, figsize=(self._width, self._height))
         self._axes = self._figure.add_axes([0, 0, 1, 1])
         self._axes.axis("off")
@@ -96,8 +98,8 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         Execute the reconstruction to recompute the image when a new measurement is processed.
         """
 
-        if self._reader.count_packets() > 0:
-            packet = self._reader.get_packet()
+        if self._buffer.count() > 0:
+            packet = self._buffer.get()
             self._rssi.append(packet.get("rssi"))
             source = (packet.get("from_latitude"), packet.get("from_longitude"))
             destination = (packet.get("to_latitude"), packet.get("to_longitude"))
