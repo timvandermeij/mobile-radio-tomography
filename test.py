@@ -62,8 +62,8 @@ class Test_Run(object):
         files = glob.glob("logs/*.log")
         log_contents = ""
         for file in files:
-            with open(file) as f:
-                contents = f.read().rstrip('\n')
+            with open(file) as log_file:
+                contents = log_file.read().rstrip("\n")
                 if contents != "":
                     log_contents += contents + "\n"
                     self._failed = True
@@ -72,7 +72,7 @@ class Test_Run(object):
 
     def clear_logs_directory(self):
         """
-        Print all logs and clear the logs directory.
+        Clear all log files the logs directory.
         """
 
         files = glob.glob("logs/*.log")
