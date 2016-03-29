@@ -1,5 +1,6 @@
 import json
 import struct
+import zlib
 
 class XBee_Packet(object):
     # Packet type specifications loaded from the JSON file.
@@ -19,6 +20,12 @@ class XBee_Packet(object):
 
         self._private = True
         self._contents = {}
+        self._object_types = {
+            bool: "?",
+            int: "i",
+            float: "d",
+            str: "$"
+        }
 
     def set(self, key, value):
         """
@@ -96,7 +103,33 @@ class XBee_Packet(object):
             else:
                 raise KeyError("Field '{}' has not been provided.".format(field["name"]))
 
-            packed_message += struct.pack(field["format"], value)
+            if field["format"] == "$":
+                # Special string format: pack the full length of the string. 
+                # Track the length with one byte since the length should never 
+                # be more than the packet length.
+                length = len(value)
+                packed_message += struct.pack("B", length)
+                packed_message += struct.pack("{}s".format(length), value)
+            elif field["format"] == "@":
+                # Special object format: determine the type of the value. If it 
+                # is something struct can handle, use it and track which type 
+                # we used to pack. Otherwise, serialize with json and compress 
+                # with zlib. Track the final length in one byte since the 
+                # length should never be more than the packet length. Also 
+                # track whether it is a packed type or a JSON-serialized one.
+                object_type = type(value)
+                if object_type in self._object_types:
+                    object_format = self._object_types[object_type]
+                    packed_message += struct.pack("?", True)
+                    packed_message += struct.pack("B", ord(object_format))
+                    packed_message += struct.pack(object_format, value)
+                else:
+                    compressed_data = zlib.compress(json.dumps(value))
+                    packed_message += struct.pack("?", False)
+                    packed_message += struct.pack("B", len(compressed_data))
+                    packed_message += compressed_data
+            else:
+                packed_message += struct.pack(field["format"], value)
 
         return packed_message
 
@@ -113,8 +146,7 @@ class XBee_Packet(object):
         """
 
         # Unpack the specification identifier.
-        specification_id = struct.unpack_from("B", contents)[0]
-        offset = struct.calcsize("B")
+        specification_id, offset = self._read_packed("B", contents, 0)
 
         # Fetch the specification belonging to the found identifier.
         specification = None
@@ -140,8 +172,36 @@ class XBee_Packet(object):
 
             name = field["name"]
             format = field["format"]
-            self._contents[name] = struct.unpack_from(format, contents, offset)[0]
-            offset += struct.calcsize(format)
+            if format == "$":
+                length, offset = self._read_packed("B", contents, offset)
+
+                str_format = "{}s".format(length)
+                data, offset = self._read_packed(str_format, contents, offset)
+            elif format == "@":
+                is_packed, offset = self._read_packed("?", contents, offset)
+                if is_packed:
+                    object_format, offset = self._read_packed("B", contents,
+                                                                  offset)
+                    data, offset = self._read_packed(chr(object_format),
+                                                     contents, offset)
+                else:
+                    length, offset = self._read_packed("B", contents, offset)
+                    data_format = "{}s".format(length)
+
+                    compressed, offset = self._read_packed(data_format,
+                                                           contents, offset)
+
+                    data = json.loads(zlib.decompress(compressed))
+            else:
+                data, offset = self._read_packed(format, contents, offset)
+
+            self._contents[name] = data
+
+    def _read_packed(self, format, contents, offset):
+        data = struct.unpack_from(format, contents, offset)[0]
+        offset += struct.calcsize(format)
+
+        return data, offset
 
     def is_private(self):
         """
