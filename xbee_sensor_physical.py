@@ -38,6 +38,7 @@ def main(argv):
         arguments.check_help()
 
         xbee_sensor.activate()
+        raw_input("XBee has joined the network. Press enter to start measuring...")
         xbee_sensor.start()
 
         while True:

@@ -26,7 +26,6 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._synchronized = False
 
         # Prepare the packet and sensor data.
-        self._number_of_sensors = self._settings.get("number_of_sensors")
         self._sensors = self._settings.get("sensors")
         for index, address in enumerate(self._sensors):
             self._sensors[index] = address.decode("string_escape")

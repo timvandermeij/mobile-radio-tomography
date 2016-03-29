@@ -100,7 +100,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         # The simulator does not use XBee device discovery because it does not
         # use the actual XBee library that provides this functionality. We
         # simulate the process by calling the callback with the packet manually.
-        for vehicle in xrange(1, self._settings.get("number_of_sensors") + 1):
+        for vehicle in xrange(1, self._number_of_sensors + 1):
             packet = {
                 "id": self._id + vehicle,
                 "address": "{}:{}".format(self._ip, self._port + self._id + vehicle)
@@ -112,7 +112,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         Send packets to all other sensors in the network.
         """
 
-        for i in xrange(1, self._settings.get("number_of_sensors") + 1):
+        for i in xrange(1, self._number_of_sensors + 1):
             if i == self._id:
                 continue
 

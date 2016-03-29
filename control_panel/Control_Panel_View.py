@@ -16,6 +16,20 @@ class Control_Panel_View(object):
         self._controller = controller
         self._settings = settings
 
+    def load(self, data):
+        """
+        Load any cached information of the view to reinitialize it.
+        """
+
+        pass
+
+    def save(self):
+        """
+        Return information that can be cached when the view is being closed.
+        """
+
+        return {}
+
     def show(self):
         raise NotImplementedError("Subclasses must implement `show()`")
 

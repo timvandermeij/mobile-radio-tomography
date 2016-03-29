@@ -626,7 +626,14 @@ class DictFormWidget(FormWidget):
         return dict((key, subWidget.get_value()) for (key, subWidget) in self._sub_widgets.iteritems())
 
 class ChoicesFormWidget(QtGui.QComboBox, FormWidget):
-    __init__ = FormWidget.__init__
+    def __init__(self, form, key, info, *a, **kw):
+        QtGui.QLineEdit.__init__(self, *a, **kw)
+        FormWidget.__init__(self, form, key, info, *a, **kw)
+        self._types = {
+            "int": int,
+            "string": str,
+            "float": float
+        }
 
     def add_choices(self, choices):
         if self.count() == 0:
@@ -639,4 +646,9 @@ class ChoicesFormWidget(QtGui.QComboBox, FormWidget):
                 self.setCurrentIndex(i)
 
     def get_value(self):
-        return str(self.currentText())
+        if self.info["type"] in self._types:
+            type_cast = self._types[self.info["type"]]
+        else:
+            type_cast = str
+
+        return type_cast(self.currentText())

@@ -1,4 +1,4 @@
-from PyQt4 import QtGui
+from PyQt4 import QtCore, QtGui
 from Control_Panel_View import Control_Panel_View
 
 class XBee_Device_Category(object):
@@ -14,12 +14,34 @@ class XBee_Device(object):
         self.joined = False
 
 class Control_Panel_Devices_View(Control_Panel_View):
+    def load(self, data):
+        if "devices" in data:
+            self._devices = data["devices"]
+            return
+
+        self._devices = [
+            XBee_Device("Ground station", 0, XBee_Device_Category.COORDINATOR)
+        ]
+
+        for index in xrange(1, self._controller.xbee.number_of_sensors + 1):
+            self._devices.append(XBee_Device("Vehicle {}".format(index), index,
+                                             XBee_Device_Category.END_DEVICE))
+
+    def save(self):
+        return {
+            "devices": self._devices
+        }
+
     def show(self):
         """
         Show the devices view.
         """
 
         self._add_menu_bar()
+
+        self._updated = False
+        self._timer = None
+        self._discover_interval = self._settings.get("devices_discover_delay")
 
         # Create the tree view.
         self._tree_view = QtGui.QTreeWidget()
@@ -29,12 +51,8 @@ class Control_Panel_Devices_View(Control_Panel_View):
         self._tree_view.setHeaderItem(header)
         self._tree_view.header().setResizeMode(0, QtGui.QHeaderView.Stretch);
 
-        # Fill the tree view with the devices.
-        self._devices = [
-            XBee_Device("Ground station", 0, XBee_Device_Category.COORDINATOR),
-            XBee_Device("Vehicle 1", 1, XBee_Device_Category.END_DEVICE),
-            XBee_Device("Vehicle 2", 2, XBee_Device_Category.END_DEVICE)
-        ]
+        # Refresh immediately to fill the tree view with the devices and to 
+        # discover any vehicles that are already connected.
         self._refresh()
 
         # Create the refresh button.
@@ -49,6 +67,11 @@ class Control_Panel_Devices_View(Control_Panel_View):
         vbox = QtGui.QVBoxLayout(self._controller.central_widget)
         vbox.addLayout(hbox)
         vbox.addWidget(self._tree_view)
+
+    def clear(self, layout=None):
+        super(Control_Panel_Devices_View, self).clear(layout)
+        if self._timer is not None:
+            self._timer.stop()
 
     def _fill(self):
         """
@@ -93,12 +116,27 @@ class Control_Panel_Devices_View(Control_Panel_View):
         self._tree_view.clear()
         self._fill()
 
+    def _check_discover(self):
+        if self._updated:
+            self._tree_view.clear()
+            self._fill()
+            self._updated = False
+            if self._timer is not None and all(device.joined for device in self._devices):
+                self._timer.stop()
+                self._timer = None
+
     def _refresh_vehicles(self):
         """
         Refresh the status of the vehicles.
         """
 
         self._controller.xbee.discover(self._refresh_vehicle)
+
+        self._timer = QtCore.QTimer()
+        self._timer.setInterval(self._discover_interval * 1000)
+        self._timer.setSingleShot(False)
+        self._timer.timeout.connect(self._check_discover)
+        self._timer.start()
 
     def _refresh_vehicle(self, packet):
         """
@@ -110,5 +148,4 @@ class Control_Panel_Devices_View(Control_Panel_View):
         vehicle.address = packet["address"]
         vehicle.joined = True
 
-        self._tree_view.clear()
-        self._fill()
+        self._updated = True

@@ -18,6 +18,47 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
         self._controller.remove_packet_callback("waypoint_ack")
 
+    def load(self, data):
+        self._listWidget = QtGui.QListWidget()
+        self._stackedLayout = QtGui.QStackedLayout()
+
+        self._vehicle_labels = []
+        self._tables = []
+        self._column_labels = ["x", "y"]
+
+        for vehicle in xrange(1, self._controller.xbee.number_of_sensors + 1):
+            # Create the list item for the vehicle.
+            self._listWidget.addItem("Waypoints for vehicle {}".format(vehicle))
+
+            # Create the table for the vehicle.
+            table = QtGui.QTableWidget()
+            table.setRowCount(1)
+            table.setColumnCount(len(self._column_labels))
+            table.setHorizontalHeaderLabels(self._column_labels)
+            horizontalHeader = table.horizontalHeader()
+            for i in range(len(self._column_labels)):
+                horizontalHeader.setResizeMode(i, QtGui.QHeaderView.Stretch)
+
+            # Create the context menu for the rows in the table.
+            table.verticalHeader().setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
+            remove_rows_action = QtGui.QAction("Remove row(s)", table)
+            remove_rows_action.triggered.connect(partial(self._remove_rows, table))
+            table.verticalHeader().addAction(remove_rows_action)
+
+            self._tables.append(table)
+            self._stackedLayout.addWidget(table)
+
+        if "waypoints" in data:
+            self._import_waypoints(data["waypoints"], from_json=False)
+
+    def save(self):
+        try:
+            return {
+                "waypoints": self._export_waypoints(repeat=False)[0]
+            }
+        except ValueError as e:
+            return {}
+
     def show(self):
         """
         Show the waypoints view.
@@ -26,47 +67,24 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         self._add_menu_bar()
         self._controller.add_packet_callback("waypoint_ack", self._receive_ack)
 
-        labels = []
-        tables = []
-
-        for vehicle in [1, 2]:
-            # Create the label for the vehicle.
-            label = QtGui.QLabel("Waypoints for vehicle {}:".format(vehicle))
-            labels.append(label)
-
-            # Create the table for the vehicle.
-            table = QtGui.QTableWidget()
-            table.setRowCount(1)
-            table.setColumnCount(2)
-            table.setHorizontalHeaderLabels(["x", "y"])
-            table.horizontalHeader().setResizeMode(0, QtGui.QHeaderView.Stretch)
-            table.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Stretch)
-            tables.append(table)
-
-            # Create the context menu for the rows in the table.
-            table.verticalHeader().setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
-            remove_rows_action = QtGui.QAction("Remove row(s)", table)
-            remove_rows_action.triggered.connect(partial(self._remove_rows, table))
-            table.verticalHeader().addAction(remove_rows_action)
+        self._listWidget.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Expanding)
+        self._listWidget.setCurrentRow(0)
+        self._listWidget.currentRowChanged.connect(self._stackedLayout.setCurrentIndex)
 
         # Create the buttons for adding new rows and sending the waypoints.
         add_row_button = QtGui.QPushButton("Add row")
-        add_row_button.clicked.connect(lambda: self._add_row(tables))
+        add_row_button.clicked.connect(self._add_row)
         import_button = QtGui.QPushButton("Import")
-        import_button.clicked.connect(lambda: self._import(tables))
+        import_button.clicked.connect(self._import)
         export_button = QtGui.QPushButton("Export")
-        export_button.clicked.connect(lambda: self._export(tables))
+        export_button.clicked.connect(self._export)
         send_button = QtGui.QPushButton("Send")
-        send_button.clicked.connect(lambda: self._send(tables))
+        send_button.clicked.connect(self._send)
 
         # Create the layout and add the widgets.
-        hbox_labels = QtGui.QHBoxLayout()
-        for label in labels:
-            hbox_labels.addWidget(label)
-
-        hbox_tables = QtGui.QHBoxLayout()
-        for table in tables:
-            hbox_tables.addWidget(table)
+        hbox_stacks = QtGui.QHBoxLayout()
+        hbox_stacks.addWidget(self._listWidget)
+        hbox_stacks.addLayout(self._stackedLayout)
 
         hbox_buttons = QtGui.QHBoxLayout()
         hbox_buttons.addWidget(add_row_button)
@@ -77,16 +95,15 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         hbox_buttons.addWidget(send_button)
 
         vbox = QtGui.QVBoxLayout(self._controller.central_widget)
-        vbox.addLayout(hbox_labels)
-        vbox.addLayout(hbox_tables)
+        vbox.addLayout(hbox_stacks)
         vbox.addLayout(hbox_buttons)
 
-    def _add_row(self, tables):
+    def _add_row(self):
         """
         Add a row to all tables at the same time.
         """
 
-        for table in tables:
+        for table in self._tables:
             table.insertRow(table.rowCount())
 
     def _remove_rows(self, table):
@@ -99,51 +116,76 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         for row in reversed(sorted(rows)):
             table.removeRow(row)
 
-    def _make_waypoints(self, tables):
+    def _export_waypoints(self, repeat=True):
         """
         Create a list of waypoints (tuples) per vehicle.
         """
 
         waypoints = {}
         total = 0
-        for index, table in enumerate(tables):
+        for index, table in enumerate(self._tables):
+            # Keep vehicle index as string here since send and save make use of 
+            # integer indices, while JSON export will automatically convert 
+            # them to string keys.
             vehicle = index + 1
             previous = ()
             for row in range(table.rowCount()):
-                x = table.item(row, 0)
-                y = table.item(row, 1)
-                if (x is None or y is None) and not previous:
+                data = []
+                for col in range(len(self._column_labels)):
+                    item = table.item(row, col)
+                    # Handle unchanged columns (no item widget) or empty 
+                    # columns (text contents equals to empty string)
+                    if item is None or item.text() == "":
+                        data.append(None)
+                    else:
+                        data.append(item.text())
+
+                if all(item is None for item in data) and not previous:
+                    # If the first table row is completely empty, then silently 
+                    # ignore this row.
+                    continue
+
+                if any(item is None for item in data) and not previous:
                     raise ValueError("Missing coordinates for vehicle {}, row {} and no previous waypoint".format(vehicle, row))
 
-                if x is None:
-                    # If a table cell is empty, use the previous waypoint's 
-                    # coordinates for the current waypoint.
-                    x = previous[0]
-                else:
-                    try:
-                        x = int(x.text())
-                    except ValueError:
-                        raise ValueError("Invalid integer for vehicle {}, row {}, column x: {}".format(vehicle, row, x.text()))
-
-                if y is None:
-                    y = previous[1]
-                else:
-                    try:
-                        y = int(y.text())
-                    except ValueError:
-                        raise ValueError("Invalid integer for vehicle {}, row {}, column y: {}".format(vehicle, row, y.text()))
+                for i, col in enumerate(self._column_labels):
+                    if data[i] is None:
+                        # If a table cell is empty, use the previous waypoint's 
+                        # coordinates for the current waypoint.
+                        data[i] = previous[i] if repeat else None
+                    else:
+                        try:
+                            data[i] = int(data[i])
+                        except ValueError:
+                            raise ValueError("Invalid integer for vehicle {}, row {}, column {}: {}".format(vehicle, row, col, data[i]))
 
                 if vehicle not in waypoints:
-                    waypoints[vehicle] = [(x, y)]
+                    waypoints[vehicle] = [tuple(data)]
                 else:
-                    waypoints[vehicle].append((x, y))
+                    waypoints[vehicle].append(tuple(data))
 
                 total += 1
-                previous = (x, y)
+                previous = tuple(data)
 
         return waypoints, total
 
-    def _import(self, tables):
+    def _import_waypoints(self, waypoints, from_json=True):
+        for index, table in enumerate(self._tables):
+            # Allow either string or numeric indices depending on import source
+            vehicle = str(index + 1) if from_json else index + 1
+            if vehicle not in waypoints:
+                continue
+
+            for row in range(table.rowCount()):
+                table.removeRow(row)
+            for row, waypoint in enumerate(waypoints[vehicle]):
+                table.insertRow(row)
+                for col in range(len(self._column_labels)):
+                    if waypoint[col] is not None:
+                        item = str(waypoint[col])
+                        table.setItem(row, col, QtGui.QTableWidgetItem(item))
+
+    def _import(self):
         fn = QtGui.QFileDialog.getOpenFileName(self._controller.central_widget,
                                                "Import file", os.getcwd(),
                                                "JSON files (*.json)")
@@ -173,18 +215,11 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
                                        "JSON error", e.message)
             return
 
-        for index, table in enumerate(tables):
-            vehicle = str(index + 1)
-            for row in range(table.rowCount()):
-                table.removeRow(row)
-            for row, waypoint in enumerate(waypoints[vehicle]):
-                table.insertRow(row)
-                table.setItem(row, 0, QtGui.QTableWidgetItem(str(waypoint[0])))
-                table.setItem(row, 1, QtGui.QTableWidgetItem(str(waypoint[1])))
+        self._import_waypoints(waypoints)
 
-    def _export(self, tables):
+    def _export(self):
         try:
-            waypoints, total = self._make_waypoints(tables)
+            waypoints, total = self._export_waypoints()
         except ValueError as e:
             QtGui.QMessageBox.critical(self._controller.central_widget,
                                        "Waypoint incorrect", e.message)
@@ -204,16 +239,22 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             QtGui.QMessageBox.critical(self._controller.central_widget,
                                        "File error", message)
 
-    def _send(self, tables):
+    def _send(self):
         """
         Send the waypoints from all tables to the corresponding vehicles.
         """
 
         try:
-            waypoints, total = self._make_waypoints(tables)
+            waypoints, total = self._export_waypoints()
         except ValueError as e:
             QtGui.QMessageBox.critical(self._controller.central_widget,
                                        "Waypoint incorrect", e.message)
+            return
+
+        if total == 0:
+            QtGui.QMessageBox.critical(self._controller.central_widget,
+                                       "No waypoints",
+                                       "There are no vehicles with waypoints.")
             return
 
         # Create a progress dialog and send the waypoints to the vehicles.
@@ -310,7 +351,17 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         self._update_value()
 
     def _update_labels(self):
-        self._progress.setLabelText("\n".join("Vehicle {}: {}{}".format(vehicle, label, " ({} attempts remaining)".format(self._retry_counts[vehicle]) if self._retry_counts[vehicle] < self._max_retries else "") for vehicle, label in self._labels.iteritems()))
+        labels = []
+        for vehicle in sorted(self._labels.iterkeys()):
+            label = self._labels[vehicle]
+            if self._retry_counts[vehicle] < self._max_retries:
+                retry = " ({} attempts remaining)".format(self._retry_counts[vehicle])
+            else:
+                retry = ""
+
+            labels.append("Vehicle {}: {}{}".format(vehicle, label, retry))
+
+        self._progress.setLabelText("\n".join(labels))
 
     def _update_value(self):
         self._progress.setValue(max(0, min(self._total, sum(self._indexes.values()))))
