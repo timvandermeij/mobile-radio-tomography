@@ -94,14 +94,14 @@ class Control_Panel_Settings_View(Control_Panel_View):
         groundCheckBox = QtGui.QCheckBox("Ground station")
         groundCheckBox.setChecked(True)
         vehicleCheckBoxes = {}
-        for vehicle in [1,2]:
+        for vehicle in xrange(1, self._controller.xbee.number_of_sensors + 1):
             vehicleCheckBox = QtGui.QCheckBox("Vehicle {}".format(vehicle))
             vehicleCheckBox.setChecked(True)
             vehicleCheckBoxes[vehicle] = vehicleCheckBox
 
         boxLayout = QtGui.QVBoxLayout()
         boxLayout.addWidget(groundCheckBox)
-        for vehicle in [1,2]:
+        for vehicle in xrange(1, self._controller.xbee.number_of_sensors + 1):
             boxLayout.addWidget(vehicleCheckBoxes[vehicle])
 
         groupBox = QtGui.QGroupBox("Save locations")
