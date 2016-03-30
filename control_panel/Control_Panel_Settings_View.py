@@ -129,6 +129,8 @@ class Control_Panel_Settings_View(Control_Panel_View):
                 self._controller.load_settings()
 
     def _scroll_to_match(self):
+        self._listWidget.scrollToItem(self._listWidget.currentItem())
+
         index = self._listWidget.currentRow()
         if index in self._best_matches:
             key = self._best_matches[index]
