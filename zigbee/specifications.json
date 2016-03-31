@@ -175,6 +175,10 @@
             "private": false
         },
         {
+            "name": "index",
+            "format": "i"
+        },
+        {
             "name": "key",
             "format": "$"
         },
@@ -195,8 +199,8 @@
             "private": false
         },
         {
-            "name": "key",
-            "format": "$"
+            "name": "next_index",
+            "format": "i"
         },
         {
             "name": "sensor_id",

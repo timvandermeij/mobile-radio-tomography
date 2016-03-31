@@ -86,21 +86,23 @@ class TestXBeePacket(unittest.TestCase):
 
     def test_serialize_object_packed(self):
         self.packet.set("specification", "setting_add")
+        self.packet.set("index", 0)
         self.packet.set("key", "bar")
         self.packet.set("value", 42)
         self.packet.set("to_id", 1)
 
         packed_message = self.packet.serialize()
-        self.assertEqual(packed_message, "\n\x03bar\x01i*\x00\x00\x00\x01")
+        self.assertEqual(packed_message, "\n\x00\x00\x00\x00\x03bar\x01i*\x00\x00\x00\x01")
 
     def test_serialize_object_compressed(self):
         self.packet.set("specification", "setting_add")
+        self.packet.set("index", 1)
         self.packet.set("key", "items")
         self.packet.set("value", [1,2,3])
         self.packet.set("to_id", 1)
 
         packed_message = self.packet.serialize()
-        self.assertEqual(packed_message, "\n\x05items\x00\x11x\x9c\x8b6\xd4Q0\xd2Q0\x8e\x05\x00\t\x85\x01\xe7\x01")
+        self.assertEqual(packed_message, "\n\x01\x00\x00\x00\x05items\x00\x11x\x9c\x8b6\xd4Q0\xd2Q0\x8e\x05\x00\t\x85\x01\xe7\x01")
 
     def test_unserialize(self):
         # Empty strings must be refused.
@@ -123,9 +125,10 @@ class TestXBeePacket(unittest.TestCase):
         self.assertFalse(self.packet._private)
 
     def test_unserialize_object_pack(self):
-        self.packet.unserialize("\n\x03bar\x01i*\x00\x00\x00\x01")
+        self.packet.unserialize("\n\x00\x00\x00\x00\x03bar\x01i*\x00\x00\x00\x01")
         self.assertEqual(self.packet._contents, {
             "specification": "setting_add",
+            "index": 0,
             "key": "bar",
             "value": 42,
             "to_id": 1
@@ -133,9 +136,10 @@ class TestXBeePacket(unittest.TestCase):
         self.assertFalse(self.packet._private)
 
     def test_unserialize_object_compressed(self):
-        self.packet.unserialize("\n\x05items\x00\x11x\x9c\x8b6\xd4Q0\xd2Q0\x8e\x05\x00\t\x85\x01\xe7\x01")
+        self.packet.unserialize("\n\x01\x00\x00\x00\x05items\x00\x11x\x9c\x8b6\xd4Q0\xd2Q0\x8e\x05\x00\t\x85\x01\xe7\x01")
         self.assertEqual(self.packet._contents, {
             "specification": "setting_add",
+            "index": 1,
             "key": "items",
             "value": [1,2,3],
             "to_id": 1
