@@ -47,12 +47,11 @@ class MAVLink_Vehicle(Vehicle):
         """
         Retrieve the Location object corresponding to a waypoint command with ID `waypoint`.
         """
-        if waypoint == 0:
-            return None
+
         if waypoint == -1:
             waypoint = self.commands.next
 
-        mission_item = self.commands[waypoint-1]
+        mission_item = self.commands[waypoint]
         if mission_item.command != mavutil.mavlink.MAV_CMD_NAV_WAYPOINT:
             return None
 

@@ -87,7 +87,7 @@ class Control_Panel_XBee_Sender(object):
 
         self._controller.xbee.enqueue(packet, to=vehicle)
 
-        self._set_label(vehicle, "Sending {} #{}: {}".format(self._name, index, data))
+        self._set_label(vehicle, "Sending {} #{}: {}".format(self._name, index+1, data))
         self._timers[vehicle].start()
 
     def _receive_ack(self, packet):

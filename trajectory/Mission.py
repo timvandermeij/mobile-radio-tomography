@@ -294,25 +294,25 @@ class Mission_Auto(Mission):
     def get_points(self):
         raise NotImplementedError("Must be implemented in child class")
 
-    def add_commands(self):
-        """
-        Adds a takeoff command and four waypoint commands to the current mission. 
-        The waypoints are positioned to form a square of side length `2*size` around the specified `center` Location.
-
-        The function assumes `vehicle.commands` is the vehicle mission state 
-        (you must have called `download_mission` at least once before in the session and after any use of `clear_mission`)
-        """
-        # Add the commands. The meaning/order of the parameters is documented 
-        # in the Command class.
-
-        # Add MAV_CMD_NAV_TAKEOFF command. This is ignored if the vehicle is 
-        # already in the air.
+    def add_takeoff(self):
+        # Add takeoff command. This is ignored if the vehicle is already in the 
+        # air, or if the vehicle is a ground vehicle.
         has_takeoff = self.vehicle.add_takeoff(self.altitude)
         if not has_takeoff:
             self.altitude = 0.0
             self._first_waypoint = 0
 
-        # Add the MAV_CMD_NAV_WAYPOINT commands.
+    def add_commands(self):
+        """
+        Adds a takeoff command and the waypoints to the current mission. 
+
+        The function assumes that the vehicle waypoints are cleared and that we
+        can now add the mission waypoints to the vehicle.
+        """
+
+        self.add_takeoff()
+
+        # Add the waypoint commands.
         points = self.get_waypoints()
         for point in points:
             # Handle non-spherical geometries
@@ -349,11 +349,9 @@ class Mission_Auto(Mission):
                 if distance <= self.closeness:
                     print("Close enough: skip to next waypoint")
                     self.vehicle.set_next_waypoint()
-                    next_waypoint = next_waypoint + 1
+                    next_waypoint += 1
 
-        num_commands = self.vehicle.count_waypoints()
-        if next_waypoint >= num_commands:
-            print("Exit 'standard' mission when heading for final waypoint ({})".format(num_commands))
+        if next_waypoint >= self.vehicle.count_waypoints():
             return False
 
         return True
@@ -374,7 +372,10 @@ class Mission_Guided(Mission):
 class Mission_Square(Mission_Auto):
     def get_points(self):
         """
-        Define the four waypoint locations.
+        Define the four waypoint locations of a square mission.
+
+        The waypoints are positioned to form a square of side length `2*size` around the specified `center` Location.
+
         This method returns the points relative to the current location at the same altitude.
         """
         points = []
@@ -384,6 +385,18 @@ class Mission_Square(Mission_Auto):
         points.append(self.environment.get_location(-self.size/2, -self.size/2))
         points.append(points[0])
         return points
+
+    def check_waypoint(self):
+        if not super(Mission_Square, self).check_waypoint():
+            return False
+
+        next_waypoint = self.vehicle.get_next_waypoint()
+        num_commands = self.vehicle.count_waypoints()
+        if next_waypoint >= num_commands - 1:
+            print("Exit 'standard' mission when heading for final waypoint ({})".format(num_commands))
+            return False
+
+        return True
 
 class Mission_Forward(Mission_Auto):
     def get_points(self):
@@ -903,6 +916,13 @@ class Mission_XBee(Mission_Auto):
     def get_points(self):
         return []
 
+    def add_commands(self):
+        # Commands are added when they arrive, not in here.
+        pass
+
+    def _get_next_index(self):
+        return self.vehicle.count_waypoints() - self._first_waypoint
+
     def _send_ack(self):
         """
         Send a "waypoint_ack" packet to the ground station.
@@ -916,7 +936,7 @@ class Mission_XBee(Mission_Auto):
 
         ack_packet = XBee_Packet()
         ack_packet.set("specification", "waypoint_ack")
-        ack_packet.set("next_index", self.vehicle.count_waypoints())
+        ack_packet.set("next_index", self._get_next_index())
         ack_packet.set("sensor_id", xbee_sensor.id)
 
         xbee_sensor.enqueue(ack_packet, to=0)
@@ -932,6 +952,8 @@ class Mission_XBee(Mission_Auto):
             return
 
         self.clear_mission()
+        # Add a takeoff command for flying vehicles that use it.
+        self.add_takeoff()
         self._send_ack()
 
     def _add_waypoint(self, packet):
@@ -949,7 +971,7 @@ class Mission_XBee(Mission_Auto):
             return
 
         index = packet.get("index")
-        if index != self.vehicle.count_waypoints():
+        if index != self._get_next_index():
             # Send a reply saying what index were are currently at and ignore 
             # the packet, which may be duplicate or out of order.
             self._send_ack()
