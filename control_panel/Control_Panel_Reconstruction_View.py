@@ -33,19 +33,27 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         toolbar.setMovable(False)
         toolbar.setStyleSheet("QToolBar {spacing: 8px;}")
 
+        source_label = QtGui.QLabel("Source:")
+        source_box = QtGui.QComboBox()
+        source_box.addItems(["File", "Stream"])
+
         reconstructor_label = QtGui.QLabel("Reconstructor:")
         reconstructor_box = QtGui.QComboBox()
         reconstructor_box.addItems(["Least squares", "SVD", "Truncated SVD"])
         reconstructor_box.setCurrentIndex(2)
-        reconstructor_action = QtGui.QAction(QtGui.QIcon("assets/start.png"), "Start",
-                                             self._controller.central_widget)
-        reconstructor_action.triggered.connect(
-            lambda: self._reconstruction_start(str(reconstructor_box.currentText()))
+
+        start_action = QtGui.QAction(QtGui.QIcon("assets/start.png"), "Start",
+                                     self._controller.central_widget)
+        start_action.triggered.connect(
+            lambda: self._start(str(source_box.currentText()),
+                                str(reconstructor_box.currentText()))
         )
 
+        toolbar.addWidget(source_label)
+        toolbar.addWidget(source_box)
         toolbar.addWidget(reconstructor_label)
         toolbar.addWidget(reconstructor_box)
-        toolbar.addAction(reconstructor_action)
+        toolbar.addAction(start_action)
 
         self._controller.window._toolbar = toolbar
 
@@ -115,7 +123,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
             self._plot_curves[vehicle - 1].setData(self._plot_data[vehicle - 1])
 
-    def _reconstruction_start(self, reconstructor):
+    def _start(self, source, reconstructor):
         """
         Start the reconstruction process.
         """
@@ -129,11 +137,16 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._viewer_width, self._viewer_height = self._settings.get("reconstruction_viewer_dimensions")
         self._label.setFixedSize(self._viewer_width, self._viewer_height)
 
-        # Create the buffer.
-        options = {
-            "filename": "assets/reconstruction_{}.json".format(self._settings.get("filename"))
-        }
-        self._buffer = Dump_Buffer(options)
+        # Create the buffer depending on the source (file or stream).
+        if source == "File":
+            options = {
+                "filename": "assets/reconstruction_{}.json".format(self._settings.get("filename"))
+            }
+            self._buffer = Dump_Buffer(options)
+        elif source == "Stream":
+            QtGui.QMessageBox.critical(self._controller.central_widget, "Unsupported mode",
+                                       "The streaming mode is not yet supported.")
+            return
 
         # Create the reconstructor.
         reconstructors = {
@@ -155,9 +168,9 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._axes = self._figure.add_axes([0, 0, 1, 1])
         self._axes.axis("off")
         self._plot.show()
-        self._reconstruction_loop()
+        self._loop()
 
-    def _reconstruction_loop(self):
+    def _loop(self):
         """
         Execute the reconstruction to recompute the image when a new measurement is processed.
         """
@@ -184,4 +197,4 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
                 self._label.setPixmap(QtGui.QPixmap(scaled_image))
 
             self._update_plot(packet)
-            QtCore.QTimer.singleShot(self._pause_time, lambda: self._reconstruction_loop())
+            QtCore.QTimer.singleShot(self._pause_time, lambda: self._loop())
