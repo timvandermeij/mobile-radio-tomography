@@ -220,6 +220,7 @@ class XBee_Sensor(Threadable):
         location_valid = self._valid_callback(from_valid)
         ground_station_packet = XBee_Packet()
         ground_station_packet.set("specification", "rssi_ground_station")
+        ground_station_packet.set("sensor_id", self._id)
         ground_station_packet.set("from_latitude", rssi_packet.get("latitude"))
         ground_station_packet.set("from_longitude", rssi_packet.get("longitude"))
         ground_station_packet.set("from_valid", from_valid)

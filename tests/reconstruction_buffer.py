@@ -13,6 +13,7 @@ class TestReconstructionBuffer(unittest.TestCase):
         for index in range(self.xbee_packets_count):
             xbee_packet = XBee_Packet()
             xbee_packet.set("specification", "rssi_ground_station")
+            xbee_packet.set("sensor_id", 1)
             xbee_packet.set("from_latitude", 12.3456789)
             xbee_packet.set("from_longitude", 21.3456789)
             xbee_packet.set("from_valid", True)

@@ -32,11 +32,12 @@ class Dump_Buffer(Buffer):
             for packet in data["packets"]:
                 xbee_packet = XBee_Packet()
                 xbee_packet.set("specification", "rssi_ground_station")
-                xbee_packet.set("from_latitude", packet[0])
-                xbee_packet.set("from_longitude", packet[1])
-                xbee_packet.set("to_latitude", packet[2])
-                xbee_packet.set("to_longitude", packet[3])
-                xbee_packet.set("rssi", packet[4])
+                xbee_packet.set("sensor_id", packet[0])
+                xbee_packet.set("from_latitude", packet[1])
+                xbee_packet.set("from_longitude", packet[2])
+                xbee_packet.set("to_latitude", packet[3])
+                xbee_packet.set("to_longitude", packet[4])
+                xbee_packet.set("rssi", packet[5])
                 self.put(xbee_packet)
 
     @property

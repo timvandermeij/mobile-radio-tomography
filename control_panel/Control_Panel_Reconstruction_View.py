@@ -3,7 +3,6 @@ import matplotlib
 matplotlib.use("Qt4Agg")
 import matplotlib.pyplot as plt
 import pyqtgraph as pg
-import random
 from PyQt4 import QtGui, QtCore
 from Control_Panel_View import Control_Panel_View
 from ..reconstruction.Dump_Buffer import Dump_Buffer
@@ -102,7 +101,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
         return plot_widget
 
-    def _update_plot(self):
+    def _update_plot(self, packet):
         """
         Update the plot widget.
         """
@@ -111,7 +110,9 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             if len(self._plot_data[vehicle - 1]) > self._plot_curve_points:
                 self._plot_data[vehicle - 1].pop(0)
 
-            self._plot_data[vehicle - 1].append(-random.randint(0, 80))
+            if packet.get("sensor_id") == vehicle:
+                self._plot_data[vehicle - 1].append(packet.get("rssi"))
+
             self._plot_curves[vehicle - 1].setData(self._plot_data[vehicle - 1])
 
     def _reconstruction_start(self, reconstructor):
@@ -182,5 +183,5 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
                 scaled_image = image.scaled(self._viewer_width, self._viewer_height)
                 self._label.setPixmap(QtGui.QPixmap(scaled_image))
 
-            self._update_plot()
+            self._update_plot(packet)
             QtCore.QTimer.singleShot(self._pause_time, lambda: self._reconstruction_loop())
