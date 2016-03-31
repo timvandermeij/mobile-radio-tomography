@@ -7,6 +7,8 @@ class Buffer(object):
         Initialize the buffer object.
         """
 
+        self._origin = [0, 0]
+        self._size = [0, 0]
         self._queue = Queue.Queue()
 
     def get(self):
@@ -35,3 +37,19 @@ class Buffer(object):
         """
 
         return self._queue.qsize()
+
+    @property
+    def origin(self):
+        """
+        Return the origin of the network.
+        """
+
+        return self._origin
+
+    @property
+    def size(self):
+        """
+        Return the size of the network.
+        """
+
+        return self._size

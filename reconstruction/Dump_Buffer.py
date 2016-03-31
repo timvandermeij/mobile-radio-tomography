@@ -13,9 +13,6 @@ class Dump_Buffer(Buffer):
         if options is None:
             raise ValueError("No filename has been provided.")
 
-        self._origin = [0, 0]
-        self._size = [0, 0]
-
         # Read the provided dump file. The JSON file has the following structure:
         #
         # - origin: a list containing the coordinates of the network's origin
@@ -39,11 +36,3 @@ class Dump_Buffer(Buffer):
                 xbee_packet.set("to_longitude", packet[4])
                 xbee_packet.set("rssi", packet[5])
                 self.put(xbee_packet)
-
-    @property
-    def origin(self):
-        return self._origin
-
-    @property
-    def size(self):
-        return self._size
