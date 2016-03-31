@@ -41,7 +41,13 @@
                 "length": 2,
                 "subtype": "int",
                 "min": 0,
-                "default": [500, 500]
+                "default": [450, 450]
+            },
+            "reconstruction_curve_points": {
+                "help": "Number of points to show on a plotted curve",
+                "type": "int",
+                "min": 5,
+                "default": 20
             }
         }
     },

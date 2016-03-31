@@ -1,6 +1,9 @@
+import colorsys
 import matplotlib
 matplotlib.use("Qt4Agg")
 import matplotlib.pyplot as plt
+import pyqtgraph as pg
+import random
 from PyQt4 import QtGui, QtCore
 from Control_Panel_View import Control_Panel_View
 from ..reconstruction.Dump_Buffer import Dump_Buffer
@@ -10,6 +13,15 @@ from ..reconstruction.SVD_Reconstructor import SVD_Reconstructor
 from ..reconstruction.Truncated_SVD_Reconstructor import Truncated_SVD_Reconstructor
 
 class Control_Panel_Reconstruction_View(Control_Panel_View):
+    def __init__(self, controller, settings):
+        super(Control_Panel_Reconstruction_View, self).__init__(controller, settings)
+
+        pg.setConfigOptions(antialias=True, background=None, foreground="k")
+
+        self._plot_curve_points = self._settings.get("reconstruction_curve_points")
+        self._plot_curves = []
+        self._plot_data = [[] for vehicle in range(1, self._controller.xbee.number_of_sensors + 1)]
+
     def show(self):
         """
         Show the reconstruction view.
@@ -41,16 +53,66 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         # Create the label for the image.
         self._label = QtGui.QLabel()
 
+        # Create the plot widget.
+        self._plot = self._create_plot()
+        self._plot.hide()
+
         # Create the layout and add the widgets.
+        hbox_image = QtGui.QHBoxLayout()
+        hbox_image.addStretch(1)
+        hbox_image.addWidget(self._label)
+        hbox_image.addStretch(1)
+
         vbox = QtGui.QVBoxLayout()
         vbox.addStretch(1)
-        vbox.addWidget(self._label)
+        vbox.addLayout(hbox_image)
+        vbox.addStretch(1)
+        vbox.addWidget(self._plot)
         vbox.addStretch(1)
 
         hbox = QtGui.QHBoxLayout(self._controller.central_widget)
         hbox.addStretch(1)
         hbox.addLayout(vbox)
         hbox.addStretch(1)
+
+    def _create_plot(self):
+        """
+        Create the plot widget.
+        """
+
+        number_of_sensors = self._controller.xbee.number_of_sensors
+
+        plot_widget = pg.PlotWidget()
+        plot_widget.setXRange(0, self._plot_curve_points)
+        plot_widget.setLabel("left", "RSSI")
+        plot_widget.setLabel("bottom", "Measurement")
+
+        # Create the list of colors for the curves.
+        hsv_tuples = [(x * 1.0 / number_of_sensors, 0.5, 0.5) for x in range(number_of_sensors)]
+        rgb_tuples = []
+        for hsv in hsv_tuples:
+            rgb_tuples.append(map(lambda x: int(x * 255), colorsys.hsv_to_rgb(*hsv)))
+
+        # Create the curves for the plot.
+        for vehicle in range(1, number_of_sensors + 1):
+            curve = plot_widget.plot()
+            curve.setData(self._plot_data[vehicle - 1],
+                          pen=pg.mkPen(rgb_tuples[vehicle - 1], width=1.5))
+            self._plot_curves.append(curve)
+
+        return plot_widget
+
+    def _update_plot(self):
+        """
+        Update the plot widget.
+        """
+
+        for vehicle in range(1, self._controller.xbee.number_of_sensors + 1):
+            if len(self._plot_data[vehicle - 1]) > self._plot_curve_points:
+                self._plot_data[vehicle - 1].pop(0)
+
+            self._plot_data[vehicle - 1].append(-random.randint(0, 80))
+            self._plot_curves[vehicle - 1].setData(self._plot_data[vehicle - 1])
 
     def _reconstruction_start(self, reconstructor):
         """
@@ -91,6 +153,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._figure = plt.figure(frameon=False, figsize=(self._width, self._height))
         self._axes = self._figure.add_axes([0, 0, 1, 1])
         self._axes.axis("off")
+        self._plot.show()
         self._reconstruction_loop()
 
     def _reconstruction_loop(self):
@@ -119,4 +182,5 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
                 scaled_image = image.scaled(self._viewer_width, self._viewer_height)
                 self._label.setPixmap(QtGui.QPixmap(scaled_image))
 
+            self._update_plot()
             QtCore.QTimer.singleShot(self._pause_time, lambda: self._reconstruction_loop())
