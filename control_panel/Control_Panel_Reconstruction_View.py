@@ -6,6 +6,7 @@ import pyqtgraph as pg
 from PyQt4 import QtGui, QtCore
 from Control_Panel_View import Control_Panel_View
 from ..reconstruction.Dump_Buffer import Dump_Buffer
+from ..reconstruction.Stream_Buffer import Stream_Buffer
 from ..reconstruction.Weight_Matrix import Weight_Matrix
 from ..reconstruction.Least_Squares_Reconstructor import Least_Squares_Reconstructor
 from ..reconstruction.SVD_Reconstructor import SVD_Reconstructor
@@ -33,14 +34,30 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         toolbar.setMovable(False)
         toolbar.setStyleSheet("QToolBar {spacing: 8px;}")
 
+        sources = ["File", "Stream"]
         source_label = QtGui.QLabel("Source:")
         source_box = QtGui.QComboBox()
-        source_box.addItems(["File", "Stream"])
+        source_box.addItems(sources)
+        source_box.currentIndexChanged["QString"].connect(self._refresh_input_boxes)
 
         reconstructor_label = QtGui.QLabel("Reconstructor:")
         reconstructor_box = QtGui.QComboBox()
         reconstructor_box.addItems(["Least squares", "SVD", "Truncated SVD"])
         reconstructor_box.setCurrentIndex(2)
+
+        origin_label = QtGui.QLabel("Network origin:")
+        size_label = QtGui.QLabel("Network size:")
+
+        self._input_boxes = {
+            "origin_x": QtGui.QLineEdit(),
+            "origin_y": QtGui.QLineEdit(),
+            "size_x": QtGui.QLineEdit(),
+            "size_y": QtGui.QLineEdit()
+        }
+        for input_box in self._input_boxes.itervalues():
+            input_box.setText("0")
+
+        self._refresh_input_boxes(sources[0])
 
         start_action = QtGui.QAction(QtGui.QIcon("assets/start.png"), "Start",
                                      self._controller.central_widget)
@@ -53,6 +70,12 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         toolbar.addWidget(source_box)
         toolbar.addWidget(reconstructor_label)
         toolbar.addWidget(reconstructor_box)
+        toolbar.addWidget(origin_label)
+        toolbar.addWidget(self._input_boxes["origin_x"])
+        toolbar.addWidget(self._input_boxes["origin_y"])
+        toolbar.addWidget(size_label)
+        toolbar.addWidget(self._input_boxes["size_x"])
+        toolbar.addWidget(self._input_boxes["size_y"])
         toolbar.addAction(start_action)
 
         self._controller.window._toolbar = toolbar
@@ -81,6 +104,14 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         hbox.addStretch(1)
         hbox.addLayout(vbox)
         hbox.addStretch(1)
+
+    def _refresh_input_boxes(self, source):
+        """
+        Enable or disable the input boxes depending on the source.
+        """
+
+        for input_box in self._input_boxes.itervalues():
+            input_box.setDisabled(source == "File")
 
     def _create_plot(self):
         """
@@ -144,9 +175,16 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             }
             self._buffer = Dump_Buffer(options)
         elif source == "Stream":
-            QtGui.QMessageBox.critical(self._controller.central_widget, "Unsupported mode",
-                                       "The streaming mode is not yet supported.")
-            return
+            origin_x = int(self._input_boxes["origin_x"].text())
+            origin_y = int(self._input_boxes["origin_y"].text())
+            size_x = int(self._input_boxes["size_x"].text())
+            size_y = int(self._input_boxes["size_y"].text())
+
+            options = {
+                "origin": [origin_x, origin_y],
+                "size": [size_x, size_y]
+            }
+            self._buffer = Stream_Buffer(options)
 
         # Create the reconstructor.
         reconstructors = {
