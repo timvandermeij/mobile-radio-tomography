@@ -53,7 +53,7 @@ class Control_Panel_Controller(object):
             Control_Panel_View_Name.LOADING: "control_panel_loading",
             Control_Panel_View_Name.RECONSTRUCTION: "control_panel_reconstruction",
             Control_Panel_View_Name.WAYPOINTS: "control_panel_waypoints",
-            Control_Panel_View_Name.SETTINGS: "control_panel"
+            Control_Panel_View_Name.SETTINGS: "control_panel_settings"
         }
         self._view_data = dict([(name, {}) for name in self._view_components.iterkeys()])
         self.load_settings()

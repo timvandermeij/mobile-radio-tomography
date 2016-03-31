@@ -31,11 +31,6 @@ class Control_Panel_XBee_Sender(object):
         self._data = data
         self._total = total
 
-    def start(self):
-        self._controller.add_packet_callback(self._ack_message,
-                                             self._receive_ack)
-
-        # Create a progress dialog and send the data to the vehicles.
         self._progress = QtGui.QProgressDialog(self._controller.central_widget)
         self._progress.setMinimum(0)
         self._progress.setMaximum(self._total)
@@ -45,6 +40,15 @@ class Control_Panel_XBee_Sender(object):
         self._progress.canceled.connect(lambda: self._cancel())
         self._progress.setWindowTitle("Sending {}s".format(self._name))
         self._progress.setLabelText("Initializing...")
+
+    def connect_accepted(self, callback):
+        self._progress.accepted.connect(callback)
+
+    def start(self):
+        self._controller.add_packet_callback(self._ack_message,
+                                             self._receive_ack)
+
+        # Create a progress dialog and send the data to the vehicles.
         self._progress.open()
 
         for vehicle in self._data:

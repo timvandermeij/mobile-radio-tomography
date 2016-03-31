@@ -45,6 +45,23 @@
             }
         }
     },
+    "control_panel_settings": {
+        "name": "Control panel (settings view)",
+        "settings": {
+            "settings_max_retries": {
+                "help": "Number of retries for every setting packet sent to a vehicle",
+                "type": "int",
+                "min": 1,
+                "default": 5
+            },
+            "settings_retry_interval": {
+                "help": "Frequency in seconds to retry sending a setting packet to a vehicle",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.5
+            }
+        }
+    },
     "control_panel_waypoints": {
         "name": "Control panel (waypoints view)",
         "settings": {

@@ -22,7 +22,7 @@ class TestXBeeSettingsReceiver(ThreadableTestCase, USBManagerTestCase, SettingsT
                                              usb_manager=self.usb_manager)
         self.xbee = self.environment.get_xbee_sensor()
 
-        self.settings_receiver = XBee_Settings_Receiver(self.environment)
+        self.settings_receiver = self.environment._settings_receiver
 
     def test_setup(self):
         self.assertEqual(self.settings_receiver._environment, self.environment)
