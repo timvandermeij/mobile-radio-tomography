@@ -86,12 +86,11 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._label.setFixedSize(self._viewer_width, self._viewer_height)
 
         # Create the graph.
-        self._graph = self._create_graph()
-        self._graph.hide()
+        graph = self._create_graph()
 
         # Create the tab widget.
         tabs = QtGui.QTabWidget()
-        tabs.addTab(self._graph, "Graph")
+        tabs.addTab(graph, "Graph")
 
         # Create the layout and add the widgets.
         hbox = QtGui.QHBoxLayout()
@@ -202,7 +201,6 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._figure = plt.figure(frameon=False, figsize=(self._width, self._height))
         self._axes = self._figure.add_axes([0, 0, 1, 1])
         self._axes.axis("off")
-        self._graph.show()
         self._loop()
 
     def _loop(self):
