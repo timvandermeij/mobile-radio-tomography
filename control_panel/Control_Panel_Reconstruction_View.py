@@ -85,12 +85,14 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._label = QtGui.QLabel()
         self._label.setFixedSize(self._viewer_width, self._viewer_height)
 
-        # Create the graph.
+        # Create the graph and table.
         graph = self._create_graph()
+        self._table = self._create_table()
 
         # Create the tab widget.
         tabs = QtGui.QTabWidget()
         tabs.addTab(graph, "Graph")
+        tabs.addTab(self._table, "Table")
 
         # Create the layout and add the widgets.
         hbox = QtGui.QHBoxLayout()
@@ -153,6 +155,52 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
                 self._graph_data[vehicle - 1].append(packet.get("rssi"))
 
             self._graph_curves[vehicle - 1].setData(self._graph_data[vehicle - 1])
+
+    def _create_table(self):
+        """
+        Create the table for the incoming XBee packets.
+        """
+
+        column_labels = ["Vehicle", "Source location", "Destination location", "RSSI"]
+
+        table = QtGui.QTableWidget()
+        table.setRowCount(0)
+        table.setColumnCount(len(column_labels))
+        table.setHorizontalHeaderLabels(column_labels)
+        table.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
+        horizontalHeader = table.horizontalHeader()
+        for i in range(len(column_labels)):
+            horizontalHeader.setResizeMode(i, QtGui.QHeaderView.Stretch)
+
+        return table
+
+    def _update_table(self, packet):
+        """
+        Update the table for the incoming XBee packets.
+        """
+
+        # Collect and format the data.
+        vehicle = str(packet.get("sensor_id"))
+        source_location = "({}, {})".format(packet.get("from_latitude"), packet.get("from_longitude"))
+        destination_location = "({}, {})".format(packet.get("to_latitude"), packet.get("to_longitude"))
+        rssi = str(packet.get("rssi"))
+
+        # Append a new table row.
+        position = self._table.rowCount()
+        self._table.insertRow(position)
+        self._table.setItem(position, 0, QtGui.QTableWidgetItem(vehicle))
+        self._table.setItem(position, 1, QtGui.QTableWidgetItem(source_location))
+        self._table.setItem(position, 2, QtGui.QTableWidgetItem(destination_location))
+        self._table.setItem(position, 3, QtGui.QTableWidgetItem(rssi))
+
+        # Indicate the validity of the source and destination locations.
+        green = QtGui.QColor("#8BD672")
+        red = QtGui.QColor("#FA6969")
+        self._table.item(position, 1).setBackground(green if packet.get("from_valid") else red)
+        self._table.item(position, 2).setBackground(green if packet.get("to_valid") else red)
+
+        # Automatically scroll the table to the bottom.
+        self._table.scrollToBottom()
 
     def _start(self, source, reconstructor):
         """
@@ -230,4 +278,6 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
                 self._label.setPixmap(QtGui.QPixmap(scaled_image))
 
             self._update_graph(packet)
+            self._update_table(packet)
+
             QtCore.QTimer.singleShot(self._pause_time, lambda: self._loop())
