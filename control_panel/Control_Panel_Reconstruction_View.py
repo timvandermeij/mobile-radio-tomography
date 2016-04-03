@@ -18,9 +18,9 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
         pg.setConfigOptions(antialias=True, background=None, foreground="k")
 
-        self._plot_curve_points = self._settings.get("reconstruction_curve_points")
-        self._plot_curves = []
-        self._plot_data = [[] for vehicle in range(1, self._controller.xbee.number_of_sensors + 1)]
+        self._graph_curve_points = self._settings.get("reconstruction_curve_points")
+        self._graph_curves = []
+        self._graph_data = [[] for vehicle in range(1, self._controller.xbee.number_of_sensors + 1)]
 
     def show(self):
         """
@@ -85,13 +85,13 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._label = QtGui.QLabel()
         self._label.setFixedSize(self._viewer_width, self._viewer_height)
 
-        # Create the plot widget.
-        self._plot = self._create_plot()
-        self._plot.hide()
+        # Create the graph.
+        self._graph = self._create_graph()
+        self._graph.hide()
 
         # Create the tab widget.
         tabs = QtGui.QTabWidget()
-        tabs.addTab(self._plot, "Graph")
+        tabs.addTab(self._graph, "Graph")
 
         # Create the layout and add the widgets.
         hbox = QtGui.QHBoxLayout()
@@ -114,17 +114,17 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         for input_box in self._input_boxes.itervalues():
             input_box.setDisabled(source == "File")
 
-    def _create_plot(self):
+    def _create_graph(self):
         """
-        Create the plot widget.
+        Create the graph for signal strength (RSSI) values.
         """
 
         number_of_sensors = self._controller.xbee.number_of_sensors
 
-        plot_widget = pg.PlotWidget()
-        plot_widget.setXRange(0, self._plot_curve_points)
-        plot_widget.setLabel("left", "RSSI")
-        plot_widget.setLabel("bottom", "Measurement")
+        graph = pg.PlotWidget()
+        graph.setXRange(0, self._graph_curve_points)
+        graph.setLabel("left", "RSSI")
+        graph.setLabel("bottom", "Measurement")
 
         # Create the list of colors for the curves.
         hsv_tuples = [(x * 1.0 / number_of_sensors, 0.5, 0.5) for x in range(number_of_sensors)]
@@ -132,28 +132,28 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         for hsv in hsv_tuples:
             rgb_tuples.append(map(lambda x: int(x * 255), colorsys.hsv_to_rgb(*hsv)))
 
-        # Create the curves for the plot.
+        # Create the curves for the graph.
         for vehicle in range(1, number_of_sensors + 1):
-            curve = plot_widget.plot()
-            curve.setData(self._plot_data[vehicle - 1],
+            curve = graph.plot()
+            curve.setData(self._graph_data[vehicle - 1],
                           pen=pg.mkPen(rgb_tuples[vehicle - 1], width=1.5))
-            self._plot_curves.append(curve)
+            self._graph_curves.append(curve)
 
-        return plot_widget
+        return graph
 
-    def _update_plot(self, packet):
+    def _update_graph(self, packet):
         """
-        Update the plot widget.
+        Update the graph for signal strength (RSSI) values.
         """
 
         for vehicle in range(1, self._controller.xbee.number_of_sensors + 1):
-            if len(self._plot_data[vehicle - 1]) > self._plot_curve_points:
-                self._plot_data[vehicle - 1].pop(0)
+            if len(self._graph_data[vehicle - 1]) > self._graph_curve_points:
+                self._graph_data[vehicle - 1].pop(0)
 
             if packet.get("sensor_id") == vehicle:
-                self._plot_data[vehicle - 1].append(packet.get("rssi"))
+                self._graph_data[vehicle - 1].append(packet.get("rssi"))
 
-            self._plot_curves[vehicle - 1].setData(self._plot_data[vehicle - 1])
+            self._graph_curves[vehicle - 1].setData(self._graph_data[vehicle - 1])
 
     def _start(self, source, reconstructor):
         """
@@ -202,7 +202,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._figure = plt.figure(frameon=False, figsize=(self._width, self._height))
         self._axes = self._figure.add_axes([0, 0, 1, 1])
         self._axes.axis("off")
-        self._plot.show()
+        self._graph.show()
         self._loop()
 
     def _loop(self):
@@ -231,5 +231,5 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
                 scaled_image = image.scaled(self._viewer_width, self._viewer_height)
                 self._label.setPixmap(QtGui.QPixmap(scaled_image))
 
-            self._update_plot(packet)
+            self._update_graph(packet)
             QtCore.QTimer.singleShot(self._pause_time, lambda: self._loop())
