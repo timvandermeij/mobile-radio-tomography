@@ -81,29 +81,30 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._controller.window._toolbar = toolbar
 
         # Create the label for the image.
+        self._viewer_width, self._viewer_height = self._settings.get("reconstruction_viewer_dimensions")
         self._label = QtGui.QLabel()
+        self._label.setFixedSize(self._viewer_width, self._viewer_height)
 
         # Create the plot widget.
         self._plot = self._create_plot()
         self._plot.hide()
 
+        # Create the tab widget.
+        tabs = QtGui.QTabWidget()
+        tabs.addTab(self._plot, "Graph")
+
         # Create the layout and add the widgets.
-        hbox_image = QtGui.QHBoxLayout()
-        hbox_image.addStretch(1)
-        hbox_image.addWidget(self._label)
-        hbox_image.addStretch(1)
-
-        vbox = QtGui.QVBoxLayout()
-        vbox.addStretch(1)
-        vbox.addLayout(hbox_image)
-        vbox.addStretch(1)
-        vbox.addWidget(self._plot)
-        vbox.addStretch(1)
-
-        hbox = QtGui.QHBoxLayout(self._controller.central_widget)
+        hbox = QtGui.QHBoxLayout()
         hbox.addStretch(1)
-        hbox.addLayout(vbox)
+        hbox.addWidget(self._label)
         hbox.addStretch(1)
+
+        vbox = QtGui.QVBoxLayout(self._controller.central_widget)
+        vbox.addStretch(1)
+        vbox.addLayout(hbox)
+        vbox.addStretch(1)
+        vbox.addWidget(tabs)
+        vbox.addStretch(1)
 
     def _refresh_input_boxes(self, source):
         """
@@ -163,10 +164,6 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._pause_time = self._settings.get("pause_time") * 1000
         self._cmap = self._settings.get("cmap")
         self._interpolation = self._settings.get("interpolation")
-
-        # Set the width and height of the label.
-        self._viewer_width, self._viewer_height = self._settings.get("reconstruction_viewer_dimensions")
-        self._label.setFixedSize(self._viewer_width, self._viewer_height)
 
         # Create the buffer depending on the source (file or stream).
         if source == "File":
