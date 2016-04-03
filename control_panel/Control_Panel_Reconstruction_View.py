@@ -12,16 +12,143 @@ from ..reconstruction.Least_Squares_Reconstructor import Least_Squares_Reconstru
 from ..reconstruction.SVD_Reconstructor import SVD_Reconstructor
 from ..reconstruction.Truncated_SVD_Reconstructor import Truncated_SVD_Reconstructor
 
-class Control_Panel_Reconstruction_View(Control_Panel_View):
+class Graph(object):
     def __init__(self, controller, settings):
-        super(Control_Panel_Reconstruction_View, self).__init__(controller, settings)
+        """
+        Initialize the graph object.
+        """
 
+        self._controller = controller
+        self._settings = settings
+
+        # Enable antialiassing and use a transparent background with black text/lines.
         pg.setConfigOptions(antialias=True, background=None, foreground="k")
 
+        # Prepare data structures for the graph.
+        self._graph = None
         self._graph_curve_points = self._settings.get("reconstruction_curve_points")
         self._graph_curves = []
         self._graph_data = [[] for vehicle in range(1, self._controller.xbee.number_of_sensors + 1)]
 
+    def create(self):
+        """
+        Create the graph.
+        """
+
+        if self._graph is not None:
+            return self._graph
+
+        number_of_sensors = self._controller.xbee.number_of_sensors
+
+        self._graph = pg.PlotWidget()
+        self._graph.setXRange(0, self._graph_curve_points)
+        self._graph.setLabel("left", "RSSI")
+        self._graph.setLabel("bottom", "Measurement")
+
+        # Create the list of colors for the curves.
+        hsv_tuples = [(x * 1.0 / number_of_sensors, 0.5, 0.5) for x in range(number_of_sensors)]
+        rgb_tuples = []
+        for hsv in hsv_tuples:
+            rgb_tuples.append(map(lambda x: int(x * 255), colorsys.hsv_to_rgb(*hsv)))
+
+        # Create the curves for the graph.
+        for vehicle in range(1, number_of_sensors + 1):
+            curve = self._graph.plot()
+            curve.setData(self._graph_data[vehicle - 1],
+                          pen=pg.mkPen(rgb_tuples[vehicle - 1], width=1.5))
+            self._graph_curves.append(curve)
+
+        return self._graph
+
+    def update(self, packet):
+        """
+        Update the graph with information in `packet`.
+        """
+
+        for vehicle in range(1, self._controller.xbee.number_of_sensors + 1):
+            if len(self._graph_data[vehicle - 1]) > self._graph_curve_points:
+                self._graph_data[vehicle - 1].pop(0)
+
+            if packet.get("sensor_id") == vehicle:
+                self._graph_data[vehicle - 1].append(packet.get("rssi"))
+
+            self._graph_curves[vehicle - 1].setData(self._graph_data[vehicle - 1])
+
+    def clear(self):
+        """
+        Clear the graph.
+        """
+
+        for index in range(len(self._graph_data)):
+            self._graph_data[index] = []
+
+class Table(object):
+    def __init__(self):
+        """
+        Initialize the table object.
+        """
+
+        self._table = None
+
+    def create(self):
+        """
+        Create the table.
+        """
+
+        if self._table is not None:
+            return self._table
+
+        column_labels = ["Vehicle", "Source location", "Destination location", "RSSI"]
+
+        self._table = QtGui.QTableWidget()
+        self._table.setRowCount(0)
+        self._table.setColumnCount(len(column_labels))
+        self._table.setHorizontalHeaderLabels(column_labels)
+        self._table.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
+
+        horizontalHeader = self._table.horizontalHeader()
+        for index in range(len(column_labels)):
+            horizontalHeader.setResizeMode(index, QtGui.QHeaderView.Stretch)
+
+        return self._table
+
+    def update(self, packet):
+        """
+        Update the table with information in `packet`.
+        """
+
+        # Collect and format the data.
+        vehicle = str(packet.get("sensor_id"))
+        source_location = "({}, {})".format(packet.get("from_latitude"), packet.get("from_longitude"))
+        destination_location = "({}, {})".format(packet.get("to_latitude"), packet.get("to_longitude"))
+        rssi = str(packet.get("rssi"))
+
+        # Append a new table row.
+        position = self._table.rowCount()
+        self._table.insertRow(position)
+        self._table.setItem(position, 0, QtGui.QTableWidgetItem(vehicle))
+        self._table.setItem(position, 1, QtGui.QTableWidgetItem(source_location))
+        self._table.setItem(position, 2, QtGui.QTableWidgetItem(destination_location))
+        self._table.setItem(position, 3, QtGui.QTableWidgetItem(rssi))
+
+        # Indicate the validity of the source and destination locations.
+        green = QtGui.QColor("#8BD672")
+        red = QtGui.QColor("#FA6969")
+        self._table.item(position, 1).setBackground(green if packet.get("from_valid") else red)
+        self._table.item(position, 2).setBackground(green if packet.get("to_valid") else red)
+
+        # Automatically scroll the table to the bottom.
+        self._table.scrollToBottom()
+
+    def clear(self):
+        """
+        Clear the table.
+        """
+
+        for index in reversed(range(self._table.rowCount())):
+            self._table.removeRow(index)
+
+class Control_Panel_Reconstruction_View(Control_Panel_View):
     def show(self):
         """
         Show the reconstruction view.
@@ -86,13 +213,13 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._image_label.setFixedSize(self._viewer_width, self._viewer_height)
 
         # Create the graph and table.
-        graph = self._create_graph()
-        self._table = self._create_table()
+        self._graph = Graph(self._controller, self._settings)
+        self._table = Table()
 
         # Create the tab widget.
         tabs = QtGui.QTabWidget()
-        tabs.addTab(graph, "Graph")
-        tabs.addTab(self._table, "Table")
+        tabs.addTab(self._graph.create(), "Graph")
+        tabs.addTab(self._table.create(), "Table")
 
         # Create the layout and add the widgets.
         hbox = QtGui.QHBoxLayout()
@@ -114,109 +241,6 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
         for input_box in self._input_boxes.itervalues():
             input_box.setDisabled(source == "File")
-
-    def _create_graph(self):
-        """
-        Create the graph for signal strength (RSSI) values.
-        """
-
-        number_of_sensors = self._controller.xbee.number_of_sensors
-
-        graph = pg.PlotWidget()
-        graph.setXRange(0, self._graph_curve_points)
-        graph.setLabel("left", "RSSI")
-        graph.setLabel("bottom", "Measurement")
-
-        # Create the list of colors for the curves.
-        hsv_tuples = [(x * 1.0 / number_of_sensors, 0.5, 0.5) for x in range(number_of_sensors)]
-        rgb_tuples = []
-        for hsv in hsv_tuples:
-            rgb_tuples.append(map(lambda x: int(x * 255), colorsys.hsv_to_rgb(*hsv)))
-
-        # Create the curves for the graph.
-        for vehicle in range(1, number_of_sensors + 1):
-            curve = graph.plot()
-            curve.setData(self._graph_data[vehicle - 1],
-                          pen=pg.mkPen(rgb_tuples[vehicle - 1], width=1.5))
-            self._graph_curves.append(curve)
-
-        return graph
-
-    def _update_graph(self, packet):
-        """
-        Update the graph for signal strength (RSSI) values.
-        """
-
-        for vehicle in range(1, self._controller.xbee.number_of_sensors + 1):
-            if len(self._graph_data[vehicle - 1]) > self._graph_curve_points:
-                self._graph_data[vehicle - 1].pop(0)
-
-            if packet.get("sensor_id") == vehicle:
-                self._graph_data[vehicle - 1].append(packet.get("rssi"))
-
-            self._graph_curves[vehicle - 1].setData(self._graph_data[vehicle - 1])
-
-    def _clear_graph(self):
-        """
-        Clear the graph for the signal strength (RSSI) values.
-        """
-
-        for index in range(len(self._graph_data)):
-            self._graph_data[index] = []
-
-    def _create_table(self):
-        """
-        Create the table for the incoming XBee packets.
-        """
-
-        column_labels = ["Vehicle", "Source location", "Destination location", "RSSI"]
-
-        table = QtGui.QTableWidget()
-        table.setRowCount(0)
-        table.setColumnCount(len(column_labels))
-        table.setHorizontalHeaderLabels(column_labels)
-        table.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
-        horizontalHeader = table.horizontalHeader()
-        for i in range(len(column_labels)):
-            horizontalHeader.setResizeMode(i, QtGui.QHeaderView.Stretch)
-
-        return table
-
-    def _update_table(self, packet):
-        """
-        Update the table for the incoming XBee packets.
-        """
-
-        # Collect and format the data.
-        vehicle = str(packet.get("sensor_id"))
-        source_location = "({}, {})".format(packet.get("from_latitude"), packet.get("from_longitude"))
-        destination_location = "({}, {})".format(packet.get("to_latitude"), packet.get("to_longitude"))
-        rssi = str(packet.get("rssi"))
-
-        # Append a new table row.
-        position = self._table.rowCount()
-        self._table.insertRow(position)
-        self._table.setItem(position, 0, QtGui.QTableWidgetItem(vehicle))
-        self._table.setItem(position, 1, QtGui.QTableWidgetItem(source_location))
-        self._table.setItem(position, 2, QtGui.QTableWidgetItem(destination_location))
-        self._table.setItem(position, 3, QtGui.QTableWidgetItem(rssi))
-
-        # Indicate the validity of the source and destination locations.
-        green = QtGui.QColor("#8BD672")
-        red = QtGui.QColor("#FA6969")
-        self._table.item(position, 1).setBackground(green if packet.get("from_valid") else red)
-        self._table.item(position, 2).setBackground(green if packet.get("to_valid") else red)
-
-        # Automatically scroll the table to the bottom.
-        self._table.scrollToBottom()
-
-    def _clear_table(self):
-        """
-        Clear the table for the incoming XBee packets.
-        """
-
-        for index in reversed(range(self._table.rowCount())):
-            self._table.removeRow(index)
 
     def _start(self, source, reconstructor):
         """
@@ -260,8 +284,8 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
                                             self._buffer.size)
 
         # Clear the graph and table.
-        self._clear_graph()
-        self._clear_table()
+        self._graph.clear()
+        self._table.clear()
 
         # Execute the reconstruction and visualization.
         self._rssi = []
@@ -308,7 +332,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
                     self._image_label.setPixmap(QtGui.QPixmap(scaled_image))
 
             # Update the graph and table with the data from the packet.
-            self._update_graph(packet)
-            self._update_table(packet)
+            self._graph.update(packet)
+            self._table.update(packet)
 
             QtCore.QTimer.singleShot(self._pause_time, lambda: self._loop())
