@@ -156,6 +156,14 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
             self._graph_curves[vehicle - 1].setData(self._graph_data[vehicle - 1])
 
+    def _clear_graph(self):
+        """
+        Clear the graph for the signal strength (RSSI) values.
+        """
+
+        for index in range(len(self._graph_data)):
+            self._graph_data[index] = []
+
     def _create_table(self):
         """
         Create the table for the incoming XBee packets.
@@ -202,6 +210,14 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         # Automatically scroll the table to the bottom.
         self._table.scrollToBottom()
 
+    def _clear_table(self):
+        """
+        Clear the table for the incoming XBee packets.
+        """
+
+        for index in reversed(range(self._table.rowCount())):
+            self._table.removeRow(index)
+
     def _start(self, source, reconstructor):
         """
         Start the reconstruction process.
@@ -242,6 +258,10 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         # Create the weight matrix.
         self._weight_matrix = Weight_Matrix(self._controller.arguments, self._buffer.origin,
                                             self._buffer.size)
+
+        # Clear the graph and table.
+        self._clear_graph()
+        self._clear_table()
 
         # Execute the reconstruction and visualization.
         self._rssi = []
