@@ -699,7 +699,7 @@
                 "help": "Number of singular values to compute",
                 "type": "int",
                 "min": 1,
-                "default": 3
+                "default": 2
             }
         }
     },

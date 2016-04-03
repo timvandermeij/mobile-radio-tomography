@@ -82,8 +82,8 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
         # Create the label for the image.
         self._viewer_width, self._viewer_height = self._settings.get("reconstruction_viewer_dimensions")
-        self._label = QtGui.QLabel()
-        self._label.setFixedSize(self._viewer_width, self._viewer_height)
+        self._image_label = QtGui.QLabel()
+        self._image_label.setFixedSize(self._viewer_width, self._viewer_height)
 
         # Create the graph and table.
         graph = self._create_graph()
@@ -97,7 +97,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         # Create the layout and add the widgets.
         hbox = QtGui.QHBoxLayout()
         hbox.addStretch(1)
-        hbox.addWidget(self._label)
+        hbox.addWidget(self._image_label)
         hbox.addStretch(1)
 
         vbox = QtGui.QVBoxLayout(self._controller.central_widget)
@@ -256,27 +256,38 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         Execute the reconstruction to recompute the image when a new measurement is processed.
         """
 
+        # If a packet is available, process it.
         if self._buffer.count() > 0:
             packet = self._buffer.get()
-            self._rssi.append(packet.get("rssi"))
-            source = (packet.get("from_latitude"), packet.get("from_longitude"))
-            destination = (packet.get("to_latitude"), packet.get("to_longitude"))
-            self._weight_matrix.update(source, destination)
-            if self._weight_matrix.check():
-                pixels = self._reconstructor.execute(self._weight_matrix.output(), self._rssi)
 
-                # Render the image with Matplotlib.
-                self._axes.imshow(pixels.reshape((self._width, self._height)), cmap=self._cmap,
-                                  origin="lower", interpolation=self._interpolation)
-                self._figure.canvas.draw()
+            source_valid = packet.get("from_valid")
+            destination_valid = packet.get("to_valid")
 
-                # Draw the image with Qt.
-                size = self._figure.canvas.size()
-                image = QtGui.QImage(self._figure.canvas.buffer_rgba(), size.width(),
-                                     size.height(), QtGui.QImage.Format_ARGB32)
-                scaled_image = image.scaled(self._viewer_width, self._viewer_height)
-                self._label.setPixmap(QtGui.QPixmap(scaled_image))
+            # Only use packets with valid locations for the reconstruction.
+            if source_valid and destination_valid:
+                self._rssi.append(packet.get("rssi"))
 
+                source = (packet.get("from_latitude"), packet.get("from_longitude"))
+                destination = (packet.get("to_latitude"), packet.get("to_longitude"))
+                self._weight_matrix.update(source, destination)
+
+                # Redraw the image if the weight matrix is complete.
+                if self._weight_matrix.check():
+                    pixels = self._reconstructor.execute(self._weight_matrix.output(), self._rssi)
+
+                    # Render the image with Matplotlib.
+                    self._axes.imshow(pixels.reshape((self._width, self._height)), cmap=self._cmap,
+                                      origin="lower", interpolation=self._interpolation)
+                    self._figure.canvas.draw()
+
+                    # Draw the image with Qt.
+                    size = self._figure.canvas.size()
+                    image = QtGui.QImage(self._figure.canvas.buffer_rgba(), size.width(),
+                                         size.height(), QtGui.QImage.Format_ARGB32)
+                    scaled_image = image.scaled(self._viewer_width, self._viewer_height)
+                    self._image_label.setPixmap(QtGui.QPixmap(scaled_image))
+
+            # Update the graph and table with the data from the packet.
             self._update_graph(packet)
             self._update_table(packet)
 
