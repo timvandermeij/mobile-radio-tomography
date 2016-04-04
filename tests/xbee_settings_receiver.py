@@ -112,4 +112,4 @@ class TestXBeeSettingsReceiver(ThreadableTestCase, USBManagerTestCase, SettingsT
 
         self.assertEqual(Settings.settings_files, {})
         self.assertEqual(self.arguments.groups, {})
-        interrupt_mock.assert_called_once_with()
+        interrupt_mock.assert_called_once_with("xbee_sensor")

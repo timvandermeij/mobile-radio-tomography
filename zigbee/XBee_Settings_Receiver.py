@@ -63,4 +63,4 @@ class XBee_Settings_Receiver(object):
         # Clean up cached settings and stop the program so that we can restart 
         # it with the new settings.
         self._cleanup()
-        self._thread_manager.interrupt()
+        self._thread_manager.interrupt(self._xbee.thread_name)

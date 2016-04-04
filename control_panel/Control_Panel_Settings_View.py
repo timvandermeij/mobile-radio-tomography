@@ -155,7 +155,6 @@ class Control_Panel_Settings_View(Control_Panel_View):
         sender.start()
 
     def _make_add_setting_packet(self, vehicle, index, key):
-        print(vehicle, index, key, self._new_settings[key])
         packet = XBee_Packet()
         packet.set("specification", "setting_add")
         packet.set("index", index)
