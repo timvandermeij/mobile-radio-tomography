@@ -110,7 +110,7 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
 
     def _goto_waypoint(self, next_waypoint):
         # Format a "GOTO" command for the waypoint.
-        self._serial_connection.write("GOTO {} {}\n".format(next_waypoint[0], next_waypoint[1]))
+        self._serial_connection.write("GOTO {} {}\n".format(int(next_waypoint[0]), int(next_waypoint[1])))
 
         # Until we receive the ACKG message, assume we are not yet moving but 
         # also do not check for intersections and waypoints again.
