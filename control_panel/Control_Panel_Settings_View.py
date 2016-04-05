@@ -1,6 +1,6 @@
 import json
 from PyQt4 import QtGui
-from Control_Panel_View import Control_Panel_View
+from Control_Panel_View import Control_Panel_View, Control_Panel_View_Name
 from Control_Panel_Widgets import QLineEditClear, SettingsWidget
 from Control_Panel_XBee_Sender import Control_Panel_XBee_Sender
 from ..settings import Settings
@@ -96,9 +96,21 @@ class Control_Panel_Settings_View(Control_Panel_View):
         groundCheckBox = QtGui.QCheckBox("Ground station")
         groundCheckBox.setChecked(True)
         vehicleCheckBoxes = {}
+        try:
+            devices = self._controller.get_view_data(Control_Panel_View_Name.DEVICES, "devices")
+        except KeyError:
+            devices = []
+
         for vehicle in xrange(1, self._controller.xbee.number_of_sensors + 1):
+            if vehicle < len(devices):
+                vehicleJoined = devices[vehicle].joined
+            else:
+                vehicleJoined = True
+
             vehicleCheckBox = QtGui.QCheckBox("Vehicle {}".format(vehicle))
-            vehicleCheckBox.setChecked(True)
+            vehicleCheckBox.setChecked(vehicleJoined)
+            vehicleCheckBox.setEnabled(vehicleJoined)
+
             vehicleCheckBoxes[vehicle] = vehicleCheckBox
 
         boxLayout = QtGui.QVBoxLayout()

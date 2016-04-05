@@ -98,6 +98,20 @@ class Control_Panel_Controller(object):
         if specification in self._packet_callbacks:
             del self._packet_callbacks[specification]
 
+    def get_view_data(self, view, key):
+        """
+        Retrieve stored data for the given view name `view` in the stored
+        variable `key`.
+        """
+
+        if view not in self._view_data:
+            raise KeyError("Unknown view '{}'".format(view))
+
+        if key not in self._view_data[view]:
+            raise KeyError("View '{}' has no stored variable '{}'".format(view, key))
+
+        return self._view_data[view][key]
+
     def show_view(self, name):
         """
         Show a new view, identified by `name`, and clear the current view.
