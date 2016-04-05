@@ -35,10 +35,9 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
                 horizontalHeader.setResizeMode(i, QtGui.QHeaderView.Stretch)
 
             # Create the context menu for the rows in the table.
-            table.verticalHeader().setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
-            remove_rows_action = QtGui.QAction("Remove row(s)", table)
-            remove_rows_action.triggered.connect(partial(self._remove_rows, table))
-            table.verticalHeader().addAction(remove_rows_action)
+            verticalHeader = table.verticalHeader()
+            verticalHeader.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+            verticalHeader.customContextMenuRequested.connect(partial(self._make_menu, table))
 
             self._tables.append(table)
             self._stackedLayout.addWidget(table)
@@ -100,13 +99,46 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         for table in self._tables:
             table.insertRow(table.rowCount())
 
-    def _remove_rows(self, table):
+    def _make_menu(self, table, position):
+        """
+        Create a context menu for the vertical header (row labels).
+        """
+
+        menu = QtGui.QMenu(table)
+
+        insert_row_action = QtGui.QAction("Insert row before", table)
+        insert_row_action.triggered.connect(partial(self._insert_row, table, position))
+        remove_rows_action = QtGui.QAction("Remove row(s)", table)
+        remove_rows_action.triggered.connect(partial(self._remove_rows, table, position))
+
+        menu.addAction(insert_row_action)
+        menu.addAction(remove_rows_action)
+
+        menu.exec_(table.verticalHeader().viewport().mapToGlobal(position))
+
+    def _insert_row(self, table, position):
+        """
+        Add one row in front of the row at the context menu position in a table.
+        """
+
+        row = table.indexAt(position).row()
+        table.insertRow(row)
+        table.selectRow(row)
+
+    def _remove_rows(self, table, position):
         """
         Remove one or more selected rows from a table.
+
+        The rows can either be selected or the row at the context menu position
+        is removed.
         """
 
         items = table.selectionModel().selectedRows()
-        rows = [item.row() for item in items]
+        if items:
+            rows = [item.row() for item in items]
+        else:
+            rows = [table.indexAt(position).row()]
+
         for row in reversed(sorted(rows)):
             table.removeRow(row)
 
