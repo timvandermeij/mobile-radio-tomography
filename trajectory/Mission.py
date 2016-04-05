@@ -351,10 +351,7 @@ class Mission_Auto(Mission):
                     self.vehicle.set_next_waypoint()
                     next_waypoint += 1
 
-        if next_waypoint >= self.vehicle.count_waypoints():
-            return False
-
-        return True
+        return next_waypoint < self.vehicle.count_waypoints()
 
 class Mission_Guided(Mission):
     """

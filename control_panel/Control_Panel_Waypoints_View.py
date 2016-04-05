@@ -251,12 +251,17 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
                                        "There are no vehicles with waypoints.")
             return
 
-        sender = Control_Panel_XBee_Sender(self._controller, "waypoint",
-                                           waypoints, total, "waypoint_clear",
-                                           self._make_add_waypoint_packet, 
-                                           "waypoint_done", "waypoint_ack",
-                                           self._max_retries,
-                                           self._retry_interval)
+        configuration = {
+            "name": "waypoint",
+            "clear_message": "waypoint_clear",
+            "add_callback": self._make_add_waypoint_packet,
+            "done_message": "waypoint_done",
+            "ack_message": "waypoint_ack",
+            "max_retries": self._max_retries,
+            "retry_interval": self._retry_interval
+        }
+        sender = Control_Panel_XBee_Sender(self._controller, waypoints, total,
+                                           configuration)
         sender.start()
 
     def _make_add_waypoint_packet(self, vehicle, index, waypoint):

@@ -140,14 +140,17 @@ class Control_Panel_Settings_View(Control_Panel_View):
 
             return
 
-        max_retries = self._settings.get("settings_max_retries")
-        retry_interval = self._settings.get("settings_retry_interval")
-        sender = Control_Panel_XBee_Sender(self._controller, "setting",
-                                           vehicle_settings, count,
-                                           "setting_clear",
-                                           self._make_add_setting_packet,
-                                           "setting_done", "setting_ack",
-                                           max_retries, retry_interval)
+        configuration = {
+            "name": "setting",
+            "clear_message": "setting_clear",
+            "add_callback": self._make_add_setting_packet,
+            "done_message": "setting_done",
+            "ack_message": "setting_ack",
+            "max_retries": self._settings.get("settings_max_retries"),
+            "retry_interval": self._settings.get("settings_retry_interval")
+        }
+        sender = Control_Panel_XBee_Sender(self._controller, vehicle_settings,
+                                           count, configuration)
 
         if groundCheckBox.isChecked():
             sender.connect_accepted(self._set_ground_station_settings)

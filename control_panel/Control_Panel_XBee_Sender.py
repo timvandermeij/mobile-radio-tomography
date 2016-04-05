@@ -7,19 +7,17 @@ class Control_Panel_XBee_Sender(object):
     Handler for sending status changes to the XBee devices on the vehicles.
     """
 
-    def __init__(self, controller, name, data, total, clear_message,
-                 add_callback, done_message, ack_message, max_retries,
-                 retry_interval):
+    def __init__(self, controller, data, total, configuration):
         self._controller = controller
-        self._name = name
+        self._name = configuration["name"]
 
-        self._clear_message = clear_message
-        self._add_callback = add_callback
-        self._done_message = done_message
-        self._ack_message = ack_message
+        self._clear_message = configuration["clear_message"]
+        self._add_callback = configuration["add_callback"]
+        self._done_message = configuration["done_message"]
+        self._ack_message = configuration["ack_message"]
 
-        self._max_retries = max_retries
-        self._retry_interval = retry_interval
+        self._max_retries = configuration["max_retries"]
+        self._retry_interval = configuration["retry_interval"]
 
         self._labels = dict([(vehicle, "") for vehicle in data])
 
@@ -72,9 +70,11 @@ class Control_Panel_XBee_Sender(object):
         self._set_label(vehicle, "Clearing old {}s".format(self._name))
         self._timers[vehicle].start()
 
+    def _is_done(self, vehicle):
+        return len(self._data[vehicle]) <= self._indexes[vehicle]
+
     def _send_one(self, vehicle):
-        index = self._indexes[vehicle]
-        if len(self._data[vehicle]) <= index:
+        if self._is_done(vehicle):
             # Enqueue a packet indicating that sending data to this vehicle is 
             # done.
             packet = XBee_Packet()
@@ -83,8 +83,12 @@ class Control_Panel_XBee_Sender(object):
             self._controller.xbee.enqueue(packet, to=vehicle)
 
             self._update_value()
+            if all(self._is_done(vehicle) for vehicle in self._indexes):
+                self._progress.accept()
+
             return
 
+        index = self._indexes[vehicle]
         data = self._data[vehicle][index]
 
         packet = self._add_callback(vehicle, index, data)

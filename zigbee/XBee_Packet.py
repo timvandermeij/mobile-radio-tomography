@@ -104,22 +104,22 @@ class XBee_Packet(object):
                 raise KeyError("Unable to serialize XBee packet with specification '{}': Field '{}' has not been provided.".format(specification_name, field["name"]))
 
             try:
-                packed_message += self._pack_field(field, value)
+                packed_message += self._pack_field(field["format"], value)
             except struct.error as e:
                 raise ValueError("Unable to serialize XBee packet with specification '{}': struct error for field '{}': {}".format(specification_name, field["name"], e.message))
 
 
         return packed_message
 
-    def _pack_field(self, field, value):
-        if field["format"] == "$":
+    def _pack_field(self, format, value):
+        if format == "$":
             # Special string format: pack the full length of the string. Track 
             # the length with one byte since the length should never be more 
             # than the packet length.
             length = len(value)
             contents = struct.pack("B", length)
             contents += struct.pack("{}s".format(length), value)
-        elif field["format"] == "@":
+        elif format == "@":
             # Special object format: determine the type of the value. If it is 
             # something struct can handle, use it and track which type we used 
             # to pack. Otherwise, serialize with json and compress with zlib. 
@@ -131,14 +131,14 @@ class XBee_Packet(object):
                 object_format = self._object_types[object_type]
                 contents = struct.pack("?", True)
                 contents += struct.pack("B", ord(object_format))
-                contents += struct.pack(object_format, value)
+                contents += self._pack_field(object_format, value)
             else:
                 compressed_data = zlib.compress(json.dumps(value))
                 contents = struct.pack("?", False)
                 contents += struct.pack("B", len(compressed_data))
                 contents += compressed_data
         else:
-            contents = struct.pack(field["format"], value)
+            contents = struct.pack(format, value)
 
         return contents
 
@@ -198,7 +198,7 @@ class XBee_Packet(object):
             is_packed, offset = self._read_packed("?", contents, offset)
             if is_packed:
                 object_format, offset = self._read_packed("B", contents, offset)
-                data, offset = self._read_packed(chr(object_format), contents,
+                data, offset = self._read_format(chr(object_format), contents,
                                                  offset)
             else:
                 length, offset = self._read_packed("B", contents, offset)
