@@ -109,13 +109,17 @@ class Control_Panel_Settings_View(Control_Panel_View):
         groupBox = QtGui.QGroupBox("Save locations")
         groupBox.setLayout(boxLayout)
 
+        scrollArea = QtGui.QScrollArea()
+        scrollArea.setWidgetResizable(True)
+        scrollArea.setWidget(groupBox)
+
         dialogButtons = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel)
         dialogButtons.accepted.connect(dialog.accept)
         dialogButtons.rejected.connect(dialog.reject)
 
         dialogLayout = QtGui.QVBoxLayout()
         dialogLayout.addWidget(textEdit)
-        dialogLayout.addWidget(groupBox)
+        dialogLayout.addWidget(scrollArea)
         dialogLayout.addWidget(dialogButtons)
 
         dialog.setLayout(dialogLayout)
