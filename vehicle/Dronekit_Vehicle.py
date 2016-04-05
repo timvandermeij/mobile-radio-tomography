@@ -1,6 +1,7 @@
 import time
 import dronekit
 from pymavlink import mavutil
+from Vehicle import Vehicle
 from MAVLink_Vehicle import MAVLink_Vehicle
 from ..settings.Arguments import Arguments
 
