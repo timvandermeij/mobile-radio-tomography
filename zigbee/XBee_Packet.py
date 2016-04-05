@@ -197,16 +197,15 @@ class XBee_Packet(object):
         elif format == "@":
             is_packed, offset = self._read_packed("?", contents, offset)
             if is_packed:
-                object_format, offset = self._read_packed("B", contents,
-                                                                offset)
-                data, offset = self._read_packed(chr(object_format),
-                                                 contents, offset)
+                object_format, offset = self._read_packed("B", contents, offset)
+                data, offset = self._read_packed(chr(object_format), contents,
+                                                 offset)
             else:
                 length, offset = self._read_packed("B", contents, offset)
                 data_format = "{}s".format(length)
 
-                compressed, offset = self._read_packed(data_format,
-                                                       contents, offset)
+                compressed, offset = self._read_packed(data_format, contents,
+                                                       offset)
 
                 data = json.loads(zlib.decompress(compressed))
         else:

@@ -115,36 +115,36 @@ class TestXBeePacket(unittest.TestCase):
 
         # Valid messages must be unpacked.
         self.packet.unserialize("\x06H\xe1zT4o\x9dA\xf6(\\E\xa5q\x9dA\x16\x00\x00\x00\x02")
-        self.assertEqual(self.packet._contents, {
+        self.assertEqual(self.packet.get_all(), {
             "specification": "waypoint_add",
             "latitude": 123456789.12,
             "longitude": 123496785.34,
             "index": 22,
             "to_id": 2
         })
-        self.assertFalse(self.packet._private)
+        self.assertFalse(self.packet.is_private())
 
-    def test_unserialize_object_pack(self):
+    def test_unserialize_object_packed(self):
         self.packet.unserialize("\n\x00\x00\x00\x00\x03bar\x01i*\x00\x00\x00\x01")
-        self.assertEqual(self.packet._contents, {
+        self.assertEqual(self.packet.get_all(), {
             "specification": "setting_add",
             "index": 0,
             "key": "bar",
             "value": 42,
             "to_id": 1
         })
-        self.assertFalse(self.packet._private)
+        self.assertFalse(self.packet.is_private())
 
     def test_unserialize_object_compressed(self):
         self.packet.unserialize("\n\x01\x00\x00\x00\x05items\x00\x11x\x9c\x8b6\xd4Q0\xd2Q0\x8e\x05\x00\t\x85\x01\xe7\x01")
-        self.assertEqual(self.packet._contents, {
+        self.assertEqual(self.packet.get_all(), {
             "specification": "setting_add",
             "index": 1,
             "key": "items",
             "value": [1,2,3],
             "to_id": 1
         })
-        self.assertFalse(self.packet._private)
+        self.assertFalse(self.packet.is_private())
 
     def test_is_private(self):
         # The private property should be returned.
