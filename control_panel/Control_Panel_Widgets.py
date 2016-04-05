@@ -16,6 +16,13 @@ class QLineEditClear(QtGui.QLineEdit):
         self.clearButton.clicked.connect(self.clear)
         self.textChanged.connect(self.updateCloseButton)
 
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key_Escape:
+            self.clear()
+            self.clearFocus()
+
+        super(QLineEditClear, self).keyPressEvent(event)
+
     def resizeEvent(self, event):
         self.clearButton.resizeEvent(event)
 
