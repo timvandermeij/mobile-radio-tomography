@@ -146,11 +146,11 @@ class XBee_Sensor_Simulator(XBee_Sensor):
 
                 # Create and complete the packet for the ground station.
                 ground_station_packet = self._make_rssi_ground_station_packet(packet)
-                ground_station_packet.set("rssi", random.randint(0, 60))
+                ground_station_packet.set("rssi", random.randint(30, 70))
                 frame_id = chr(random.randint(1, 255))
                 self._data[frame_id] = ground_station_packet
-            else:
-                print("> Ground station received {}".format(packet.get_all()))
+            elif self._buffer is not None:
+                self._buffer.put(packet)
 
     def _format_address(self, address):
         """

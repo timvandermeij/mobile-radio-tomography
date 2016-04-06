@@ -264,11 +264,17 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             size_x = int(self._input_boxes["size_x"].text())
             size_y = int(self._input_boxes["size_y"].text())
 
+            if size_x == 0 or size_y == 0:
+                QtGui.QMessageBox.critical(self._controller.central_widget, "Invalid network dimensions",
+                                           "The network dimensions must be nonzero.")
+                return
+
             options = {
                 "origin": [origin_x, origin_y],
                 "size": [size_x, size_y]
             }
             self._buffer = Stream_Buffer(options)
+            self._controller.xbee.set_buffer(self._buffer)
 
         # Create the reconstructor.
         reconstructors = {

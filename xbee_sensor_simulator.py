@@ -7,17 +7,9 @@ from settings import Arguments
 from zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 
 def get_location():
-    """
-    Get the current GPS location (latitude and longitude pair).
-    """
-
-    return (random.uniform(1.0, 50.0), random.uniform(1.0, 50.0))
+    return (random.randint(0, 10), random.randint(0, 10))
 
 def receive_packet(packet):
-    """
-    Handle a custom packet that has been sent to this sensor.
-    """
-
     pass
 
 def location_valid(other_valid=None):
