@@ -303,42 +303,46 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
     def _loop(self):
         """
-        Execute the reconstruction to recompute the image when a new measurement is processed.
+        Execute the reconstruction loop.
         """
 
-        # If a packet is available, process it.
-        if self._buffer.count() > 0:
-            packet = self._buffer.get()
-
-            source_valid = packet.get("from_valid")
-            destination_valid = packet.get("to_valid")
-
-            # Only use packets with valid locations for the reconstruction.
-            if source_valid and destination_valid:
-                source = (packet.get("from_latitude"), packet.get("from_longitude"))
-                destination = (packet.get("to_latitude"), packet.get("to_longitude"))
-                points = self._weight_matrix.update(source, destination)
-                if points is not None:
-                    self._rssi.append(packet.get("rssi"))
-
-                    # Redraw the image if the weight matrix is complete.
-                    if self._weight_matrix.check():
-                        pixels = self._reconstructor.execute(self._weight_matrix.output(), self._rssi)
-
-                        # Render the image with Matplotlib.
-                        self._axes.imshow(pixels.reshape((self._width, self._height)), cmap=self._cmap,
-                                          origin="lower", interpolation=self._interpolation)
-                        self._figure.canvas.draw()
-
-                        # Draw the image with Qt.
-                        size = self._figure.canvas.size()
-                        image = QtGui.QImage(self._figure.canvas.buffer_rgba(), size.width(),
-                                             size.height(), QtGui.QImage.Format_ARGB32)
-                        scaled_image = image.scaled(self._viewer_width, self._viewer_height)
-                        self._image_label.setPixmap(QtGui.QPixmap(scaled_image))
-
-            # Update the graph and table with the data from the packet.
-            self._graph.update(packet)
-            self._table.update(packet)
-
+        # If no packets are available yet, wait for them to arrive.
+        if self._buffer.count() == 0:
             QtCore.QTimer.singleShot(self._pause_time, lambda: self._loop())
+            return
+
+        packet = self._buffer.get()
+
+        # Update the graph and table with the data from the packet.
+        self._graph.update(packet)
+        self._table.update(packet)
+
+        # Only use packets with valid source and destination locations.
+        if not packet.get("from_valid") or not packet.get("to_valid"):
+            QtCore.QTimer.singleShot(self._pause_time, lambda: self._loop())
+            return
+
+        source = (packet.get("from_latitude"), packet.get("from_longitude"))
+        destination = (packet.get("to_latitude"), packet.get("to_longitude"))
+
+        # If the weight matrix has been updated, store the RSSI value and
+        # redraw the image if the weight matrix is complete.
+        if self._weight_matrix.update(source, destination) is not None:
+            self._rssi.append(packet.get("rssi"))
+
+            if self._weight_matrix.check():
+                pixels = self._reconstructor.execute(self._weight_matrix.output(), self._rssi)
+
+                # Render the image with Matplotlib.
+                self._axes.imshow(pixels.reshape((self._width, self._height)), cmap=self._cmap,
+                                  origin="lower", interpolation=self._interpolation)
+                self._figure.canvas.draw()
+
+                # Draw the image with Qt.
+                size = self._figure.canvas.size()
+                image = QtGui.QImage(self._figure.canvas.buffer_rgba(), size.width(),
+                                     size.height(), QtGui.QImage.Format_ARGB32)
+                scaled_image = image.scaled(self._viewer_width, self._viewer_height)
+                self._image_label.setPixmap(QtGui.QPixmap(scaled_image))
+
+        QtCore.QTimer.singleShot(self._pause_time, lambda: self._loop())
