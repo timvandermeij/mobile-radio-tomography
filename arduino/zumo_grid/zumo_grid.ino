@@ -63,7 +63,7 @@
 #define COMMAND_LENGTH 4
 
 // RX pin of the serial interface
-#define RX_PIN 6
+#define RX_PIN A5
 
 // TX pin of the serial interface
 #define TX_PIN A1
@@ -363,6 +363,12 @@ void zumo_goto(int row, int col) {
   softSerial.print("\n");
 }
 
+void advance() {
+    // Advance passed intersection
+    motors.setSpeeds(SPEED, SPEED);
+    delay(OVERSHOOT(LINE_THICKNESS * 2.0));
+    motors.setSpeeds(0,0);
+}
 
 void goto_dir(char dir, int count) {
   // Are we already there?
@@ -372,10 +378,7 @@ void goto_dir(char dir, int count) {
   turn_to(dir);
   for (int i = 0; i < count; i++) {
     followSegment();
-    // Advance passed intersection
-    motors.setSpeeds(SPEED, SPEED);
-    delay(OVERSHOOT(LINE_THICKNESS*1.25));
-    motors.setSpeeds(0,0);
+    advance();
     softSerial.print("PASS ");
     softSerial.print(i);
     softSerial.print("\n");

@@ -1,8 +1,10 @@
 import json
 from PyQt4 import QtGui
-from Control_Panel_View import Control_Panel_View
+from Control_Panel_View import Control_Panel_View, Control_Panel_View_Name
 from Control_Panel_Widgets import QLineEditClear, SettingsWidget
+from Control_Panel_XBee_Sender import Control_Panel_XBee_Sender
 from ..settings import Settings
+from ..zigbee.XBee_Packet import XBee_Packet
 
 class Setting_Filter_Match(object):
     NONE = 0
@@ -94,9 +96,21 @@ class Control_Panel_Settings_View(Control_Panel_View):
         groundCheckBox = QtGui.QCheckBox("Ground station")
         groundCheckBox.setChecked(True)
         vehicleCheckBoxes = {}
+        try:
+            devices = self._controller.get_view_data(Control_Panel_View_Name.DEVICES, "devices")
+        except KeyError:
+            devices = []
+
         for vehicle in xrange(1, self._controller.xbee.number_of_sensors + 1):
+            if vehicle < len(devices):
+                vehicleJoined = devices[vehicle].joined
+            else:
+                vehicleJoined = True
+
             vehicleCheckBox = QtGui.QCheckBox("Vehicle {}".format(vehicle))
-            vehicleCheckBox.setChecked(True)
+            vehicleCheckBox.setChecked(vehicleJoined)
+            vehicleCheckBox.setEnabled(vehicleJoined)
+
             vehicleCheckBoxes[vehicle] = vehicleCheckBox
 
         boxLayout = QtGui.QVBoxLayout()
@@ -107,28 +121,79 @@ class Control_Panel_Settings_View(Control_Panel_View):
         groupBox = QtGui.QGroupBox("Save locations")
         groupBox.setLayout(boxLayout)
 
+        scrollArea = QtGui.QScrollArea()
+        scrollArea.setWidgetResizable(True)
+        scrollArea.setWidget(groupBox)
+
         dialogButtons = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel)
         dialogButtons.accepted.connect(dialog.accept)
         dialogButtons.rejected.connect(dialog.reject)
 
         dialogLayout = QtGui.QVBoxLayout()
         dialogLayout.addWidget(textEdit)
-        dialogLayout.addWidget(groupBox)
+        dialogLayout.addWidget(scrollArea)
         dialogLayout.addWidget(dialogButtons)
 
         dialog.setLayout(dialogLayout)
 
         result = dialog.exec_()
-        if result == QtGui.QDialog.Accepted:
-            if groundCheckBox.isChecked():
-                with open('settings.json', 'w') as f:
-                    f.write(pretty_json)
+        if result != QtGui.QDialog.Accepted:
+            return
 
-                Settings.settings_files = {}
-                self._controller.arguments.groups = {}
-                self._controller.load_settings()
+        self._new_settings = flat_settings
+
+        vehicle_settings = {}
+        keys = sorted(self._new_settings.keys())
+        count = 0
+        for vehicle in xrange(1, self._controller.xbee.number_of_sensors + 1):
+            if vehicleCheckBoxes[vehicle].isChecked():
+                vehicle_settings[vehicle] = keys
+                count += len(keys)
+
+        if not vehicle_settings:
+            if groundCheckBox.isChecked():
+                self._set_ground_station_settings()
+
+            return
+
+        configuration = {
+            "name": "setting",
+            "clear_message": "setting_clear",
+            "add_callback": self._make_add_setting_packet,
+            "done_message": "setting_done",
+            "ack_message": "setting_ack",
+            "max_retries": self._settings.get("settings_max_retries"),
+            "retry_interval": self._settings.get("settings_retry_interval")
+        }
+        sender = Control_Panel_XBee_Sender(self._controller, vehicle_settings,
+                                           count, configuration)
+
+        if groundCheckBox.isChecked():
+            sender.connect_accepted(self._set_ground_station_settings)
+
+        sender.start()
+
+    def _make_add_setting_packet(self, vehicle, index, key):
+        packet = XBee_Packet()
+        packet.set("specification", "setting_add")
+        packet.set("index", index)
+        packet.set("key", str(key))
+        packet.set("value", self._new_settings[key])
+        packet.set("to_id", vehicle)
+
+        return packet
+
+    def _set_ground_station_settings(self):
+        with open(self._controller.arguments.settings_file, 'w') as json_file:
+            json.dump(self._new_settings, json_file, indent=4, sort_keys=True)
+
+        Settings.settings_files = {}
+        self._controller.arguments.groups = {}
+        self._controller.load_settings()
 
     def _scroll_to_match(self):
+        self._listWidget.scrollToItem(self._listWidget.currentItem())
+
         index = self._listWidget.currentRow()
         if index in self._best_matches:
             key = self._best_matches[index]

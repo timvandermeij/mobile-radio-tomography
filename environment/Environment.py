@@ -6,6 +6,7 @@ from ..trajectory.Servo import Servo
 from ..vehicle.Vehicle import Vehicle
 from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
 from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
+from ..zigbee.XBee_Settings_Receiver import XBee_Settings_Receiver
 
 from dronekit import LocationLocal
 
@@ -77,6 +78,7 @@ class Environment(object):
 
         self.arguments = arguments
         self.settings = self.arguments.get_settings("environment")
+
         self._distance_sensors = None
 
         # Servo pins of the flight controller for distance sensor rotation
@@ -89,6 +91,8 @@ class Environment(object):
         self._measurements_valid = False
         self._packet_callbacks = {}
         self._setup_xbee_sensor()
+
+        self._settings_receiver = XBee_Settings_Receiver(self)
 
         if self.settings.get("infrared_sensor"):
             from ..control.Infrared_Sensor import Infrared_Sensor

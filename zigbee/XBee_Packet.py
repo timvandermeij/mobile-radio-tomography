@@ -1,5 +1,6 @@
 import json
 import struct
+import zlib
 
 class XBee_Packet(object):
     # Packet type specifications loaded from the JSON file.
@@ -19,6 +20,12 @@ class XBee_Packet(object):
 
         self._private = True
         self._contents = {}
+        self._object_types = {
+            bool: "?",
+            int: "i",
+            float: "d",
+            str: "$"
+        }
 
     def set(self, key, value):
         """
@@ -78,7 +85,7 @@ class XBee_Packet(object):
 
         # Verify that the provided specification exists.
         if specification_name not in self._specifications:
-            raise KeyError("Unknown specification has been provided")
+            raise KeyError("Unknown specification '{}' has been provided".format(specification_name))
 
         specification = self._specifications[specification_name]
 
@@ -94,11 +101,46 @@ class XBee_Packet(object):
             elif field["name"] in self._contents:
                 value = self._contents[field["name"]]
             else:
-                raise KeyError("Field '{}' has not been provided.".format(field["name"]))
+                raise KeyError("Unable to serialize XBee packet with specification '{}': Field '{}' has not been provided.".format(specification_name, field["name"]))
 
-            packed_message += struct.pack(field["format"], value)
+            try:
+                packed_message += self._pack_field(field["format"], value)
+            except struct.error as e:
+                raise ValueError("Unable to serialize XBee packet with specification '{}': struct error for field '{}': {}".format(specification_name, field["name"], e.message))
+
 
         return packed_message
+
+    def _pack_field(self, format, value):
+        if format == "$":
+            # Special string format: pack the full length of the string. Track 
+            # the length with one byte since the length should never be more 
+            # than the packet length.
+            length = len(value)
+            contents = struct.pack("B", length)
+            contents += struct.pack("{}s".format(length), value)
+        elif format == "@":
+            # Special object format: determine the type of the value. If it is 
+            # something struct can handle, use it and track which type we used 
+            # to pack. Otherwise, serialize with json and compress with zlib. 
+            # Track the final length in one byte since the length should never 
+            # be more than the packet length. Also track whether it is a packed 
+            # type or a JSON-serialized one.
+            object_type = type(value)
+            if object_type in self._object_types:
+                object_format = self._object_types[object_type]
+                contents = struct.pack("?", True)
+                contents += struct.pack("B", ord(object_format))
+                contents += self._pack_field(object_format, value)
+            else:
+                compressed_data = zlib.compress(json.dumps(value))
+                contents = struct.pack("?", False)
+                contents += struct.pack("B", len(compressed_data))
+                contents += compressed_data
+        else:
+            contents = struct.pack(format, value)
+
+        return contents
 
     def unserialize(self, contents):
         """
@@ -113,8 +155,7 @@ class XBee_Packet(object):
         """
 
         # Unpack the specification identifier.
-        specification_id = struct.unpack_from("B", contents)[0]
-        offset = struct.calcsize("B")
+        specification_id, offset = self._read_packed("B", contents, 0)
 
         # Fetch the specification belonging to the found identifier.
         specification = None
@@ -126,7 +167,7 @@ class XBee_Packet(object):
                 break
 
         if specification is None:
-            raise KeyError("Invalid specification has been provided")
+            raise KeyError("Invalid specification {} has been provided".format(specification_id))
 
         # Loop through all fields in the specification that do not have
         # a fixed value (in order). Using the format of the field, we
@@ -140,8 +181,43 @@ class XBee_Packet(object):
 
             name = field["name"]
             format = field["format"]
-            self._contents[name] = struct.unpack_from(format, contents, offset)[0]
-            offset += struct.calcsize(format)
+            try:
+                data, offset = self._read_format(format, contents, offset)
+            except struct.error as e:
+                raise ValueError("Unable to unserialize XBee packet with specification '{}': struct error for field '{}' at offset {}: {}".format(specification_name, name, offset, e.message))
+
+            self._contents[name] = data
+
+    def _read_format(self, format, contents, offset):
+        if format == "$":
+            length, offset = self._read_packed("B", contents, offset)
+
+            str_format = "{}s".format(length)
+            data, offset = self._read_packed(str_format, contents, offset)
+        elif format == "@":
+            is_packed, offset = self._read_packed("?", contents, offset)
+            if is_packed:
+                object_format, offset = self._read_packed("B", contents, offset)
+                data, offset = self._read_format(chr(object_format), contents,
+                                                 offset)
+            else:
+                length, offset = self._read_packed("B", contents, offset)
+                data_format = "{}s".format(length)
+
+                compressed, offset = self._read_packed(data_format, contents,
+                                                       offset)
+
+                data = json.loads(zlib.decompress(compressed))
+        else:
+            data, offset = self._read_packed(format, contents, offset)
+
+        return data, offset
+
+    def _read_packed(self, format, contents, offset):
+        data = struct.unpack_from(format, contents, offset)[0]
+        offset += struct.calcsize(format)
+
+        return data, offset
 
     def is_private(self):
         """

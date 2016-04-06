@@ -45,7 +45,7 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
     def _update_home_location(self):
         # Format a "home location" command
         # Only use this when starting.
-        self._serial_connection.write("HOME {} {} {}\n".format(self._home_location[0], self._home_location[1], self._get_zumo_direction(self._direction)))
+        self._serial_connection.write("HOME {} {} {}\n".format(int(self._home_location[0]), int(self._home_location[1]), self._get_zumo_direction(self._direction)))
 
     @Robot_Vehicle_Arduino.home_location.setter
     def home_location(self, value):
@@ -110,7 +110,7 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
 
     def _goto_waypoint(self, next_waypoint):
         # Format a "GOTO" command for the waypoint.
-        self._serial_connection.write("GOTO {} {}\n".format(next_waypoint[0], next_waypoint[1]))
+        self._serial_connection.write("GOTO {} {}\n".format(int(next_waypoint[0]), int(next_waypoint[1])))
 
         # Until we receive the ACKG message, assume we are not yet moving but 
         # also do not check for intersections and waypoints again.

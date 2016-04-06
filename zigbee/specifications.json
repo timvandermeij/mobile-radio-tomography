@@ -158,5 +158,69 @@
             "name": "to_id",
             "format": "B"
         }
+    ],
+    "setting_clear": [
+        {
+            "name": "id",
+            "format": "B",
+            "value": 9,
+            "private": false
+        },
+        {
+            "name": "to_id",
+            "format": "B"
+        }
+    ],
+    "setting_add": [
+        {
+            "name": "id",
+            "format": "B",
+            "value": 10,
+            "private": false
+        },
+        {
+            "name": "index",
+            "format": "i"
+        },
+        {
+            "name": "key",
+            "format": "$"
+        },
+        {
+            "name": "value",
+            "format": "@"
+        },
+        {
+            "name": "to_id",
+            "format": "B"
+        }
+    ],
+    "setting_ack": [
+        {
+            "name": "id",
+            "format": "B",
+            "value": 11,
+            "private": false
+        },
+        {
+            "name": "next_index",
+            "format": "i"
+        },
+        {
+            "name": "sensor_id",
+            "format": "B"
+        }
+    ],
+    "setting_done": [
+        {
+            "name": "id",
+            "format": "B",
+            "value": 12,
+            "private": false
+        },
+        {
+            "name": "to_id",
+            "format": "B"
+        }
     ]
 }

@@ -27,3 +27,11 @@ class Threadable(object):
         """
 
         self._thread_manager.interrupt(self._name)
+
+    @property
+    def thread_name(self):
+        """
+        Retrieve the name of this thread.
+        """
+
+        return self._name

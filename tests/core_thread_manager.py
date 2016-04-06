@@ -42,6 +42,7 @@ class TestCoreThreadManager(ThreadableTestCase):
     def test_register(self):
         # The thread storage must contain a registered thread.
         mock_thread = Mock_Thread(self.thread_manager)
+        self.assertEqual(mock_thread.thread_name, "mock_thread")
         self.thread_manager.register("mock_thread", mock_thread)
         self.assertEqual(self.thread_manager._threads, {
             "mock_thread": mock_thread

@@ -16,6 +16,13 @@ class QLineEditClear(QtGui.QLineEdit):
         self.clearButton.clicked.connect(self.clear)
         self.textChanged.connect(self.updateCloseButton)
 
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key_Escape:
+            self.clear()
+            self.clearFocus()
+
+        super(QLineEditClear, self).keyPressEvent(event)
+
     def resizeEvent(self, event):
         self.clearButton.resizeEvent(event)
 
@@ -96,6 +103,9 @@ class SettingsWidget(QtGui.QWidget):
 
         if self._settings.parent is not None:
             parentButton = QtGui.QCommandLinkButton(self._settings.parent.name, "Go to parent ({})".format(self._settings.parent.component_name))
+            policy = parentButton.sizePolicy()
+            policy.setVerticalPolicy(QtGui.QSizePolicy.Fixed)
+            parentButton.setSizePolicy(policy)
             parentButton.clicked.connect(self._trigger_parent_clicked)
 
             layout.addWidget(parentButton)
@@ -119,7 +129,7 @@ class SettingsWidget(QtGui.QWidget):
             descriptionLabel = QtGui.QLabel("Description:")
             descriptionLabel.setAlignment(QtCore.Qt.AlignTop)
             description = QtGui.QLabel(self._arguments.get_help(key, info))
-            description.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+            description.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
             description.setWordWrap(True)
             formLayout.addRow(descriptionLabel, description)
 
@@ -129,6 +139,11 @@ class SettingsWidget(QtGui.QWidget):
             formLayout.addRow(valueLabel, valueWidget)
 
             groupBox = QtGui.QGroupBox(key)
+
+            groupBox.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
+            for action in valueWidget.get_actions():
+                groupBox.addAction(action)
+
             groupBox.setLayout(formLayout)
             layout.addWidget(groupBox)
 
@@ -177,16 +192,32 @@ class FormWidget(QtGui.QWidget):
         self.form = form
         self.key = key
         self.info = info
+
+        reset_action = QtGui.QAction("Reset to current value", self)
+        reset_action.triggered.connect(self.reset_value)
+        default_action = QtGui.QAction("Reset to default value", self)
+        default_action.triggered.connect(self.set_default_value)
+        self._actions = [reset_action, default_action]
+
         self.setup_form()
 
     def setup_form(self):
         pass
 
+    def get_actions(self):
+        return self._actions
+
     def get_value(self):
         raise NotImplementedError("Subclasses must implement `get_value`")
 
+    def set_value(self, value):
+        raise NotImplementedError("Subclasses must implement `set_value(value)`")
+
     def reset_value(self):
-        raise NotImplementedError("Subclasses must implement `reset_value`")
+        self.set_value(self.info["value"])
+
+    def set_default_value(self):
+        self.set_value(self.info["default"])
 
     def is_value_changed(self):
         return self.get_value() != self.info["value"]
@@ -215,9 +246,9 @@ class BooleanFormWidget(FormWidget):
     def get_value(self):
         return self._enabledButton.isChecked()
 
-    def reset_value(self):
-        self._enabledButton.setChecked(self.info["value"])
-        self._disabledButton.setChecked(not self.info["value"])
+    def set_value(self, value):
+        self._enabledButton.setChecked(value)
+        self._disabledButton.setChecked(not value)
 
 class TextFormWidget(QtGui.QLineEdit, FormWidget):
     def __init__(self, form, key, info, *a, **kw):
@@ -231,6 +262,16 @@ class TextFormWidget(QtGui.QLineEdit, FormWidget):
         QtGui.QLineEdit.__init__(self, *a, **kw)
         FormWidget.__init__(self, form, key, info, *a, **kw)
         self._background_color = ""
+
+    def contextMenuEvent(self, event):
+        menu = self.createStandardContextMenu()
+        menu.addSeparator()
+        for action in self._actions:
+            menu.addAction(action)
+
+        menu.setStyleSheet("background-color: base")
+        menu.exec_(event.globalPos())
+        menu.clear()
 
     def setup_form(self):
         self.reset_value()
@@ -254,8 +295,8 @@ class TextFormWidget(QtGui.QLineEdit, FormWidget):
 
         return str(text)
 
-    def reset_value(self):
-        self.setText(self.format_value(self.info["value"]))
+    def set_value(self, value):
+        self.setText(self.format_value(value))
 
     def _format(self):
         self.setText(self.format_value(self.text()))
@@ -418,6 +459,7 @@ class NumericFormWidget(TextFormWidget):
 class NumericSliderFormWidget(FormWidget):
     def setup_form(self):
         self._valueWidget = NumericFormWidget(self.form, "{}-num".format(self.key), self.info)
+        self._slider = None
 
         self._layout = QtGui.QHBoxLayout()
         self._layout.setContentsMargins(0, 0, 0, 0)
@@ -448,6 +490,11 @@ class NumericSliderFormWidget(FormWidget):
 
     def get_value(self):
         return self._valueWidget.get_value()
+
+    def set_value(self, value):
+        self._valueWidget.set_value(value)
+        if self._slider is not None:
+            self._update_slider(self._valueWidget.text())
 
     def _slider_to_value(self, value):
         minimum = self._slider.minimum()
@@ -599,6 +646,22 @@ class ListFormWidget(FormWidget):
     def get_value(self):
         return [sub_widget.get_value() for sub_widget in self._sub_widgets]
 
+    def set_value(self, value):
+        # Replace values in item widgets, add widgets to the list if necessary.
+        for position, sub_value in enumerate(value):
+            if position >= len(self._sub_widgets):
+                self._add_to_list()
+
+            self._sub_widgets[position].set_value(sub_value)
+
+        # Remove item widgets not having a value anymore.
+        for index in xrange(len(value), len(self._sub_widgets)):
+            item = self._layout.itemAt(len(value))
+            if item.layout():
+                self._remove_item(item, item.itemAt(0).widget(), item.itemAt(1).widget())
+            else:
+                self._layout.removeItem(item)
+
 class DictFormWidget(FormWidget):
     def setup_form(self):
         self._sub_widgets = {}
@@ -623,7 +686,11 @@ class DictFormWidget(FormWidget):
         self.setLayout(formLayout)
 
     def get_value(self):
-        return dict((key, subWidget.get_value()) for (key, subWidget) in self._sub_widgets.iteritems())
+        return dict((key, subWidget.get_value()) for key, subWidget in self._sub_widgets.iteritems())
+
+    def set_value(self, value):
+        for key, subWidget in self._sub_widgets.iteritems():
+            subWidget.set_value(value[key])
 
 class ChoicesFormWidget(QtGui.QComboBox, FormWidget):
     def __init__(self, form, key, info, *a, **kw):
@@ -645,6 +712,14 @@ class ChoicesFormWidget(QtGui.QComboBox, FormWidget):
             if choice == self.info["value"]:
                 self.setCurrentIndex(i)
 
+    def contextMenuEvent(self, event):
+        menu = QtGui.QMenu(self)
+        for action in self._actions:
+            menu.addAction(action)
+
+        menu.exec_(event.globalPos())
+        menu.clear()
+
     def get_value(self):
         if self.info["type"] in self._types:
             type_cast = self._types[self.info["type"]]
@@ -652,3 +727,7 @@ class ChoicesFormWidget(QtGui.QComboBox, FormWidget):
             type_cast = str
 
         return type_cast(self.currentText())
+
+    def set_value(self, value):
+        index = self.findText(str(value))
+        self.setCurrentIndex(index)

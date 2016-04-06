@@ -53,7 +53,7 @@ class Control_Panel_Controller(object):
             Control_Panel_View_Name.LOADING: "control_panel_loading",
             Control_Panel_View_Name.RECONSTRUCTION: "control_panel_reconstruction",
             Control_Panel_View_Name.WAYPOINTS: "control_panel_waypoints",
-            Control_Panel_View_Name.SETTINGS: "control_panel"
+            Control_Panel_View_Name.SETTINGS: "control_panel_settings"
         }
         self._view_data = dict([(name, {}) for name in self._view_components.iterkeys()])
         self.load_settings()
@@ -97,6 +97,20 @@ class Control_Panel_Controller(object):
     def remove_packet_callback(self, specification):
         if specification in self._packet_callbacks:
             del self._packet_callbacks[specification]
+
+    def get_view_data(self, view, key):
+        """
+        Retrieve stored data for the given view name `view` in the stored
+        variable `key`.
+        """
+
+        if view not in self._view_data:
+            raise KeyError("Unknown view '{}'".format(view))
+
+        if key not in self._view_data[view]:
+            raise KeyError("View '{}' has no stored variable '{}'".format(view, key))
+
+        return self._view_data[view][key]
 
     def show_view(self, name):
         """

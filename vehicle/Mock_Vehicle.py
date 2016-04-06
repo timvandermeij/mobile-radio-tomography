@@ -21,7 +21,7 @@ LocalMessage = namedtuple('Message',['x', 'y', 'z'])
 class CommandSequence(object):
     def __init__(self, vehicle):
         self._vehicle = vehicle
-        self._next = 1
+        self._next = 0
         self._commands = []
 
     def takeoff(self, altitude):
@@ -53,7 +53,7 @@ class CommandSequence(object):
         self._commands = []
 
     def __getitem__(self, key):
-        return self._commands[key+1]
+        return self._commands[key]
 
     def download(self):
         pass
@@ -330,7 +330,7 @@ class Mock_Vehicle(MAVLink_Vehicle):
                     self._target_location = None
                     self._target_command = False
         elif self._mode.name == "AUTO" and self.commands.count > self.commands.next:
-            cmd = self.commands[self.commands.next-1]
+            cmd = self.commands[self.commands.next]
             self._parse_command(cmd)
         elif self._mode.name == "GUIDED":
             vNorth = self._velocity[0]
