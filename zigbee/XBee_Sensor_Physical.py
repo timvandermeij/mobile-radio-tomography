@@ -246,7 +246,9 @@ class XBee_Sensor_Physical(XBee_Sensor):
                 return
 
             if self._id == 0:
-                print("[{}] Ground station received {}".format(time.time(), packet.get_all()))
+                if self._buffer is not None:
+                    self._buffer.put(packet)
+
                 return
 
             # Synchronize the scheduler using the timestamp in the packet.

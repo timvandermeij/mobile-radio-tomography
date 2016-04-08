@@ -8,17 +8,9 @@ from settings import Arguments
 from zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
 
 def get_location():
-    """
-    Get the current GPS location (latitude and longitude pair).
-    """
-
-    return (random.uniform(1.0, 50.0), random.uniform(1.0, 50.0))
+    return (random.randint(0, 5), random.randint(0, 5))
 
 def receive_packet(packet):
-    """
-    Handle a custom packet that has been sent to this sensor.
-    """
-
     pass
 
 def location_valid(other_valid=None):
@@ -38,7 +30,7 @@ def main(argv):
         arguments.check_help()
 
         xbee_sensor.activate()
-        raw_input("XBee has joined the network. Press enter to start measuring...")
+        raw_input("XBee has joined the network. Press Enter to start measuring...")
         xbee_sensor.start()
 
         while True:

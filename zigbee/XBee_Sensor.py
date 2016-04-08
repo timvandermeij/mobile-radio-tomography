@@ -2,6 +2,7 @@ import copy
 import Queue
 import time
 from ..core.Threadable import Threadable
+from ..reconstruction.Buffer import Buffer
 from ..settings import Arguments
 from XBee_Packet import XBee_Packet
 from XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
@@ -53,6 +54,7 @@ class XBee_Sensor(Threadable):
         self._sensor = None
         self._id = self._settings.get("xbee_id")
         self._number_of_sensors = self._settings.get("number_of_sensors")
+        self._buffer = None
         self._address = None
         self._next_timestamp = 0
         self._scheduler = XBee_TDMA_Scheduler(self._id, arguments)
@@ -76,6 +78,12 @@ class XBee_Sensor(Threadable):
     @property
     def number_of_sensors(self):
         return self._number_of_sensors
+
+    def set_buffer(self, buffer):
+        if not isinstance(buffer, Buffer):
+            raise ValueError("The buffer object must be an instance of Buffer")
+
+        self._buffer = buffer
 
     def get_identity(self):
         """
@@ -220,6 +228,7 @@ class XBee_Sensor(Threadable):
         location_valid = self._valid_callback(from_valid)
         ground_station_packet = XBee_Packet()
         ground_station_packet.set("specification", "rssi_ground_station")
+        ground_station_packet.set("sensor_id", self._id)
         ground_station_packet.set("from_latitude", rssi_packet.get("latitude"))
         ground_station_packet.set("from_longitude", rssi_packet.get("longitude"))
         ground_station_packet.set("from_valid", from_valid)

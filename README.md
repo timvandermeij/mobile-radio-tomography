@@ -33,6 +33,8 @@ systems, perhaps with slightly different installation procedures.
     * matplotlib
     * NumPy
     * scipy
+  * Control panel:
+    * PyQtGraph
   * Physical sensor/communication interfaces:
     * pyserial
     * RPi.GPIO

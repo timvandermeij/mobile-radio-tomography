@@ -13,7 +13,7 @@ class Control_Panel_Window(QtGui.QMainWindow):
         self._toolbar = None
 
         # Set the dimensions, title and icon of the window.
-        self.setGeometry(0, 0, 800, 600)
+        self.setGeometry(0, 0, 900, 700)
         self.setWindowTitle("Mobile radio tomography")
         self.setWindowIcon(QtGui.QIcon("assets/mobile-radio-tomography.png"))
 

@@ -168,6 +168,7 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
         mock_send.call_count = 0
         valid_packet = XBee_Packet()
         valid_packet.set("specification", "rssi_ground_station")
+        valid_packet.set("sensor_id", self.sensor_id)
         valid_packet.set("from_latitude", 123456789.12)
         valid_packet.set("from_longitude", 123456789.12)
         valid_packet.set("from_valid", True)

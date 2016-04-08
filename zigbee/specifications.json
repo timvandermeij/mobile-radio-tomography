@@ -35,6 +35,10 @@
             "private": true
         },
         {
+            "name": "sensor_id",
+            "format": "B"
+        },
+        {
             "name": "from_latitude",
             "format": "d"
         },
