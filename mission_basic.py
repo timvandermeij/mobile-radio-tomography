@@ -33,6 +33,14 @@ class Setup(object):
 
         self.arguments.check_help()
 
+        infrared_sensor = self.environment.get_infrared_sensor()
+        if infrared_sensor is not None:
+            infrared_sensor.register("start", self.enable)
+            infrared_sensor.register("stop", self._infrared_disable)
+            infrared_sensor.activate()
+        else:
+            self.activated = True
+
         print("Setting up mission")
         self.mission.setup()
         self.mission.display()
@@ -43,14 +51,6 @@ class Setup(object):
         # can fly.
         self.mission.arm_and_takeoff()
         self.mission.display()
-
-        infrared_sensor = self.environment.get_infrared_sensor()
-        if infrared_sensor is not None:
-            infrared_sensor.register("start", self.enable)
-            infrared_sensor.register("stop", self.disable)
-            infrared_sensor.activate()
-        else:
-            self.activated = True
 
         while not self.activated:
             self.monitor.sleep()
@@ -82,10 +82,6 @@ class Setup(object):
             # launch.
             print(e)
             self.environment.thread_manager.log("main thread")
-        except:
-            # Stop vehicle immediately if there are serious problems.
-            self.disable()
-            return
 
         # Return to lauch at the end of the mission or when we can safely 
         # return before a potential problem.
@@ -97,14 +93,21 @@ class Setup(object):
         if self.activated:
             self.activated = False
             print("Stopped mission")
-            self.monitor.stop()
-            self.environment.thread_manager.destroy()
-            self.environment.usb_manager.clear()
+
+        self.monitor.stop()
+        self.environment.thread_manager.destroy()
+        self.environment.usb_manager.clear()
+
+    def _infrared_disable(self):
+        self.environment.thread_manager.interrupt("infrared_sensor")
 
 def main(argv):
     arguments = Arguments("settings.json", argv)
     setup = Setup(arguments)
-    setup.setup()
+    try:
+        setup.setup()
+    except:
+        setup.disable()
 
 # The 'api start' command of pymavlink executes the script using the builtin 
 # function `execfile`, which makes the module name __builtin__, so allow this 
