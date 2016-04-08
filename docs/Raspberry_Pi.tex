@@ -70,17 +70,20 @@ over.
           mkfs.vfat}.
     \item Create a dedicated folder for the Raspberry Pi configuration on the 
           hard disk of the laptop, now called \emph{pi\_dir}.
-          Then create and mount a FAT file system for the boot partition: \\\\
+          Then create and mount a FAT file system for the boot partition:
+
           {\tt mkfs.vfat \emph{device\_name}1} \\
           {\tt cd \emph{pi\_dir}} \\
           {\tt mkdir boot} \\
           {\tt mount \emph{device\_name}1 boot}
-    \item Create and mount the ext4 file system for the storage partition: \\\\
+    \item Create and mount an ext4 file system for the storage partition:
+
           {\tt mkfs.ext4 \emph{device\_name}2} \\
           {\tt mkdir root} \\
           {\tt mount \emph{device\_name}2 root}
     \item Make sure {\tt wget} is installed (otherwise use {\tt pacman -S wget} 
-          \arch{}). Download the Arch Linux ARM image: \\\\
+          \arch{}). Download the Arch Linux ARM image:
+
           {\tt wget 
           http://archlinuxarm.org/os/ArchLinuxARM-rpi-2-latest.tar.gz}
     \item Extract the archive with {\tt bsdtar -xpf 
@@ -89,10 +92,12 @@ over.
           the micro SD card.
     \item Move boot files to the boot partition with {\tt mv root/boot/* boot} 
           and then run {\tt sync} again to be safe.
-    \item Set up a static IP for the Raspberry Pi: \\\\
+    \item Set up a static IP for the Raspberry Pi:
+
           {\tt cd boot} \\
           {\tt cp cmdline.txt cmdline.txt.bak} \\
-          {\tt vim cmdline.txt} \\\\
+          {\tt vim cmdline.txt}
+
           In that file, add a space and {\tt ip=169.254.0.2} at the end of the 
           line. Do not create a new line for that. Save the file and {\tt sync} 
           again.
@@ -121,18 +126,22 @@ over.
           following lines:
 
           {\tt [Match]} \\
-          {\tt Name=eth0} \\
-
+          {\tt Name=eth0}
+          \vspace{\baselineskip} \\
           {\tt [Network]} \\
           {\tt Address=10.42.0.10/24} \\
-          {\tt Gateway=10.42.0.1}
+          {\tt Gateway=10.42.0.1} \\
+          {\tt DNS=10.42.0.1}
 
-          This ensures that the private IP address is always the same. This 
-          example is for the first Raspberry Pi. For the second device, change 
-          {\tt 10.42.0.10} to {\tt 10.42.0.11}, and so on. If at any moment 
-          after these changes you cannot SSH into the device, run {\tt nmap -sP 
-          10.42.0.10/24} on the laptop to determine which IP the device 
-          assigned itself.
+          This ensures that the private IP address is always the same, and the 
+          laptop provides a DNS service via {\tt dnsmasq} that always works. 
+          The laptop connection setup is changed to match later on.
+
+          This example is for the first Raspberry Pi. For the second device, 
+          change {\tt 10.42.0.10} to {\tt 10.42.0.11}, and so on. If at any 
+          moment after these changes you cannot SSH into the device, run {\tt 
+          nmap -sP 10.42.0.10/24} on the laptop to determine which IP the 
+          device assigned itself.
     \item Create a file {\tt /etc/modprobe.d/wireless.conf} to add the 
           following line:
 
@@ -144,25 +153,27 @@ over.
           better to blacklist it.
     \item Edit {\tt /boot/cmdline.txt} to remove the recently added IP part.
           After that, reboot the Raspberry Pi device.
-    \item On your laptop, edit the old link-local connection. Change the type 
-          to ``Shared with other computers'' and check the checkbox at the 
-          bottom. Make sure that {\tt dnsmasq} is installed on the laptop 
-          (otherwise use {\tt pacman -S dnsmasq} \arch{}). Then select this 
-          connection in the network manager to connect to it. Wait until the 
-          connection is established, then SSH to the Raspberry Pi again using 
-          {\tt ssh root@10.42.0.*}. Replace {\tt *} with the last part of the 
-          IP address set earlier on. You should now be able to run {\tt ping -c 
-          3 www.google.com} successfully.
+    \item On your laptop, edit the old link-local connection or create a new 
+          one if you want to save the old connection for later steps. Set the 
+          type to ``Shared with other computers''. Make sure that {\tt dnsmasq} 
+          is installed on the laptop (otherwise use {\tt pacman -S dnsmasq} 
+          \arch{}). Then select this connection in the network manager to 
+          connect to it. Wait until the connection is established, then SSH to 
+          the Raspberry Pi again using {\tt ssh root@10.42.0.*}, replacing 
+          {\tt *} with the last part of the IP address set earlier on. You 
+          should now be able to run {\tt ping -c 3 www.google.com} 
+          successfully.
     \item Now we can configure Arch Linux ARM after having full SSH and 
           internet access on the Raspberry Pi. Start by setting the time: run 
           {\tt timedatectl set-ntp true} and {\tt timedatectl set-timezone 
           Europe/Amsterdam}.
-    \item Edit the mirror list for the package manager: run {\tt nano 
-          /etc/pacman.d/mirrorlist} and uncomment the line in the section of 
-          the Netherlands.
-    \item Set the hostname: run {\tt echo raspberry-pi-1 > /etc/hostname} to 
-          name the device ``raspberry-pi-1'' for the first Raspberry Pi, 
-          ``raspberry-pi-2'' for the second Raspberry Pi, and so on.
+    \item Edit the mirror list for the package manager. Run {\tt nano 
+          /etc/pacman.d/mirrorlist} and remove the comment in front of the line 
+          in the section of the Netherlands, for example.
+    \item Give the Raspberry Pi device a unique and identifiable hostname: run 
+          {\tt echo raspberry-pi-1 > /etc/hostname} to name the device 
+          ``raspberry-pi-1'' for the first Raspberry Pi, ``raspberry-pi-2'' for 
+          the second Raspberry Pi, and so on.
     \item Run {\tt nano /etc/hosts} and append a tab character and the hostname 
           at the end of each line that already mentions ``localhost''.
     \item Run {\tt pacman -Syyu} to update the system.
@@ -174,17 +185,20 @@ over.
     \item Run {\tt pacman -S make} to be able to use Makefiles.
     \item Run {\tt pacman -S screen} to use {\tt screen} for running Python
           scripts.
-    \item Update the Raspberry Pi frequently using {\tt pacman -Syu}.
     \item Give the {\tt alarm} user access to USB using
           {\tt usermod -aG uucp alarm}. After that, reboot the device using
           {\tt reboot}.
 \end{itemize}
 
+Make sure to update the Raspberry Pi frequently using {\tt sudo pacman -Syu}. 
+This may cause these instructions to become outdated or insufficient, so check 
+if everything still works after system upgrades.
+
 \section{Distance sensor configuration steps}
 \begin{itemize}
     \item Connect the HC-SR04 distance sensor on the breadboard as in
           \url{http://www.bytecreation.com/blog/2013/10/13/raspberry-pi-ultrasonic-sensor-hc-sr04}
-          (left side of the image). You can use pin 2 for UUC, pin 6 for
+          (left side of the image). You can use GPIO pin 2 for UUC, pin 6 for
           ground, pin 11 for echo and pin 13 for trigger. Take a look at
           \url{http://www.element14.com/community/servlet/JiveServlet/previewBody/73950-102-4-309126/GPIO_Pi2.png}
           for an overview of the GPIO pins for the Raspberry Pi model 2B and
@@ -206,7 +220,7 @@ over.
 
 \section{Autostart configuration steps}
 After booting the Raspberry Pi we immediately want to run the mission script 
-instead of starting the script manually using an ethernet cable every time. To 
+instead of starting the script manually using an Ethernet cable every time. To 
 maintain control over the process we wish to run the process in a detached 
 screen. To achieve all this, the following actions have to be performed:
 
@@ -231,10 +245,11 @@ screen. To achieve all this, the following actions have to be performed:
 \section{References}
 \begin{itemize}
     \item Arch Linux ARM can be obtained from \url{http://archlinuxarm.org/platforms/armv7/broadcom/raspberry-pi-2}.
-    \item See \url{http://bvanderveen.com/a/rpi-booted-static-ip-ssh} and 
-          \url{http://l2ork.music.vt.edu/main/?page_id=2288} about setting up 
-          the connection to the Raspberry Pi and making it connect to the 
-          internet via network sharing.
+    \item See \url{http://bvanderveen.com/a/rpi-booted-static-ip-ssh} as well 
+          as  
+          \url{http://l2ork.music.vt.edu/main/make-your-own-l2ork/software/raspberry-pi/} 
+          about setting up the connection to the Raspberry Pi and making it 
+          connect to the internet via network sharing.
     \item See the installation guide at 
           \url{https://wiki.archlinux.org/index.php/Beginners'_guide} for 
           generic steps for installing (normal) Arch Linux. Many steps do not 
