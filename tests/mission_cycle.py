@@ -1,6 +1,7 @@
 import itertools
-from mock import patch
+from mock import patch, MagicMock
 from dronekit import LocationLocal
+from ..core.USB_Manager import USB_Device_Category
 from ..environment.Environment import Environment
 from ..location.Line_Follower import Line_Follower
 from ..trajectory.Mission import Mission_Cycle
@@ -17,10 +18,13 @@ class TestMissionCycle(ThreadableTestCase, USBManagerTestCase, LocationTestCase,
 
         self.arguments = Arguments("settings.json", [
             "--vehicle-class", "Robot_Vehicle_Arduino", "--space-size", "3",
-            "--serial-flow-control", "--no-infrared-sensor"
+            "--no-infrared-sensor"
         ])
         self.environment = Environment.setup(self.arguments, geometry_class="Geometry",
                                              usb_manager=self.usb_manager, simulated=True)
+        device = self.usb_manager._devices[USB_Device_Category.TTL][0]
+        device.serial_object._update_dtr_state = MagicMock()
+
         self.vehicle = self.environment.get_vehicle()
 
         settings = self.arguments.get_settings("mission")

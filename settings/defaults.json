@@ -229,13 +229,7 @@
     "line_follower_arduino": {
         "name": "Line follower (Arduino)",
         "parent": "line_follower_base",
-        "settings": {
-            "serial_flow_control": {
-                "help": "Whether to enable RTS/CTS flow control for the serial connection",
-                "type": "bool",
-                "default": false
-            }
-        }
+        "settings": {}
     },
     "mission": {
         "name": "Drone trajectory mission data",

@@ -22,15 +22,6 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
 
     def __init__(self, arguments, geometry, thread_manager, usb_manager):
         super(Robot_Vehicle_Arduino_Full, self).__init__(arguments, geometry, thread_manager, usb_manager)
-        # Send a DTR signal to turn on the Arduino via the RESET line. 
-        # According to a forum post at 
-        # http://forum.arduino.cc/index.php?topic=38981.msg287027#msg287027 and 
-        # the ATmega328P datasheet, we need to send a low DTR to turn on the 
-        # vehicle, and the pulse needs to be at least 2.5 microseconds to get 
-        # through. We add more time for it to reset and start the serial 
-        # connection, since that may take some time.
-        self._serial_connection.dtr = False
-        time.sleep(1.0)
 
     def activate(self):
         super(Robot_Vehicle_Arduino_Full, self).activate()

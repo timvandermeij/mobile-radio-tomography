@@ -3,6 +3,7 @@ try:
 except (ImportError, SystemError):
     RPIO = None
 
+import time
 from Robot_Vehicle import Robot_Vehicle
 from ..location.Line_Follower_Arduino import Line_Follower_Arduino
 from ..trajectory.Servo import Servo
@@ -46,12 +47,26 @@ class Robot_Vehicle_Arduino(Robot_Vehicle):
 
     def activate(self):
         super(Robot_Vehicle_Arduino, self).activate()
+        
+        # Send a DTR signal to turn on the Arduino via the RESET line. 
+        # According to a forum post at 
+        # http://forum.arduino.cc/index.php?topic=38981.msg287027#msg287027 and 
+        # the ATmega328P datasheet, we need to send a low DTR to turn on the 
+        # vehicle, and the pulse needs to be at least 2.5 microseconds to get 
+        # through. We add more time for it to reset and start the serial 
+        # connection, since that may take some time.
+        self._serial_connection.dtr = False
+        time.sleep(1.0)
+
+        # Let the Arduino know that the serial connection is established and we 
+        # want to arm the vehicle.
         self._serial_connection.write("START\n")
         self._serial_connection.flush()
 
     def _reset(self):
         # Turn off motors.
         self.set_speeds(0, 0)
+        self._serial_connection.dtr = True
 
     def deactivate(self):
         self._reset()

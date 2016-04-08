@@ -16,11 +16,9 @@ class Line_Follower_Arduino(Line_Follower):
 
         self._readable_leds = settings.get("readable_leds")
         self._line_threshold = settings.get("line_threshold")
-        rtscts = settings.get("serial_flow_control")
 
         # Initialize the serial connection.
         self._serial_connection = usb_manager.get_ttl_device()
-        self._serial_connection.rtscts = rtscts
         self._serial_connection.reset_input_buffer()
 
     def get_serial_connection(self):
