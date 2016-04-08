@@ -1,0 +1,128 @@
+\documentclass{article}
+
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\parindent=0pt
+\frenchspacing
+
+\usepackage[none]{hyphenat}
+\usepackage{parskip}
+\usepackage[hyphens]{url}
+\usepackage{hyperref}
+
+\hypersetup{colorlinks, citecolor=red, filecolor=red, linkcolor=black, urlcolor=blue}
+
+\newcommand{\arch}{{\color{red} (Arch)}}
+
+\begin{document}
+
+\title{DroneKit, MAVProxy and ArduPilot: Working with the vehicle simulator}
+\author{Tim van der Meij and Leon Helwerda}
+\date{\today}
+
+\maketitle
+
+\section{Introduction}
+The SITL (software in the loop) vehicle simulator allows us to run DroneKit 
+Python scripts or other MAVProxy-based programs on a computer, i.e., without an 
+actual vehicle. It uses the same ArduPilot autopilot binary. This document 
+outlines the steps to successfully install the SITL simulator with all 
+requirements and run Python scripts. Note that the steps here are suitable for 
+any Linux distribution. Steps that have been altered for Arch Linux are 
+indicated with \arch{}.
+
+\section{Installing the simulator}
+We follow instructions from the 
+\href{http://ardupilot.org/dev/docs/setting-up-sitl-on-linux.html}{ArduPilot 
+documentation} which uses Ubuntu Linux or Fedora as an example. Not all 
+commands are exactly the same on other systems and some commands might not be 
+necessary, but we will go through the bare needs first.
+
+For all requirements, take heed of the prerequisites in the README.md file in 
+this directory. Make sure Git is available and is a somewhat recent version 
+first. Also, make sure Python~2.7 is available.
+
+\begin{itemize}
+    \item Create a folder in your home directory to store all vehicle software 
+          (referred to as \emph{vehicle\_folder} from now on). Navigate to this 
+          folder: \\
+          {\tt cd $\sim$/\emph{vehicle\_folder}}
+    \item Download ArduPilot: \\
+          {\tt \$ git clone git://github.com/diydrones/ardupilot.git}
+
+          This downloads the latest ardupilot code into a subdirectory. In 
+          order to update the code, run {\tt git pull} within that directory.
+
+          Note that every time the code is updated, the simulator needs to be 
+          recompiled. The stability of the code can change over time, so use 
+          this with caution.
+    \item The MAVProxy connection and other components of ArduPilot require 
+          some Python packages. These might also be available in {\tt pip} by 
+          using {\tt sudo pip install <package>} (or {\tt pip install --user 
+          <package>} without superuser right). For some Linux systems,
+          distribution packages are available instead. If you also do not have 
+          these, the README in this repository may offer some other solutions.
+          
+          First, install {\tt pip} for Python 2: \\
+          {\tt \$ su} \\
+          {\tt \$ pacman -S python2-pip} \arch{} \\
+          {\tt \$ exit}
+    \item Install Python packages that do not require other software to be 
+          installed: \\
+          {\tt \$ pip2 install --user pymavlink mavproxy matplotlib lxml pexpect} \arch{}
+    \item Install other required software: \\
+          {\tt \$ su} \\
+          {\tt \$ pacman -S ccache opencv wxpython blas lapack gcc-fortran} \arch{} \\
+          {\tt \$ exit}
+    \item Install SciPy (which depends on the previously installed software): \\
+          {\tt \$ pip2 install --user scipy} \arch{}
+    \item Edit {\tt $\sim$/.bashrc} by running {\tt vim $\sim$/.bashrc} to 
+          append the following fragment: \\\\
+          {\tt \# ArduPilot software} \\
+          {\tt export PATH=\$PATH:\$HOME/\emph{vehicle\_folder}/ardupilot/Tools/autotest} \\
+          {\tt export PATH=/usr/lib/ccache:\$PATH} \\
+          {\tt export PATH=\$PATH:\$HOME/.local/bin} \\\\
+          The last line is required to be able to access {\tt mavproxy.py} 
+          directly.
+    \item Install DroneKit for Python: \\
+          {\tt \$ pip2 install --user droneapi} \arch{}
+    \item Download DroneKit source code and examples: \\
+          {\tt \$ git clone git://github.com/dronekit/dronekit-python.git}
+\end{itemize}
+
+\section{Running Python scripts}
+Once you have written a Python script (located at \emph{script\_path}), you can 
+run it using the simulator.
+
+\begin{itemize}
+    \item Start the simulator for a copter vehicle with a console and a map 
+          view: \\
+          {\tt \$ cd $\sim$/\emph{vehicle\_folder}/ardupilot/Tools/autotest} \\
+          {\tt \$ sim\_vehicle.sh -v ArduCopter --console --map} \\
+          If ArduCopter has not been compiled yet, this script will take care 
+          of that. Note that there is no need for the {\tt --aircraft} 
+          parameter from the original documentation.
+
+          You can run this command in any directory, since we added the 
+          directory from the first command to the {\tt \$PATH}. When you run it 
+          in one of the directories for the vehicle types of ArduPilot, then 
+          you do not need to pass the {\tt -v <vehicle>} parameter.
+    \item Once the terminal window contains a line about saved parameters, 
+          press Enter to enter command mode. Then, run the following commands 
+          to configure the parameters for the copter: \\
+          {\tt > param load copter\_params.parm} \\
+          {\tt > param set ARMING\_CHECK 0}
+\end{itemize}
+
+\vspace{0.4cm}
+
+The Python scripts for DroneKit~2 no longer use the SITL MAVProxy connection to 
+start their scripts, but it is still possible to connect to the simulator. 
+After starting the {\tt sim\_vehicle.sh} command, there will be output 
+regarding a TCP or UDP port that the simulator itself connects to, for example 
+{\tt tcp:127.0.0.1:5760}. Additionally, there is a console window that 
+describes other ports that have been opened, for example {\tt 5762} or {\tt 
+5763}. One can pass a connection string line {\tt mission\_basic.py --connect 
+tcp:127.0.0.1:5762} to connect to these additional ports and control the 
+vehicle from there.
+
+\end{document}
