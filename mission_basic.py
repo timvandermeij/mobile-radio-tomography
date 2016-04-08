@@ -106,7 +106,7 @@ def main(argv):
     setup = Setup(arguments)
     try:
         setup.setup()
-    except:
+    finally:
         setup.disable()
 
 # The 'api start' command of pymavlink executes the script using the builtin 
