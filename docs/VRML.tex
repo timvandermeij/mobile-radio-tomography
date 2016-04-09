@@ -1,0 +1,42 @@
+\documentclass{article}
+
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\parindent=0pt
+\frenchspacing
+
+\usepackage[none]{hyphenat}
+\usepackage{parskip}
+\usepackage{hyperref}
+
+\hypersetup{colorlinks, citecolor=red, filecolor=red, linkcolor=black, urlcolor=blue}
+
+\begin{document}
+
+\title{VRML files}
+\author{Leon Helwerda}
+\date{\today}
+
+\maketitle
+
+\section{Usage notes}
+There are VRML files at 
+\url{http://castle-engine.sourceforge.net/demo_models.php} that can be used to 
+simulate environments. Interesting ones are {\tt vrml\_2/castle.wrl}, {\tt 
+shadow\_maps/trees\_river.wrl} and {\tt 
+sensors\_environmental/deranged\_house.wrl} (indoor).
+
+Certain files use nonstandard/unsupported/new features that cause the VRML 
+parser to give up. The solution is to remove the entire node that the parser 
+mentions as problematic, since it is a feature that we do not use.
+
+One can export scene files in Blender using an addon that is provided with the 
+download, but disabled by default. Go to ``File $\to$ User Preferences $\to$ 
+Add-ons $\to$ Categories: Import-Export'' and scroll down to the VRML2 addon.  
+Check the box next to it and save the settings. One can import PLY, OBJ, 
+Autodesk 3D Studio (somewhat open/standard formats) or X3D files (the followup 
+of VRML) and then export them to VRML in this way. Note that this might cause 
+certain information to be lost, but we only use the bare polygon coordinate 
+information, so that is not a problem. It does seem that the orientation of the 
+scene is sometimes altered.
+
+\end{document}
