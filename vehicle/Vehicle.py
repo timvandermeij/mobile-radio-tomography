@@ -141,12 +141,29 @@ class Vehicle(Threadable):
 
         pass
 
+    def add_wait(self):
+        """
+        Add a command to wait after reaching a previous waypoint command.
+
+        The vehicle waits indefinitely after reaching this location, unless
+        the waypoint is manually adjusted using `set_next_waypoint`.
+        """
+
+        pass
+
     def clear_waypoints(self):
         """
         Clear any waypoints and other mission commands to the vehicle.
         """
 
         pass
+
+    def is_wait(self):
+        """
+        Check if the current waypoint is a wait command added via `add_wait`.
+        """
+        
+        return False
 
     def get_waypoint(self, waypoint=-1):
         """

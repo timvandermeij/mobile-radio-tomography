@@ -222,6 +222,15 @@ class Robot_Vehicle(Vehicle):
             print("Warning: Using non-local locations")
             self._waypoints.append((location.lat, location.lon))
 
+    def add_wait(self):
+        self._waypoints.append(None)
+
+    def is_wait(self):
+        if not self._is_waypoint(self._current_waypoint):
+            return False
+
+        return self._waypoints[self._current_waypoint] is None
+
     def clear_waypoints(self):
         self._waypoints = []
 
@@ -233,6 +242,9 @@ class Robot_Vehicle(Vehicle):
             return None
 
         wp = self._waypoints[waypoint]
+        if wp is None:
+            return None
+
         return LocationLocal(wp[0], wp[1], 0.0)
 
     def get_next_waypoint(self):
@@ -257,8 +269,9 @@ class Robot_Vehicle(Vehicle):
         if self._is_moving():
             return False
 
-        # If we are not at the waypoint, then the location is not yet valid.
-        if not self._at_current_waypoint():
+        # If we are not at the waypoint and not waiting there based on 
+        # a command, then the location is not yet valid.
+        if not self._at_current_waypoint() and not self.is_wait():
             return False
 
         return super(Robot_Vehicle, self).is_current_location_valid()
@@ -359,6 +372,9 @@ class Robot_Vehicle(Vehicle):
             self._current_waypoint = waypoint
 
     def _goto_waypoint(self, next_waypoint):
+        if next_waypoint is None:
+            return True
+
         next_direction = self._next_direction(next_waypoint)
         if next_direction == self._direction:
             # Start moving in the given direction

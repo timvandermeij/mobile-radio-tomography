@@ -73,6 +73,9 @@ class Mission(object):
         # Distance in meters above which we are uninterested in objects
         self.farness = self.settings.get("farness")
 
+        # Whether to synchronize vehicles at waypoints
+        self._xbee_synchronization = self.settings.get("xbee_synchronization")
+
         # Create a memory map for the vehicle to track where it has seen 
         # objects. This can later be used to find the target object or to fly 
         # around obstacles without colliding.
@@ -323,6 +326,9 @@ class Mission_Auto(Mission):
 
             self.vehicle.add_waypoint(point)
 
+            if self._xbee_synchronization:
+                self.vehicle.add_wait()
+
         # Send commands to vehicle and update.
         self.vehicle.update_mission()
         self.check_mission()
@@ -337,6 +343,13 @@ class Mission_Auto(Mission):
         self.vehicle.mode = VehicleMode("AUTO")
 
     def check_waypoint(self):
+        if self.vehicle.is_wait():
+            if self._xbee_synchronization and self.environment.is_measurement_valid():
+                print("Measurements are valid, continuing to next waypoint")
+                self.vehicle.set_next_waypoint()
+            else:
+                return True
+
         next_waypoint = self.vehicle.get_next_waypoint()
         distance = self.distance_to_current_waypoint()
         if distance is None:
@@ -918,7 +931,9 @@ class Mission_XBee(Mission_Auto):
         pass
 
     def _get_next_index(self):
-        return self.vehicle.count_waypoints() - self._first_waypoint
+        # Number of waypoint commands in the vehicle for each waypoint.
+        commands = 2 if self._xbee_synchronization else 1
+        return self.vehicle.count_waypoints() / commands - self._first_waypoint
 
     def _send_ack(self):
         """

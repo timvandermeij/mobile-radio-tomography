@@ -9,6 +9,7 @@ from MAVLink_Vehicle import MAVLink_Vehicle
 # Constants used in commands according to mavutil
 MAV_FRAME_GLOBAL_RELATIVE_ALT = 3
 MAV_CMD_NAV_WAYPOINT = 16
+MAV_CMD_NAV_LOITER_UNLIM = 17
 MAV_CMD_NAV_TAKEOFF = 22
 
 # Read only classes
@@ -180,6 +181,10 @@ class Mock_Vehicle(MAVLink_Vehicle):
 
         if cmd.command == MAV_CMD_NAV_WAYPOINT:
             self._set_target_location(lat=cmd.x, lon=cmd.y, alt=cmd.z, cmd=True)
+        elif cmd.command == MAV_CMD_NAV_LOITER_UNLIM:
+            # Set target location to False so we can detect this case in 
+            # _update_location.
+            self._target_location = False
         elif cmd.command == MAV_CMD_NAV_TAKEOFF:
             if self._takeoff:
                 self.commands._next = self.commands._next + 1
@@ -296,7 +301,7 @@ class Mock_Vehicle(MAVLink_Vehicle):
             self._update_time = new_time
             return
 
-        if self._target_location is not None:
+        if self._target_location:
             if self._speed != 0.0:
                 # Move to location with given `speed`
                 dist = self._geometry.get_distance_meters(self._locations, self._target_location)
@@ -329,9 +334,10 @@ class Mock_Vehicle(MAVLink_Vehicle):
 
                     self._target_location = None
                     self._target_command = False
-        elif self._mode.name == "AUTO" and self.commands.count > self.commands.next:
-            cmd = self.commands[self.commands.next]
-            self._parse_command(cmd)
+        elif self._mode.name == "AUTO" and self._target_location != False:
+            if self.commands.count > self.commands.next:
+                cmd = self.commands[self.commands.next]
+                self._parse_command(cmd)
         elif self._mode.name == "GUIDED":
             vNorth = self._velocity[0]
             vEast = self._velocity[1]

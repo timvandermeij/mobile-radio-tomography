@@ -304,6 +304,11 @@
                 "type": "class",
                 "module": "trajectory.Mission",
                 "default": "Mission_Browse"
+            },
+            "xbee_synchronization": {
+                "help": "Whether to wait for measurements to be complete at waypoints",
+                "type": "bool",
+                "default": false
             }
         }
     },
