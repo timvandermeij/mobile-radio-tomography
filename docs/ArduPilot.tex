@@ -39,7 +39,7 @@ necessary, but we will go through the bare needs first.
 
 For all requirements, take heed of the prerequisites in the README.md file in 
 this directory. Make sure Git is available and is a somewhat recent version 
-first. Also, make sure Python~2.7 is available.
+first. Furthermore, make sure Python~2.7 is available.
 
 \begin{itemize}
     \item Create a folder in your home directory to store all vehicle software 
@@ -115,13 +115,14 @@ run it using the simulator.
 
 \vspace{0.4cm}
 
-The Python scripts for DroneKit~2 no longer use the SITL MAVProxy connection to 
-start their scripts, but it is still possible to connect to the simulator. 
-After starting the {\tt sim\_vehicle.sh} command, there will be output 
-regarding a TCP or UDP port that the simulator itself connects to, for example 
-{\tt tcp:127.0.0.1:5760}. Additionally, there is a console window that 
-describes other ports that have been opened, for example {\tt 5762} or {\tt 
-5763}. One can pass a connection string line {\tt mission\_basic.py --connect 
+The Python scripts for DroneKit~2 (to be installed with {\tt pip2 install 
+--user dronekit} \arch{}) no longer use the SITL MAVProxy connection to start 
+their scripts, but it is still possible to connect to the simulator. After 
+starting the {\tt sim\_vehicle.sh} command, there will be output regarding a 
+TCP or UDP port that the simulator itself connects to, for example {\tt 
+tcp:127.0.0.1:5760}. Additionally, there is a console window that describes 
+other ports that have been opened, for example {\tt 5762} or {\tt 5763}. One 
+can pass a connection string line {\tt mission\_basic.py --connect 
 tcp:127.0.0.1:5762} to connect to these additional ports and control the 
 vehicle from there.
 

@@ -139,9 +139,9 @@ class TestSettingsDefaults(unittest.TestCase):
         for component in components:
             self.assertIn("name", components[component], "Component '{}' must have a 'name' key".format(component))
             self.assertIn("settings", components[component], "Component '{}' must have a 'settings' key".format(component))
-            if "parent" in components:
+            if "parent" in components[component]:
                 parent = components[component]["parent"]
-                self.assertIn(parent, component, "Component '{}' has a parent '{}' that must exist".format(component, parent))
+                self.assertIn(parent, components, "Component '{}' has a parent '{}' that must exist".format(component, parent))
 
             settings = components[component]["settings"]
             for key in settings:
