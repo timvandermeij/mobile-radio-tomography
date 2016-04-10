@@ -283,6 +283,7 @@ class Mission_Auto(Mission):
         # first waypoint of our mission. For non-Rover vehicles, we add 
         # a takeoff command to the list that we need not display.
         self._first_waypoint = 1
+        self._required_waypoint_sensors = []
 
     def arm_and_takeoff(self):
         self.add_commands()
@@ -309,12 +310,14 @@ class Mission_Auto(Mission):
             self.altitude = 0.0
             self._first_waypoint = 0
 
-    def add_waypoint(self, point):
+    def add_waypoint(self, point, required_sensors=None):
         """
         Add a waypoint location object `point` to the vehicle's mission command
         waypoints.
 
         If XBee synchronization is enabled, also adds a wait command afterward.
+        The option `required_sensors` list determines which sensors ID to wait
+        for in the measurement validation.
         """
 
         # Handle local locations, points without a specific altitude and 
@@ -333,6 +336,7 @@ class Mission_Auto(Mission):
 
         if self._xbee_synchronization:
             self.vehicle.add_wait()
+            self._required_waypoint_sensors.append(required_sensors)
 
     def add_commands(self):
         """
@@ -367,7 +371,13 @@ class Mission_Auto(Mission):
             if self._xbee_synchronization and self.environment.is_measurement_valid():
                 print("Measurements are valid, continuing to next waypoint")
                 self.vehicle.set_next_waypoint()
-                self.environment.invalidate_measurement()
+                index = self.vehicle.get_next_waypoint() / 2
+                if index < len(self._required_waypoint_sensors):
+                    required_sensors = self._required_waypoint_sensors[index]
+                else:
+                    required_sensors = None
+
+                self.environment.invalidate_measurement(required_sensors)
             else:
                 return True
 
@@ -1010,10 +1020,13 @@ class Mission_XBee(Mission_Auto):
 
         latitude = packet.get("latitude")
         longitude = packet.get("longitude")
+        altitude = packet.get("altitude")
+        wait_id = packet.get("wait_id")
 
         # Make a location waypoint. `add_waypoint` handles any further 
         # conversion steps.
-        point = LocationGlobalRelative(latitude, longitude, 0.0)
-        self.add_waypoint(point)
+        point = LocationGlobalRelative(latitude, longitude, altitude)
+        required_sensors = [wait_id] if wait_id > 0 else None
+        self.add_waypoint(point, required_sensors)
         self._next_index += 1
         self._send_ack()

@@ -23,7 +23,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         # Default values that are used when exporting/importing tables.
         # We initially require data for the north/east column, but the altitude 
         # and wait ID can be left out.
-        self._column_defaults = (None, None, 0, False)
+        self._column_defaults = (None, None, 0.0, 0)
 
         for vehicle in xrange(1, self._controller.xbee.number_of_sensors + 1):
             # Create the list item for the vehicle.
@@ -124,7 +124,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
                 if any(item is None and prev is None for item, prev in zip(data, previous)):
                     # If a column has no data and no previous data either, then 
                     # we have missing information.
-                    raise ValueError("Missing coordinates for vehicle {}, row {} and no previous waypoint".format(vehicle, row))
+                    raise ValueError("Missing coordinates for vehicle {}, row #{} and no previous waypoint".format(vehicle, row + 1))
 
                 for i, col in enumerate(self._column_labels):
                     if data[i] is None:
@@ -133,9 +133,14 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
                         data[i] = previous[i] if repeat else None
                     else:
                         try:
-                            data[i] = int(data[i])
+                            if self._column_defaults[i] is not None:
+                                type_cast = type(self._column_defaults[i])
+                            else:
+                                type_cast = float
+
+                            data[i] = type_cast(data[i])
                         except ValueError:
-                            raise ValueError("Invalid integer for vehicle {}, row {}, column {}: {}".format(vehicle, row, col, data[i]))
+                            raise ValueError("Invalid value for vehicle {}, row #{}, column '{}': '{}'".format(vehicle, row + 1, col, data[i]))
 
                 if vehicle not in waypoints:
                     waypoints[vehicle] = [tuple(data)]
@@ -264,6 +269,8 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         packet.set("specification", "waypoint_add")
         packet.set("latitude", waypoint[0])
         packet.set("longitude", waypoint[1])
+        packet.set("altitude", waypoint[2])
+        packet.set("wait_id", int(waypoint[3]))
         packet.set("index", index)
         packet.set("to_id", vehicle)
 

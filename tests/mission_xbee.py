@@ -40,6 +40,8 @@ class TestMissionXBee(EnvironmentTestCase):
         packet.set("index", index)
         packet.set("latitude", latitude)
         packet.set("longitude", longitude)
+        packet.set("altitude", 0.0)
+        packet.set("wait_id", 0)
         packet.set("to_id", self.xbee.id)
 
         with patch('sys.stdout'):

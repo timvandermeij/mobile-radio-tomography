@@ -123,6 +123,14 @@
             "format": "d"
         },
         {
+            "name": "altitude",
+            "format": "d"
+        },
+        {
+            "name": "wait_id",
+            "format": "B"
+        },
+        {
             "name": "index",
             "format": "i"
         },
