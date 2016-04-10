@@ -298,12 +298,41 @@ class Mission_Auto(Mission):
         raise NotImplementedError("Must be implemented in child class")
 
     def add_takeoff(self):
-        # Add takeoff command. This is ignored if the vehicle is already in the 
-        # air, or if the vehicle is a ground vehicle.
+        """
+        Add takeoff command. The command is ignored if the vehicle is already
+        in the air, or if the vehicle is a ground vehicle. In this case, the
+        command may even be not added at all, and the altitude is set to zero.
+        """
+
         has_takeoff = self.vehicle.add_takeoff(self.altitude)
         if not has_takeoff:
             self.altitude = 0.0
             self._first_waypoint = 0
+
+    def add_waypoint(self, point):
+        """
+        Add a waypoint location object `point` to the vehicle's mission command
+        waypoints.
+
+        If XBee synchronization is enabled, also adds a wait command afterward.
+        """
+
+        # Handle local locations, points without a specific altitude and 
+        # non-spherical geometries.
+        if isinstance(point, LocationLocal):
+            down = point.down if point.down != 0.0 else -self.altitude
+            point = LocationLocal(point.north, point.east, down)
+        else:
+            alt = point.alt if point.alt != 0.0 else self.altitude
+            if isinstance(self.geometry, Geometry_Spherical):
+                point = LocationGlobalRelative(point.lat, point.lon, alt)
+            else:
+                point = LocationLocal(point.lat, point.lon, -alt)
+
+        self.vehicle.add_waypoint(point)
+
+        if self._xbee_synchronization:
+            self.vehicle.add_wait()
 
     def add_commands(self):
         """
@@ -318,16 +347,7 @@ class Mission_Auto(Mission):
         # Add the waypoint commands.
         points = self.get_waypoints()
         for point in points:
-            # Handle non-spherical geometries
-            if isinstance(point, LocationLocal):
-                point = LocationLocal(point.north, point.east, -self.altitude)
-            else:
-                point = LocationGlobalRelative(point.lat, point.lon, self.altitude)
-
-            self.vehicle.add_waypoint(point)
-
-            if self._xbee_synchronization:
-                self.vehicle.add_wait()
+            self.add_waypoint(point)
 
         # Send commands to vehicle and update.
         self.vehicle.update_mission()
@@ -905,6 +925,7 @@ class Mission_XBee(Mission_Auto):
         self.environment.add_packet_action("waypoint_done", self._complete_waypoints)
 
         self._waypoints_complete = False
+        self._next_index = 0
 
     def arm_and_takeoff(self):
         # Wait until all the waypoints have been received before arming.
@@ -930,11 +951,6 @@ class Mission_XBee(Mission_Auto):
         # Commands are added when they arrive, not in here.
         pass
 
-    def _get_next_index(self):
-        # Number of waypoint commands in the vehicle for each waypoint.
-        commands = 2 if self._xbee_synchronization else 1
-        return self.vehicle.count_waypoints() / commands - self._first_waypoint
-
     def _send_ack(self):
         """
         Send a "waypoint_ack" packet to the ground station.
@@ -948,7 +964,7 @@ class Mission_XBee(Mission_Auto):
 
         ack_packet = XBee_Packet()
         ack_packet.set("specification", "waypoint_ack")
-        ack_packet.set("next_index", self._get_next_index())
+        ack_packet.set("next_index", self._next_index)
         ack_packet.set("sensor_id", xbee_sensor.id)
 
         xbee_sensor.enqueue(ack_packet, to=0)
@@ -983,7 +999,7 @@ class Mission_XBee(Mission_Auto):
             return
 
         index = packet.get("index")
-        if index != self._get_next_index():
+        if index != self._next_index:
             # Send a reply saying what index were are currently at and ignore 
             # the packet, which may be duplicate or out of order.
             self._send_ack()
@@ -991,10 +1007,10 @@ class Mission_XBee(Mission_Auto):
 
         latitude = packet.get("latitude")
         longitude = packet.get("longitude")
-        if isinstance(self.geometry, Geometry_Spherical):
-            point = LocationGlobalRelative(latitude, longitude, self.altitude)
-        else:
-            point = LocationLocal(latitude, longitude, -self.altitude)
 
-        self.vehicle.add_waypoint(point)
+        # Make a location waypoint. `add_waypoint` handles any further 
+        # conversion steps.
+        point = LocationGlobalRelative(latitude, longitude, 0.0)
+        self.add_waypoint(point)
+        self._next_index += 1
         self._send_ack()
