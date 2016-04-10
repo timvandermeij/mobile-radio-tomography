@@ -982,6 +982,7 @@ class Mission_XBee(Mission_Auto):
         self.clear_mission()
         # Add a takeoff command for flying vehicles that use it.
         self.add_takeoff()
+        self._next_index = 0
         self._send_ack()
 
     def _add_waypoint(self, packet):
