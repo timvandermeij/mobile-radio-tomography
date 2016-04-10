@@ -30,11 +30,10 @@ and always has the most recent packages.
 \section{Requirements}
 This document assumes that a laptop with (standard) Arch Linux and some 
 graphical interface is used to connect to the Raspberry Pi. Other distributions 
-also work, but the required packages for the tools used (marked with \arch{}), 
+also work, but the required packages for the tools used (marked with \arch{}) 
 as well as the appearance of the network manager settings may differ.
 
-The following cables and other hardware are required for setting up the 
-Raspberry Pi:
+The following hardware is required for setting up the Raspberry Pi:
 
 \begin{itemize}
     \item An Ethernet cable.
@@ -43,16 +42,14 @@ Raspberry Pi:
           of Arch Linux ARM takes very little space and at the end around
           1.5~GB is in use.
     \item A card reader compatible with micro SD cards that can be connected to 
-          the laptop via USB\@. Alternatively, a micro SD-to-SD adapter can be 
-          used if the laptop has a built-in SD card reader.
+          the laptop via USB\@. Alternatively, a micro SD to regular SD adapter 
+          can be used if the laptop has a built-in SD card reader.
 \end{itemize}
 
-Additionally, it is useful to keep an HDMI cable, a USB keyboard and a USB 
-mouse handy in case the setup goes wrong and makes it impossible to log in to 
-the Raspberry Pi via SSH\@. One could also wipe the micro SD card and start
-over.
-
 \section{Operating system configuration steps}
+Depending on the configuration of your laptop you might need root privileges to 
+execute the steps below.
+
 \begin{itemize}
     \item Connect the micro SD card to the laptop. Use {\tt lsblk} to find out 
           the device name, now called \emph{device\_name} (example: {\tt 
@@ -66,8 +63,9 @@ over.
                     space.
           \end{itemize}
           Then write the partition table to disk.
-    \item Run {\tt pacman -S dosfstools} \arch{} to be able to make use of {\tt 
-          mkfs.vfat}.
+    \item Make sure that the {\tt dosfstools} \arch{} package is installed.  
+          Run {\tt pacman -S dosfstools} \arch{} if you do not have it yet to 
+          make use of {\tt mkfs.vfat}.
     \item Create a dedicated folder for the Raspberry Pi configuration on the 
           hard disk of the laptop, now called \emph{pi\_dir}.
           Then create and mount a FAT file system for the boot partition:
@@ -85,45 +83,14 @@ over.
           \arch{}). Download the Arch Linux ARM image:
 
           {\tt wget 
-          http://archlinuxarm.org/os/ArchLinuxARM-rpi-2-latest.tar.gz}
+          http://os.archlinuxarm.org/os/ArchLinuxARM-rpi-2-latest.tar.gz}
     \item Extract the archive with {\tt bsdtar -xpf 
-          ArchLinuxARM-rpi-2-latest.tar.gz -C root}.
-          After that run {\tt sync} to make sure that the files are written to 
-          the micro SD card.
+          ArchLinuxARM-rpi-2-latest.tar.gz -C root}. After that run {\tt sync} 
+          to make sure that the files are written to the micro SD card.
     \item Move boot files to the boot partition with {\tt mv root/boot/* boot} 
-          and then run {\tt sync} again to be safe.
-    \item Set up a static IP for the Raspberry Pi:
-
-          {\tt cd boot} \\
-          {\tt cp cmdline.txt cmdline.txt.bak} \\
-          {\tt vim cmdline.txt}
-
-          In that file, add a space and {\tt ip=169.254.0.2} at the end of the 
-          line. Do not create a new line for that. Save the file and {\tt sync} 
-          again.
-    \item Unmount the mounts using {\tt umount boot root}. Finally, run {\tt rm 
-          -rf~../\emph{pi\_dir}} to remove the temporary directory.
-    \item Insert the micro SD card into the Raspberry Pi device. Connect an 
-          ethernet cable from the Raspberry Pi to a laptop and then power the 
-          Raspberry Pi using a micro USB charger (in that order, as the 
-          Raspberry Pi will boot automatically).
-    \item On the laptop make sure that {\tt net-tools} is installed (otherwise 
-          use {\tt pacman -S net-tools} \arch{}) for {\tt ifconfig}. You need 
-          to set up a ``Link-local'' connection on your laptop. Depending on 
-          your distribution you can find this in the network settings. Create 
-          a new wired connection, go to the IPv4 tab and set the connection 
-          type to ``Link-local''. After a while you should see an IP address in 
-          {\tt ifconfig} when you activate the connection. This is when the 
-          connection is established.
-    \item SSH into the Raspberry Pi: {\tt ssh alarm@169.254.0.2}. Use the 
-          password ``alarm''.
-    \item Run {\tt su} to become the root superuser. Use the password ``root''.
-    \item Edit {\tt /etc/ssh/sshd\_config} and set {\tt PermitRootLogin} to the 
-          value {\tt yes} to allow root login from SSH\@.
-    \item Disable the DHCP service using {\tt sudo systemctl disable 
-          dhcpcd@.service}. After this, edit {\tt 
-          /etc/systemd/network/eth0.network} so that its contents are the 
-          following lines:
+          and run {\tt sync} again.
+    \item Edit {\tt root/etc/systemd/network/eth0.network} so that its contents 
+          are the following lines:
 
           {\tt [Match]} \\
           {\tt Name=eth0}
@@ -133,16 +100,15 @@ over.
           {\tt Gateway=10.42.0.1} \\
           {\tt DNS=10.42.0.1}
 
-          This ensures that the private IP address is always the same, and the 
-          laptop provides a DNS service via {\tt dnsmasq} that always works. 
-          The laptop connection setup is changed to match later on.
+          This ensures that the private IP address is always the same. The 
+          laptop provides a DNS service via {\tt dnsmasq} that always works.  
 
           This example is for the first Raspberry Pi. For the second device, 
           change {\tt 10.42.0.10} to {\tt 10.42.0.11}, and so on. If at any 
           moment after these changes you cannot SSH into the device, run {\tt 
           nmap -sP 10.42.0.10/24} on the laptop to determine which IP the 
           device assigned itself.
-    \item Create a file {\tt /etc/modprobe.d/wireless.conf} to add the 
+    \item Create a file {\tt root/etc/modprobe.d/wireless.conf} to add the 
           following line:
 
           {\tt blacklist cfg80211}
@@ -151,25 +117,28 @@ over.
           the Raspberry Pi 2 has no built-in wireless support and the XBees do 
           not need it. It causes a lot of spam in the kernel logs, so it is 
           better to blacklist it.
-    \item Edit {\tt /boot/cmdline.txt} to remove the recently added IP part.
-          After that, reboot the Raspberry Pi device.
-    \item On your laptop, edit the old link-local connection or create a new 
-          one if you want to save the old connection for later steps. Set the 
-          type to ``Shared with other computers''. Make sure that {\tt dnsmasq} 
-          is installed on the laptop (otherwise use {\tt pacman -S dnsmasq} 
-          \arch{}). Then select this connection in the network manager to 
-          connect to it. Wait until the connection is established, then SSH to 
-          the Raspberry Pi again using {\tt ssh root@10.42.0.*}, replacing 
-          {\tt *} with the last part of the IP address set earlier on. You 
-          should now be able to run {\tt ping -c 3 www.google.com} 
+    \item Unmount the partitions with {\tt umount boot root}. Finally, run {\tt 
+          rm -rf~../\emph{pi\_dir}} to remove the temporary directory.
+    \item Insert the micro SD card into the Raspberry Pi device. Connect an 
+          Ethernet cable from the Raspberry Pi to the laptop and then power the 
+          Raspberry Pi using a micro USB charger (in that order).
+    \item On your laptop, create a new wired connection in the network manager.  
+          Set the type to ``Shared with other computers'' in the IPv4 tab. Make 
+          sure that {\tt dnsmasq} is installed on the laptop (otherwise use 
+          {\tt pacman -S dnsmasq} \arch{}). Then select this connection in the 
+          network manager to use it. Wait until the connection is established, 
+          then SSH into the Raspberry Pi using {\tt ssh alarm@10.42.0.*}, 
+          replacing {\tt *} with the last part of the IP address set earlier 
+          on. You should now be able to run {\tt ping -c 3 www.google.com} 
           successfully.
-    \item Now we can configure Arch Linux ARM after having full SSH and 
-          internet access on the Raspberry Pi. Start by setting the time: run 
-          {\tt timedatectl set-ntp true} and {\tt timedatectl set-timezone 
-          Europe/Amsterdam}.
+    \item From now on we work on the Raspberry Pi device over SSH\@. Use {\tt 
+          su} to become root user (the password is {\tt root}). Run {\tt 
+          timedatectl set-ntp true} to update the system clock. Run {\tt ln -s 
+          /usr/share/zoneinfo/Europe/Amsterdam /etc/localtime} to set the time 
+          zone to UTC+2, for example.
     \item Edit the mirror list for the package manager. Run {\tt nano 
-          /etc/pacman.d/mirrorlist} and remove the comment in front of the line 
-          in the section of the Netherlands, for example.
+          /etc/pacman.d/mirrorlist} and remove the comments in front of the 
+          lines in the section of the Netherlands, for example.
     \item Give the Raspberry Pi device a unique and identifiable hostname: run 
           {\tt echo raspberry-pi-1 > /etc/hostname} to name the device 
           ``raspberry-pi-1'' for the first Raspberry Pi, ``raspberry-pi-2'' for 
@@ -177,17 +146,27 @@ over.
     \item Run {\tt nano /etc/hosts} and append a tab character and the hostname 
           at the end of each line that already mentions ``localhost''.
     \item Run {\tt pacman -Syyu} to update the system.
-    \item Run {\tt pacman -S vim} to install Vim. Python 2 will be installed 
-          along with this (otherwise install it manually).
-    \item Run {\tt pacman -S python2-pip} to install the Python 2 package 
-          manager.
     \item Run {\tt pacman -S git} for the Git version control system.
     \item Run {\tt pacman -S make} to be able to use Makefiles.
     \item Run {\tt pacman -S screen} to use {\tt screen} for running Python
           scripts.
-    \item Give the {\tt alarm} user access to USB using
-          {\tt usermod -aG uucp alarm}. After that, reboot the device using
-          {\tt reboot}.
+    \item Run {\tt pacman -S python2 python2-pip} to install Python 2 with the 
+          package manager.
+    \item Run {\tt pacman -S vim} to install Vim.
+    \item Run {\tt pacman -S sudo}. Edit {\tt /etc/sudoers} by copying the line 
+          containing ``root'' under ``User privilege specification'' and 
+          changing ``root'' to ``alarm''.
+    \item Reboot the device using {\tt reboot}.
+    \item Clone the repository: \\ {\tt git clone 
+          https://github.com/timvandermeij/mobile-radio-tomography}.
+    \item Copy the configuration files for {\tt vim} and {\tt top}:
+        
+          {\tt cp mobile-radio-tomography/docs/raspberry-pi/toprc 
+          $\sim$/.toprc} \\
+          {\tt cp mobile-radio-tomography/docs/raspberry-pi/vimrc 
+          $\sim$/.vimrc}
+    \item Install all prerequisites mentioned in the README file in the 
+          repository. It is important to install these as the root user!
 \end{itemize}
 
 Make sure to update the Raspberry Pi frequently using {\tt sudo pacman -Syu}. 
@@ -201,21 +180,14 @@ if everything still works after system upgrades.
           (left side of the image). You can use GPIO pin 2 for UUC, pin 6 for
           ground, pin 11 for echo and pin 13 for trigger. Take a look at
           \url{http://www.element14.com/community/servlet/JiveServlet/previewBody/73950-102-4-309126/GPIO_Pi2.png}
-          for an overview of the GPIO pins for the Raspberry Pi model 2B and
+          for an overview of the GPIO pins of the Raspberry Pi 2 model B and
           \url{http://pi4j.com/images/j8header-photo.png} for how the pins are
-          numbered. For connecting the distance sensor to the \navio{}, see the 
-          file related to that setup.
-    \item Connect to the device via SSH using {\tt ssh alarm@10.42.0.*}, become
-          root user using {\tt su} and run {\tt pacman -S gcc sudo}.
-    \item Run {\tt vim /etc/sudoers}, copy the root user line under ``User
-          privilege specification'', change ``root'' to ``alarm'' and
-          force-save.
-    \item Run {\tt pip2 install rpi.gpio} (still as root).
-    \item Run {\tt su alarm} and place the file {\tt raspberry-pi/vimrc} in
-          {\tt $\sim$/.vimrc}.
-    \item Run the distance sensor test script with {\tt python2 
-          distance\_sensor\_physical.py}
-          and distance measurements should be displayed continuously.
+          numbered. For connecting the distance sensor to the \navio{} refer to 
+          the separate documentation related to this subject.
+    \item Connect to the Raspberry Pi via SSH using {\tt ssh alarm@10.42.0.*}.
+    \item Run the distance sensor test script with {\tt sudo python2 
+          distance\_sensor\_physical.py}. Distance measurements should be 
+          displayed continuously.
 \end{itemize}
 
 \section{Autostart configuration steps}
@@ -226,33 +198,27 @@ screen. To achieve all this, the following actions have to be performed:
 
 \begin{itemize}
     \item Make sure that the repository is cloned in
-          {\tt /home/alarm/mobile-radio-tomography}. If not, edit
-          {\tt raspberry-pi/mobile-radio-tomography.service} to set the
-          correct path, and change the path in {\tt raspberry-pi-start.sh}.
-    \item Become root: {\tt su}.
-    \item Place the file {\tt raspberry-pi/mobile-radio-tomography.service} in
-          {\tt /etc/systemd/system}.
-    \item Run {\tt systemctl enable mobile-radio-tomography.service}.
-    \item Reboot the device: {\tt reboot}. After rebooting, the mission script 
-          should be running. Depending on settings, one can verify this by 
-          checking if the LEDs on the XBee sensor are blinking, if the 
-          serial/direct interface to the robot vehicle is active or if the 
-          autopilot is starting. One can also log in and check that running 
-          {\tt screen -r sensor} opens the detached screen, or check whether 
-          log files appear in the {\tt logs} directory.
+          {\tt /home/alarm/mobile-radio-tomography}.
+    \item Copy the file {\tt docs/raspberry-pi/mobile-radio-tomography.service} 
+          to {\tt /etc/systemd/system}.
+    \item Run {\tt sudo systemctl enable mobile-radio-tomography.service}.
+    \item Reboot the device. After rebooting, the mission script should be 
+          running. Depending on settings, one can verify this by checking if 
+          the LEDs on the XBee sensor are blinking, if the serial/direct 
+          interface to the robot vehicle is active or if the autopilot is 
+          starting. One can also log in and check that running {\tt sudo screen 
+          -r sensor} opens the detached screen or check whether log files 
+          appear in the {\tt logs} directory.
 \end{itemize}
 
 \section{References}
 \begin{itemize}
-    \item Arch Linux ARM can be obtained from \url{http://archlinuxarm.org/platforms/armv7/broadcom/raspberry-pi-2}.
-    \item See \url{http://bvanderveen.com/a/rpi-booted-static-ip-ssh} as well 
-          as  
-          \url{http://l2ork.music.vt.edu/main/make-your-own-l2ork/software/raspberry-pi/} 
-          about setting up the connection to the Raspberry Pi and making it 
-          connect to the internet via network sharing.
-    \item See the installation guide at 
+    \item More information about Arch Linux ARM for Raspberry Pi can be found 
+          at \\
+          \url{http://archlinuxarm.org/platforms/armv7/broadcom/raspberry-pi-2}.
+    \item Refer to the installation guide at 
           \url{https://wiki.archlinux.org/index.php/Beginners'_guide} for 
-          generic steps for installing (normal) Arch Linux. Many steps do not 
+          generic steps for installing (regular) Arch Linux. Many steps do not 
           apply since we take care of partitioning and installing ourselves.
 \end{itemize}
 
