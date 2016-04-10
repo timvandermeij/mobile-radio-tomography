@@ -50,7 +50,7 @@ class Infrared_Sensor(Threadable):
         # Check if the `lircd.conf` file already exists.
         remote_file = "{}.lircd.conf".format(self._remote)
         if os.path.isfile("/etc/lirc/lircd.conf.d/{}".format(remote_file)):
-            return
+            raise OSError("Remote file '{}' is not placed in /etc/lirc/lircd.conf.d".format(remote_file))
 
         # Check if the `lircd.conf` file is available in our remotes folder.
         if not os.path.isfile("{}/remotes/{}".format(self._base_path, remote_file)):
