@@ -13,7 +13,7 @@ def get_location():
 def receive_packet(packet):
     pass
 
-def location_valid(other_valid=None):
+def location_valid(other_valid=None, other_id=None):
     return True
 
 def main(argv):

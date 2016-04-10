@@ -197,15 +197,18 @@ class XBee_Sensor(Threadable):
         """
         Create an XBee_Packet object containing current location data.
 
-        The resulting packet is only missing the XBee ID of the current XBee.
+        The XBee packet is complete, including location validity, the sensor ID
+        and the current timestamp.
         """
 
         location = self._location_callback()
+
         packet = XBee_Packet()
         packet.set("specification", "rssi_broadcast")
         packet.set("latitude", location[0])
         packet.set("longitude", location[1])
         packet.set("valid", self._valid_callback())
+        packet.set("sensor_id", self._id)
         packet.set("timestamp", time.time())
 
         return packet
@@ -224,8 +227,11 @@ class XBee_Sensor(Threadable):
         """
 
         from_valid = rssi_packet.get("valid")
+        from_id = rssi_packet.get("sensor_id")
+
         location = self._location_callback()
-        location_valid = self._valid_callback(from_valid)
+        location_valid = self._valid_callback(other_valid=from_valid, other_id=from_id)
+
         ground_station_packet = XBee_Packet()
         ground_station_packet.set("specification", "rssi_ground_station")
         ground_station_packet.set("sensor_id", self._id)

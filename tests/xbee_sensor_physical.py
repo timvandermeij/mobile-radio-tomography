@@ -23,7 +23,7 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
     def receive_callback(self, packet):
         pass
 
-    def valid_callback(self, other_valid=None):
+    def valid_callback(self, other_valid=None, other_id=None):
         return True
 
     def setUp(self):

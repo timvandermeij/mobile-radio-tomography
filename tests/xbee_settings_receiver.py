@@ -10,9 +10,7 @@ from environment import EnvironmentTestCase
 
 class TestXBeeSettingsReceiver(EnvironmentTestCase):
     def setUp(self):
-        self.register_arguments([
-            "--xbee-type", "simulator"
-        ], use_infrared_sensor=False)
+        self.register_arguments([], use_infrared_sensor=False)
 
         super(TestXBeeSettingsReceiver, self).setUp()
 

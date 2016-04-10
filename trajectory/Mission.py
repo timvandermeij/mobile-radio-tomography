@@ -367,6 +367,7 @@ class Mission_Auto(Mission):
             if self._xbee_synchronization and self.environment.is_measurement_valid():
                 print("Measurements are valid, continuing to next waypoint")
                 self.vehicle.set_next_waypoint()
+                self.environment.invalidate_measurement()
             else:
                 return True
 
@@ -903,6 +904,7 @@ class Mission_Cycle(Mission_Guided):
             # so that they both measure at the "valid" location.
             if self.environment.is_measurement_valid():
                 self.next_waypoint()
+                self.environment.invalidate_measurement()
 
     def check_waypoint(self):
         return not self.done

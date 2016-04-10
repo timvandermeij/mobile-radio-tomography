@@ -10,7 +10,8 @@ class TestMissionCycle(EnvironmentTestCase):
     def setUp(self):
         self.register_arguments([
             "--vehicle-class", "Robot_Vehicle_Arduino",
-            "--geometry-class", "Geometry", "--space-size", "3"
+            "--geometry-class", "Geometry", "--space-size", "3",
+            "--number-of-sensors", "2"
         ], use_infrared_sensor=False)
 
         super(TestMissionCycle, self).setUp()
@@ -19,6 +20,7 @@ class TestMissionCycle(EnvironmentTestCase):
 
         settings = self.arguments.get_settings("mission")
         self.mission = Mission_Cycle(self.environment, settings)
+        self.xbee = self.environment.get_xbee_sensor()
 
     def test_setup(self):
         with patch('sys.stdout'):
@@ -84,7 +86,7 @@ class TestMissionCycle(EnvironmentTestCase):
         self.mission.step()
         # The mission waits for the other XBee to send a valid location packet.
         self.assertEqual(self.mission.current_waypoint, (1,0))
-        self.assertTrue(self.environment.location_valid(other_valid=True))
+        self.assertTrue(self.environment.location_valid(other_valid=True, other_id=self.xbee.id + 1))
         self.mission.step()
         self.assertEqual(self.mission.current_waypoint, (2,0))
         self.vehicle._check_state()

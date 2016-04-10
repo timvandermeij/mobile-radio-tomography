@@ -194,7 +194,6 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
         # Create and send the RSSI broadcast packets.
         packet = self._make_rssi_broadcast_packet()
-        packet.set("sensor_id", self._id)
 
         for index in xrange(1, self._number_of_sensors + 1):
             if index == self._id:
