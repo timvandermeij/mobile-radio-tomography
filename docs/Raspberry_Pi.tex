@@ -153,6 +153,8 @@ execute the steps below.
     \item Run {\tt pacman -S python2 python2-pip} to install Python 2 with the 
           package manager.
     \item Run {\tt pacman -S vim} to install Vim.
+    \item Run {\tt pacman -S gcc} as {\tt gcc} will be used for compiling 
+          C-based Python packages such as {\tt RPi.GPIO}.
     \item Run {\tt pacman -S sudo}. Edit {\tt /etc/sudoers} by copying the line 
           containing ``root'' under ``User privilege specification'' and 
           changing ``root'' to ``alarm''.
@@ -165,8 +167,16 @@ execute the steps below.
           $\sim$/.toprc} \\
           {\tt cp mobile-radio-tomography/docs/raspberry-pi/vimrc 
           $\sim$/.vimrc}
-    \item Install all prerequisites mentioned in the README file in the 
-          repository. It is important to install these as the root user!
+    \item Install the prerequisites mentioned in the README file in the 
+          repository. It is important to install these as the root user. Note 
+          that GUI-related packages (such as PyQt4, PyQtGraph, matplotlib, all 
+          packages listed under ``Environment simulation'' and everything 
+          related to ArduPilot) do not need to be installed on the Raspberry Pi 
+          devices. Furthermore we recommend to install some large packages 
+          using the system's package manager as that saves quite some 
+          compilation time. Use {\tt pacman -S python2-numpy}, {\tt pacman -S 
+          python2-scipy} and {\tt pacman -S python2-lxml} to install those 
+          packages.
 \end{itemize}
 
 Make sure to update the Raspberry Pi frequently using {\tt sudo pacman -Syu}. 
