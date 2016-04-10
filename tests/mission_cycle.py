@@ -1,29 +1,19 @@
 import itertools
-from mock import patch, MagicMock
+from mock import patch
 from dronekit import LocationLocal
-from ..core.USB_Manager import USB_Device_Category
-from ..environment.Environment import Environment
 from ..location.Line_Follower import Line_Follower
 from ..trajectory.Mission import Mission_Cycle
 from ..vehicle.Robot_Vehicle import Robot_State
-from ..settings import Arguments
-from core_thread_manager import ThreadableTestCase
-from core_usb_manager import USBManagerTestCase
-from geometry import LocationTestCase
-from settings import SettingsTestCase
+from environment import EnvironmentTestCase
 
-class TestMissionCycle(ThreadableTestCase, USBManagerTestCase, LocationTestCase, SettingsTestCase):
+class TestMissionCycle(EnvironmentTestCase):
     def setUp(self):
-        super(TestMissionCycle, self).setUp()
+        self.register_arguments([
+            "--vehicle-class", "Robot_Vehicle_Arduino",
+            "--geometry-class", "Geometry", "--space-size", "3"
+        ], use_infrared_sensor=False)
 
-        self.arguments = Arguments("settings.json", [
-            "--vehicle-class", "Robot_Vehicle_Arduino", "--space-size", "3",
-            "--no-infrared-sensor"
-        ])
-        self.environment = Environment.setup(self.arguments, geometry_class="Geometry",
-                                             usb_manager=self.usb_manager, simulated=True)
-        device = self.usb_manager._devices[USB_Device_Category.TTL][0]
-        device.serial_object._update_dtr_state = MagicMock()
+        super(TestMissionCycle, self).setUp()
 
         self.vehicle = self.environment.get_vehicle()
 

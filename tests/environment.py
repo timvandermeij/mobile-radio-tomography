@@ -13,34 +13,51 @@ from settings import SettingsTestCase
 from core_thread_manager import ThreadableTestCase
 from core_usb_manager import USBManagerTestCase
 
-class TestEnvironment(LocationTestCase, SettingsTestCase, ThreadableTestCase, USBManagerTestCase):
+class EnvironmentTestCase(LocationTestCase, SettingsTestCase, ThreadableTestCase, USBManagerTestCase):
+    def register_arguments(self, argv, use_infrared_sensor=True):
+        self._argv = argv
+        self._use_infrared_sensor = use_infrared_sensor
+        if self._use_infrared_sensor:
+            self._argv.append("--infrared-sensor")
+        else:
+            self._argv.append("--no-infrared-sensor")
+
     def setUp(self):
-        super(TestEnvironment, self).setUp()
+        super(EnvironmentTestCase, self).setUp()
 
-        self.arguments = Arguments("settings.json", [
-            "--geometry-class", "Geometry_Spherical", "--infrared-sensor",
-            "--vehicle-class", "Mock_Vehicle", "--distance-sensors", "0", "90",
-            "--xbee-type", "simulator"
-        ])
+        self.arguments = Arguments("settings.json", self._argv)
 
-        # We need to mock the Infrared_Sensor module as it is only available
-        # when LIRC is installed which is not a requirement for running tests.
-        package = __package__.split('.')[0]
-        self.infrared_sensor_mock = MagicMock()
-        modules = {
-            package + '.control.Infrared_Sensor': self.infrared_sensor_mock,
-        }
+        if self._use_infrared_sensor:
+            # We need to mock the Infrared_Sensor module as it is only 
+            # available when LIRC is installed which is not a requirement for 
+            # running tests.
+            package = __package__.split('.')[0]
+            self.infrared_sensor_mock = MagicMock()
+            modules = {
+                package + '.control.Infrared_Sensor': self.infrared_sensor_mock,
+            }
 
-        self.patcher = patch.dict('sys.modules', modules)
-        self.patcher.start()
+            self._infrared_sensor_patcher = patch.dict('sys.modules', modules)
+            self._infrared_sensor_patcher.start()
 
         self.environment = Environment.setup(self.arguments,
                                              usb_manager=self.usb_manager,
                                              simulated=True)
 
     def tearDown(self):
-        super(TestEnvironment, self).tearDown()
-        self.patcher.stop()
+        super(EnvironmentTestCase, self).tearDown()
+        if self._use_infrared_sensor:
+            self._infrared_sensor_patcher.stop()
+
+class TestEnvironment(EnvironmentTestCase):
+    def setUp(self):
+        self.register_arguments([
+            "--geometry-class", "Geometry_Spherical",
+            "--vehicle-class", "Mock_Vehicle", "--distance-sensors", "0", "90",
+            "--xbee-type", "simulator"
+        ], use_infrared_sensor=True)
+
+        super(TestEnvironment, self).setUp()
 
     def test_setup(self):
         self.assertIsInstance(self.environment, Environment)

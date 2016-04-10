@@ -1,7 +1,7 @@
 import os
 import serial
 import unittest
-from mock import MagicMock
+from mock import patch, MagicMock
 from ..core.USB_Manager import USB_Manager, USB_Device_Category, USB_Device_Baud_Rate, USB_Device_Fingerprint
 
 class USBManagerTestCase(unittest.TestCase):
@@ -46,11 +46,21 @@ class USBManagerTestCase(unittest.TestCase):
         ])
         self.usb_manager._obtain_devices = mock_obtain_devices
 
+        # Disable internal pySerial updates of the DTR state since they do not 
+        # function correctly when the serial device is mocked as a virtual pty.
+        self._dtr_patcher = patch.object(serial.Serial, '_update_dtr_state')
+        self._dtr_patcher.start()
+        self._rts_patcher = patch.object(serial.Serial, '_update_rts_state')
+        self._rts_patcher.start()
+
     def tearDown(self):
         super(USBManagerTestCase, self).tearDown()
 
         self.usb_manager.clear()
         self._ttl_device.close()
+
+        self._dtr_patcher.stop()
+        self._rts_patcher.stop()
 
 class TestCoreUSBManager(USBManagerTestCase):
     def test_initialization(self):
