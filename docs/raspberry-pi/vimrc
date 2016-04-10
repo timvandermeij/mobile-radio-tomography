@@ -12,4 +12,4 @@ set incsearch " Incremental searching
 set hlsearch " Highlight all results
 
 " Color scheme configuration
-colorscheme torte
+colorscheme slate
