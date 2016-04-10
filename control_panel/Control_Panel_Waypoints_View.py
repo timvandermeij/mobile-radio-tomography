@@ -1,8 +1,8 @@
 import json
 import os
-from functools import partial
-from PyQt4 import QtCore, QtGui
+from PyQt4 import QtGui
 from Control_Panel_View import Control_Panel_View
+from Control_Panel_Widgets import WaypointsTableWidget
 from Control_Panel_XBee_Sender import Control_Panel_XBee_Sender
 from ..zigbee.XBee_Packet import XBee_Packet
 
@@ -26,18 +26,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             self._listWidget.addItem("Waypoints for vehicle {}".format(vehicle))
 
             # Create the table for the vehicle.
-            table = QtGui.QTableWidget()
-            table.setRowCount(1)
-            table.setColumnCount(len(self._column_labels))
-            table.setHorizontalHeaderLabels(self._column_labels)
-            horizontalHeader = table.horizontalHeader()
-            for i in range(len(self._column_labels)):
-                horizontalHeader.setResizeMode(i, QtGui.QHeaderView.Stretch)
-
-            # Create the context menu for the rows in the table.
-            verticalHeader = table.verticalHeader()
-            verticalHeader.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-            verticalHeader.customContextMenuRequested.connect(partial(self._make_menu, table))
+            table = WaypointsTableWidget(self._column_labels)
 
             self._tables.append(table)
             self._stackedLayout.addWidget(table)
@@ -98,49 +87,6 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
         for table in self._tables:
             table.insertRow(table.rowCount())
-
-    def _make_menu(self, table, position):
-        """
-        Create a context menu for the vertical header (row labels).
-        """
-
-        menu = QtGui.QMenu(table)
-
-        insert_row_action = QtGui.QAction("Insert row before", table)
-        insert_row_action.triggered.connect(partial(self._insert_row, table, position))
-        remove_rows_action = QtGui.QAction("Remove row(s)", table)
-        remove_rows_action.triggered.connect(partial(self._remove_rows, table, position))
-
-        menu.addAction(insert_row_action)
-        menu.addAction(remove_rows_action)
-
-        menu.exec_(table.verticalHeader().viewport().mapToGlobal(position))
-
-    def _insert_row(self, table, position):
-        """
-        Add one row in front of the row at the context menu position in a table.
-        """
-
-        row = table.indexAt(position).row()
-        table.insertRow(row)
-        table.selectRow(row)
-
-    def _remove_rows(self, table, position):
-        """
-        Remove one or more selected rows from a table.
-
-        The rows can either be selected or the row at the context menu position
-        is removed.
-        """
-
-        items = table.selectionModel().selectedRows()
-        if items:
-            rows = [item.row() for item in items]
-        else:
-            rows = [table.indexAt(position).row()]
-
-        for row in reversed(sorted(rows)):
-            table.removeRow(row)
 
     def _export_waypoints(self, repeat=True):
         """

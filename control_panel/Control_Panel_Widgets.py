@@ -1,6 +1,67 @@
 import os
 import re
+from functools import partial
 from PyQt4 import QtCore, QtGui
+
+class WaypointsTableWidget(QtGui.QTableWidget):
+    def __init__(self, column_labels, *a, **kw):
+        super(WaypointsTableWidget, self).__init__(*a, **kw)
+
+        self.setRowCount(1)
+        self.setColumnCount(len(column_labels))
+        self.setHorizontalHeaderLabels(column_labels)
+
+        horizontalHeader = self.horizontalHeader()
+        for i in range(len(column_labels)):
+            horizontalHeader.setResizeMode(i, QtGui.QHeaderView.Stretch)
+
+        # Create the context menu for the rows in the table.
+        verticalHeader = self.verticalHeader()
+        verticalHeader.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        verticalHeader.customContextMenuRequested.connect(partial(self._make_menu))
+
+    def _make_menu(self, position):
+        """
+        Create a context menu for the vertical header (row labels).
+        """
+
+        menu = QtGui.QMenu(self)
+
+        insert_row_action = QtGui.QAction("Insert row before", self)
+        insert_row_action.triggered.connect(partial(self._insert_row, position))
+        remove_rows_action = QtGui.QAction("Remove row(s)", self)
+        remove_rows_action.triggered.connect(partial(self._remove_rows, position))
+
+        menu.addAction(insert_row_action)
+        menu.addAction(remove_rows_action)
+
+        menu.exec_(self.verticalHeader().viewport().mapToGlobal(position))
+
+    def _insert_row(self, position):
+        """
+        Add one row in front of the row at the context menu position.
+        """
+
+        row = self.indexAt(position).row()
+        self.insertRow(row)
+        self.selectRow(row)
+
+    def _remove_rows(self, position):
+        """
+        Remove one or more selected rows from the table.
+
+        The rows can either be selected or the row at the context menu position
+        is removed.
+        """
+
+        items = self.selectionModel().selectedRows()
+        if items:
+            rows = [item.row() for item in items]
+        else:
+            rows = [self.indexAt(position).row()]
+
+        for row in reversed(sorted(rows)):
+            self.removeRow(row)
 
 # Ported from https://github.com/Frodox/qt-line-edit-with-clear-button
 # Qt5's QLineEdit has this built in via the clearButtonEnabled.
