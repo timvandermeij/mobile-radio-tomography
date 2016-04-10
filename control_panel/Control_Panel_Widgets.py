@@ -20,6 +20,14 @@ class WaypointsTableWidget(QtGui.QTableWidget):
         verticalHeader.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         verticalHeader.customContextMenuRequested.connect(partial(self._make_menu))
 
+    def removeRows(self):
+        """
+        Remove all the rows in the table.
+        """
+
+        for row in reversed(range(self.rowCount())):
+            self.removeRow(row)
+
     def _make_menu(self, position):
         """
         Create a context menu for the vertical header (row labels).
