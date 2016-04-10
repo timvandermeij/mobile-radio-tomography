@@ -30,7 +30,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             self._listWidget.addItem("Waypoints for vehicle {}".format(vehicle))
 
             # Create the table for the vehicle.
-            table = WaypointsTableWidget(self._column_labels)
+            table = WaypointsTableWidget(self._column_labels, self._column_defaults)
 
             self._tables.append(table)
             self._stackedLayout.addWidget(table)
