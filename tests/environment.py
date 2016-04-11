@@ -121,7 +121,9 @@ class TestEnvironment(EnvironmentTestCase):
     def test_location(self):
         location = self.environment.vehicle.location.global_relative_frame
         self.assertEqual(location, self.environment.get_location())
-        self.assertEqual((location.lat, location.lon), self.environment.get_raw_location())
+        raw_location, waypoint_index = self.environment.get_raw_location()
+        self.assertEqual((location.lat, location.lon), raw_location)
+        self.assertEqual(0, waypoint_index)
 
     def test_location_valid(self):
         xbee = self.environment.get_xbee_sensor()
@@ -131,18 +133,18 @@ class TestEnvironment(EnvironmentTestCase):
 
         self.assertTrue(self.environment.location_valid())
         self.assertFalse(self.environment.is_measurement_valid())
-        self.assertEqual(self.environment._valid_measurements, {xbee.id: True})
+        self.assertEqual(self.environment._valid_measurements, {xbee.id: 0})
 
-        self.assertTrue(self.environment.location_valid(other_valid=True, other_id=xbee.id + 1))
+        self.assertTrue(self.environment.location_valid(other_valid=True, other_id=xbee.id + 1, other_index=0))
         self.assertFalse(self.environment.is_measurement_valid())
-        self.assertEqual(self.environment._valid_measurements, {xbee.id: True, xbee.id + 1: True})
+        self.assertEqual(self.environment._valid_measurements, {xbee.id: 0, xbee.id + 1: 0})
 
-        self.assertTrue(self.environment.location_valid(other_valid=True, other_id=xbee.id + 2))
+        self.assertTrue(self.environment.location_valid(other_valid=True, other_id=xbee.id + 2, other_index=0))
         self.assertTrue(self.environment.is_measurement_valid())
 
         # Requiring a specific set of sensors
         self.environment.invalidate_measurement(required_sensors=[xbee.id + 1])
         self.assertFalse(self.environment.is_measurement_valid())
 
-        self.assertTrue(self.environment.location_valid(other_valid=True, other_id=xbee.id + 1))
+        self.assertTrue(self.environment.location_valid(other_valid=True, other_id=xbee.id + 1, other_index=0))
         self.assertTrue(self.environment.is_measurement_valid())

@@ -201,13 +201,14 @@ class XBee_Sensor(Threadable):
         and the current timestamp.
         """
 
-        location = self._location_callback()
+        location, waypoint_index = self._location_callback()
 
         packet = XBee_Packet()
         packet.set("specification", "rssi_broadcast")
         packet.set("latitude", location[0])
         packet.set("longitude", location[1])
         packet.set("valid", self._valid_callback())
+        packet.set("waypoint_index", waypoint_index)
         packet.set("sensor_id", self._id)
         packet.set("timestamp", time.time())
 
@@ -228,9 +229,12 @@ class XBee_Sensor(Threadable):
 
         from_valid = rssi_packet.get("valid")
         from_id = rssi_packet.get("sensor_id")
+        from_waypoint_index = rssi_packet.get("waypoint_index")
 
-        location = self._location_callback()
-        location_valid = self._valid_callback(other_valid=from_valid, other_id=from_id)
+        location, waypoint_index = self._location_callback()
+        location_valid = self._valid_callback(other_valid=from_valid,
+                                              other_id=from_id,
+                                              other_index=from_waypoint_index)
 
         ground_station_packet = XBee_Packet()
         ground_station_packet.set("specification", "rssi_ground_station")

@@ -19,6 +19,10 @@
             "format": "?"
         },
         {
+            "name": "waypoint_index",
+            "format": "i"
+        },
+        {
             "name": "sensor_id",
             "format": "B"
         },

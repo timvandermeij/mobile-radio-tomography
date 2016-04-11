@@ -162,7 +162,7 @@ class TestMissionXBee(EnvironmentTestCase):
         self.assertTrue(self.vehicle.is_wait())
 
         # The mission waits for the other XBee to send a valid location packet.
-        self.assertTrue(self.environment.location_valid(other_valid=True, other_id=self.xbee.id + 1))
+        self.assertTrue(self.environment.location_valid(other_valid=True, other_id=self.xbee.id + 1, other_index=1))
         with patch('sys.stdout'):
             self.assertTrue(self.mission.check_waypoint())
 
