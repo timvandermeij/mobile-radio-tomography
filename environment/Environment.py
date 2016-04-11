@@ -268,6 +268,12 @@ class Environment(object):
 
         return location_valid
 
+    def _is_valid(self, xbee_id):
+        if xbee_id not in self._valid_measurements:
+            return False
+
+        return self._valid_measurements[xbee_id]
+
     def is_measurement_valid(self):
         """
         Check whether the measurement at the current location was valid.
@@ -276,7 +282,10 @@ class Environment(object):
         other XBee's sent location were valid.
         """
 
-        return all(sensor in self._valid_measurements and self._valid_measurements[sensor] for sensor in self._required_sensors)
+        if not self._is_valid(self._xbee_sensor.id):
+            return False
+
+        return all(self._is_valid(sensor) for sensor in self._required_sensors)
 
     def invalidate_measurement(self, required_sensors=None):
         """
@@ -300,7 +309,6 @@ class Environment(object):
             required_sensors = range(1, self._xbee_sensor.number_of_sensors + 1)
 
         self._required_sensors = set(required_sensors)
-        self._required_sensors.add(self._xbee_sensor.id)
 
     def get_distance(self, location):
         """
