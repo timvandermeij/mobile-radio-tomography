@@ -100,6 +100,9 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
         self._serial_connection.write("DIRS {} {}\n".format(self._get_zumo_direction(target_direction), rotate_direction))
 
     def _goto_waypoint(self, next_waypoint):
+        if next_waypoint is None:
+            return True
+
         # Format a "GOTO" command for the waypoint.
         self._serial_connection.write("GOTO {} {}\n".format(int(next_waypoint[0]), int(next_waypoint[1])))
 
