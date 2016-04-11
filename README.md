@@ -38,7 +38,7 @@ systems, perhaps with slightly different installation procedures.
   * Physical sensor/communication interfaces:
     * pyserial
     * RPi.GPIO
-    * RPIO
+    * wiringpi
     * xbee
     * pylirc2
     * pyudev
