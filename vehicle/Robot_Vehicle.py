@@ -1,7 +1,7 @@
 try:
     import RPi.GPIO as GPIO
     import wiringpi
-except RuntimeError:
+except (ImportError, RuntimeError):
     GPIO = None
 
 import math
