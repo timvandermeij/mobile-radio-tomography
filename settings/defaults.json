@@ -305,6 +305,12 @@
                 "module": "trajectory.Mission",
                 "default": "Mission_Browse"
             },
+            "measurement_delay": {
+                "help": "Time in seconds to wait at a waypoint to perform synchronized measurements",
+                "type": "float",
+                "min": 0.0,
+                "default": 1.0
+            },
             "xbee_synchronization": {
                 "help": "Whether to wait for measurements to be complete at waypoints",
                 "type": "bool",

@@ -369,6 +369,7 @@ class Mission_Auto(Mission):
     def check_waypoint(self):
         if self.vehicle.is_wait():
             if self._xbee_synchronization and self.environment.is_measurement_valid():
+                time.sleep(self.settings.get("measurement_delay"))
                 print("Measurements are valid, continuing to next waypoint")
                 self.vehicle.set_next_waypoint()
                 index = self.vehicle.get_next_waypoint() / 2

@@ -275,7 +275,7 @@ class Environment(object):
         if xbee_id not in self._valid_measurements:
             return False
 
-        return self._valid_measurements[xbee_id] == index
+        return self._valid_measurements[xbee_id] >= index
 
     def is_measurement_valid(self):
         """
