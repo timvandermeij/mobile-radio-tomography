@@ -1,10 +1,5 @@
-try:
-    import RPIO
-except (ImportError, SystemError):
-    RPIO = None
-
 import time
-from Robot_Vehicle import Robot_Vehicle
+from Robot_Vehicle import Robot_Vehicle, GPIO
 from ..location.Line_Follower_Arduino import Line_Follower_Arduino
 from ..trajectory.Servo import Servo
 
@@ -39,11 +34,13 @@ class Robot_Vehicle_Arduino(Robot_Vehicle):
         self._current_speed = (0, 0, True, True)
 
     def setup(self):
+        super(Robot_Vehicle_Arduino, self).setup()
+
         self._serial_connection.reset_output_buffer()
 
     @property
     def use_simulation(self):
-        return RPIO is None
+        return GPIO is None
 
     def activate(self):
         super(Robot_Vehicle_Arduino, self).activate()
@@ -96,9 +93,3 @@ class Robot_Vehicle_Arduino(Robot_Vehicle):
         output = self._format_speeds(*new_speed)
 
         self._serial_connection.write("{}\n".format(output))
-
-    def set_servo(self, servo, pwm):
-        if RPIO is not None:
-            RPIO.PWM.set_servo(servo.pin, pwm)
-
-        servo.set_current_pwm(pwm)

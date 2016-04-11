@@ -1,4 +1,3 @@
-import RPIO
 import RPi.GPIO
 from Robot_Vehicle import Robot_Vehicle
 from ..location.Line_Follower_Raspberry_Pi import Line_Follower_Raspberry_Pi
@@ -30,7 +29,14 @@ class Robot_Vehicle_Raspberry_Pi(Robot_Vehicle):
         # First item is left motor, second item is right motor.
         self._speed_servos = []
 
+    @property
+    def use_simulation(self):
+        # Raspberry Pi vehicle does not support simulation.
+        return False
+
     def setup(self):
+        super(Robot_Vehicle_Raspberry_Pi, self).setup()
+
         # Initialize the RPi.GPIO module. Doing it this way instead of using
         # an alias during import allows unit tests to access it too.
         self.gpio = RPi.GPIO
@@ -45,9 +51,6 @@ class Robot_Vehicle_Raspberry_Pi(Robot_Vehicle):
         for pin in self._direction_pins:
             self.gpio.setup(pin, self.gpio.OUT)
 
-        for pin in self._speed_pins:
-            self.gpio.setup(pin, self.gpio.OUT)
-
         self._speed_servos = [Servo(pin, self._speeds, self._speed_pwms) for pin in self._speed_pins]
 
     def set_speeds(left_speed, right_speed, left_forward=True, right_forward=True):
@@ -58,7 +61,3 @@ class Robot_Vehicle_Raspberry_Pi(Robot_Vehicle):
         for i, forward in [(0, left_forward), (1, right_forward)]:
             # LOW value is forward, HIGH is backward.
             self.gpio.output(self._direction_pins[i], not forward)
-
-    def set_servo(self, servo, pwm):
-        RPIO.PWM.set_servo(servo.pin, pwm)
-        servo.set_current_pwm(pwm)

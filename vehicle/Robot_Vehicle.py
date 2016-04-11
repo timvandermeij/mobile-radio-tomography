@@ -1,3 +1,9 @@
+try:
+    import RPi.GPIO as GPIO
+    import wiringpi
+except (ImportError, RuntimeError):
+    GPIO = None
+
 import math
 import thread
 import time
@@ -73,6 +79,14 @@ class Robot_Vehicle(Vehicle):
         # - rotate: The robot is rotating at an intersection. See
         #   Robot_State_Rotate
         self._state = Robot_State("intersection")
+
+        self._servo_pins = set()
+
+    def setup(self):
+        super(Robot_Vehicle, self).setup()
+
+        if GPIO is not None:
+            wiringpi.wiringPiSetupPhys()
 
     def _setup_line_follower(self, thread_manager, usb_manager):
         if self._line_follower_class is None:
@@ -428,3 +442,13 @@ class Robot_Vehicle(Vehicle):
 
         waypoint = self._waypoints[self._current_waypoint]
         return waypoint == self._location
+
+    def set_servo(self, servo, pwm):
+        if GPIO is not None:
+            if servo.pin not in self._servo_pins:
+                self._servo_pins.add(servo.pin)
+                wiringpi.softPwmCreate(servo.pin, pwm, servo.pwm.max)
+
+            wiringpi.softPwmWrite(servo.pin, pwm)
+
+        servo.set_current_pwm(pwm)

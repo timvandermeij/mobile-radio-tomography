@@ -6,6 +6,7 @@ Documentation for the source is provided at http://python.dronekit.io/examples/m
 """
 
 import sys
+import traceback
 
 # Package imports
 # Ensure that we can import from the current directory as a package since 
@@ -94,9 +95,12 @@ class Setup(object):
             self.activated = False
             print("Stopped mission")
 
-        self.monitor.stop()
-        self.environment.thread_manager.destroy()
-        self.environment.usb_manager.clear()
+        try:
+            self.monitor.stop()
+            self.environment.thread_manager.destroy()
+            self.environment.usb_manager.clear()
+        except:
+            sys.exit(1)
 
     def _infrared_disable(self):
         self.environment.thread_manager.interrupt("infrared_sensor")
@@ -106,6 +110,8 @@ def main(argv):
     setup = Setup(arguments)
     try:
         setup.setup()
+    except:
+        traceback.print_exc()
     finally:
         setup.disable()
 
