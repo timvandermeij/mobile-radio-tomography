@@ -144,7 +144,7 @@ void setup() {
       }
 
       reflectanceSensors.calibrate();
-      reflectanceSensors.readLine(sensors);
+      reflectanceSensors.read(sensors);
       if (turn_direction < 0)
       {
         // If the right  most sensor changes from (over white space -> over
