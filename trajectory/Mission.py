@@ -816,20 +816,17 @@ class Mission_Infrared_Grid(Mission_Infrared):
     def _right(self):
         self._diff[1] = 1
 
-class Mission_Cycle(Mission_Guided):
+class Mission_Cycle(Mission_Auto):
     """
     A mission that performs fan beam and straight line measurements on a grid
     using a `Robot_Vehicle`.
     """
 
     def setup(self):
-        super(Mission_Guided, self).setup()
+        super(Mission_Cycle, self).setup()
 
         if not isinstance(self.vehicle, Robot_Vehicle):
             raise ValueError("Mission_Cycle only works with robot vehicles")
-
-        self.done = False
-        self.current_waypoint = None
 
         wpzip = itertools.izip_longest
         grid_size = int(self.size)
@@ -904,31 +901,9 @@ class Mission_Cycle(Mission_Guided):
         else:
             raise ValueError("Vehicle is incorrectly positioned at ({},{}), must be at (0,0) or (0,{})".format(location.north, location.east, size))
 
-    def step(self):
-        if self.done:
-            return
-
-        if self.current_waypoint is None:
-            self.next_waypoint()
-        else:
-            # Delay to perform measurements. We need to synchronize the robots 
-            # so that they both measure at the "valid" location.
-            if self.environment.is_measurement_valid():
-                self.next_waypoint()
-                self.environment.invalidate_measurement()
-
-    def check_waypoint(self):
-        return not self.done
-
-    def next_waypoint(self):
-        try:
-            waypoint = self.waypoints.next()
-        except StopIteration:
-            self.done = True
-            return
-
-        self.current_waypoint = waypoint
-        self.vehicle.simple_goto(LocationLocal(waypoint[0], waypoint[1], 0.0))
+    def get_points(self):
+        self.waypoints = list(self.waypoints)
+        return [LocationLocal(north, east, 0.0) for north, east in self.waypoints]
 
 class Mission_XBee(Mission_Auto):
     def setup(self):
