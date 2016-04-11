@@ -36,15 +36,16 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             self._stackedLayout.addWidget(table)
 
         if "waypoints" in data:
-            self._import_waypoints(data["waypoints"], from_json=False)
+            try:
+                self._import_waypoints(data["waypoints"], from_json=False)
+            except:
+                return
 
     def save(self):
-        try:
-            return {
-                "waypoints": self._export_waypoints(repeat=False)[0]
-            }
-        except ValueError as e:
-            return {}
+        waypoints, total = self._export_waypoints(repeat=False, errors=False)
+        return {
+            "waypoints": waypoints
+        }
 
     def show(self):
         """
@@ -92,9 +93,20 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         for table in self._tables:
             table.insertRow(table.rowCount())
 
-    def _export_waypoints(self, repeat=True):
+    def _export_waypoints(self, repeat=True, errors=True):
         """
-        Create a list of waypoints (tuples) per vehicle.
+        Create a dictonary containing lists of waypoints (tuples) per vehicle
+        from the current contents of the tables.
+
+        When `repeat` is enabled, the output for rows with empty column is
+        augmented with data from previous rows. This is perfect for exporting
+        to somewhat readable JSON files and the actual sending mechanisms, but
+        can be disabled for internal storage since `_import_waypoint` handles
+        data that is default differently than repeated data.
+
+        When `errors` is enabled, columns that have missing first data when
+        they are required raise a `ValueError`, and invalid values do as well.
+        This can also be disabled for internal storage.
         """
 
         waypoints = {}
@@ -121,16 +133,18 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
                     # ignore this row.
                     continue
 
-                if any(item is None and prev is None for item, prev in zip(data, previous)):
-                    # If a column has no data and no previous data either, then 
-                    # we have missing information.
-                    raise ValueError("Missing coordinates for vehicle {}, row #{} and no previous waypoint".format(vehicle, row + 1))
+                if errors:
+                    pair = zip(data, previous)
+                    if any(val is None and prev is None for val, prev in pair):
+                        # If a column has no data and no previous data either, 
+                        # then we have missing information.
+                        raise ValueError("Missing coordinates for vehicle {}, row #{} and no previous waypoint".format(vehicle, row + 1))
 
                 for i, col in enumerate(self._column_labels):
                     if data[i] is None:
                         # If a table cell is empty, use the previous waypoint's 
                         # coordinates for the current waypoint.
-                        data[i] = previous[i] if repeat else None
+                        data[i] = previous[i] if repeat else self._column_defaults[i]
                     else:
                         try:
                             if self._column_defaults[i] is not None:
@@ -140,7 +154,8 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
                             data[i] = type_cast(data[i])
                         except ValueError:
-                            raise ValueError("Invalid value for vehicle {}, row #{}, column '{}': '{}'".format(vehicle, row + 1, col, data[i]))
+                            if errors:
+                                raise ValueError("Invalid value for vehicle {}, row #{}, column '{}': '{}'".format(vehicle, row + 1, col, data[i]))
 
                 if vehicle not in waypoints:
                     waypoints[vehicle] = [tuple(data)]
@@ -153,6 +168,14 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         return waypoints, total
 
     def _import_waypoints(self, waypoints, from_json=True):
+        """
+        Populate the tables from a dictionary of lists of waypoints (tuples)
+        for each vehicle.
+
+        When `from_json` is enabled, consider the dictionary to be loaded from
+        a JSON file, which has strings as vehicle index keys.
+        """
+
         for index, table in enumerate(self._tables):
             # Allow either string or numeric indices depending on import source
             vehicle = str(index + 1) if from_json else index + 1
@@ -176,6 +199,11 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
                         table.setItem(row, col, QtGui.QTableWidgetItem(item))
 
     def _import(self):
+        """
+        Import waypoints from a JSON file that was exported from the waypoints
+        view or from the planning algorithm.
+        """
+
         fn = QtGui.QFileDialog.getOpenFileName(self._controller.central_widget,
                                                "Import file", os.getcwd(),
                                                "JSON files (*.json)")
@@ -212,6 +240,10 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
                                        "Waypoint incorrect", e.message)
 
     def _export(self):
+        """
+        Export the waypoints in the tables to a JSON file.
+        """
+
         try:
             waypoints, total = self._export_waypoints()
         except ValueError as e:
@@ -265,6 +297,13 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         sender.start()
 
     def _make_add_waypoint_packet(self, vehicle, index, waypoint):
+        """
+        Create a `XBee_Packet` object with the `waypoint_add` specification
+        and fill its fields with correct values.
+
+        This is a callback for the `Control_Panel_XBee_Sender`.
+        """
+
         packet = XBee_Packet()
         packet.set("specification", "waypoint_add")
         packet.set("latitude", waypoint[0])

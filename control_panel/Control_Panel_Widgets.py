@@ -35,42 +35,68 @@ class WaypointsTableWidget(QtGui.QTableWidget):
         for row in reversed(range(self.rowCount())):
             self.removeRow(row)
 
+    def _get_tab_index(self, next):
+        """
+        Determine the `QModelIndex` belonging to the next or previous item.
+
+        The waypoints table has a special tab order that follows the columns
+        without defaults first, and only then goes to columns with defaults.
+
+        If `next` is `True`, then we want to receive an index for the first
+        logical item after the current item, otherwise we want the index for
+        the one before it. If no such index can be found, an invalid model index
+        is returned.
+        """
+
+        currentIndex = self.currentIndex()
+        row = currentIndex.row()
+        col = currentIndex.column()
+
+        endRow = self.rowCount() - 1
+        endCol = self.columnCount() - 1
+        if self._column_defaults[col] is not None:
+            # Navigate down/up in columns with defaults, and otherwise jump to 
+            # the beginning/end of the next row or the table start/end
+            if next:
+                options = [(row+1, col), (0, col+1), (0, 0)]
+            else:
+                options = [(row-1, col), (endRow, col-1), (endRow, endCol)]
+        else:
+            # Navigate right/left in columns without defaults, but skip columns 
+            # with defaults, by going to the first/last column without defaults 
+            # of the next/previous row if one would go to such column with 
+            # defaults. If no such row exists anymore, go to the first/last 
+            # column with defaults on the first/last row.
+            lastCol = max(enumerate(self._column_defaults), key=lambda x: x[0] if x[1] is None else 0)[0]
+            if next:
+                options = [(row+1, 0), (0, col+1), (0, 0)]
+                if col != lastCol:
+                    options[0:0] = [(row, col+1)]
+            else:
+                options = [(row, col-1), (row-1, lastCol), (endRow, endCol)]
+
+        for newRow, newCol in options:
+            index = currentIndex.sibling(newRow, newCol)
+            if index.isValid():
+                return index
+
+        # Return an invalid model index if no valid next index is found.
+        return QtCore.QModelIndex()
+
+    def moveCursor(self, action, modifiers):
+        if action == QtGui.QAbstractItemView.MoveNext:
+            return self._get_tab_index(True)
+        if action == QtGui.QAbstractItemView.MovePrevious:
+            return self._get_tab_index(False)
+
+        return super(WaypointsTableWidget, self).moveCursor(action, modifiers)
+
     def focusNextPrevChild(self, next):
         if self.tabKeyNavigation():
-            # Create a special tab order that follows the column without 
-            # defaults first, and only then goes to columns with defaults.
-            currentIndex = self.currentIndex()
-            row = currentIndex.row()
-            col = currentIndex.column()
-
-            endRow = self.rowCount() - 1
-            endCol = self.columnCount() - 1
-            if self._column_defaults[col] is not None:
-                # Navigate down/up in columns with defaults, and otherwise jump 
-                # to the beginning/end of the next row or the table start/end
-                if next:
-                    options = [(row+1, col), (0, col+1), (0, 0)]
-                else:
-                    options = [(row-1, col), (endRow, col-1), (endRow, endCol)]
-            else:
-                # Navigate right/left in columns without defaults, but skip 
-                # columns with defaults, by going to the first/last column 
-                # without defaults of the next/previous row if one would go to 
-                # such column with defaults. If no such row exists anymore, go 
-                # to the first/last column with defaults on the first/last row.
-                lastCol = max(enumerate(self._column_defaults), key=lambda x: x[0] if x[1] is None else 0)[0]
-                if next:
-                    options = [(row+1, 0), (0, col+1), (0, 0)]
-                    if col != lastCol:
-                        options[0:0] = [(row, col+1)]
-                else:
-                    options = [(row, col-1), (row-1, lastCol), (endRow, endCol)]
-
-            for newRow, newCol in options:
-                index = currentIndex.sibling(newRow, newCol)
-                if index.isValid():
-                    self.setCurrentIndex(index)
-                    return True
+            index = self._get_tab_index(next)
+            if index.isValid():
+                self.setCurrentIndex(index)
+                return True
 
             return False
 
@@ -98,7 +124,8 @@ class WaypointsTableWidget(QtGui.QTableWidget):
         Add one row in front of the row at the context menu position.
         """
 
-        row = self.indexAt(position).row()
+        item = self.indexAt(position)
+        row = item.row() if item.isValid() else self.rowCount()
         self.insertRow(row)
         self.selectRow(row)
 
