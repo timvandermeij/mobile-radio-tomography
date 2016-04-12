@@ -622,7 +622,7 @@
                 "min": 0,
                 "default": 100
             },
-            "iteration_debug": {
+            "iteration_callback": {
                 "help": "Number of iterations to show a progress report every so often",
                 "type": "int",
                 "min": 1,

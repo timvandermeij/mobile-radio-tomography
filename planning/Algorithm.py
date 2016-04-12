@@ -20,19 +20,23 @@ class Algorithm(object):
         self.settings = arguments.get_settings("planning_algorithm")
         self.mu = self.settings.get("population_size")
         self.t_max = self.settings.get("iteration_limit")
-        self.t_debug = self.settings.get("iteration_debug")
+        self.t_callback = self.settings.get("iteration_callback")
+        self.iteration_callback = None
 
         # Make steps as long as necessary, and convert to numpy array for easy 
         # per-component application.
         self.steps = self.problem.format_steps(self.settings.get("step_size"))
 
+    def set_iteration_callback(self, callback):
+        if not hasattr(callback, "__call__"):
+            raise TypeError("Iteration callback is not callable")
+
+        self.iteration_callback = callback
+
     def evolve(self):
         """
         Perform the evolutionary algorithm and find solutions.
         """
-
-        print("Settings: Problem {}, Algo {}, mu={}, t_max={}".format(self.problem.__class__.__name__, self.__class__.__name__, self.mu, self.t_max))
-        print("Steps: {}".format(self.steps))
 
         # For our initial population of size mu, generate random vectors with 
         # values in a feasible interval using domain specification.
@@ -45,14 +49,15 @@ class Algorithm(object):
 
         # For t = 1, 2, ..., t_max
         for t in xrange(1, self.t_max+1):
-            if t % self.t_debug == 0:
+            if t % self.t_callback == 0 and self.iteration_callback is not None:
                 cur_time = time.time() - start_time
-                print("Iteration {} ({} sec, {} it/s)".format(t, cur_time, t/float(cur_time)))
-                scores = list(sorted((i for i in range(self.mu) if Feasible[i]), key=lambda i: Objectives[i]))
-                if scores:
-                    idx = scores[len(scores)/2]
-                    print("Current knee point objectives: {}".format(Objectives[idx]))
-                print("Infeasible count: {}".format(self.mu - sum(Feasible)))
+                self.iteration_callback(self, {
+                    "iteration": t,
+                    "cur_time": cur_time,
+                    "population": P,
+                    "feasible": Feasible,
+                    "objectives": Objectives
+                })
 
             # Select random index s of the mu points
             s = np.random.randint(self.mu)

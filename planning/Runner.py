@@ -13,7 +13,7 @@ class Planning_Runner(object):
     output of the algorithm.
     """
 
-    def __init__(self, arguments):
+    def __init__(self, arguments, iteration_callback=None):
         self.settings = arguments.get_settings("planning")
         algo = self.settings.get("algorithm_class")
 
@@ -26,6 +26,10 @@ class Planning_Runner(object):
             raise ValueError("Algorithm class '{}' does not exist".format(algo))
 
         self.algorithm = Algorithm.__dict__[algo](self.problem, arguments)
+
+        if iteration_callback is not None:
+            self.algorithm.set_iteration_callback(iteration_callback)
+
         self.done = False
 
     def start(self):

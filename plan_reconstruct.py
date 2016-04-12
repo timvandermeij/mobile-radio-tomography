@@ -48,19 +48,38 @@ def do_data(name, data):
     else:
         print(data)
 
+def iteration_callback(algorithm, data):
+    t = data["iteration"]
+    cur_time = data["cur_time"]
+    speed = t/float(cur_time)
+    print("Iteration {} ({} sec, {} it/s)".format(t, cur_time, speed))
+
+    Feasible = data["feasible"]
+    Objectives = data["objectives"]
+    scores = list(sorted((i for i in range(algorithm.mu) if Feasible[i]), key=lambda i: Objectives[i]))
+    if scores:
+        idx = scores[len(scores)/2]
+        print("Current knee point objectives: {}".format(Objectives[idx]))
+
+    print("Infeasible count: {}".format(algorithm.mu - sum(Feasible)))
+
 def main(argv):
     # Initialize, read parameters from input and set up problems
     stamp = int(time.time())
 
     arguments = Arguments("settings.json", argv)
 
-    runner = Planning_Runner(arguments)
+    runner = Planning_Runner(arguments, iteration_callback)
 
     arguments.check_help()
 
-    indices = runner.start()
     t_max = runner.get_iteration_limit()
     size = runner.get_population_size()
+
+    print("Settings: Algorithm {}, mu={}, t_max={}".format(runner.algorithm.get_name(), size, t_max))
+    print("Steps: {}".format(runner.algorithm.steps))
+
+    indices = runner.start()
 
     # Show feasible solutions in a sorted manner.
     if len(indices) == 0:
