@@ -2,18 +2,22 @@ import itertools
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
+import thread
 
 import Algorithm
 from Problem import Reconstruction_Plan_Continuous, Reconstruction_Plan_Discrete
+from ..core.Threadable import Threadable
 
-class Planning_Runner(object):
+class Planning_Runner(Threadable):
     """
     A supervisor class that handles running the evolutionary algorithm on the
     reconstruction planning problem and creates results and plots from the
     output of the algorithm.
     """
 
-    def __init__(self, arguments, iteration_callback=None):
+    def __init__(self, arguments, thread_manager, iteration_callback=None):
+        super(Planning_Runner, self).__init__("planning_runner", thread_manager)
+
         self.settings = arguments.get_settings("planning")
         algo = self.settings.get("algorithm_class")
 
@@ -32,6 +36,27 @@ class Planning_Runner(object):
 
         self.done = False
 
+    def activate(self):
+        """
+        Run the algorithm in its own thread.
+        """
+
+        super(Planning_Runner, self).activate()
+
+        thread.start_new_thread(self.start, ())
+
+    def deactivate(self):
+        """
+        Stop the algorithm if it is currently running.
+
+        This makes the iteration limit invalid, so any later runs must either
+        reinstantiate the entire runner or set the iteration limit again.
+        """
+
+        super(Planning_Runner, self).deactivate()
+
+        self.set_iteration_limit(0)
+
     def start(self):
         """
         Run the algorithm.
@@ -39,12 +64,29 @@ class Planning_Runner(object):
         Returns a list of feasible indices, sorted on the first objective.
         """
 
-        self.P, self.Objectives, self.Feasible = self.algorithm.evolve()
-        self.R = self.algorithm.sort_nondominated(self.Objectives)
+        self.done = False
+        try:
+            self.P, self.Objectives, self.Feasible = self.algorithm.evolve()
+            self.R = self.algorithm.sort_nondominated(self.Objectives)
+        except:
+            super(Planning_Runner, self).interrupt()
+            return []
+
         self.done = True
 
-        # Get the indices of the population list that are feasible, then sort 
-        # them according to the first objective value.
+        return self.get_indices()
+
+    def get_indices(self):
+        """
+        Get the indices of the population list that are feasible.
+        The resulting list is sorted according to the first objective value.
+
+        If the algorithm is not yet done, an empty list is returned.
+        """
+
+        if not self.done:
+            return []
+
         indices = [i for i in range(self.get_population_size()) if self.Feasible[i]]
         indices = sorted(indices, key=lambda i: self.Objectives[i][0])
 
@@ -115,25 +157,33 @@ class Planning_Runner(object):
 
         return positions, unsnappable
 
-    def make_pareto_plot(self):
+    def make_pareto_plot(self, axes=None):
         """
         Create a plot of the Pareto front of all the feasible solutions in 
         the sorted nondominated layers.
+
+        If `axes` is given, then the plot is drawn on those matplotlib axes
+        instead of the current plot figure.
 
         Does nothing if the algorithm is not yet finished.
         """
 
         if not self.done:
+            print("not done")
             return
 
-        plt.clf()
-        plt.title("Pareto front with {}, t={}".format(self.algorithm.get_name(), self.get_iteration_limit()))
-        plt.xlabel("Objective 1")
-        plt.ylabel("Objective 2")
+        if axes is None:
+            axes = plt.gca()
+
+        axes.cla()
+
+        axes.set_title("Pareto front with {}, t={}".format(self.algorithm.get_name(), self.get_iteration_limit()))
+        axes.set_xlabel("Objective 1")
+        axes.set_ylabel("Objective 2")
         for Rk in self.R:
             o1 = [self.Objectives[i][0] for i in Rk if self.Feasible[i]]
             o2 = [self.Objectives[i][1] for i in Rk if self.Feasible[i]]
-            plt.plot(o1, o2, marker='o')
+            axes.plot(o1, o2, marker='o')
 
     def get_iteration_limit(self):
         """

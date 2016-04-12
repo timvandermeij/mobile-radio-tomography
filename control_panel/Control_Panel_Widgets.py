@@ -394,59 +394,18 @@ class BooleanFormWidget(FormWidget):
         self._enabledButton.setChecked(value)
         self._disabledButton.setChecked(not value)
 
-class TextFormWidget(QtGui.QLineEdit, FormWidget):
-    def __init__(self, form, key, info, *a, **kw):
-        # Qt does not understand the concept of multiple inheritance, since it 
-        # is written in C++. Therefore, the QLineEdit must be the first class 
-        # we inherit from, otherwise setText (a slot method) does not function.
-        # However, we now need to call the FormWidget initializer explicitly, 
-        # since it sets up member variables and is not called by QLineEdit.
-        # See http://trevorius.com/scrapbook/python/pyqt-multiple-inheritance/ 
-        # for more details.
+class QLineEditValidated(QtGui.QLineEdit):
+    def __init__(self, *a, **kw):
         QtGui.QLineEdit.__init__(self, *a, **kw)
-        FormWidget.__init__(self, form, key, info, *a, **kw)
         self._background_color = ""
 
-    def contextMenuEvent(self, event):
-        menu = self.createStandardContextMenu()
-        menu.addSeparator()
-        for action in self._actions:
-            menu.addAction(action)
-
-        menu.setStyleSheet("background-color: base")
-        menu.exec_(event.globalPos())
-        menu.clear()
-
-    def setup_form(self):
-        self.reset_value()
-        self.editingFinished.connect(self._format)
-
     def setValidator(self, v):
-        super(TextFormWidget, self).setValidator(v)
+        super(QLineEditValidated, self).setValidator(v)
         validator = self.validator()
         if validator is not None:
             self.textChanged.connect(self._validate)
         else:
             self.textChanged.disconnect(self._validate)
-
-    def get_value(self):
-        text = self.text()
-        validator = self.validator()
-        if validator is not None:
-            state, pos = validator.validate(text, 0)
-            if state != QtGui.QValidator.Acceptable:
-                return self.info["value"]
-
-        return str(text)
-
-    def set_value(self, value):
-        self.setText(self.format_value(value))
-
-    def _format(self):
-        self.setText(self.format_value(self.text()))
-
-    def format_value(self, value):
-        return str(value) if value is not None else ""
 
     def set_background_color(self, color):
         self._background_color = color
@@ -479,6 +438,52 @@ class TextFormWidget(QtGui.QLineEdit, FormWidget):
 
         if newpos != pos:
             self.setCursorPosition(pos)
+
+class TextFormWidget(QLineEditValidated, FormWidget):
+    def __init__(self, form, key, info, *a, **kw):
+        # Qt does not understand the concept of multiple inheritance, since it 
+        # is written in C++. Therefore, the QLineEdit must be the first class 
+        # we inherit from, otherwise setText (a slot method) does not function.
+        # However, we now need to call the FormWidget initializer explicitly, 
+        # since it sets up member variables and is not called by QLineEdit.
+        # See http://trevorius.com/scrapbook/python/pyqt-multiple-inheritance/ 
+        # for more details.
+        QLineEditValidated.__init__(self, *a, **kw)
+        FormWidget.__init__(self, form, key, info, *a, **kw)
+        self._background_color = ""
+
+    def contextMenuEvent(self, event):
+        menu = self.createStandardContextMenu()
+        menu.addSeparator()
+        for action in self._actions:
+            menu.addAction(action)
+
+        menu.setStyleSheet("background-color: base")
+        menu.exec_(event.globalPos())
+        menu.clear()
+
+    def setup_form(self):
+        self.reset_value()
+        self.editingFinished.connect(self._format)
+
+    def get_value(self):
+        text = self.text()
+        validator = self.validator()
+        if validator is not None:
+            state, pos = validator.validate(text, 0)
+            if state != QtGui.QValidator.Acceptable:
+                return self.info["value"]
+
+        return str(text)
+
+    def set_value(self, value):
+        self.setText(self.format_value(value))
+
+    def _format(self):
+        self.setText(self.format_value(self.text()))
+
+    def format_value(self, value):
+        return str(value) if value is not None else ""
 
 class FileFormatValidator(QtGui.QRegExpValidator):
     def __init__(self, form_widget, *a, **kw):

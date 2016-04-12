@@ -1,8 +1,9 @@
 from PyQt4 import QtCore, QtGui
 
 class Control_Panel_View_Name(object):
+    LOADING = 0
     DEVICES = 1
-    LOADING = 2
+    PLANNING = 2
     RECONSTRUCTION = 3
     WAYPOINTS = 4
     SETTINGS = 5

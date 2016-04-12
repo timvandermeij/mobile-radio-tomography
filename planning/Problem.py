@@ -155,7 +155,8 @@ class Problem(object):
                     - point[self._bool_indices]
                 )
 
-            x_new[self._int_indices] = self._clip(x_new[self._int_indices])
+            if len(self._int_indices[0]) > 0:
+                x_new[self._int_indices] = self._clip(x_new[self._int_indices])
 
         return x_new
 

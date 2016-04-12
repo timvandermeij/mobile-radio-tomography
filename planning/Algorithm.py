@@ -48,7 +48,12 @@ class Algorithm(object):
         start_time = time.time()
 
         # For t = 1, 2, ..., t_max
-        for t in xrange(1, self.t_max+1):
+        # We use an infinite iterable and stop when the maximum iteration is 
+        # reached so that the maximum iteration can be altered while running.
+        for t in itertools.count(1):
+            if t > self.t_max:
+                break
+
             if t % self.t_callback == 0 and self.iteration_callback is not None:
                 cur_time = time.time() - start_time
                 self.iteration_callback(self, {

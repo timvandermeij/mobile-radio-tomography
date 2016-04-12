@@ -11,6 +11,7 @@ if displayless:
 import matplotlib.pyplot as plt
 
 from __init__ import __package__
+from core.Thread_Manager import Thread_Manager
 from planning.Runner import Planning_Runner
 from settings import Arguments
 
@@ -67,9 +68,10 @@ def main(argv):
     # Initialize, read parameters from input and set up problems
     stamp = int(time.time())
 
+    thread_manager = Thread_Manager()
     arguments = Arguments("settings.json", argv)
 
-    runner = Planning_Runner(arguments, iteration_callback)
+    runner = Planning_Runner(arguments, thread_manager, iteration_callback)
 
     arguments.check_help()
 
