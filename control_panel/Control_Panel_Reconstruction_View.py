@@ -298,7 +298,6 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._width, self._height = self._buffer.size
         self._figure = plt.figure(frameon=False, figsize=(self._width, self._height))
         self._axes = self._figure.add_axes([0, 0, 1, 1])
-        self._axes.axis("off")
         self._loop()
 
     def _loop(self):
@@ -334,6 +333,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
                 pixels = self._reconstructor.execute(self._weight_matrix.output(), self._rssi)
 
                 # Render the image with Matplotlib.
+                self._axes.axis("off")
                 self._axes.imshow(pixels.reshape((self._width, self._height)), cmap=self._cmap,
                                   origin="lower", interpolation=self._interpolation)
                 self._figure.canvas.draw()
@@ -344,5 +344,8 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
                                      size.height(), QtGui.QImage.Format_ARGB32)
                 scaled_image = image.scaled(self._viewer_width, self._viewer_height)
                 self._image_label.setPixmap(QtGui.QPixmap(scaled_image))
+
+                # Delete the Matplotlib image now that is it unused.
+                self._axes.cla()
 
         QtCore.QTimer.singleShot(self._pause_time, lambda: self._loop())
