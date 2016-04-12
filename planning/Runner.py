@@ -40,11 +40,34 @@ class Planning_Runner(Threadable):
             raise ValueError("Algorithm class '{}' does not exist".format(algo))
 
         self.algorithm = Algorithm.__dict__[algo](self.problem, self.arguments)
+        self.algorithm.set_iteration_callback(self._handle_algorithm_data)
 
-        if self._iteration_callback is not None:
-            self.algorithm.set_iteration_callback(self._iteration_callback)
-
+        # Whether the algorithm is done running.
         self.done = False
+
+        # Iteration from which we received the data from the iteration callback
+        self.current_iteration = 0
+
+        # Population of individuals
+        self.P = np.empty(0)
+
+        # Feasibility of individuals
+        self.Feasible = np.empty(0)
+
+        # Objective values of individuals
+        self.Objectives = np.empty(0)
+
+    def _handle_algorithm_data(self, algorithm, data):
+        # Pass through to the actual algorithm iteration callback, and track 
+        # the current variables in the runner as well.
+        if self._iteration_callback is not None:
+            self.current_iteration = data["iteration"]
+            self.P = np.copy(data["population"])
+            self.Feasible = np.copy(data["feasible"])
+            self.Objectives = np.copy(data["objectives"])
+            self.R = self.algorithm.sort_nondominated(self.Objectives)
+
+            self._iteration_callback(algorithm, data)
 
     def activate(self):
         """
@@ -53,6 +76,7 @@ class Planning_Runner(Threadable):
 
         super(Planning_Runner, self).activate()
 
+        self.reset()
         thread.start_new_thread(self.start, ())
 
     def deactivate(self):
@@ -74,9 +98,12 @@ class Planning_Runner(Threadable):
         Returns a list of feasible indices, sorted on the first objective.
         """
 
-        self.reset()
         try:
-            self.P, self.Objectives, self.Feasible = self.algorithm.evolve()
+            P, Objectives, Feasible = self.algorithm.evolve()
+            self.current_iteration = self.get_iteration_current()
+            self.P = np.copy(P)
+            self.Objectives = np.copy(Objectives)
+            self.Feasible = np.copy(Feasible)
             self.R = self.algorithm.sort_nondominated(self.Objectives)
         except:
             super(Planning_Runner, self).interrupt()
@@ -91,10 +118,11 @@ class Planning_Runner(Threadable):
         Get the indices of the population list that are feasible.
         The resulting list is sorted according to the first objective value.
 
-        If the algorithm is not yet done, an empty list is returned.
+        If the algorithm does not yet have (intermediate) results, an empty list
+        is returned.
         """
 
-        if not self.done:
+        if self.Feasible.size == 0:
             return []
 
         indices = [i for i in range(self.get_population_size()) if self.Feasible[i]]
@@ -107,10 +135,11 @@ class Planning_Runner(Threadable):
         Get the objective values for an individual with index `i` from a run of
         the algorithm.
 
-        If the algorithm is not yet done, `None` is returned.
+        If the algorithm does not yet have (intermediate) results, `None` is
+        returned.
         """
 
-        if not self.done:
+        if self.Objectives.size == 0:
             return None
 
         return self.Objectives[i]
@@ -125,12 +154,13 @@ class Planning_Runner(Threadable):
         unique identifier for the layer the individual is in, and `count` is the
         number of individuals of that layer.
 
-        If the algorithm is not yet done or if the individual is not feasible,
-        or if a `layer` is given and the individual is not in that layer, then
-        this method returns an empty numpy array and zero instead.
+        If the algorithm does not yet have (intermediate) results, if the
+        individual is not feasible, or if a `layer` is given and the individual
+        is not in that layer, then this method returns an empty numpy array and
+        zero instead.
         """
 
-        if not self.done or not self.Feasible[i]:
+        if self.Feasible.size == 0 or not self.Feasible[i]:
             return np.empty(0), 0
         if layer is not None and i not in self.R[layer]:
             return np.empty(0), 0
@@ -175,11 +205,11 @@ class Planning_Runner(Threadable):
         If `axes` is given, then the plot is drawn on those matplotlib axes
         instead of the current plot figure.
 
-        Does nothing if the algorithm is not yet finished.
+        If the algorithm does not yet have (intermediate) results, then this
+        method does nothing.
         """
 
-        if not self.done:
-            print("not done")
+        if self.Feasible.size == 0:
             return
 
         if axes is None:
@@ -187,7 +217,7 @@ class Planning_Runner(Threadable):
 
         axes.cla()
 
-        axes.set_title("Pareto front with {}, t={}".format(self.algorithm.get_name(), self.get_iteration_current()))
+        axes.set_title("Pareto front with {}, t={}".format(self.algorithm.get_name(), self.current_iteration))
         axes.set_xlabel("Objective 1")
         axes.set_ylabel("Objective 2")
         for Rk in self.R:
@@ -198,6 +228,9 @@ class Planning_Runner(Threadable):
     def get_iteration_current(self):
         """
         Get the current iteration number that the algorithm is at.
+
+        This is different from `Planning_Runner.current_iteration` which is the
+        iteration number from which cached callback data is from.
         """
 
         return self.algorithm.t_current

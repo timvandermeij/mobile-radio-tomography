@@ -39,7 +39,7 @@
                 "help": "Frequency in seconds to handle planning algorithm updates. This depends on the `iteration_callback` setting and the speed of the algorithm run.",
                 "type": "float",
                 "min": 0.0,
-                "default": 1.0
+                "default": 0.2
             },
             "planning_front_dimensions": {
                 "help": "Size in pixels for the width and height, respectively, of the Pareto front viewer",

@@ -48,6 +48,11 @@ class Control_Panel_Planning_View(Control_Panel_View):
         actions.addAction(self._start_action)
         actions.addAction(self._stop_action)
 
+        # Create a progress bar.
+        self._progress = QtGui.QProgressBar()
+        self._progress.setValue(0)
+        self._progress.reset()
+
         # Create the figure canvas for the main Pareto front image.
         front_width, front_height = self._settings.get("planning_front_dimensions")
 
@@ -57,10 +62,11 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._front_canvas = FigureCanvas(self._front_figure)
 
         # Create the layout and add the widgets.
-        hbox = QtGui.QHBoxLayout(self._controller.central_widget)
-        hbox.addStretch(1)
-        hbox.addWidget(self._front_canvas)
-        hbox.addStretch(1)
+        vbox = QtGui.QVBoxLayout(self._controller.central_widget)
+        vbox.addWidget(self._progress)
+        vbox.addStretch(1)
+        vbox.addWidget(self._front_canvas)
+        vbox.addStretch(1)
 
     def _start(self):
         for component, form in self._forms.iteritems():
@@ -76,6 +82,9 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
         self._runner.activate()
 
+        self._progress.setValue(0)
+        self._progress.setRange(0, self._runner.get_iteration_limit())
+
         self._timer = QtCore.QTimer()
         self._timer.setInterval(self._update_interval * 1000)
         self._timer.setSingleShot(False)
@@ -89,12 +98,16 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._stop_action.setEnabled(False)
 
     def _check(self):
+        self._progress.setValue(self._runner.get_iteration_current())
         if self._runner.done:
             self._stop()
             self._timer.stop()
+
+        if self._runner.done or self._updated:
             self._runner.make_pareto_plot(self._front_axes)
             self._front_canvas.draw()
 
+        self._updated = False
+
     def iteration_callback(self, algorithm, data):
-        self._current_data = data
         self._updated = True
