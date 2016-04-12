@@ -163,6 +163,13 @@ class Algorithm(object):
     def sort_contribution(self, Rk):
         return Rk
 
+    def get_name(self):
+        """
+        Get the displayable name of the algorithm.
+        """
+
+        raise NotImplementedError("Subclasses must implement `get_name`")
+
 class NSGA(Algorithm):
     def crowding_distance(self,Rk):
         """
@@ -194,6 +201,9 @@ class NSGA(Algorithm):
     def sort_contribution(self, Rk):
         return self.crowding_distance(Rk)
 
+    def get_name(self):
+        return "NSGA"
+
 class SMS_EMOA(Algorithm):
     def hypervolume_contribution(self, Rk):
         """
@@ -219,3 +229,6 @@ class SMS_EMOA(Algorithm):
 
     def sort_contribution(self, Rk):
         return self.hypervolume_contribution(Rk)
+
+    def get_name(self):
+        return "SMS-EMOA"
