@@ -205,8 +205,6 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         toolbar.addWidget(self._input_boxes["size_y"])
         toolbar.addAction(start_action)
 
-        self._controller.window._toolbar = toolbar
-
         # Create the label for the image.
         self._viewer_width, self._viewer_height = self._settings.get("reconstruction_viewer_dimensions")
         self._image_label = QtGui.QLabel()

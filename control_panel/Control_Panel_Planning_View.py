@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 from PyQt4 import QtCore, QtGui
 from Control_Panel_View import Control_Panel_View
-from Control_Panel_Widgets import QLineEditValidated
+from Control_Panel_Widgets import SettingsWidget
 from ..planning.Runner import Planning_Runner
 
 class Control_Panel_Planning_View(Control_Panel_View):
@@ -18,53 +18,42 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
         self._update_interval = self._settings.get("planning_update_interval")
 
-        # Create the toolbar.
-        toolbar = self._controller.window.addToolBar("Planning")
+        # Create the settings toolbar.
+        toolbar = self._controller.window.addToolBar("Settings")
         toolbar.setMovable(False)
         toolbar.setStyleSheet("QToolBar {spacing: 8px;}")
 
-        iteration_label = QtGui.QLabel("Number of iterations:")
-        iteration_validator = QtGui.QIntValidator()
-        iteration_validator.setBottom(1)
-        iteration_box = QLineEditValidated()
-        iteration_box.setText(str(self._runner.get_iteration_limit()))
-        iteration_box.setValidator(iteration_validator)
-        iteration_box.textEdited.connect(
-            lambda: self._update_start_state(iteration_box)
-        )
+        self._forms = {}
+        for component in ("planning", "planning_algorithm", "planning_problem"):
+            self._forms[component] = SettingsWidget(self._controller.arguments,
+                                                    component, toolbar)
+            toolbar.addWidget(self._forms[component])
 
-        stretch = QtGui.QWidget()
-        stretch.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
-
+        # Create the actions toolbar
         self._start_action = QtGui.QAction(QtGui.QIcon("assets/start.png"),
                                            "Start",
                                            self._controller.central_widget)
-        self._start_action.triggered.connect(
-            lambda: self._start(int(iteration_box.text()))
-        )
+        self._start_action.triggered.connect(lambda: self._start())
 
         self._stop_action = QtGui.QAction(QtGui.QIcon("assets/stop.png"),
-                                           "Start",
+                                           "Stop",
                                            self._controller.central_widget)
         self._stop_action.setEnabled(False)
-        self._stop_action.triggered.connect(
-            lambda: self._stop()
-        )
+        self._stop_action.triggered.connect(lambda: self._stop())
 
-        toolbar.addWidget(iteration_label)
-        toolbar.addWidget(iteration_box)
-        toolbar.addWidget(stretch)
-        toolbar.addAction(self._start_action)
-        toolbar.addAction(self._stop_action)
-
-        self._controller.window._toolbar = toolbar    
+        actions = self._controller.window.addToolBar("Planning")
+        actions.setMovable(False)
+        actions.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
+        actions.setStyleSheet("QToolBar {spacing: 8px;}")
+        actions.addAction(self._start_action)
+        actions.addAction(self._stop_action)
 
         # Create the figure canvas for the main Pareto front image.
         front_width, front_height = self._settings.get("planning_front_dimensions")
 
         self._front_figure = plt.figure(frameon=False,
                                         figsize=(front_width, front_height))
-        self._front_axes = self._front_figure.add_axes([0, 0, 1, 1])
+        self._front_axes = self._front_figure.add_subplot(111)
         self._front_canvas = FigureCanvas(self._front_figure)
 
         # Create the layout and add the widgets.
@@ -73,16 +62,18 @@ class Control_Panel_Planning_View(Control_Panel_View):
         hbox.addWidget(self._front_canvas)
         hbox.addStretch(1)
 
-    def _update_start_state(self, iteration_box):
-        self._start_action.setEnabled(iteration_box.hasAcceptableInput())
+    def _start(self):
+        for component, form in self._forms.iteritems():
+            settings = self._controller.arguments.get_settings(component)
+            for key, value in form.get_values().iteritems():
+                try:
+                    settings.set(key, value)
+                except ValueError:
+                    return
 
-    def _start(self, t_max):
         self._start_action.setEnabled(False)
         self._stop_action.setEnabled(True)
 
-        self._controller.app.processEvents()
-
-        self._runner.set_iteration_limit(t_max)
         self._runner.activate()
 
         self._timer = QtCore.QTimer()
@@ -93,7 +84,6 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
     def _stop(self):
         self._runner.deactivate()
-        self._timer.stop()
 
         self._start_action.setEnabled(True)
         self._stop_action.setEnabled(False)
@@ -101,6 +91,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
     def _check(self):
         if self._runner.done:
             self._stop()
+            self._timer.stop()
             self._runner.make_pareto_plot(self._front_axes)
             self._front_canvas.draw()
 

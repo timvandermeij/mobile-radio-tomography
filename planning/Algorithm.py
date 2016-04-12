@@ -19,6 +19,7 @@ class Algorithm(object):
         self.problem = problem
         self.settings = arguments.get_settings("planning_algorithm")
         self.mu = self.settings.get("population_size")
+        self.t_current = 0
         self.t_max = self.settings.get("iteration_limit")
         self.t_callback = self.settings.get("iteration_callback")
         self.iteration_callback = None
@@ -47,17 +48,16 @@ class Algorithm(object):
 
         start_time = time.time()
 
-        # For t = 1, 2, ..., t_max
+        # For t_current = 1, 2, ..., t_max (updated at the end of the loop).
         # We use an infinite iterable and stop when the maximum iteration is 
         # reached so that the maximum iteration can be altered while running.
-        for t in itertools.count(1):
-            if t > self.t_max:
-                break
+        t_iter = itertools.count(self.t_current)
 
-            if t % self.t_callback == 0 and self.iteration_callback is not None:
+        while self.t_current < self.t_max:
+            if self.t_current % self.t_callback == 0 and self.iteration_callback is not None:
                 cur_time = time.time() - start_time
                 self.iteration_callback(self, {
-                    "iteration": t,
+                    "iteration": self.t_current,
                     "cur_time": cur_time,
                     "population": P,
                     "feasible": Feasible,
@@ -107,6 +107,8 @@ class Algorithm(object):
             del P[idx]
             del Feasible[idx]
             del Objectives[idx]
+
+            self.t_current = t_iter.next()
 
         return P, Objectives, Feasible
 

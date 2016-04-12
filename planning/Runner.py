@@ -18,21 +18,31 @@ class Planning_Runner(Threadable):
     def __init__(self, arguments, thread_manager, iteration_callback=None):
         super(Planning_Runner, self).__init__("planning_runner", thread_manager)
 
-        self.settings = arguments.get_settings("planning")
+        self.arguments = arguments
+        self.settings = self.arguments.get_settings("planning")
+        self._iteration_callback = iteration_callback
+
+        self.reset()
+
+    def reset(self):
+        """
+        Reset the algorithm and problem state.
+        """
+
         algo = self.settings.get("algorithm_class")
 
         if self.settings.get("discrete"):
-            self.problem = Reconstruction_Plan_Discrete(arguments)
+            self.problem = Reconstruction_Plan_Discrete(self.arguments)
         else:
-            self.problem = Reconstruction_Plan_Continuous(arguments)
+            self.problem = Reconstruction_Plan_Continuous(self.arguments)
 
         if algo not in Algorithm.__dict__:
             raise ValueError("Algorithm class '{}' does not exist".format(algo))
 
-        self.algorithm = Algorithm.__dict__[algo](self.problem, arguments)
+        self.algorithm = Algorithm.__dict__[algo](self.problem, self.arguments)
 
-        if iteration_callback is not None:
-            self.algorithm.set_iteration_callback(iteration_callback)
+        if self._iteration_callback is not None:
+            self.algorithm.set_iteration_callback(self._iteration_callback)
 
         self.done = False
 
@@ -64,7 +74,7 @@ class Planning_Runner(Threadable):
         Returns a list of feasible indices, sorted on the first objective.
         """
 
-        self.done = False
+        self.reset()
         try:
             self.P, self.Objectives, self.Feasible = self.algorithm.evolve()
             self.R = self.algorithm.sort_nondominated(self.Objectives)
@@ -177,13 +187,20 @@ class Planning_Runner(Threadable):
 
         axes.cla()
 
-        axes.set_title("Pareto front with {}, t={}".format(self.algorithm.get_name(), self.get_iteration_limit()))
+        axes.set_title("Pareto front with {}, t={}".format(self.algorithm.get_name(), self.get_iteration_current()))
         axes.set_xlabel("Objective 1")
         axes.set_ylabel("Objective 2")
         for Rk in self.R:
             o1 = [self.Objectives[i][0] for i in Rk if self.Feasible[i]]
             o2 = [self.Objectives[i][1] for i in Rk if self.Feasible[i]]
             axes.plot(o1, o2, marker='o')
+
+    def get_iteration_current(self):
+        """
+        Get the current iteration number that the algorithm is at.
+        """
+
+        return self.algorithm.t_current
 
     def get_iteration_limit(self):
         """

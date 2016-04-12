@@ -615,6 +615,7 @@
         "settings": {
             "algorithm_class": {
                 "help": "The evolutionary algorithm to use for the planning problem. It can be given with dashes instead of underscores and with lowercase letters.",
+                "short": "Algorithm",
                 "type": "class",
                 "module": "planning.Algorithm",
                 "replace": ["abcdefghijklmnopqrstuvwxyz-", "ABCDEFGHIJKLMNOPQRSTUVWXYZ_"],
@@ -622,6 +623,7 @@
             },
             "discrete": {
                 "help": "Whether to use discrete grid cells instead of allowing measurements to happen anywhere",
+                "short": "Discrete",
                 "type": "bool",
                 "default": false
             }
@@ -632,24 +634,28 @@
         "settings": {
             "population_size": {
                 "help": "Number of individuals to use during optimization. Afterward, at most this number of nondominated solutions is presented.",
+                "short": "Population",
                 "type": "int",
                 "min": 1,
                 "default": 15
             },
             "iteration_limit": {
                 "help": "Number of iterations to run optimization for",
+                "short": "Iterations",
                 "type": "int",
                 "min": 0,
                 "default": 100
             },
             "iteration_callback": {
                 "help": "Number of iterations to show a progress report every so often",
+                "short": "Update interval",
                 "type": "int",
                 "min": 1,
                 "default": 100
             },
             "step_size": {
                 "help": "Step sizes for the problem variables. It can be given in various lengths that are extended to the correct size.",
+                "short": "Step sizes",
                 "type": "list",
                 "subtype": "float",
                 "min": 0.0,
@@ -661,13 +667,15 @@
         "name": "Reconstruction trajectory planning problem",
         "settings": {
             "number_of_measurements": {
-                "help": "Maximum number of measurements to perform", 
+                "help": "Maximum number of measurements to perform",
+                "short": "Measurements",
                 "type": "int",
                 "min": 1,
                 "default": 20
             },
             "network_size": {
                 "help": "Dimensions of the total space wherein the network lies, in number of grid cells",
+                "short": "Network size",
                 "type": "tuple",
                 "length": 2,
                 "subtype": "int",
@@ -676,6 +684,7 @@
             },
             "network_padding": {
                 "help": "Number of full cells for each dimension and on every side where the vehicles are allowed to drive around the network",
+                "short": "Padding",
                 "type": "tuple",
                 "length": 2,
                 "subtype": "int",
@@ -684,6 +693,7 @@
             },
             "unsnappable_rate": {
                 "help": "Ratio of the number of measurements that are allowed to be useless in the reconstruction problem and thus are discarded",
+                "short": "Unsnappable rate",
                 "type": "float",
                 "min": 0.0,
                 "max": 1.0,

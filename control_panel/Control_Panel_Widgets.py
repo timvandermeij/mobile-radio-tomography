@@ -204,7 +204,7 @@ class QLineEditToolButton(QtGui.QToolButton):
 class SettingsWidget(QtGui.QWidget):
     parentClicked = QtCore.pyqtSignal(str, name='parentClicked')
 
-    def __init__(self, arguments, component, *a, **kw):
+    def __init__(self, arguments, component, toolbar=None, *a, **kw):
         super(SettingsWidget, self).__init__(*a, **kw)
         self._type_names = {
             "int": "Integer",
@@ -235,16 +235,49 @@ class SettingsWidget(QtGui.QWidget):
         self._widgets = {}
         self._value_widgets = {}
 
-        layout = QtGui.QVBoxLayout()
+        if toolbar is None:
+            self._layout = QtGui.QVBoxLayout()
 
+            self._add_title_label()
+            self._add_parent_button()
+        else:
+            self._layout = QtGui.QHBoxLayout()
+
+        first = True
+        for key, info in self._settings.get_info():
+            if first:
+                first = False
+            elif toolbar is None:
+                line = QtGui.QFrame()
+                line.setFrameShape(QtGui.QFrame.HLine)
+                line.setFrameShadow(QtGui.QFrame.Sunken)
+                self._layout.addWidget(line)
+
+            valueWidget = self.make_value_widget(key, info, toolbar is not None)
+
+            if toolbar is None:
+                self._widgets[key] = self._add_group_box(key, info, valueWidget)
+            else:
+                labelWidget = QtGui.QLabel("{}:".format(info["short"] if "short" in info else key))
+                labelWidget.setToolTip(self._arguments.get_help(key, info))
+                self._layout.addWidget(labelWidget)
+                self._layout.addWidget(valueWidget)
+                self._widgets[key] = valueWidget
+
+            self._value_widgets[key] = valueWidget
+
+        self.setLayout(self._layout)
+
+    def _add_title_label(self):
         titleLabel = QtGui.QLabel("{} ({})".format(self._settings.name, self._component))
         titleLabel.setFrameStyle(QtGui.QFrame.Panel | QtGui.QFrame.Sunken)
         titleLabel.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
         titleLabel.setStyleSheet("QLabel { font-size: 24px; background: white }")
         titleLabel.setWordWrap(True)
 
-        layout.addWidget(titleLabel)
+        self._layout.addWidget(titleLabel)
 
+    def _add_parent_button(self):
         if self._settings.parent is not None:
             parentButton = QtGui.QCommandLinkButton(self._settings.parent.name, "Go to parent ({})".format(self._settings.parent.component_name))
             policy = parentButton.sizePolicy()
@@ -252,49 +285,35 @@ class SettingsWidget(QtGui.QWidget):
             parentButton.setSizePolicy(policy)
             parentButton.clicked.connect(self._trigger_parent_clicked)
 
-            layout.addWidget(parentButton)
+            self._layout.addWidget(parentButton)
 
-        first = True
-        for key, info in self._settings.get_info():
-            if first:
-                first = False
-            else:
-                line = QtGui.QFrame()
-                line.setFrameShape(QtGui.QFrame.HLine)
-                line.setFrameShadow(QtGui.QFrame.Sunken)
-                layout.addWidget(line)
+    def _add_group_box(self, key, info, valueWidget):
+        formLayout = QtGui.QFormLayout()
+        formLayout.setRowWrapPolicy(QtGui.QFormLayout.WrapLongRows)
 
-            formLayout = QtGui.QFormLayout()
-            formLayout.setRowWrapPolicy(QtGui.QFormLayout.WrapLongRows)
+        typeLabel = QtGui.QLabel(self.format_type(info))
+        formLayout.addRow("Type:", typeLabel)
 
-            typeLabel = QtGui.QLabel(self.format_type(info))
-            formLayout.addRow("Type:", typeLabel)
+        descriptionLabel = QtGui.QLabel("Description:")
+        descriptionLabel.setAlignment(QtCore.Qt.AlignTop)
+        description = QtGui.QLabel(self._arguments.get_help(key, info))
+        description.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
+        description.setWordWrap(True)
+        formLayout.addRow(descriptionLabel, description)
 
-            descriptionLabel = QtGui.QLabel("Description:")
-            descriptionLabel.setAlignment(QtCore.Qt.AlignTop)
-            description = QtGui.QLabel(self._arguments.get_help(key, info))
-            description.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
-            description.setWordWrap(True)
-            formLayout.addRow(descriptionLabel, description)
+        valueLabel = QtGui.QLabel("Value:")
+        formLayout.addRow(valueLabel, valueWidget)
 
-            valueWidget = self.make_value_widget(key, info)
+        groupBox = QtGui.QGroupBox(key)
 
-            valueLabel = QtGui.QLabel("Value:")
-            formLayout.addRow(valueLabel, valueWidget)
+        groupBox.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
+        for action in valueWidget.get_actions():
+            groupBox.addAction(action)
 
-            groupBox = QtGui.QGroupBox(key)
+        groupBox.setLayout(formLayout)
+        self._layout.addWidget(groupBox)
 
-            groupBox.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
-            for action in valueWidget.get_actions():
-                groupBox.addAction(action)
-
-            groupBox.setLayout(formLayout)
-            layout.addWidget(groupBox)
-
-            self._value_widgets[key] = valueWidget
-            self._widgets[key] = groupBox
-
-        self.setLayout(layout)
+        return groupBox
 
     def get_settings(self):
         return self._settings
@@ -308,14 +327,14 @@ class SettingsWidget(QtGui.QWidget):
     def format_type(self, info):
         return self._type_names[info["type"]]
 
-    def make_value_widget(self, key, info):
+    def make_value_widget(self, key, info, horizontal=False):
         choices = self._arguments.get_choices(info)
         if choices is not None:
-            widget = ChoicesFormWidget(self, key, info)
+            widget = ChoicesFormWidget(self, key, info, horizontal)
             widget.add_choices(choices)
         else:
             widget_type = self._type_widgets[info["type"]]
-            widget = widget_type(self, key, info)
+            widget = widget_type(self, key, info, horizontal)
 
         return widget
 
@@ -331,11 +350,12 @@ class SettingsWidget(QtGui.QWidget):
         self.parentClicked.emit(self._settings.parent.component_name)
 
 class FormWidget(QtGui.QWidget):
-    def __init__(self, form, key, info, *a, **kw):
+    def __init__(self, form, key, info, horizontal=False, *a, **kw):
         super(FormWidget, self).__init__(*a, **kw)
         self.form = form
         self.key = key
         self.info = info
+        self.horizontal = horizontal
 
         reset_action = QtGui.QAction("Reset to current value", self)
         reset_action.triggered.connect(self.reset_value)
@@ -371,20 +391,23 @@ class FormWidget(QtGui.QWidget):
 
 class BooleanFormWidget(FormWidget):
     def setup_form(self):
-        self._enabledButton = QtGui.QRadioButton("Enabled")
-        self._disabledButton = QtGui.QRadioButton("Disabled")
+        if self.horizontal:
+            self._enabledButton = QtGui.QCheckBox("Enabled")
+        else:
+            self._enabledButton = QtGui.QRadioButton("Enabled")
+            self._disabledButton = QtGui.QRadioButton("Disabled")
 
-        self.reset_value()
-
-        buttonGroup = QtGui.QButtonGroup()
-        buttonGroup.addButton(self._enabledButton)
-        buttonGroup.addButton(self._disabledButton)
+            buttonGroup = QtGui.QButtonGroup()
+            buttonGroup.addButton(self._enabledButton)
+            buttonGroup.addButton(self._disabledButton)
 
         buttonLayout = QtGui.QVBoxLayout()
         buttonLayout.setContentsMargins(0, 0, 0, 0)
         buttonLayout.addWidget(self._enabledButton)
-        buttonLayout.addWidget(self._disabledButton)
+        if not self.horizontal:
+            buttonLayout.addWidget(self._disabledButton)
 
+        self.reset_value()
         self.setLayout(buttonLayout)
 
     def get_value(self):
@@ -392,7 +415,8 @@ class BooleanFormWidget(FormWidget):
 
     def set_value(self, value):
         self._enabledButton.setChecked(value)
-        self._disabledButton.setChecked(not value)
+        if not self.horizontal:
+            self._disabledButton.setChecked(not value)
 
 class QLineEditValidated(QtGui.QLineEdit):
     def __init__(self, *a, **kw):
@@ -440,7 +464,7 @@ class QLineEditValidated(QtGui.QLineEdit):
             self.setCursorPosition(pos)
 
 class TextFormWidget(QLineEditValidated, FormWidget):
-    def __init__(self, form, key, info, *a, **kw):
+    def __init__(self, form, key, info, horizontal=False, *a, **kw):
         # Qt does not understand the concept of multiple inheritance, since it 
         # is written in C++. Therefore, the QLineEdit must be the first class 
         # we inherit from, otherwise setText (a slot method) does not function.
@@ -449,7 +473,7 @@ class TextFormWidget(QLineEditValidated, FormWidget):
         # See http://trevorius.com/scrapbook/python/pyqt-multiple-inheritance/ 
         # for more details.
         QLineEditValidated.__init__(self, *a, **kw)
-        FormWidget.__init__(self, form, key, info, *a, **kw)
+        FormWidget.__init__(self, form, key, info, horizontal, *a, **kw)
         self._background_color = ""
 
     def contextMenuEvent(self, event):
@@ -708,7 +732,7 @@ class FloatFormWidget(NumericSliderFormWidget):
 
 class ListFormWidget(FormWidget):
     def setup_form(self):
-        if "length" in self.info:
+        if "length" in self.info or self.horizontal:
             self._layout = QtGui.QHBoxLayout()
         else:
             self._layout = QtGui.QVBoxLayout()
@@ -762,7 +786,7 @@ class ListFormWidget(FormWidget):
 
         sub_info["value"] = sub_value
         sub_info["default"] = sub_default
-        sub_widget = self.form.make_value_widget("{}-{}".format(self.key, position), sub_info)
+        sub_widget = self.form.make_value_widget("{}-{}".format(self.key, position), sub_info, horizontal=True)
 
         self._sub_widgets.append(sub_widget)
 
@@ -827,7 +851,7 @@ class DictFormWidget(FormWidget):
             key_text = "{} ({}):".format(key, self.form.format_type(sub_info))
             keyLabel = QtGui.QLabel(key_text)
 
-            subWidget = self.form.make_value_widget("{}-{}".format(self.key, key), sub_info)
+            subWidget = self.form.make_value_widget("{}-{}".format(self.key, key), sub_info, horizontal=True)
             formLayout.addRow(keyLabel, subWidget)
 
             self._sub_widgets[key] = subWidget
@@ -842,9 +866,9 @@ class DictFormWidget(FormWidget):
             subWidget.set_value(value[key])
 
 class ChoicesFormWidget(QtGui.QComboBox, FormWidget):
-    def __init__(self, form, key, info, *a, **kw):
+    def __init__(self, form, key, info, horizontal=False, *a, **kw):
         QtGui.QLineEdit.__init__(self, *a, **kw)
-        FormWidget.__init__(self, form, key, info, *a, **kw)
+        FormWidget.__init__(self, form, key, info, horizontal, *a, **kw)
         self._types = {
             "int": int,
             "string": str,

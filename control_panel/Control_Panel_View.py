@@ -43,10 +43,10 @@ class Control_Panel_View(object):
         if menu_bar is not None:
             menu_bar.hide()
 
-        toolbar = self._controller.window._toolbar
-        if toolbar is not None:
+        for toolbar in self._controller.window._toolbars:
             self._controller.window.removeToolBar(toolbar)
-            self._controller.window._toolbar = None
+
+        self._controller.window._toolbars = []
 
         if layout is not None:
             for index in reversed(range(layout.count())):
