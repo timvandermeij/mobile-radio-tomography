@@ -2,26 +2,19 @@ import json
 from StringIO import StringIO
 from mock import Mock, mock_open, patch
 from ..core.Thread_Manager import Thread_Manager
-from ..environment.Environment import Environment
-from ..settings import Arguments, Settings
+from ..settings import Settings
 from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 from ..zigbee.XBee_Packet import XBee_Packet
 from ..zigbee.XBee_Settings_Receiver import XBee_Settings_Receiver
-from core_thread_manager import ThreadableTestCase
-from core_usb_manager import USBManagerTestCase
-from settings import SettingsTestCase
+from environment import EnvironmentTestCase
 
-class TestXBeeSettingsReceiver(ThreadableTestCase, USBManagerTestCase, SettingsTestCase):
+class TestXBeeSettingsReceiver(EnvironmentTestCase):
     def setUp(self):
+        self.register_arguments([], use_infrared_sensor=False)
+
         super(TestXBeeSettingsReceiver, self).setUp()
 
-        self.arguments = Arguments("settings.json", [
-            "--xbee-type", "simulator", "--no-infrared-sensor"
-        ])
-        self.environment = Environment.setup(self.arguments,
-                                             usb_manager=self.usb_manager)
         self.xbee = self.environment.get_xbee_sensor()
-
         self.settings_receiver = self.environment._settings_receiver
 
     def test_setup(self):

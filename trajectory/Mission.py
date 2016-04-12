@@ -73,6 +73,9 @@ class Mission(object):
         # Distance in meters above which we are uninterested in objects
         self.farness = self.settings.get("farness")
 
+        # Whether to synchronize vehicles at waypoints
+        self._xbee_synchronization = self.settings.get("xbee_synchronization")
+
         # Create a memory map for the vehicle to track where it has seen 
         # objects. This can later be used to find the target object or to fly 
         # around obstacles without colliding.
@@ -280,6 +283,7 @@ class Mission_Auto(Mission):
         # first waypoint of our mission. For non-Rover vehicles, we add 
         # a takeoff command to the list that we need not display.
         self._first_waypoint = 1
+        self._required_waypoint_sensors = []
 
     def arm_and_takeoff(self):
         self.add_commands()
@@ -295,12 +299,44 @@ class Mission_Auto(Mission):
         raise NotImplementedError("Must be implemented in child class")
 
     def add_takeoff(self):
-        # Add takeoff command. This is ignored if the vehicle is already in the 
-        # air, or if the vehicle is a ground vehicle.
+        """
+        Add takeoff command. The command is ignored if the vehicle is already
+        in the air, or if the vehicle is a ground vehicle. In this case, the
+        command may even be not added at all, and the altitude is set to zero.
+        """
+
         has_takeoff = self.vehicle.add_takeoff(self.altitude)
         if not has_takeoff:
             self.altitude = 0.0
             self._first_waypoint = 0
+
+    def add_waypoint(self, point, required_sensors=None):
+        """
+        Add a waypoint location object `point` to the vehicle's mission command
+        waypoints.
+
+        If XBee synchronization is enabled, also adds a wait command afterward.
+        The option `required_sensors` list determines which sensors ID to wait
+        for in the measurement validation.
+        """
+
+        # Handle local locations, points without a specific altitude and 
+        # non-spherical geometries.
+        if isinstance(point, LocationLocal):
+            down = point.down if point.down != 0.0 else -self.altitude
+            point = LocationLocal(point.north, point.east, down)
+        else:
+            alt = point.alt if point.alt != 0.0 else self.altitude
+            if isinstance(self.geometry, Geometry_Spherical):
+                point = LocationGlobalRelative(point.lat, point.lon, alt)
+            else:
+                point = LocationLocal(point.lat, point.lon, -alt)
+
+        self.vehicle.add_waypoint(point)
+
+        if self._xbee_synchronization:
+            self.vehicle.add_wait()
+            self._required_waypoint_sensors.append(required_sensors)
 
     def add_commands(self):
         """
@@ -315,13 +351,7 @@ class Mission_Auto(Mission):
         # Add the waypoint commands.
         points = self.get_waypoints()
         for point in points:
-            # Handle non-spherical geometries
-            if isinstance(point, LocationLocal):
-                point = LocationLocal(point.north, point.east, -self.altitude)
-            else:
-                point = LocationGlobalRelative(point.lat, point.lon, self.altitude)
-
-            self.vehicle.add_waypoint(point)
+            self.add_waypoint(point)
 
         # Send commands to vehicle and update.
         self.vehicle.update_mission()
@@ -337,6 +367,21 @@ class Mission_Auto(Mission):
         self.vehicle.mode = VehicleMode("AUTO")
 
     def check_waypoint(self):
+        if self.vehicle.is_wait():
+            if self._xbee_synchronization and self.environment.is_measurement_valid():
+                time.sleep(self.settings.get("measurement_delay"))
+                print("Measurements are valid, continuing to next waypoint")
+                self.vehicle.set_next_waypoint()
+                index = self.vehicle.get_next_waypoint() / 2
+                if index < len(self._required_waypoint_sensors):
+                    required_sensors = self._required_waypoint_sensors[index]
+                else:
+                    required_sensors = None
+
+                self.environment.invalidate_measurement(required_sensors)
+            else:
+                return True
+
         next_waypoint = self.vehicle.get_next_waypoint()
         distance = self.distance_to_current_waypoint()
         if distance is None:
@@ -771,20 +816,17 @@ class Mission_Infrared_Grid(Mission_Infrared):
     def _right(self):
         self._diff[1] = 1
 
-class Mission_Cycle(Mission_Guided):
+class Mission_Cycle(Mission_Auto):
     """
     A mission that performs fan beam and straight line measurements on a grid
     using a `Robot_Vehicle`.
     """
 
     def setup(self):
-        super(Mission_Guided, self).setup()
+        super(Mission_Cycle, self).setup()
 
         if not isinstance(self.vehicle, Robot_Vehicle):
             raise ValueError("Mission_Cycle only works with robot vehicles")
-
-        self.done = False
-        self.current_waypoint = None
 
         wpzip = itertools.izip_longest
         grid_size = int(self.size)
@@ -859,30 +901,9 @@ class Mission_Cycle(Mission_Guided):
         else:
             raise ValueError("Vehicle is incorrectly positioned at ({},{}), must be at (0,0) or (0,{})".format(location.north, location.east, size))
 
-    def step(self):
-        if self.done:
-            return
-
-        if self.current_waypoint is None:
-            self.next_waypoint()
-        else:
-            # Delay to perform measurements. We need to synchronize the robots 
-            # so that they both measure at the "valid" location.
-            if self.environment.is_measurement_valid():
-                self.next_waypoint()
-
-    def check_waypoint(self):
-        return not self.done
-
-    def next_waypoint(self):
-        try:
-            waypoint = self.waypoints.next()
-        except StopIteration:
-            self.done = True
-            return
-
-        self.current_waypoint = waypoint
-        self.vehicle.simple_goto(LocationLocal(waypoint[0], waypoint[1], 0.0))
+    def get_points(self):
+        self.waypoints = list(self.waypoints)
+        return [LocationLocal(north, east, 0.0) for north, east in self.waypoints]
 
 class Mission_XBee(Mission_Auto):
     def setup(self):
@@ -892,6 +913,7 @@ class Mission_XBee(Mission_Auto):
         self.environment.add_packet_action("waypoint_done", self._complete_waypoints)
 
         self._waypoints_complete = False
+        self._next_index = 0
 
     def arm_and_takeoff(self):
         # Wait until all the waypoints have been received before arming.
@@ -917,9 +939,6 @@ class Mission_XBee(Mission_Auto):
         # Commands are added when they arrive, not in here.
         pass
 
-    def _get_next_index(self):
-        return self.vehicle.count_waypoints() - self._first_waypoint
-
     def _send_ack(self):
         """
         Send a "waypoint_ack" packet to the ground station.
@@ -933,7 +952,7 @@ class Mission_XBee(Mission_Auto):
 
         ack_packet = XBee_Packet()
         ack_packet.set("specification", "waypoint_ack")
-        ack_packet.set("next_index", self._get_next_index())
+        ack_packet.set("next_index", self._next_index)
         ack_packet.set("sensor_id", xbee_sensor.id)
 
         xbee_sensor.enqueue(ack_packet, to=0)
@@ -951,6 +970,7 @@ class Mission_XBee(Mission_Auto):
         self.clear_mission()
         # Add a takeoff command for flying vehicles that use it.
         self.add_takeoff()
+        self._next_index = 0
         self._send_ack()
 
     def _add_waypoint(self, packet):
@@ -968,7 +988,7 @@ class Mission_XBee(Mission_Auto):
             return
 
         index = packet.get("index")
-        if index != self._get_next_index():
+        if index != self._next_index:
             # Send a reply saying what index were are currently at and ignore 
             # the packet, which may be duplicate or out of order.
             self._send_ack()
@@ -976,10 +996,13 @@ class Mission_XBee(Mission_Auto):
 
         latitude = packet.get("latitude")
         longitude = packet.get("longitude")
-        if isinstance(self.geometry, Geometry_Spherical):
-            point = LocationGlobalRelative(latitude, longitude, self.altitude)
-        else:
-            point = LocationLocal(latitude, longitude, -self.altitude)
+        altitude = packet.get("altitude")
+        wait_id = packet.get("wait_id")
 
-        self.vehicle.add_waypoint(point)
+        # Make a location waypoint. `add_waypoint` handles any further 
+        # conversion steps.
+        point = LocationGlobalRelative(latitude, longitude, altitude)
+        required_sensors = [wait_id] if wait_id > 0 else None
+        self.add_waypoint(point, required_sensors)
+        self._next_index += 1
         self._send_ack()

@@ -1,8 +1,8 @@
 import json
 import os
-from functools import partial
-from PyQt4 import QtCore, QtGui
+from PyQt4 import QtGui
 from Control_Panel_View import Control_Panel_View
+from Control_Panel_Widgets import WaypointsTableWidget
 from Control_Panel_XBee_Sender import Control_Panel_XBee_Sender
 from ..zigbee.XBee_Packet import XBee_Packet
 
@@ -19,39 +19,33 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
         self._vehicle_labels = []
         self._tables = []
-        self._column_labels = ["x", "y"]
+        self._column_labels = ["north", "east", "altitude", "wait for vehicle"]
+        # Default values that are used when exporting/importing tables.
+        # We initially require data for the north/east column, but the altitude 
+        # and wait ID can be left out.
+        self._column_defaults = (None, None, 0.0, 0)
 
         for vehicle in xrange(1, self._controller.xbee.number_of_sensors + 1):
             # Create the list item for the vehicle.
             self._listWidget.addItem("Waypoints for vehicle {}".format(vehicle))
 
             # Create the table for the vehicle.
-            table = QtGui.QTableWidget()
-            table.setRowCount(1)
-            table.setColumnCount(len(self._column_labels))
-            table.setHorizontalHeaderLabels(self._column_labels)
-            horizontalHeader = table.horizontalHeader()
-            for i in range(len(self._column_labels)):
-                horizontalHeader.setResizeMode(i, QtGui.QHeaderView.Stretch)
-
-            # Create the context menu for the rows in the table.
-            verticalHeader = table.verticalHeader()
-            verticalHeader.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-            verticalHeader.customContextMenuRequested.connect(partial(self._make_menu, table))
+            table = WaypointsTableWidget(self._column_labels, self._column_defaults)
 
             self._tables.append(table)
             self._stackedLayout.addWidget(table)
 
         if "waypoints" in data:
-            self._import_waypoints(data["waypoints"], from_json=False)
+            try:
+                self._import_waypoints(data["waypoints"], from_json=False)
+            except:
+                return
 
     def save(self):
-        try:
-            return {
-                "waypoints": self._export_waypoints(repeat=False)[0]
-            }
-        except ValueError as e:
-            return {}
+        waypoints, total = self._export_waypoints(repeat=False, errors=False)
+        return {
+            "waypoints": waypoints
+        }
 
     def show(self):
         """
@@ -99,52 +93,20 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         for table in self._tables:
             table.insertRow(table.rowCount())
 
-    def _make_menu(self, table, position):
+    def _export_waypoints(self, repeat=True, errors=True):
         """
-        Create a context menu for the vertical header (row labels).
-        """
+        Create a dictonary containing lists of waypoints (tuples) per vehicle
+        from the current contents of the tables.
 
-        menu = QtGui.QMenu(table)
+        When `repeat` is enabled, the output for rows with empty column is
+        augmented with data from previous rows. This is perfect for exporting
+        to somewhat readable JSON files and the actual sending mechanisms, but
+        can be disabled for internal storage since `_import_waypoint` handles
+        data that is default differently than repeated data.
 
-        insert_row_action = QtGui.QAction("Insert row before", table)
-        insert_row_action.triggered.connect(partial(self._insert_row, table, position))
-        remove_rows_action = QtGui.QAction("Remove row(s)", table)
-        remove_rows_action.triggered.connect(partial(self._remove_rows, table, position))
-
-        menu.addAction(insert_row_action)
-        menu.addAction(remove_rows_action)
-
-        menu.exec_(table.verticalHeader().viewport().mapToGlobal(position))
-
-    def _insert_row(self, table, position):
-        """
-        Add one row in front of the row at the context menu position in a table.
-        """
-
-        row = table.indexAt(position).row()
-        table.insertRow(row)
-        table.selectRow(row)
-
-    def _remove_rows(self, table, position):
-        """
-        Remove one or more selected rows from a table.
-
-        The rows can either be selected or the row at the context menu position
-        is removed.
-        """
-
-        items = table.selectionModel().selectedRows()
-        if items:
-            rows = [item.row() for item in items]
-        else:
-            rows = [table.indexAt(position).row()]
-
-        for row in reversed(sorted(rows)):
-            table.removeRow(row)
-
-    def _export_waypoints(self, repeat=True):
-        """
-        Create a list of waypoints (tuples) per vehicle.
+        When `errors` is enabled, columns that have missing first data when
+        they are required raise a `ValueError`, and invalid values do as well.
+        This can also be disabled for internal storage.
         """
 
         waypoints = {}
@@ -154,7 +116,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             # integer indices, while JSON export will automatically convert 
             # them to string keys.
             vehicle = index + 1
-            previous = ()
+            previous = self._column_defaults
             for row in range(table.rowCount()):
                 data = []
                 for col in range(len(self._column_labels)):
@@ -171,19 +133,29 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
                     # ignore this row.
                     continue
 
-                if any(item is None for item in data) and not previous:
-                    raise ValueError("Missing coordinates for vehicle {}, row {} and no previous waypoint".format(vehicle, row))
+                if errors:
+                    pair = zip(data, previous)
+                    if any(val is None and prev is None for val, prev in pair):
+                        # If a column has no data and no previous data either, 
+                        # then we have missing information.
+                        raise ValueError("Missing coordinates for vehicle {}, row #{} and no previous waypoint".format(vehicle, row + 1))
 
                 for i, col in enumerate(self._column_labels):
                     if data[i] is None:
                         # If a table cell is empty, use the previous waypoint's 
                         # coordinates for the current waypoint.
-                        data[i] = previous[i] if repeat else None
+                        data[i] = previous[i] if repeat else self._column_defaults[i]
                     else:
                         try:
-                            data[i] = int(data[i])
+                            if self._column_defaults[i] is not None:
+                                type_cast = type(self._column_defaults[i])
+                            else:
+                                type_cast = float
+
+                            data[i] = type_cast(data[i])
                         except ValueError:
-                            raise ValueError("Invalid integer for vehicle {}, row {}, column {}: {}".format(vehicle, row, col, data[i]))
+                            if errors:
+                                raise ValueError("Invalid value for vehicle {}, row #{}, column '{}': '{}'".format(vehicle, row + 1, col, data[i]))
 
                 if vehicle not in waypoints:
                     waypoints[vehicle] = [tuple(data)]
@@ -196,22 +168,42 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         return waypoints, total
 
     def _import_waypoints(self, waypoints, from_json=True):
+        """
+        Populate the tables from a dictionary of lists of waypoints (tuples)
+        for each vehicle.
+
+        When `from_json` is enabled, consider the dictionary to be loaded from
+        a JSON file, which has strings as vehicle index keys.
+        """
+
         for index, table in enumerate(self._tables):
             # Allow either string or numeric indices depending on import source
             vehicle = str(index + 1) if from_json else index + 1
             if vehicle not in waypoints:
                 continue
 
-            for row in range(table.rowCount()):
-                table.removeRow(row)
+            table.removeRows()
             for row, waypoint in enumerate(waypoints[vehicle]):
                 table.insertRow(row)
                 for col in range(len(self._column_labels)):
-                    if waypoint[col] is not None:
+                    if col >= len(waypoint):
+                        if self._column_defaults[col] is None:
+                            # Data is required for this column, but it is not 
+                            # provided.
+                            raise ValueError("Row #{} has missing information for column '{}'".format(row + 1, self._column_labels[col]))
+
+                        break
+
+                    if waypoint[col] != self._column_defaults[col]:
                         item = str(waypoint[col])
                         table.setItem(row, col, QtGui.QTableWidgetItem(item))
 
     def _import(self):
+        """
+        Import waypoints from a JSON file that was exported from the waypoints
+        view or from the planning algorithm.
+        """
+
         fn = QtGui.QFileDialog.getOpenFileName(self._controller.central_widget,
                                                "Import file", os.getcwd(),
                                                "JSON files (*.json)")
@@ -241,9 +233,17 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
                                        "JSON error", e.message)
             return
 
-        self._import_waypoints(waypoints)
+        try:
+            self._import_waypoints(waypoints)
+        except ValueError as e:
+            QtGui.QMessageBox.critical(self._controller.central_widget,
+                                       "Waypoint incorrect", e.message)
 
     def _export(self):
+        """
+        Export the waypoints in the tables to a JSON file.
+        """
+
         try:
             waypoints, total = self._export_waypoints()
         except ValueError as e:
@@ -297,10 +297,19 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         sender.start()
 
     def _make_add_waypoint_packet(self, vehicle, index, waypoint):
+        """
+        Create a `XBee_Packet` object with the `waypoint_add` specification
+        and fill its fields with correct values.
+
+        This is a callback for the `Control_Panel_XBee_Sender`.
+        """
+
         packet = XBee_Packet()
         packet.set("specification", "waypoint_add")
         packet.set("latitude", waypoint[0])
         packet.set("longitude", waypoint[1])
+        packet.set("altitude", waypoint[2])
+        packet.set("wait_id", int(waypoint[3]))
         packet.set("index", index)
         packet.set("to_id", vehicle)
 

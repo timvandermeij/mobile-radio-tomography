@@ -8,12 +8,12 @@ from settings import Arguments
 from zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
 
 def get_location():
-    return (random.randint(0, 5), random.randint(0, 5))
+    return (random.randint(0, 5), random.randint(0, 5)), random.randint(0, 5)
 
 def receive_packet(packet):
     pass
 
-def location_valid(other_valid=None):
+def location_valid(other_valid=None, other_id=None, other_index=None):
     return True
 
 def main(argv):

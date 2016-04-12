@@ -88,9 +88,9 @@ class Environment(object):
             self._servos.append(Servo(servo["pin"], servo["angles"], pwm))
 
         self._xbee_sensor = None
-        self._measurements_valid = False
         self._packet_callbacks = {}
         self._setup_xbee_sensor()
+        self.invalidate_measurement()
 
         self._settings_receiver = XBee_Settings_Receiver(self)
 
@@ -235,32 +235,47 @@ class Environment(object):
         """
         Callback method for the location callback of the `XBee_Sensor`.
 
-        The returned value is a tuple of vehicle coordinates.
+        The returned values are a tuple of vehicle coordinates, and the current
+        waypoint index.
         """
 
         location = self.get_location()
+        waypoint_index = self.vehicle.get_next_waypoint()
         if isinstance(location, LocationLocal):
-            return (location.north, location.east)
+            return (location.north, location.east), waypoint_index
         else:
-            return (location.lat, location.lon)
+            return (location.lat, location.lon), waypoint_index
 
-    def location_valid(self, other_valid=None):
+    def location_valid(self, other_valid=None, other_id=None, other_index=None):
         """
         Callback method for the valid callback of the `XBee_Sensor`.
 
         The argument `other_valid`, when given, indicates whether the location
-        of another vehicle is also valid. This is used to determine whether
-        the measurement in total is valid and whether the mission can move to
+        of another vehicle is also valid. This vehicle is identified by its XBee
+        sensor ID `other_id`, and is at waypoint index `other_index`. These must
+        also be given in this case.
+
+        This is used to determine whether the measurement is valid on both ends
+        of a synchronized pair of vehicles, and whether the mission can move to
         another waypoint already.
 
         The returned value indicates whether the vehicle's location is valid.
         """
 
         location_valid = self.vehicle.is_current_location_valid()
-        if other_valid is not None:
-            self._measurements_valid = location_valid and other_valid
+
+        if self._xbee_sensor is not None:
+            self._valid_measurements[self._xbee_sensor.id] = self.vehicle.get_next_waypoint()
+        if other_id is not None and other_valid:
+            self._valid_measurements[other_id] = other_index
 
         return location_valid
+
+    def _is_valid(self, xbee_id, index):
+        if xbee_id not in self._valid_measurements:
+            return False
+
+        return self._valid_measurements[xbee_id] >= index
 
     def is_measurement_valid(self):
         """
@@ -270,7 +285,34 @@ class Environment(object):
         other XBee's sent location were valid.
         """
 
-        return self._measurements_valid
+        index = self.vehicle.get_next_waypoint()
+        if not self._is_valid(self._xbee_sensor.id, index):
+            return False
+
+        return all(self._is_valid(id, index) for id in self._required_sensors)
+
+    def invalidate_measurement(self, required_sensors=None):
+        """
+        Consider the current measurement to be invalid.
+
+        The measurement will only be valid again if the current location and
+        the locations of each vehicle given in by their sensor ID in
+        `required_sensors` become valid. If `required_sensors` is not given,
+        then it falls back to the list of vehicle sensors in the network.
+        Regardless of the list of required sensors, the location of the current
+        vehicle must always be valid for a measurement to be complete.
+        """
+
+        self._valid_measurements = {}
+
+        if self._xbee_sensor is None:
+            self._required_sensors = set()
+            return
+
+        if required_sensors is None:
+            required_sensors = range(1, self._xbee_sensor.number_of_sensors + 1)
+
+        self._required_sensors = set(required_sensors)
 
     def get_distance(self, location):
         """

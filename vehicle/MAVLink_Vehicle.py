@@ -43,6 +43,14 @@ class MAVLink_Vehicle(Vehicle):
         cmd = Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, lat, lon, alt)
         self.commands.add(cmd)
 
+    def add_wait(self):
+        cmd = Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_LOITER_UNLIM, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        self.commands.add(cmd)
+
+    def is_wait(self):
+        mission_item = self.commands[self.commands.next]
+        return mission_item.command == mavutil.mavlink.MAV_CMD_NAV_LOITER_UNLIM
+
     def get_waypoint(self, waypoint=-1):
         """
         Retrieve the Location object corresponding to a waypoint command with ID `waypoint`.

@@ -13,34 +13,53 @@ from settings import SettingsTestCase
 from core_thread_manager import ThreadableTestCase
 from core_usb_manager import USBManagerTestCase
 
-class TestEnvironment(LocationTestCase, SettingsTestCase, ThreadableTestCase, USBManagerTestCase):
+class EnvironmentTestCase(LocationTestCase, SettingsTestCase, ThreadableTestCase, USBManagerTestCase):
+    def register_arguments(self, argv, use_infrared_sensor=True):
+        self._argv = argv
+        self._argv.extend(["--xbee-type", "simulator", "--xbee-id", "1"])
+
+        self._use_infrared_sensor = use_infrared_sensor
+        if self._use_infrared_sensor:
+            self._argv.append("--infrared-sensor")
+        else:
+            self._argv.append("--no-infrared-sensor")
+
     def setUp(self):
-        super(TestEnvironment, self).setUp()
+        super(EnvironmentTestCase, self).setUp()
 
-        self.arguments = Arguments("settings.json", [
-            "--geometry-class", "Geometry_Spherical", "--infrared-sensor",
-            "--vehicle-class", "Mock_Vehicle", "--distance-sensors", "0", "90",
-            "--xbee-type", "simulator"
-        ])
+        self.arguments = Arguments("settings.json", self._argv)
 
-        # We need to mock the Infrared_Sensor module as it is only available
-        # when LIRC is installed which is not a requirement for running tests.
-        package = __package__.split('.')[0]
-        self.infrared_sensor_mock = MagicMock()
-        modules = {
-            package + '.control.Infrared_Sensor': self.infrared_sensor_mock,
-        }
+        if self._use_infrared_sensor:
+            # We need to mock the Infrared_Sensor module as it is only 
+            # available when LIRC is installed which is not a requirement for 
+            # running tests.
+            package = __package__.split('.')[0]
+            self.infrared_sensor_mock = MagicMock()
+            modules = {
+                package + '.control.Infrared_Sensor': self.infrared_sensor_mock,
+            }
 
-        self.patcher = patch.dict('sys.modules', modules)
-        self.patcher.start()
+            self._infrared_sensor_patcher = patch.dict('sys.modules', modules)
+            self._infrared_sensor_patcher.start()
 
         self.environment = Environment.setup(self.arguments,
                                              usb_manager=self.usb_manager,
                                              simulated=True)
 
     def tearDown(self):
-        super(TestEnvironment, self).tearDown()
-        self.patcher.stop()
+        super(EnvironmentTestCase, self).tearDown()
+        if self._use_infrared_sensor:
+            self._infrared_sensor_patcher.stop()
+
+class TestEnvironment(EnvironmentTestCase):
+    def setUp(self):
+        self.register_arguments([
+            "--geometry-class", "Geometry_Spherical",
+            "--vehicle-class", "Mock_Vehicle", "--distance-sensors", "0", "90",
+            "--number-of-sensors", "3"
+        ], use_infrared_sensor=True)
+
+        super(TestEnvironment, self).setUp()
 
     def test_setup(self):
         self.assertIsInstance(self.environment, Environment)
@@ -102,10 +121,30 @@ class TestEnvironment(LocationTestCase, SettingsTestCase, ThreadableTestCase, US
     def test_location(self):
         location = self.environment.vehicle.location.global_relative_frame
         self.assertEqual(location, self.environment.get_location())
-        self.assertEqual((location.lat, location.lon), self.environment.get_raw_location())
+        raw_location, waypoint_index = self.environment.get_raw_location()
+        self.assertEqual((location.lat, location.lon), raw_location)
+        self.assertEqual(0, waypoint_index)
 
     def test_location_valid(self):
+        xbee = self.environment.get_xbee_sensor()
+
+        self.assertEqual(self.environment._valid_measurements, {})
+        self.assertEqual(self.environment._required_sensors, set(range(1, xbee.number_of_sensors + 1)))
+
         self.assertTrue(self.environment.location_valid())
         self.assertFalse(self.environment.is_measurement_valid())
-        self.assertTrue(self.environment.location_valid(other_valid=True))
+        self.assertEqual(self.environment._valid_measurements, {xbee.id: 0})
+
+        self.assertTrue(self.environment.location_valid(other_valid=True, other_id=xbee.id + 1, other_index=0))
+        self.assertFalse(self.environment.is_measurement_valid())
+        self.assertEqual(self.environment._valid_measurements, {xbee.id: 0, xbee.id + 1: 0})
+
+        self.assertTrue(self.environment.location_valid(other_valid=True, other_id=xbee.id + 2, other_index=0))
+        self.assertTrue(self.environment.is_measurement_valid())
+
+        # Requiring a specific set of sensors
+        self.environment.invalidate_measurement(required_sensors=[xbee.id + 1])
+        self.assertFalse(self.environment.is_measurement_valid())
+
+        self.assertTrue(self.environment.location_valid(other_valid=True, other_id=xbee.id + 1, other_index=0))
         self.assertTrue(self.environment.is_measurement_valid())

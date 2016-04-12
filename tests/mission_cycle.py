@@ -1,47 +1,28 @@
 import itertools
-from mock import patch, MagicMock
+from mock import patch
 from dronekit import LocationLocal
-from ..core.USB_Manager import USB_Device_Category
-from ..environment.Environment import Environment
 from ..location.Line_Follower import Line_Follower
 from ..trajectory.Mission import Mission_Cycle
 from ..vehicle.Robot_Vehicle import Robot_State
-from ..settings import Arguments
-from core_thread_manager import ThreadableTestCase
-from core_usb_manager import USBManagerTestCase
-from geometry import LocationTestCase
-from settings import SettingsTestCase
+from environment import EnvironmentTestCase
 
-class TestMissionCycle(ThreadableTestCase, USBManagerTestCase, LocationTestCase, SettingsTestCase):
+class TestMissionCycle(EnvironmentTestCase):
     def setUp(self):
-        super(TestMissionCycle, self).setUp()
+        self.register_arguments([
+            "--vehicle-class", "Robot_Vehicle_Arduino",
+            "--geometry-class", "Geometry", "--space-size", "3",
+            "--number-of-sensors", "2", "--closeness", "0",
+            "--xbee-synchronization"
+        ], use_infrared_sensor=False)
 
-        self.arguments = Arguments("settings.json", [
-            "--vehicle-class", "Robot_Vehicle_Arduino", "--space-size", "3",
-            "--no-infrared-sensor"
-        ])
-        self.environment = Environment.setup(self.arguments, geometry_class="Geometry",
-                                             usb_manager=self.usb_manager, simulated=True)
-        device = self.usb_manager._devices[USB_Device_Category.TTL][0]
-        device.serial_object._update_dtr_state = MagicMock()
+        super(TestMissionCycle, self).setUp()
 
         self.vehicle = self.environment.get_vehicle()
 
         settings = self.arguments.get_settings("mission")
         self.mission = Mission_Cycle(self.environment, settings)
-
-    def test_setup(self):
-        with patch('sys.stdout'):
-            self.mission.setup()
-
-        self.assertEqual(self.vehicle.location, LocationLocal(0, 0, 0))
-        self.assertEqual(self.mission.id, 0)
-        self.assertEqual(self.mission.size, 3)
-        self.assertFalse(self.mission.done)
-        self.assertIsNone(self.mission.current_waypoint)
-        self.assertIsInstance(self.mission.waypoints, itertools.chain)
-        waypoints = list(self.mission.waypoints)
-        self.assertEqual(waypoints, [
+        self.xbee = self.environment.get_xbee_sensor()
+        self.first_waypoints = [
             (1,0), (2,0),
             (1,0), (0,0), (0,1), (0,2),
             (0,1), (0,0),
@@ -50,8 +31,21 @@ class TestMissionCycle(ThreadableTestCase, USBManagerTestCase, LocationTestCase,
             (1,2), (2,2), (2,1), (2,0),
             (2,1), (2,2),
             (2,1), (2,0), (1,0), (0,0)
-        ])
+        ]
 
+    def test_setup(self):
+        with patch('sys.stdout'):
+            self.mission.setup()
+
+        # Check first vehicle's state.
+        self.assertEqual(self.vehicle.location, LocationLocal(0, 0, 0))
+        self.assertEqual(self.mission.id, 0)
+        self.assertEqual(self.mission.size, 3)
+        self.assertIsInstance(self.mission.waypoints, itertools.chain)
+        waypoints = list(self.mission.waypoints)
+        self.assertEqual(waypoints, self.first_waypoints)
+
+        # Check second vehicle's state.
         self.vehicle._location = (0,2)
         with patch('sys.stdout'):
             self.mission.setup()
@@ -69,34 +63,38 @@ class TestMissionCycle(ThreadableTestCase, USBManagerTestCase, LocationTestCase,
         ])
 
     @patch.object(Line_Follower, "_loop")
-    def test_step(self, line_follower_arduino_read_mock):
+    def test_mission(self, line_follower_arduino_read_mock):
         with patch('sys.stdout'):
             self.mission.setup()
             self.mission.arm_and_takeoff()
             self.mission.start()
 
-        self.assertEqual(self.vehicle.mode.name, "GUIDED")
+        self.assertEqual(self.vehicle.mode.name, "AUTO")
         self.assertTrue(self.vehicle.armed)
-        self.assertEqual(self.vehicle._waypoints, [])
+        self.assertEqual(self.vehicle._waypoints, list(itertools.chain(*[[waypoint, None] for waypoint in self.first_waypoints])))
         self.assertEqual(self.vehicle.get_waypoint(), None)
 
-        self.mission.step()
-        self.assertEqual(self.mission.current_waypoint, (1,0))
+        with patch('sys.stdout'):
+            self.mission.check_waypoint()
+
         self.vehicle._check_state()
         self.assertEqual(self.vehicle._current_waypoint, 0)
-        self.assertEqual(self.vehicle._waypoints, [(1,0)])
         self.assertEqual(self.vehicle._state.name, "move")
         self.assertEqual(self.vehicle.get_waypoint(), LocationLocal(1,0,0))
         self.assertNotEqual(self._ttl_device.readline(), "")
 
         self.vehicle._location = (1,0)
         self.vehicle._state = Robot_State("intersection")
-        self.mission.step()
+        with patch('sys.stdout'):
+            self.mission.check_waypoint()
+
         # The mission waits for the other XBee to send a valid location packet.
-        self.assertEqual(self.mission.current_waypoint, (1,0))
-        self.assertTrue(self.environment.location_valid(other_valid=True))
-        self.mission.step()
-        self.assertEqual(self.mission.current_waypoint, (2,0))
         self.vehicle._check_state()
-        self.assertEqual(self.vehicle._waypoints, [(2,0)])
+        self.assertEqual(self.vehicle.get_waypoint(), None)
+        self.assertTrue(self.environment.location_valid(other_valid=True, other_id=self.xbee.id + 1, other_index=1))
+
+        with patch('sys.stdout'):
+            self.mission.check_waypoint()
+
+        self.vehicle._check_state()
         self.assertEqual(self.vehicle.get_waypoint(), LocationLocal(2,0,0))

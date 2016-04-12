@@ -79,10 +79,12 @@ class TestXBeePacket(unittest.TestCase):
         self.packet.set("specification", "waypoint_add")
         self.packet.set("latitude", 123456789.12)
         self.packet.set("longitude", 123496785.34)
+        self.packet.set("altitude", 4.2)
+        self.packet.set("wait_id", 3)
         self.packet.set("index", 22)
         self.packet.set("to_id", 2)
         packed_message = self.packet.serialize()
-        self.assertEqual(packed_message, "\x06H\xe1zT4o\x9dA\xf6(\\E\xa5q\x9dA\x16\x00\x00\x00\x02")
+        self.assertEqual(packed_message, "\x06H\xe1zT4o\x9dA\xf6(\\E\xa5q\x9dA\xcd\xcc\xcc\xcc\xcc\xcc\x10@\x03\x16\x00\x00\x00\x02")
 
     def test_serialize_object_packed(self):
         self.packet.set("specification", "setting_add")
@@ -114,11 +116,13 @@ class TestXBeePacket(unittest.TestCase):
             self.packet.unserialize("\xFF\x01")
 
         # Valid messages must be unpacked.
-        self.packet.unserialize("\x06H\xe1zT4o\x9dA\xf6(\\E\xa5q\x9dA\x16\x00\x00\x00\x02")
+        self.packet.unserialize("\x06H\xe1zT4o\x9dA\xf6(\\E\xa5q\x9dA\xcd\xcc\xcc\xcc\xcc\xcc\x10@\x03\x16\x00\x00\x00\x02")
         self.assertEqual(self.packet.get_all(), {
             "specification": "waypoint_add",
             "latitude": 123456789.12,
             "longitude": 123496785.34,
+            "altitude": 4.2,
+            "wait_id": 3,
             "index": 22,
             "to_id": 2
         })

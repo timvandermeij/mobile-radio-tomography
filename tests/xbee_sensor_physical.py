@@ -15,15 +15,16 @@ from settings import SettingsTestCase
 class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTestCase):
     def location_callback(self):
         """
-        Get the current GPS location (latitude and longitude pair).
+        Get the current GPS location (latitude and longitude pair) and the
+        current waypoint index.
         """
 
-        return (random.uniform(1.0, 50.0), random.uniform(1.0, 50.0))
+        return (random.uniform(1.0, 50.0), random.uniform(1.0, 50.0)), random.randint(0, 5)
 
     def receive_callback(self, packet):
         pass
 
-    def valid_callback(self, other_valid=None):
+    def valid_callback(self, other_valid=None, other_id=None, other_index=None):
         return True
 
     def setUp(self):
@@ -117,6 +118,8 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
         packet.set("specification", "waypoint_add")
         packet.set("latitude", 123456789.12)
         packet.set("longitude", 123459678.34)
+        packet.set("altitude", 0.0)
+        packet.set("wait_id", 3)
         packet.set("index", 22)
         packet.set("to_id", 2)
         self.sensor.enqueue(packet)
@@ -129,6 +132,8 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
         packet.set("specification", "waypoint_add")
         packet.set("latitude", 123456789.12)
         packet.set("longitude", 123459678.34)
+        packet.set("altitude", 0.0)
+        packet.set("wait_id", 3)
         packet.set("index", 22)
         packet.set("to_id", 2)
         self.sensor.enqueue(packet, to=2)
@@ -208,6 +213,8 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
         packet.set("specification", "waypoint_add")
         packet.set("latitude", 123456789.12)
         packet.set("longitude", 123459678.34)
+        packet.set("altitude", 0.0)
+        packet.set("wait_id", 3)
         packet.set("index", 22)
         packet.set("to_id", 2)
         self.sensor.enqueue(packet, to=2)
@@ -237,6 +244,7 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
         packet.set("latitude", 123456789.12)
         packet.set("longitude", 123459678.34)
         packet.set("valid", True)
+        packet.set("waypoint_index", 1)
         packet.set("sensor_id", 2)
         packet.set("timestamp", time.time())
         raw_packet = {

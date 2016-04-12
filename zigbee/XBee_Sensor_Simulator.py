@@ -117,7 +117,6 @@ class XBee_Sensor_Simulator(XBee_Sensor):
                 continue
 
             packet = self._make_rssi_broadcast_packet()
-            packet.set("sensor_id", self._id)
             self._send_tx_frame(packet, i)
 
         # Send the sweep data to the ground sensor.

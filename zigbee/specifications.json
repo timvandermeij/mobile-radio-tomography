@@ -19,6 +19,10 @@
             "format": "?"
         },
         {
+            "name": "waypoint_index",
+            "format": "i"
+        },
+        {
             "name": "sensor_id",
             "format": "B"
         },
@@ -121,6 +125,14 @@
         {
             "name": "longitude",
             "format": "d"
+        },
+        {
+            "name": "altitude",
+            "format": "d"
+        },
+        {
+            "name": "wait_id",
+            "format": "B"
         },
         {
             "name": "index",

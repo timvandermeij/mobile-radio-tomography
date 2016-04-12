@@ -53,6 +53,8 @@ class TestXBeeTDMAScheduler(SettingsTestCase):
         packet.set("specification", "rssi_broadcast")
         packet.set("latitude", 123456789.12)
         packet.set("longitude", 123459678.34)
+        packet.set("valid", True)
+        packet.set("waypoint_index", 1)
         packet.set("sensor_id", 1)
         packet.set("timestamp", time.time())
 
@@ -75,6 +77,8 @@ class TestXBeeTDMAScheduler(SettingsTestCase):
         packet.set("specification", "rssi_broadcast")
         packet.set("latitude", 123456789.12)
         packet.set("longitude", 123459678.34)
+        packet.set("valid", True)
+        packet.set("waypoint_index", 2)
         packet.set("sensor_id", 6)
         packet.set("timestamp", time.time())
 

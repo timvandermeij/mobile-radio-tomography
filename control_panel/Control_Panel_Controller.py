@@ -85,7 +85,7 @@ class Control_Panel_Controller(object):
             callback = self._packet_callbacks[specification]
             callback(packet)
 
-    def _location_valid(self, other_valid=None):
+    def _location_valid(self, other_valid=None, other_id=None, other_index=None):
         return False
 
     def add_packet_callback(self, specification, callback):
