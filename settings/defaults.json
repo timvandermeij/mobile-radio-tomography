@@ -35,14 +35,6 @@
         "name": "Control panel (reconstruction view)",
         "parent": "reconstruction",
         "settings": {
-            "reconstruction_viewer_dimensions": {
-                "help": "Size in pixels for the width and height, respectively, of the viewer",
-                "type": "tuple",
-                "length": 2,
-                "subtype": "int",
-                "min": 0,
-                "default": [450, 450]
-            },
             "reconstruction_curve_points": {
                 "help": "Number of points to show on a plotted curve",
                 "type": "int",

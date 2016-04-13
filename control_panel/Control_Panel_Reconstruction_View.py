@@ -3,6 +3,7 @@ import matplotlib
 matplotlib.use("Qt4Agg")
 import matplotlib.pyplot as plt
 import pyqtgraph as pg
+from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from PyQt4 import QtGui, QtCore
 from Control_Panel_View import Control_Panel_View
 from ..reconstruction.Dump_Buffer import Dump_Buffer
@@ -207,10 +208,11 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
         self._controller.window._toolbar = toolbar
 
-        # Create the label for the image.
-        self._viewer_width, self._viewer_height = self._settings.get("reconstruction_viewer_dimensions")
-        self._image_label = QtGui.QLabel()
-        self._image_label.setFixedSize(self._viewer_width, self._viewer_height)
+        # Create the image.
+        figure = plt.figure(frameon=False)
+        self._axes = figure.add_axes([0, 0, 1, 1])
+        self._axes.axis("off")
+        self._canvas = FigureCanvas(figure)
 
         # Create the graph and table.
         self._graph = Graph(self._controller, self._settings)
@@ -224,7 +226,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         # Create the layout and add the widgets.
         hbox = QtGui.QHBoxLayout()
         hbox.addStretch(1)
-        hbox.addWidget(self._image_label)
+        hbox.addWidget(self._canvas)
         hbox.addStretch(1)
 
         vbox = QtGui.QVBoxLayout(self._controller.central_widget)
@@ -293,9 +295,6 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
         # Execute the reconstruction and visualization.
         self._rssi = []
-        self._width, self._height = self._buffer.size
-        self._figure = plt.figure(frameon=False, figsize=(self._width, self._height))
-        self._axes = self._figure.add_axes([0, 0, 1, 1])
         self._loop()
 
     def _loop(self):
@@ -330,20 +329,13 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             if self._weight_matrix.check():
                 pixels = self._reconstructor.execute(self._weight_matrix.output(), self._rssi)
 
-                # Render the image with Matplotlib.
+                # Render and draw the image with Matplotlib.
                 self._axes.axis("off")
-                self._axes.imshow(pixels.reshape((self._width, self._height)), cmap=self._cmap,
+                self._axes.imshow(pixels.reshape(self._buffer.size), cmap=self._cmap,
                                   origin="lower", interpolation=self._interpolation)
-                self._figure.canvas.draw()
+                self._canvas.draw()
 
-                # Draw the image with Qt.
-                size = self._figure.canvas.size()
-                image = QtGui.QImage(self._figure.canvas.buffer_rgba(), size.width(),
-                                     size.height(), QtGui.QImage.Format_ARGB32)
-                scaled_image = image.scaled(self._viewer_width, self._viewer_height)
-                self._image_label.setPixmap(QtGui.QPixmap(scaled_image))
-
-                # Delete the Matplotlib image now that is it unused.
+                # Delete the image from memory now that it is drawn.
                 self._axes.cla()
 
         QtCore.QTimer.singleShot(self._pause_time, lambda: self._loop())
