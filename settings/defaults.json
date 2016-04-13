@@ -666,6 +666,13 @@
     "reconstruction": {
         "name": "Reconstruction",
         "settings": {
+            "dataset_file": {
+                "help": "Filename part to use for dataset reconstruction",
+                "type": "file",
+                "format": "assets/dataset_{}.csv",
+                "required": true,
+                "default": "one_person_moving_square"
+            },
             "dump_file": {
                 "help": "Filename part to use for dump reconstruction",
                 "type": "file",

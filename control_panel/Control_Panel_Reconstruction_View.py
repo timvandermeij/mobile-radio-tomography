@@ -6,6 +6,7 @@ import pyqtgraph as pg
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from PyQt4 import QtGui, QtCore
 from Control_Panel_View import Control_Panel_View
+from ..reconstruction.Dataset_Buffer import Dataset_Buffer
 from ..reconstruction.Dump_Buffer import Dump_Buffer
 from ..reconstruction.Stream_Buffer import Stream_Buffer
 from ..reconstruction.Weight_Matrix import Weight_Matrix
@@ -164,7 +165,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         toolbar.setMovable(False)
         toolbar.setStyleSheet("QToolBar {spacing: 8px;}")
 
-        sources = ["Dump", "Stream"]
+        sources = ["Dataset", "Dump", "Stream"]
         source_label = QtGui.QLabel("Source:")
         source_box = QtGui.QComboBox()
         source_box.addItems(sources)
@@ -242,7 +243,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         """
 
         for input_box in self._input_boxes.itervalues():
-            input_box.setDisabled(source == "Dump")
+            input_box.setDisabled(source == "Dataset" or source == "Dump")
 
     def _start(self, source, reconstructor):
         """
@@ -254,8 +255,13 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._cmap = self._settings.get("cmap")
         self._interpolation = self._settings.get("interpolation")
 
-        # Create the buffer depending on the source (file or stream).
-        if source == "Dump":
+        # Create the buffer depending on the source.
+        if source == "Dataset":
+            options = {
+                "file": "assets/dataset_{}.csv".format(self._settings.get("dataset_file"))
+            }
+            self._buffer = Dataset_Buffer(options)
+        elif source == "Dump":
             options = {
                 "file": "assets/dump_{}.json".format(self._settings.get("dump_file"))
             }
