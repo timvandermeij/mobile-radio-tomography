@@ -54,9 +54,9 @@ class Graph(object):
 
         # Create the curves for the graph.
         for vehicle in range(1, number_of_sensors + 1):
+            index = vehicle - 1
             curve = self._graph.plot()
-            curve.setData(self._graph_data[vehicle - 1],
-                          pen=pg.mkPen(rgb_tuples[vehicle - 1], width=1.5))
+            curve.setData(self._graph_data[index], pen=pg.mkPen(rgb_tuples[index], width=1.5))
             self._graph_curves.append(curve)
 
         return self._graph
@@ -67,13 +67,15 @@ class Graph(object):
         """
 
         for vehicle in range(1, self._controller.xbee.number_of_sensors + 1):
-            if len(self._graph_data[vehicle - 1]) > self._graph_curve_points:
-                self._graph_data[vehicle - 1].pop(0)
+            index = vehicle - 1
+
+            if len(self._graph_data[index]) > self._graph_curve_points:
+                self._graph_data[index].pop(0)
 
             if packet.get("sensor_id") == vehicle:
-                self._graph_data[vehicle - 1].append(packet.get("rssi"))
+                self._graph_data[index].append(packet.get("rssi"))
 
-            self._graph_curves[vehicle - 1].setData(self._graph_data[vehicle - 1])
+            self._graph_curves[index].setData(self._graph_data[index])
 
     def clear(self):
         """
