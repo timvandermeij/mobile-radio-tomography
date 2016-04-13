@@ -11,7 +11,7 @@ class Dump_Buffer(Buffer):
         super(Dump_Buffer, self).__init__(options)
 
         if options is None:
-            raise ValueError("No filename has been provided.")
+            raise ValueError("No file has been provided.")
 
         # Read the provided dump file. The JSON file has the following structure:
         #
@@ -20,7 +20,7 @@ class Dump_Buffer(Buffer):
         # - packets: a list containing one list per packet, where each packet list
         #            contains the data from the XBee packet specification
         #            "rssi_ground_station" (in order)
-        with open(options["filename"], "r") as dump_file:
+        with open(options["file"], "r") as dump_file:
             data = json.load(dump_file)
 
             self._origin = data["origin"]

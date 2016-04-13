@@ -164,7 +164,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         toolbar.setMovable(False)
         toolbar.setStyleSheet("QToolBar {spacing: 8px;}")
 
-        sources = ["File", "Stream"]
+        sources = ["Dump", "Stream"]
         source_label = QtGui.QLabel("Source:")
         source_box = QtGui.QComboBox()
         source_box.addItems(sources)
@@ -242,7 +242,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         """
 
         for input_box in self._input_boxes.itervalues():
-            input_box.setDisabled(source == "File")
+            input_box.setDisabled(source == "Dump")
 
     def _start(self, source, reconstructor):
         """
@@ -255,9 +255,9 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._interpolation = self._settings.get("interpolation")
 
         # Create the buffer depending on the source (file or stream).
-        if source == "File":
+        if source == "Dump":
             options = {
-                "filename": "assets/reconstruction_{}.json".format(self._settings.get("filename"))
+                "file": "assets/dump_{}.json".format(self._settings.get("dump_file"))
             }
             self._buffer = Dump_Buffer(options)
         elif source == "Stream":

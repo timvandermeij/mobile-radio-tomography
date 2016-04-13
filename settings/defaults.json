@@ -666,12 +666,12 @@
     "reconstruction": {
         "name": "Reconstruction",
         "settings": {
-            "filename": {
+            "dump_file": {
                 "help": "Filename part to use for dump reconstruction",
                 "type": "file",
-                "format": "assets/reconstruction_{}.json",
+                "format": "assets/dump_{}.json",
                 "required": true,
-                "default": "static"
+                "default": "static_manual"
             },
             "pause_time": {
                 "help": "Delay in seconds to wait before showing the next frame of a dump reconstruction",
