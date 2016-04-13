@@ -228,11 +228,9 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         hbox.addStretch(1)
 
         vbox = QtGui.QVBoxLayout(self._controller.central_widget)
-        vbox.addStretch(1)
         vbox.addLayout(hbox)
         vbox.addStretch(1)
         vbox.addWidget(tabs)
-        vbox.addStretch(1)
 
     def _refresh_input_boxes(self, source):
         """
