@@ -152,6 +152,11 @@ class Table(object):
         for index in reversed(range(self._table.rowCount())):
             self._table.removeRow(index)
 
+class Source(object):
+    DATASET = "Dataset"
+    DUMP = "Dump"
+    STREAM = "Stream"
+
 class Control_Panel_Reconstruction_View(Control_Panel_View):
     def show(self):
         """
@@ -165,7 +170,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         toolbar.setMovable(False)
         toolbar.setStyleSheet("QToolBar {spacing: 8px;}")
 
-        sources = ["Dataset", "Dump", "Stream"]
+        sources = [Source.DATASET, Source.DUMP, Source.STREAM]
         source_label = QtGui.QLabel("Source:")
         source_box = QtGui.QComboBox()
         source_box.addItems(sources)
@@ -243,7 +248,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         """
 
         for input_box in self._input_boxes.itervalues():
-            input_box.setDisabled(source == "Dataset" or source == "Dump")
+            input_box.setDisabled(source == Source.DATASET or source == Source.DUMP)
 
     def _start(self, source, reconstructor):
         """
@@ -256,17 +261,17 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._interpolation = self._settings.get("interpolation")
 
         # Create the buffer depending on the source.
-        if source == "Dataset":
+        if source == Source.DATASET:
             options = {
                 "file": "assets/dataset_{}.csv".format(self._settings.get("dataset_file"))
             }
             self._buffer = Dataset_Buffer(options)
-        elif source == "Dump":
+        elif source == Source.DUMP:
             options = {
                 "file": "assets/dump_{}.json".format(self._settings.get("dump_file"))
             }
             self._buffer = Dump_Buffer(options)
-        elif source == "Stream":
+        elif source == Source.STREAM:
             origin_x = int(self._input_boxes["origin_x"].text())
             origin_y = int(self._input_boxes["origin_y"].text())
             size_x = int(self._input_boxes["size_x"].text())
