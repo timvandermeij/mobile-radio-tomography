@@ -7,6 +7,7 @@ import thread
 import Algorithm
 from Problem import Reconstruction_Plan_Continuous, Reconstruction_Plan_Discrete
 from ..core.Threadable import Threadable
+from ..reconstruction.Weight_Matrix import Weight_Matrix
 
 class Planning_Runner(Threadable):
     """
@@ -144,7 +145,34 @@ class Planning_Runner(Threadable):
 
         return self.Objectives[i]
 
-    def get_positions_plot(self, i, plot_number, count, layer=None):
+    def find_objectives(self, objectives):
+        """
+        Get the indices of the individuals that have the given objective values
+        `objectives`.
+
+        If the algorithm does not yet have (intermediate) results, an empty
+        list is returned.
+        """
+
+        if self.Objectives.size == 0:
+            return []
+
+        return np.nonzero(np.all(self.Objectives == objectives, axis=1))[0]
+
+    def is_feasible(self, i):
+        """
+        Check whether the individual with index `i` is feasible.
+
+        If the algorithm does not yet have (intermediate) results, `False` is
+        returned.
+        """
+
+        if self.Feasible.size == 0:
+            return False
+
+        return self.Feasible[i]
+
+    def get_positions_plot(self, i, plot_number, count, layer=None, axes=None):
         """
         Given an index `i` of an individual from a run of the algorithm, create
         a matplotlib plot for the display of the positions of the vehicles and
@@ -158,6 +186,9 @@ class Planning_Runner(Threadable):
         individual is not feasible, or if a `layer` is given and the individual
         is not in that layer, then this method returns an empty numpy array and
         zero instead.
+
+        If `axes` is given, then the plot is drawn on those matplotlib axes
+        instead of the current plot figure.
         """
 
         if self.Feasible.size == 0 or not self.Feasible[i]:
@@ -165,23 +196,32 @@ class Planning_Runner(Threadable):
         if layer is not None and i not in self.R[layer]:
             return np.empty(0), 0
 
-        positions, unsnappable = self.problem.get_positions(self.P[i])
-        plt.clf()
-        plt.title("Planned sensor positions for solution #{}/{} (index {}, f1 = {})".format(plot_number, count, i, self.Objectives[i][0]))
+        weight_matrix = Weight_Matrix(self.arguments, self.problem.padding,
+                                      self.problem.size)
+
+        positions, unsnappable = self.problem.get_positions(self.P[i],
+                                                            weight_matrix)
+
+        if axes is None:
+            axes = plt.gca()
+
+        axes.cla()
+
+        axes.set_title("Sensor positions for solution #{}/{} (index {}, f1 = {})".format(plot_number, count, i, self.Objectives[i][0]))
 
         # Create axes with limits that keep the network visible, make the plot 
         # square and display ticks and a grid at the network coordinates.
-        plt.xlabel("x coordinate")
-        plt.ylabel("y coordinate")
-        plt.xlim([-0.1, self.problem.network_size[0]+0.1])
-        plt.ylim([-0.1, self.problem.network_size[1]+0.1])
-        plt.gca().set_aspect('equal', adjustable='box')
-        plt.xticks(range(self.problem.network_size[0]+1))
-        plt.yticks(range(self.problem.network_size[1]+1))
-        plt.grid()
+        axes.set_xlabel("x coordinate")
+        axes.set_ylabel("y coordinate")
+        axes.set_xlim([-0.1, self.problem.network_size[0]+0.1])
+        axes.set_ylim([-0.1, self.problem.network_size[1]+0.1])
+        axes.set_aspect('equal', adjustable='box')
+        axes.set_xticks(range(self.problem.network_size[0]+1))
+        axes.set_yticks(range(self.problem.network_size[1]+1))
+        axes.grid(True)
 
         # Make network size with padding visible
-        plt.gca().add_patch(Rectangle(
+        axes.add_patch(Rectangle(
             (self.problem.padding[0], self.problem.padding[1]),
             self.problem.network_size[0] - self.problem.padding[0] * 2,
             self.problem.network_size[1] - self.problem.padding[1] * 2,
@@ -192,8 +232,8 @@ class Planning_Runner(Threadable):
         # sensor locations themselves as circles.
         lines = [[(p[0,0], p[1,0]), (p[0,1], p[1,1])] for p in positions]
 
-        plt.plot(*itertools.chain(*lines))
-        plt.plot(positions[:,:,0].flatten(), positions[:,:,1].flatten(), 'ro')
+        axes.plot(*itertools.chain(*lines))
+        axes.plot(positions[:,:,0].flatten(), positions[:,:,1].flatten(), 'ro')
 
         return positions, unsnappable
 
@@ -221,9 +261,11 @@ class Planning_Runner(Threadable):
         axes.set_xlabel("Objective 1")
         axes.set_ylabel("Objective 2")
         for Rk in self.R:
+            # Plot the front line of objective values for feasible individuals.
+            # Enable the picker events for uses in the control panel.
             o1 = [self.Objectives[i][0] for i in Rk if self.Feasible[i]]
             o2 = [self.Objectives[i][1] for i in Rk if self.Feasible[i]]
-            axes.plot(o1, o2, marker='o')
+            axes.plot(o1, o2, marker='o', picker=5)
 
     def get_iteration_current(self):
         """
