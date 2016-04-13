@@ -304,7 +304,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
         # If no packets are available yet, wait for them to arrive.
         if self._buffer.count() == 0:
-            QtCore.QTimer.singleShot(self._pause_time, lambda: self._loop())
+            QtCore.QTimer.singleShot(self._pause_time, self._loop)
             return
 
         packet = self._buffer.get()
@@ -315,7 +315,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
         # Only use packets with valid source and destination locations.
         if not packet.get("from_valid") or not packet.get("to_valid"):
-            QtCore.QTimer.singleShot(self._pause_time, lambda: self._loop())
+            QtCore.QTimer.singleShot(self._pause_time, self._loop)
             return
 
         source = (packet.get("from_latitude"), packet.get("from_longitude"))
@@ -338,4 +338,4 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
                 # Delete the image from memory now that it is drawn.
                 self._axes.cla()
 
-        QtCore.QTimer.singleShot(self._pause_time, lambda: self._loop())
+        QtCore.QTimer.singleShot(self._pause_time, self._loop)
