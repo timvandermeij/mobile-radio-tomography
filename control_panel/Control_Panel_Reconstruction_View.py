@@ -1,3 +1,15 @@
+# TODO:
+# - Replace toolbar with sidebar that has tabs for each source with corresponding options
+# - Dataset performance (reading with progress bar or packet generation on demand)
+# - Implement more reconstructors: Tikhonov and total variation
+# - Faster reconstruction: epsilon instead of zero
+# - Render after a chunk of measurements of a certain size, not after each measurement
+# - Remove old data to keep the weight matrix and RSSI vector compact
+# - Remove timers where possible: use the availability of data chunks instead
+# - Investigate canvas flipping
+# - Implement dump recorder
+# - Average measurements of the same link
+
 import colorsys
 import matplotlib
 matplotlib.use("Qt4Agg")
