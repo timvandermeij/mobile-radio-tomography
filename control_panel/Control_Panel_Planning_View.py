@@ -1,6 +1,8 @@
 import matplotlib
 matplotlib.use("Qt4Agg")
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+
+from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 
 from PyQt4 import QtCore, QtGui
@@ -51,25 +53,108 @@ class Control_Panel_Planning_View(Control_Panel_View):
         actions.addAction(self._start_action)
         actions.addAction(self._stop_action)
 
+        self._plot_width, self._plot_height = self._settings.get("planning_plot_dimensions")
+
         # Create a progress bar.
         self._progress = QtGui.QProgressBar()
-        self._progress.setValue(0)
-        self._progress.reset()
+        self._progress.setMaximumWidth(self._plot_width)
 
         # Create the figure canvas for the main Pareto front image.
-        front_width, front_height = self._settings.get("planning_front_dimensions")
+        self._front_axes, self._front_canvas = self._create_plot()
 
-        self._front_figure = plt.figure(frameon=False,
-                                        figsize=(front_width, front_height))
-        self._front_axes = self._front_figure.add_subplot(111)
-        self._front_canvas = FigureCanvas(self._front_figure)
+        # Register a picker to select a specific point in the Pareto front, 
+        # which can then select one of the individuals.
+        self._front_canvas.mpl_connect('pick_event', self._front_pick_event)
+
+        self._item_width = self._plot_width / 4
+        self._item_height = self._plot_height / 4
+
+        self._listWidget = QtGui.QListWidget()
+        frameWidth = self._listWidget.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth)
+        barWidth = self._listWidget.verticalScrollBar().sizeHint().width()
+        self._listWidget.setFixedWidth(self._item_width + frameWidth + barWidth)
+        self._listWidget.setCurrentRow(0)
+
+        self._stackedLayout = QtGui.QStackedLayout()
+        self._listWidget.currentRowChanged.connect(self._stackedLayout.setCurrentIndex)
 
         # Create the layout and add the widgets.
-        vbox = QtGui.QVBoxLayout(self._controller.central_widget)
+        vbox = QtGui.QVBoxLayout()
+        vbox.addStretch(1)
         vbox.addWidget(self._progress)
+        vbox.addLayout(self._stackedLayout)
         vbox.addStretch(1)
-        vbox.addWidget(self._front_canvas)
-        vbox.addStretch(1)
+
+        hbox = QtGui.QHBoxLayout(self._controller.central_widget)
+        hbox.addWidget(self._listWidget)
+        hbox.addStretch(1)
+        hbox.addLayout(vbox)
+        hbox.addStretch(1)
+
+        self._front_label = self._add_list_item("Pareto front",
+                                                self._front_canvas)
+
+    def _create_plot(self):
+        dpi = plt.rcParams['figure.dpi']
+        figsize = (self._plot_width / dpi, self._plot_height / dpi)
+
+        figure = plt.figure(frameon=False, figsize=figsize)
+        axes = figure.add_subplot(111)
+
+        canvas = FigureCanvas(figure)
+        canvas.setFocusPolicy(QtCore.Qt.ClickFocus)
+        canvas.setFixedSize(self._plot_width, self._plot_height)
+        canvas.setStyleSheet("background: transparent")
+
+        return axes, canvas
+
+    def _add_list_item(self, placeholder, canvas):
+        list_item = QtGui.QListWidgetItem(placeholder)
+        font = QtGui.QFont()
+        font.setBold(True)
+        height = QtGui.QFontInfo(font).pixelSize()
+        list_item.setFont(font)
+        list_item.setTextAlignment(QtCore.Qt.AlignHCenter | QtCore.Qt.AlignTop)
+        list_item.setSizeHint(QtCore.QSize(self._item_width, self._item_height + height))
+
+        item_label = QtGui.QLabel()
+        item_label.setFixedSize(self._item_width, self._item_height + height)
+        item_label.setAlignment(QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+
+        self._listWidget.addItem(list_item)
+        self._listWidget.setItemWidget(list_item, item_label)
+
+        self._stackedLayout.addWidget(canvas)
+        self._controller.app.processEvents()
+
+        return item_label
+
+    def _draw_list_item(self, label, canvas):
+        pixmap = QtGui.QPixmap.grabWidget(canvas)
+        image = pixmap.toImage()
+
+        label_size = label.minimumSize()
+        scaled_image = image.scaled(self._item_width, self._item_height)
+        label.setPixmap(QtGui.QPixmap(scaled_image))
+
+        self._controller.app.processEvents()
+
+    def _front_pick_event(self, event):
+        # We only want points on front lines.
+        if not isinstance(event.artist, Line2D):
+            return
+        if len(event.ind) == 0:
+            return True
+
+        xdata = event.artist.get_xdata()
+        ydata = event.artist.get_ydata()
+        indices = event.ind
+
+        for picked_point in zip(xdata[indices], ydata[indices]):
+            points = self._runner.find_objectives(picked_point)
+            if points:
+                self._listWidget.setCurrentRow(points[0])
+                return
 
     def _start(self):
         for component, form in self._forms.iteritems():
@@ -87,6 +172,31 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
         self._progress.setValue(0)
         self._progress.setRange(0, self._runner.get_iteration_limit())
+
+        # Remove old individual items from the list widget, then add the new 
+        # individuals in the population.
+        for i in range(self._listWidget.count() - 1, 0, -1):
+            self._listWidget.takeItem(i)
+            self._stackedLayout.takeAt(i)
+            plt.close(self._individual_canvases[i-1].figure)
+
+        self._individual_labels = []
+        self._individual_axes = []
+        self._individual_canvases = []
+
+        size = self._runner.get_population_size()
+        plt.rcParams.update({'figure.max_open_warning': size + 1})
+
+        for i in range(1, size + 1):
+            axes, canvas = self._create_plot()
+
+            label = self._add_list_item("Solution #{}".format(i), canvas)
+            label.setStyleSheet("border-top: 1px solid grey")
+
+            self._individual_labels.append(label)
+
+            self._individual_axes.append(axes)
+            self._individual_canvases.append(canvas)
 
         self._timer = QtCore.QTimer()
         self._timer.setInterval(self._update_interval * 1000)
@@ -107,8 +217,30 @@ class Control_Panel_Planning_View(Control_Panel_View):
             self._timer.stop()
 
         if self._runner.done or self._updated:
+            currentIndex = self._stackedLayout.currentIndex()
+
             self._runner.make_pareto_plot(self._front_axes)
             self._front_canvas.draw()
+            self._draw_list_item(self._front_label, self._front_canvas)
+
+            size = self._runner.get_population_size()
+            indices = self._runner.get_indices()
+            c = 0
+            for i in range(size):
+                if not self._runner.is_feasible(i):
+                    self._individual_labels[i].setText("(infeasible)")
+                elif currentIndex == i + 1 or self._runner.done:
+                    axes = self._individual_axes[i]
+
+                    self._runner.get_positions_plot(i, indices.index(i),
+                                                    len(indices), axes=axes)
+
+                    self._individual_canvases[i].draw()
+                    self._draw_list_item(self._individual_labels[i],
+                                         self._individual_canvases[i])
+                else:
+                    text = ", ".join([str(x) for x in self._runner.get_objectives(i)])
+                    self._individual_labels[i].setText(text)
 
         self._updated = False
 

@@ -41,13 +41,13 @@
                 "min": 0.0,
                 "default": 0.2
             },
-            "planning_front_dimensions": {
+            "planning_plot_dimensions": {
                 "help": "Size in pixels for the width and height, respectively, of the Pareto front viewer",
                 "type": "tuple",
                 "length": 2,
                 "subtype": "int",
                 "min": 0,
-                "default": [450, 450]
+                "default": [550, 550]
             }
         }
     },
