@@ -22,17 +22,19 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._update_interval = self._settings.get("planning_update_interval")
 
         # Create the settings toolbar.
-        toolbar = QToolBarFocus(self._controller.app, "Settings")
-        toolbar.setMovable(False)
-        toolbar.setStyleSheet("QToolBar {spacing: 8px;}")
+        self._settings_toolbar = QToolBarFocus(self._controller.app, "Settings")
+        self._settings_toolbar.setMovable(False)
+        self._settings_toolbar.setStyleSheet("QToolBar {spacing: 8px;}")
 
         self._forms = {}
         for component in ("planning", "planning_algorithm", "planning_problem"):
-            self._forms[component] = SettingsWidget(self._controller.arguments,
-                                                    component, toolbar)
-            toolbar.addWidget(self._forms[component])
+            form = SettingsWidget(self._controller.arguments, component,
+                                  toolbar=self._settings_toolbar)
 
-        self._controller.window.addToolBar(toolbar)
+            self._settings_toolbar.addWidget(form)
+            self._forms[component] = form
+
+        self._controller.window.addToolBar(self._settings_toolbar)
 
         # Create the actions toolbar
         self._start_action = QtGui.QAction(QtGui.QIcon("assets/start.png"),
@@ -46,12 +48,13 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._stop_action.setEnabled(False)
         self._stop_action.triggered.connect(lambda: self._stop())
 
-        actions = self._controller.window.addToolBar("Planning")
-        actions.setMovable(False)
-        actions.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Preferred)
-        actions.setStyleSheet("QToolBar {spacing: 8px;}")
-        actions.addAction(self._start_action)
-        actions.addAction(self._stop_action)
+        actions_toolbar = self._controller.window.addToolBar("Planning")
+        actions_toolbar.setMovable(False)
+        actions_toolbar.setSizePolicy(QtGui.QSizePolicy.Minimum,
+                                      QtGui.QSizePolicy.Preferred)
+        actions_toolbar.setStyleSheet("QToolBar {spacing: 8px;}")
+        actions_toolbar.addAction(self._start_action)
+        actions_toolbar.addAction(self._stop_action)
 
         self._plot_width, self._plot_height = self._settings.get("planning_plot_dimensions")
 
@@ -77,6 +80,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
         self._stackedLayout = QtGui.QStackedLayout()
         self._listWidget.currentRowChanged.connect(self._stackedLayout.setCurrentIndex)
+        self._stackedLayout.currentChanged.connect(lambda i: self._redraw(i))
 
         # Create the layout and add the widgets.
         vbox = QtGui.QVBoxLayout()
@@ -139,6 +143,32 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
         self._controller.app.processEvents()
 
+    def _draw_individual_solution(self, i, indices):
+        axes = self._individual_axes[i]
+
+        self._runner.get_positions_plot(i, indices.index(i), len(indices),
+                                        axes=axes)
+
+        self._individual_canvases[i].draw()
+        self._draw_list_item(self._individual_labels[i],
+                             self._individual_canvases[i])
+
+    def _redraw(self, i):
+        if i == 0:
+            # The Pareto front is always redrawn when possible.
+            return
+
+        # The solution plots are indexed from 1 in the list widget, but from 
+        # 0 in the algorithm population and plot object lists.
+        i = i - 1
+
+        indices = self._runner.get_indices()
+        if i not in indices:
+            # Solution is not feasible or there are no results yet.
+            return
+
+        self._draw_individual_solution(i, indices)
+
     def _front_pick_event(self, event):
         # We only want points on front lines.
         if not isinstance(event.artist, Line2D):
@@ -165,6 +195,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
                 except ValueError:
                     return
 
+        self._settings_toolbar.layout().setExpanded(False)
         self._start_action.setEnabled(False)
         self._stop_action.setEnabled(True)
 
@@ -230,14 +261,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
                 if not self._runner.is_feasible(i):
                     self._individual_labels[i].setText("(infeasible)")
                 elif currentIndex == i + 1 or self._runner.done:
-                    axes = self._individual_axes[i]
-
-                    self._runner.get_positions_plot(i, indices.index(i),
-                                                    len(indices), axes=axes)
-
-                    self._individual_canvases[i].draw()
-                    self._draw_list_item(self._individual_labels[i],
-                                         self._individual_canvases[i])
+                    self._draw_individual_solution(i, indices)
                 else:
                     text = ", ".join([str(x) for x in self._runner.get_objectives(i)])
                     self._individual_labels[i].setText(text)
