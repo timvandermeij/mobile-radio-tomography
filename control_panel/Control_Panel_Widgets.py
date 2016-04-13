@@ -146,6 +146,47 @@ class WaypointsTableWidget(QtGui.QTableWidget):
         for row in reversed(sorted(rows)):
             self.removeRow(row)
 
+class QToolBarFocus(QtGui.QToolBar):
+    def __init__(self, app, *a, **kw):
+        super(QToolBarFocus, self).__init__(*a, **kw)
+        self._app = app
+        self._focused = False
+
+        self._app.focusChanged.connect(self._global_focus_changed)
+
+    def hideEvent(self, event):
+        self._app.focusChanged.disconnect(self._global_focus_changed)
+        super(QToolBarFocus, self).hideEvent(event)
+
+    def _global_focus_changed(self, old, now):
+        if now is None:
+            self._set_focus(False)
+            return
+
+        barRect = QtCore.QRect(self.mapToGlobal(QtCore.QPoint(0, 0)),
+                               self.mapToGlobal(QtCore.QPoint(self.width(),
+                                                              self.height())))
+        nowRect = QtCore.QRect(now.mapToGlobal(QtCore.QPoint(0, 0)),
+                               now.mapToGlobal(QtCore.QPoint(now.width(),
+                                                             now.height())))
+
+        self._set_focus(barRect.contains(nowRect))
+
+    def _set_focus(self, focused):
+        wasFocused = self._focused
+        self._focused = focused
+        if wasFocused and not self._focused:
+            self.layout().setExpanded(False)
+
+    def event(self, event):
+        if event.type() == QtCore.QEvent.Leave and self._focused:
+            # Do not pass the leave event to the normal toolbar event handler, 
+            # but to the QWidget base class, so that the toolbar remains 
+            # expanded when it is focused.
+            return QtGui.QWidget.event(self, event)
+
+        return super(QToolBarFocus, self).event(event)
+
 # Ported from https://github.com/Frodox/qt-line-edit-with-clear-button
 # Qt5's QLineEdit has this built in via the clearButtonEnabled.
 # We emulate its behavior here.
@@ -639,6 +680,7 @@ class NumericSliderFormWidget(FormWidget):
         self._layout.addWidget(self._valueWidget)
 
         self.setLayout(self._layout)
+        self.setFocusProxy(self._valueWidget)
 
     def has_slider(self):
         return "min" in self.info and "max" in self.info
@@ -647,7 +689,7 @@ class NumericSliderFormWidget(FormWidget):
         self._slider = slider
         self._slider.setValue(self._value_to_slider(self.info["value"]))
 
-        self._slider.valueChanged.connect(self._handle_slider)
+        self._slider.sliderMoved.connect(self._handle_slider)
         self._valueWidget.textEdited.connect(self._update_slider)
 
         self._layout.addWidget(self._slider)
@@ -740,22 +782,26 @@ class ListFormWidget(FormWidget):
         self._layout.setContentsMargins(0, 0, 0, 0)
 
         self._sub_widgets = []
+        self._removeButtons = []
+        self._addButton = None
 
         self._values = self._format_list(self.info["value"])
         self._defaults = self._format_list(self.info["default"])
-        for i in range(len(self._values)):
-            self._add_to_list()
 
         if "length" not in self.info:
-            addButton = QtGui.QToolButton()
-            addButton.setIcon(QtGui.QIcon("assets/list-add.png"))
-            addButton.setText("Add item")
-            addButton.setToolTip("Add another item element to the list")
-            addButton.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
-            addButton.clicked.connect(self._add_to_list)
-            self._layout.addWidget(addButton)
+            self._addButton = QtGui.QToolButton()
+            self._addButton.setIcon(QtGui.QIcon("assets/list-add.png"))
+            self._addButton.setText("Add item")
+            self._addButton.setToolTip("Add another item element to the list")
+            self._addButton.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
+            self._addButton.clicked.connect(self._add_to_list)
+
+            self._layout.addWidget(self._addButton)
 
         self.setLayout(self._layout)
+
+        for i in range(len(self._values)):
+            self._add_to_list()
 
     def _format_list(self, value):
         if value is None:
@@ -806,6 +852,34 @@ class ListFormWidget(FormWidget):
             itemLayout.addWidget(sub_widget)
             itemLayout.addWidget(removeButton)
             self._layout.insertLayout(position, itemLayout)
+            self._removeButtons.append(removeButton)
+
+            self._fix_tab_order(add=True)
+
+    def _fix_tab_order(self, add=True):
+        if self._addButton is None:
+            return
+
+        # Fix tab order in list widgets that can change length
+        prev_button = None
+        for sub_widget, button, i in zip(self._sub_widgets, self._removeButtons, range(len(self._sub_widgets))):
+            # Contrary to documentation, Qt does not propagate tab order to the 
+            # focus proxy of any widget during manual tab ordering.
+            if sub_widget.focusProxy():
+                widget = sub_widget.focusProxy()
+            else:
+                widget = sub_widget
+
+            if prev_button is not None:
+                QtGui.QWidget.setTabOrder(prev_button, widget)
+            elif add and len(self._sub_widgets) == 1:
+                QtGui.QWidget.setTabOrder(self._addButton.previousInFocusChain(), sub_widget)
+
+            QtGui.QWidget.setTabOrder(widget, button)
+            prev_button = button
+
+        if prev_button is not None:
+            QtGui.QWidget.setTabOrder(prev_button, self._addButton)
 
     def _remove_item(self, itemLayout, sub_widget, removeButton):
         self._layout.removeItem(itemLayout)
@@ -814,7 +888,11 @@ class ListFormWidget(FormWidget):
         removeButton.close()
         itemLayout.deleteLater()
         self._layout.invalidate()
+
         self._sub_widgets.remove(sub_widget)
+        self._removeButtons.remove(removeButton)
+
+        self._fix_tab_order(add=False)
 
     def get_value(self):
         return [sub_widget.get_value() for sub_widget in self._sub_widgets]

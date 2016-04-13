@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 from PyQt4 import QtCore, QtGui
 from Control_Panel_View import Control_Panel_View
-from Control_Panel_Widgets import SettingsWidget
+from Control_Panel_Widgets import SettingsWidget, QToolBarFocus
 from ..planning.Runner import Planning_Runner
 
 class Control_Panel_Planning_View(Control_Panel_View):
@@ -16,10 +16,11 @@ class Control_Panel_Planning_View(Control_Panel_View):
                                        self._controller.thread_manager,
                                        self.iteration_callback)
 
+        self._updated = False
         self._update_interval = self._settings.get("planning_update_interval")
 
         # Create the settings toolbar.
-        toolbar = self._controller.window.addToolBar("Settings")
+        toolbar = QToolBarFocus(self._controller.app, "Settings")
         toolbar.setMovable(False)
         toolbar.setStyleSheet("QToolBar {spacing: 8px;}")
 
@@ -28,6 +29,8 @@ class Control_Panel_Planning_View(Control_Panel_View):
             self._forms[component] = SettingsWidget(self._controller.arguments,
                                                     component, toolbar)
             toolbar.addWidget(self._forms[component])
+
+        self._controller.window.addToolBar(toolbar)
 
         # Create the actions toolbar
         self._start_action = QtGui.QAction(QtGui.QIcon("assets/start.png"),
