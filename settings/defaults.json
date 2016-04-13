@@ -684,7 +684,7 @@
                 "type": "string",
                 "required": true,
                 "keys": ["matplotlib.cm", "datad"],
-                "default": "pink"
+                "default": "RdGy"
             },
             "interpolation": {
                 "help": "Pixel interpolation for the reconstruction display",
