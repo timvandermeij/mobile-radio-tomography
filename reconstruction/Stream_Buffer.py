@@ -11,5 +11,6 @@ class Stream_Buffer(Buffer):
         if options is None:
             raise ValueError("No origin and size have been provided.")
 
+        self._number_of_sensors = options["number_of_sensors"]
         self._origin = options["origin"]
         self._size = options["size"]

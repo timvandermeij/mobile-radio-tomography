@@ -15,6 +15,7 @@ class Dump_Buffer(Buffer):
 
         # Read the provided dump file. The JSON file has the following structure:
         #
+        # - number_of_sensors: number of sensors in the network (excluding ground station)
         # - origin: a list containing the coordinates of the network's origin
         # - size: a list containing the width and height of the network
         # - packets: a list containing one list per packet, where each packet list
@@ -23,6 +24,7 @@ class Dump_Buffer(Buffer):
         with open(options["file"], "r") as dump_file:
             data = json.load(dump_file)
 
+            self._number_of_sensors = data["number_of_sensors"]
             self._origin = data["origin"]
             self._size = data["size"]
 

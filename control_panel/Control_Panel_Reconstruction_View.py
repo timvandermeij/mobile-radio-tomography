@@ -248,7 +248,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         """
 
         for input_box in self._input_boxes.itervalues():
-            input_box.setDisabled(source == Source.DATASET or source == Source.DUMP)
+            input_box.setEnabled(source == Source.STREAM)
 
     def _start(self, source, reconstructor):
         """
@@ -283,6 +283,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
                 return
 
             options = {
+                "number_of_sensors": self._controller.xbee.number_of_sensors,
                 "origin": [origin_x, origin_y],
                 "size": [size_x, size_y]
             }

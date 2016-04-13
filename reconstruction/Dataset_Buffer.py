@@ -26,6 +26,7 @@ class Dataset_Buffer(Buffer):
         with open(options["file"], "r") as dataset_file:
             data = csv.reader(dataset_file)
 
+            self._number_of_sensors = len(positions)
             self._size = size
 
             for line in data:
