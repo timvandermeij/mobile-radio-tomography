@@ -10,9 +10,6 @@ class Dump_Buffer(Buffer):
 
         super(Dump_Buffer, self).__init__(options)
 
-        if options is None:
-            raise ValueError("No file has been provided.")
-
         # Read the provided dump file. The JSON file has the following structure:
         #
         # - number_of_sensors: number of sensors in the network (excluding ground station)

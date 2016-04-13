@@ -7,6 +7,9 @@ class Buffer(object):
         Initialize the buffer object.
         """
 
+        if options is None:
+            raise ValueError("Options for the buffer have not been provided.")
+
         self._number_of_sensors = 0
         self._origin = [0, 0]
         self._size = [0, 0]

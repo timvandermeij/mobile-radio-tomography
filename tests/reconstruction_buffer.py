@@ -4,7 +4,7 @@ from ..zigbee.XBee_Packet import XBee_Packet
 
 class TestReconstructionBuffer(unittest.TestCase):
     def setUp(self):
-        self.buffer = Buffer()
+        self.buffer = Buffer({})
 
         # Create a list of unique XBee packets.
         self.xbee_packets = []
@@ -23,6 +23,13 @@ class TestReconstructionBuffer(unittest.TestCase):
             xbee_packet.set("rssi", index)
 
             self.xbee_packets.append(xbee_packet)
+
+    def test_initialization(self):
+        # If no options have been provided, an error should be raised.
+        # Note that the `setUp` method already covers the case where
+        # options have been provided.
+        with self.assertRaises(ValueError):
+            Buffer()
 
     def test_get(self):
         # If the buffer is empty, we should get None.
@@ -53,3 +60,12 @@ class TestReconstructionBuffer(unittest.TestCase):
             self.buffer.put(xbee_packet)
 
         self.assertEqual(self.buffer.count(), self.xbee_packets_count)
+
+    def test_number_of_sensors(self):
+        self.assertEqual(self.buffer.number_of_sensors, 0)
+
+    def test_origin(self):
+        self.assertEqual(self.buffer.origin, [0, 0])
+
+    def test_size(self):
+        self.assertEqual(self.buffer.size, [0, 0])
