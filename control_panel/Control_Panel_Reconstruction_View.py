@@ -15,22 +15,45 @@ from ..reconstruction.SVD_Reconstructor import SVD_Reconstructor
 from ..reconstruction.Truncated_SVD_Reconstructor import Truncated_SVD_Reconstructor
 
 class Graph(object):
-    def __init__(self, controller, settings):
+    def __init__(self, settings):
         """
         Initialize the graph object.
         """
 
-        self._controller = controller
         self._settings = settings
 
         # Enable antialiassing and use a transparent background with black text/lines.
         pg.setConfigOptions(antialias=True, background=None, foreground="k")
 
         # Prepare data structures for the graph.
+        self._number_of_sensors = 0
         self._graph = None
         self._graph_curve_points = self._settings.get("reconstruction_curve_points")
         self._graph_curves = []
-        self._graph_data = [[] for vehicle in range(1, self._controller.xbee.number_of_sensors + 1)]
+        self._graph_data = []
+
+    def setup(self, buffer):
+        """
+        Setup the graph with the number of sensors from the buffer.
+        """
+
+        self._number_of_sensors = buffer.number_of_sensors
+
+        # Create the data lists for the graph.
+        self._graph_data = [[] for vehicle in range(1, self._number_of_sensors + 1)]
+
+        # Create the list of colors for the curves.
+        hsv_tuples = [(x * 1.0 / self._number_of_sensors, 0.5, 0.5) for x in range(self._number_of_sensors)]
+        rgb_tuples = []
+        for hsv in hsv_tuples:
+            rgb_tuples.append(map(lambda x: int(x * 255), colorsys.hsv_to_rgb(*hsv)))
+
+        # Create the curves for the graph.
+        for vehicle in range(1, self._number_of_sensors + 1):
+            index = vehicle - 1
+            curve = self._graph.plot()
+            curve.setData(self._graph_data[index], pen=pg.mkPen(rgb_tuples[index], width=1.5))
+            self._graph_curves.append(curve)
 
     def create(self):
         """
@@ -40,25 +63,10 @@ class Graph(object):
         if self._graph is not None:
             return self._graph
 
-        number_of_sensors = self._controller.xbee.number_of_sensors
-
         self._graph = pg.PlotWidget()
         self._graph.setXRange(0, self._graph_curve_points)
         self._graph.setLabel("left", "RSSI")
         self._graph.setLabel("bottom", "Measurement")
-
-        # Create the list of colors for the curves.
-        hsv_tuples = [(x * 1.0 / number_of_sensors, 0.5, 0.5) for x in range(number_of_sensors)]
-        rgb_tuples = []
-        for hsv in hsv_tuples:
-            rgb_tuples.append(map(lambda x: int(x * 255), colorsys.hsv_to_rgb(*hsv)))
-
-        # Create the curves for the graph.
-        for vehicle in range(1, number_of_sensors + 1):
-            index = vehicle - 1
-            curve = self._graph.plot()
-            curve.setData(self._graph_data[index], pen=pg.mkPen(rgb_tuples[index], width=1.5))
-            self._graph_curves.append(curve)
 
         return self._graph
 
@@ -67,7 +75,7 @@ class Graph(object):
         Update the graph with information in `packet`.
         """
 
-        for vehicle in range(1, self._controller.xbee.number_of_sensors + 1):
+        for vehicle in range(1, self._number_of_sensors + 1):
             index = vehicle - 1
 
             if len(self._graph_data[index]) > self._graph_curve_points:
@@ -223,7 +231,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._canvas = FigureCanvas(figure)
 
         # Create the graph and table.
-        self._graph = Graph(self._controller, self._settings)
+        self._graph = Graph(self._settings)
         self._table = Table()
 
         # Create the tab widget.
@@ -303,7 +311,8 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._weight_matrix = Weight_Matrix(self._controller.arguments, self._buffer.origin,
                                             self._buffer.size)
 
-        # Clear the graph and table.
+        # Setup the graph and clear the graph and table.
+        self._graph.setup(self._buffer)
         self._graph.clear()
         self._table.clear()
 
