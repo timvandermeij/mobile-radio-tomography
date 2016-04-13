@@ -135,11 +135,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
     def _draw_list_item(self, label, canvas):
         pixmap = QtGui.QPixmap.grabWidget(canvas)
-        image = pixmap.toImage()
-
-        label_size = label.minimumSize()
-        scaled_image = image.scaled(self._item_width, self._item_height)
-        label.setPixmap(QtGui.QPixmap(scaled_image))
+        label.setPixmap(pixmap.scaled(self._item_width, self._item_height))
 
         self._controller.app.processEvents()
 
