@@ -172,6 +172,24 @@ class Planning_Runner(Threadable):
 
         return self.Feasible[i]
 
+    def get_positions(self, i):
+        """
+        Given an index `i` of an individual from a run of the algorithm, return
+        the positions and unsnappable count of that solution.
+
+        If the algorithm does not yet have (intermediate) results or if the
+        solution is not feasible, then this method returns an empty numpy array
+        and zero instead.
+        """
+
+        if self.Feasible.size == 0:
+            return np.empty(0), 0
+
+        weight_matrix = Weight_Matrix(self.arguments, self.problem.padding,
+                                      self.problem.size)
+
+        return self.problem.get_positions(self.P[i], weight_matrix)
+
     def get_positions_plot(self, i, plot_number, count, layer=None, axes=None):
         """
         Given an index `i` of an individual from a run of the algorithm, create
@@ -196,11 +214,7 @@ class Planning_Runner(Threadable):
         if layer is not None and i not in self.R[layer]:
             return np.empty(0), 0
 
-        weight_matrix = Weight_Matrix(self.arguments, self.problem.padding,
-                                      self.problem.size)
-
-        positions, unsnappable = self.problem.get_positions(self.P[i],
-                                                            weight_matrix)
+        positions, unsnappable = self.get_positions(i)
 
         if axes is None:
             axes = plt.gca()

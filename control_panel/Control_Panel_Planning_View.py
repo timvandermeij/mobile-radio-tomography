@@ -6,7 +6,7 @@ from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 
 from PyQt4 import QtCore, QtGui
-from Control_Panel_View import Control_Panel_View
+from Control_Panel_View import Control_Panel_View, Control_Panel_View_Name
 from Control_Panel_Widgets import SettingsWidget, QToolBarFocus
 from ..planning.Runner import Planning_Runner
 
@@ -62,6 +62,12 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._progress = QtGui.QProgressBar()
         self._progress.setMaximumWidth(self._plot_width)
 
+        self._selectButton = QtGui.QPushButton()
+        self._selectButton.setText("Select")
+        self._selectButton.setToolTip("Select current solution to use waypoints from")
+        self._selectButton.setEnabled(False)
+        self._selectButton.clicked.connect(self._select)
+
         # Create the figure canvas for the main Pareto front image.
         self._front_axes, self._front_canvas = self._create_plot()
 
@@ -83,9 +89,13 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._stackedLayout.currentChanged.connect(lambda i: self._redraw(i))
 
         # Create the layout and add the widgets.
+        topLayout = QtGui.QHBoxLayout()
+        topLayout.addWidget(self._progress)
+        topLayout.addWidget(self._selectButton)
+
         vbox = QtGui.QVBoxLayout()
         vbox.addStretch(1)
-        vbox.addWidget(self._progress)
+        vbox.addLayout(topLayout)
         vbox.addLayout(self._stackedLayout)
         vbox.addStretch(1)
 
@@ -142,8 +152,9 @@ class Control_Panel_Planning_View(Control_Panel_View):
     def _draw_individual_solution(self, i, indices):
         axes = self._individual_axes[i]
 
-        self._runner.get_positions_plot(i, indices.index(i), len(indices),
-                                        axes=axes)
+        # The ranking of the solution in the ordered list of feasible solutions
+        c = indices.index(i)
+        self._runner.get_positions_plot(i, c, len(indices), axes=axes)
 
         self._individual_canvases[i].draw()
         self._draw_list_item(self._individual_labels[i],
@@ -151,7 +162,9 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
     def _redraw(self, i):
         if i == 0:
-            # The Pareto front is always redrawn when possible.
+            # The Pareto front is always redrawn when possible, so we do not 
+            # need to draw it here. Disable the select button.
+            self._selectButton.setEnabled(False)
             return
 
         # The solution plots are indexed from 1 in the list widget, but from 
@@ -164,6 +177,9 @@ class Control_Panel_Planning_View(Control_Panel_View):
             return
 
         self._draw_individual_solution(i, indices)
+
+        if self._runner.done:
+            self._selectButton.setEnabled(self._runner.is_feasible(i))
 
     def _front_pick_event(self, event):
         # We only want points on front lines.
@@ -198,6 +214,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._settings_toolbar.layout().setExpanded(False)
         self._start_action.setEnabled(False)
         self._stop_action.setEnabled(True)
+        self._selectButton.setEnabled(False)
 
         self._runner.activate()
 
@@ -243,13 +260,16 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
     def _check(self):
         self._progress.setValue(self._runner.get_iteration_current())
+
+        currentIndex = self._stackedLayout.currentIndex()
         if self._runner.done:
+            if currentIndex != 0:
+                self._selectButton.setEnabled(True)
+
             self._stop()
             self._timer.stop()
 
         if self._runner.done or self._updated:
-            currentIndex = self._stackedLayout.currentIndex()
-
             self._runner.make_pareto_plot(self._front_axes)
             self._front_canvas.draw()
             self._draw_list_item(self._front_label, self._front_canvas)
@@ -267,6 +287,20 @@ class Control_Panel_Planning_View(Control_Panel_View):
                     self._individual_labels[i].setText(text)
 
         self._updated = False
+
+    def _select(self):
+        currentIndex = self._stackedLayout.currentIndex()
+        if currentIndex == 0:
+            return
+
+        if not self._runner.is_feasible(currentIndex - 1):
+            return
+
+        positions, unsnappable = self._runner.get_positions(currentIndex - 1)
+
+        self._controller.set_view_data(Control_Panel_View_Name.WAYPOINTS,
+                                       "waypoints", positions.tolist())
+        self._controller.show_view(Control_Panel_View_Name.WAYPOINTS)
 
     def iteration_callback(self, algorithm, data):
         self._updated = True

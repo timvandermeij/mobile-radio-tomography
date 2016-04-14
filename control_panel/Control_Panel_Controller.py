@@ -114,6 +114,17 @@ class Control_Panel_Controller(object):
 
         return self._view_data[view][key]
 
+    def set_view_data(self, view, key, value):
+        """
+        Alter stored data for the given view name `view` in the stored
+        variable `key` to contain the given `value`.
+        """
+
+        if view not in self._view_data:
+            raise KeyError("Unknown view '{}'".format(view))
+
+        self._view_data[view][key] = value
+
     def show_view(self, name):
         """
         Show a new view, identified by `name`, and clear the current view.

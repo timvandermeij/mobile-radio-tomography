@@ -37,7 +37,8 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
         if "waypoints" in data:
             try:
-                self._import_waypoints(data["waypoints"], from_json=False)
+                waypoints = self._convert_waypoints(data["waypoints"])
+                self._import_waypoints(waypoints, from_json=False)
             except:
                 return
 
@@ -167,6 +168,32 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
         return waypoints, total
 
+    def _convert_waypoints(self, waypoints):
+        """
+        Convert an imported object containing waypoints to a dictionary of lists
+        of waypoints (tuples) for each vehicle.
+
+        If the `waypoints` objects is already such a dictionary, it is left
+        intact. If it is a list, then it is assumed that it has lists of sensor
+        pairs (lists of lists). This is mostly for compatibility with output
+        from a planning algorithm.
+
+        If the waypoints could not be converted, then a `ValueError` is raised.
+        """
+
+        if isinstance(waypoints, list):
+            try:
+                waypoints = {
+                    1: [sensor_pairs[0] for sensor_pairs in waypoints],
+                    2: [sensor_pairs[1] for sensor_pairs in waypoints]
+                }
+            except IndexError:
+                raise ValueError("JSON list must contain sensor pairs")
+        elif not isinstance(waypoints, dict):
+            raise ValueError("Waypoints must be a JSON list or array")
+
+        return waypoints
+
     def _import_waypoints(self, waypoints, from_json=True):
         """
         Populate the tables from a dictionary of lists of waypoints (tuples)
@@ -212,17 +239,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
         try:
             with open(fn, 'r') as import_file:
-                waypoints = json.load(import_file)
-                if isinstance(waypoints, list):
-                    try:
-                        waypoints = {
-                            1: [sensor_pairs[0] for sensor_pairs in waypoints],
-                            2: [sensor_pairs[1] for sensor_pairs in waypoints]
-                        }
-                    except IndexError:
-                        raise ValueError("JSON list must contain sensor pairs")
-                elif not isinstance(waypoints, dict):
-                    raise ValueError("Waypoints must be a JSON list or array")
+                waypoints = self._convert_import(json.load(import_file))
         except IOError as e:
             message = "Could not open file '{}': {}".format(fn, e.strerror)
             QtGui.QMessageBox.critical(self._controller.central_widget,
