@@ -153,9 +153,13 @@ class QToolBarFocus(QtGui.QToolBar):
         self._focused = False
 
         self._app.focusChanged.connect(self._global_focus_changed)
+        self._is_connected = True
 
     def hideEvent(self, event):
-        self._app.focusChanged.disconnect(self._global_focus_changed)
+        if self._is_connected:
+            self._app.focusChanged.disconnect(self._global_focus_changed)
+            self._is_connected = False
+
         super(QToolBarFocus, self).hideEvent(event)
 
     def _global_focus_changed(self, old, now):

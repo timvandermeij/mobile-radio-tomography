@@ -40,13 +40,13 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._start_action = QtGui.QAction(QtGui.QIcon("assets/start.png"),
                                            "Start",
                                            self._controller.central_widget)
-        self._start_action.triggered.connect(lambda: self._start())
+        self._start_action.triggered.connect(self._start)
 
         self._stop_action = QtGui.QAction(QtGui.QIcon("assets/stop.png"),
                                            "Stop",
                                            self._controller.central_widget)
         self._stop_action.setEnabled(False)
-        self._stop_action.triggered.connect(lambda: self._stop())
+        self._stop_action.triggered.connect(self._stop)
 
         actions_toolbar = self._controller.window.addToolBar("Planning")
         actions_toolbar.setMovable(False)
@@ -169,8 +169,12 @@ class Control_Panel_Planning_View(Control_Panel_View):
         # We only want points on front lines.
         if not isinstance(event.artist, Line2D):
             return
+        # Events with no picked point indices are not of interest.
         if len(event.ind) == 0:
-            return True
+            return
+        # If we just changed to one solution, do not handle more fired events.
+        if self._listWidget.currentRow() != 0:
+            return
 
         xdata = event.artist.get_xdata()
         ydata = event.artist.get_ydata()
@@ -179,7 +183,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
         for picked_point in zip(xdata[indices], ydata[indices]):
             points = self._runner.find_objectives(picked_point)
             if points:
-                self._listWidget.setCurrentRow(points[0])
+                self._listWidget.setCurrentRow(points[0] + 1)
                 return
 
     def _start(self):
