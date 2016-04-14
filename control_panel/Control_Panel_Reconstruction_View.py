@@ -1,5 +1,4 @@
 # TODO:
-# - Replace toolbar with sidebar that has tabs for each source with corresponding options
 # - Dataset performance (reading with progress bar or packet generation on demand)
 # - Implement more reconstructors: Tikhonov and total variation
 # - Faster reconstruction: epsilon instead of zero
@@ -14,6 +13,7 @@ import colorsys
 import matplotlib
 matplotlib.use("Qt4Agg")
 import matplotlib.pyplot as plt
+import os.path
 import pyqtgraph as pg
 from collections import OrderedDict
 from functools import partial
@@ -175,13 +175,14 @@ class Table(object):
             self._table.removeRow(index)
 
 class Panel(QtGui.QTableWidget):
-    def __init__(self, parent):
+    def __init__(self, parent, settings):
         """
         Initialize the panel object.
         """
 
         QtGui.QTableWidget.__init__(self, parent)
 
+        self._settings = settings
         self._source = None
 
         # Maintain an object that maps a label to a lambda function responsible
@@ -255,32 +256,78 @@ class Panel(QtGui.QTableWidget):
             self.setCellWidget(position, 1, widget)
 
 class DatasetPanel(Panel):
-    def __init__(self, parent):
+    def __init__(self, parent, settings):
         """
         Initialize the dataset panel object.
         """
 
-        super(DatasetPanel, self).__init__(parent)
+        super(DatasetPanel, self).__init__(parent, settings)
 
         self._source = Source.DATASET
 
+    def _render(self):
+        """
+        Render the panel with both the default items and items
+        that are specific to this data source.
+        """
+
+        widget = QtGui.QWidget()
+
+        widget_layout = QtGui.QHBoxLayout()
+        widget_layout.setContentsMargins(0, 0, 0, 0)
+
+        file_box = QtGui.QLineEdit()
+        file_box.setText(self._settings.get("dataset_file"))
+
+        widget_layout.addWidget(file_box)
+        widget.setLayout(widget_layout)
+
+        self._register("File", widget, partial(
+            lambda file_box: "assets/dataset_{}.csv".format(file_box.text()), file_box)
+        )
+
+        super(DatasetPanel, self)._render()
+
 class DumpPanel(Panel):
-    def __init__(self, parent):
+    def __init__(self, parent, settings):
         """
         Initialize the dump panel object.
         """
 
-        super(DumpPanel, self).__init__(parent)
+        super(DumpPanel, self).__init__(parent, settings)
 
         self._source = Source.DUMP
 
+    def _render(self):
+        """
+        Render the panel with both the default items and items
+        that are specific to this data source.
+        """
+
+        widget = QtGui.QWidget()
+
+        widget_layout = QtGui.QHBoxLayout()
+        widget_layout.setContentsMargins(0, 0, 0, 0)
+
+        file_box = QtGui.QLineEdit()
+        file_box.setText(self._settings.get("dump_file"))
+
+        widget_layout.addWidget(file_box)
+        widget.setLayout(widget_layout)
+
+        self._register("File", widget, partial(
+            lambda file_box: "assets/dump_{}.json".format(file_box.text()), file_box)
+        )
+
+        super(DumpPanel, self)._render()
+
 class StreamPanel(Panel):
-    def __init__(self, parent):
+    def __init__(self, parent, settings):
         """
         Initialize the stream panel object.
         """
 
-        super(StreamPanel, self).__init__(parent)
+        super(StreamPanel, self).__init__(parent, settings)
 
         self._source = Source.STREAM
 
@@ -342,9 +389,9 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         # Create the panels.
         panels = QtGui.QTabWidget()
         panels.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Expanding)
-        panels.addTab(DatasetPanel(panels), Source.DATASET)
-        panels.addTab(DumpPanel(panels), Source.DUMP)
-        panels.addTab(StreamPanel(panels), Source.STREAM)
+        panels.addTab(DatasetPanel(panels, self._settings), Source.DATASET)
+        panels.addTab(DumpPanel(panels, self._settings), Source.DUMP)
+        panels.addTab(StreamPanel(panels, self._settings), Source.STREAM)
 
         # Create the start button.
         start_button = QtGui.QPushButton(QtGui.QIcon("assets/start.png"), "Start")
@@ -375,16 +422,18 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._interpolation = self._settings.get("interpolation")
 
         # Create the buffer depending on the source.
-        if parameters.source == Source.DATASET:
-            options = {
-                "file": "assets/dataset_{}.csv".format(self._settings.get("dataset_file"))
-            }
-            self._buffer = Dataset_Buffer(options)
-        elif parameters.source == Source.DUMP:
-            options = {
-                "file": "assets/dump_{}.json".format(self._settings.get("dump_file"))
-            }
-            self._buffer = Dump_Buffer(options)
+        if parameters.source == Source.DATASET or parameters.source == Source.DUMP:
+            file = parameters.get("File")
+
+            if not os.path.exists(file):
+                QtGui.QMessageBox.critical(self._controller.central_widget, "Invalid file",
+                                           "File '{}' does not exist.".format(file))
+                return
+
+            buffer_class = Dataset_Buffer if parameters.source == Source.DATASET else Dump_Buffer
+            self._buffer = buffer_class({
+                "file": file
+            })
         elif parameters.source == Source.STREAM:
             origin = parameters.get("Origin")
             size = parameters.get("Size")
@@ -394,12 +443,11 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
                                            "The network dimensions must be greater than zero.")
                 return
 
-            options = {
+            self._buffer = Stream_Buffer({
                 "number_of_sensors": self._controller.xbee.number_of_sensors,
                 "origin": origin,
                 "size": size
-            }
-            self._buffer = Stream_Buffer(options)
+            })
             self._controller.xbee.set_buffer(self._buffer)
 
         # Create the reconstructor.
