@@ -1,3 +1,7 @@
+import matplotlib
+matplotlib.use("Qt4Agg")
+import matplotlib.pyplot as plt
+
 from PyQt4 import QtCore, QtGui
 
 class Control_Panel_View_Name(object):
@@ -59,6 +63,9 @@ class Control_Panel_View(object):
 
             # Delete the layout itself.
             QtCore.QObjectCleanupHandler().add(layout)
+
+        # Close all figures that the view may have opened.
+        plt.close('all')
 
     def _add_menu_bar(self):
         """
