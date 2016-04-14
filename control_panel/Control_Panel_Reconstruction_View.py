@@ -15,6 +15,8 @@ import matplotlib
 matplotlib.use("Qt4Agg")
 import matplotlib.pyplot as plt
 import pyqtgraph as pg
+from collections import OrderedDict
+from functools import partial
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from PyQt4 import QtGui, QtCore
 from Control_Panel_View import Control_Panel_View
@@ -172,6 +174,143 @@ class Table(object):
         for index in reversed(range(self._table.rowCount())):
             self._table.removeRow(index)
 
+class Panel(QtGui.QTableWidget):
+    def __init__(self, parent):
+        """
+        Initialize the panel object.
+        """
+
+        QtGui.QTableWidget.__init__(self, parent)
+
+        self._source = None
+
+        # Maintain an object that maps a label to a lambda function responsible
+        # for returning the value of the widget. This is used to fetch all entered
+        # values in a structured manner when the reconstruction process is started.
+        self._data = {}
+
+        # Create the key and value columns.
+        self.setColumnCount(2)
+
+        # Let the columns take up the entire width of the table.
+        for index in range(2):
+            self.horizontalHeader().setResizeMode(index, QtGui.QHeaderView.Stretch)
+
+        # Hide the horizontal and vertical headers.
+        self.horizontalHeader().hide()
+        self.verticalHeader().hide()
+
+        # Populate the panel with default items.
+        self._items = OrderedDict()
+
+        reconstructor = QtGui.QComboBox()
+        reconstructor.addItems(["Least squares", "SVD", "Truncated SVD"])
+        reconstructor.setCurrentIndex(2)
+
+        self._register("Reconstructor", reconstructor,
+                       partial(lambda reconstructor: str(reconstructor.currentText()), reconstructor))
+        self._render()
+
+    @property
+    def source(self):
+        """
+        Return the data source corresponding to this panel.
+        """
+
+        return self._source
+
+    def get(self, label):
+        """
+        Get the value of the widget identified by its `label` using
+        the associated lambda function.
+        """
+
+        if label not in self._data:
+            raise ValueError("Lambda function for label '{}' has not been registered".format(label))
+
+        return self._data[label]()
+
+    def _register(self, label, widget, lambda_function):
+        """
+        Register an item for the table with a `label`, a `widget` and a
+        `lambda_function` that takes care of fetching the value of the widget.
+        """
+
+        self._items[label] = widget
+        self._data[label] = lambda_function
+
+    def _render(self):
+        """
+        Render the panel with all registered items.
+        """
+
+        for label, widget in self._items.iteritems():
+            position = self.rowCount()
+
+            label = QtGui.QTableWidgetItem("{}:".format(label))
+            label.setFlags(label.flags() & ~QtCore.Qt.ItemIsEditable & ~QtCore.Qt.ItemIsSelectable)
+
+            self.insertRow(position)
+            self.setItem(position, 0, label)
+            self.setCellWidget(position, 1, widget)
+
+class DatasetPanel(Panel):
+    def __init__(self, parent):
+        """
+        Initialize the dataset panel object.
+        """
+
+        super(DatasetPanel, self).__init__(parent)
+
+        self._source = Source.DATASET
+
+class DumpPanel(Panel):
+    def __init__(self, parent):
+        """
+        Initialize the dump panel object.
+        """
+
+        super(DumpPanel, self).__init__(parent)
+
+        self._source = Source.DUMP
+
+class StreamPanel(Panel):
+    def __init__(self, parent):
+        """
+        Initialize the stream panel object.
+        """
+
+        super(StreamPanel, self).__init__(parent)
+
+        self._source = Source.STREAM
+
+    def _render(self):
+        """
+        Render the panel with both the default items and items
+        that are specific to this data source.
+        """
+
+        for label in ["Origin", "Size"]:
+            widget = QtGui.QWidget()
+
+            widget_layout = QtGui.QHBoxLayout()
+            widget_layout.setContentsMargins(0, 0, 0, 0)
+
+            x_box = QtGui.QLineEdit()
+            x_box.setText("0")
+            y_box = QtGui.QLineEdit()
+            y_box.setText("0")
+
+            widget_layout.addWidget(x_box)
+            widget_layout.addWidget(y_box)
+            widget.setLayout(widget_layout)
+
+            self._register(label, widget, partial(
+                lambda x_box, y_box: [int(x_box.text()), int(y_box.text())], x_box, y_box)
+            )
+
+        super(StreamPanel, self)._render()
+
 class Source(object):
     DATASET = "Dataset"
     DUMP = "Dump"
@@ -184,57 +323,6 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         """
 
         self._add_menu_bar()
-
-        # Create the toolbar.
-        toolbar = self._controller.window.addToolBar("Reconstruction")
-        toolbar.setMovable(False)
-        toolbar.setStyleSheet("QToolBar {spacing: 8px;}")
-
-        sources = [Source.DATASET, Source.DUMP, Source.STREAM]
-        source_label = QtGui.QLabel("Source:")
-        source_box = QtGui.QComboBox()
-        source_box.addItems(sources)
-        source_box.currentIndexChanged["QString"].connect(self._refresh_input_boxes)
-
-        reconstructor_label = QtGui.QLabel("Reconstructor:")
-        reconstructor_box = QtGui.QComboBox()
-        reconstructor_box.addItems(["Least squares", "SVD", "Truncated SVD"])
-        reconstructor_box.setCurrentIndex(2)
-
-        origin_label = QtGui.QLabel("Network origin:")
-        size_label = QtGui.QLabel("Network size:")
-
-        self._input_boxes = {
-            "origin_x": QtGui.QLineEdit(),
-            "origin_y": QtGui.QLineEdit(),
-            "size_x": QtGui.QLineEdit(),
-            "size_y": QtGui.QLineEdit()
-        }
-        for input_box in self._input_boxes.itervalues():
-            input_box.setText("0")
-
-        self._refresh_input_boxes(sources[0])
-
-        start_action = QtGui.QAction(QtGui.QIcon("assets/start.png"), "Start",
-                                     self._controller.central_widget)
-        start_action.triggered.connect(
-            lambda: self._start(str(source_box.currentText()),
-                                str(reconstructor_box.currentText()))
-        )
-
-        toolbar.addWidget(source_label)
-        toolbar.addWidget(source_box)
-        toolbar.addWidget(reconstructor_label)
-        toolbar.addWidget(reconstructor_box)
-        toolbar.addWidget(origin_label)
-        toolbar.addWidget(self._input_boxes["origin_x"])
-        toolbar.addWidget(self._input_boxes["origin_y"])
-        toolbar.addWidget(size_label)
-        toolbar.addWidget(self._input_boxes["size_x"])
-        toolbar.addWidget(self._input_boxes["size_y"])
-        toolbar.addAction(start_action)
-
-        self._controller.window._toolbar = toolbar
 
         # Create the image.
         figure = plt.figure(frameon=False)
@@ -251,28 +339,34 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         tabs.addTab(self._graph.create(), "Graph")
         tabs.addTab(self._table.create(), "Table")
 
+        # Create the panels.
+        panels = QtGui.QTabWidget()
+        panels.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Expanding)
+        panels.addTab(DatasetPanel(panels), Source.DATASET)
+        panels.addTab(DumpPanel(panels), Source.DUMP)
+        panels.addTab(StreamPanel(panels), Source.STREAM)
+
+        # Create the start button.
+        start_button = QtGui.QPushButton(QtGui.QIcon("assets/start.png"), "Start")
+        start_button.clicked.connect(lambda: self._start(panels.currentWidget()))
+
         # Create the layout and add the widgets.
-        hbox = QtGui.QHBoxLayout()
-        hbox.addStretch(1)
-        hbox.addWidget(self._canvas)
-        hbox.addStretch(1)
+        vbox_left = QtGui.QVBoxLayout()
+        vbox_left.addWidget(panels)
+        vbox_left.addWidget(start_button)
 
-        vbox = QtGui.QVBoxLayout(self._controller.central_widget)
-        vbox.addLayout(hbox)
-        vbox.addStretch(1)
-        vbox.addWidget(tabs)
+        vbox_right = QtGui.QVBoxLayout()
+        vbox_right.addWidget(self._canvas)
+        vbox_right.addStretch(1)
+        vbox_right.addWidget(tabs)
 
-    def _refresh_input_boxes(self, source):
+        hbox = QtGui.QHBoxLayout(self._controller.central_widget)
+        hbox.addLayout(vbox_left)
+        hbox.addLayout(vbox_right)
+
+    def _start(self, parameters):
         """
-        Enable or disable the input boxes depending on the source.
-        """
-
-        for input_box in self._input_boxes.itervalues():
-            input_box.setEnabled(source == Source.STREAM)
-
-    def _start(self, source, reconstructor):
-        """
-        Start the reconstruction process.
+        Start the reconstruction process with all parameters from the panel.
         """
 
         # Fetch the settings for the reconstruction.
@@ -281,31 +375,29 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._interpolation = self._settings.get("interpolation")
 
         # Create the buffer depending on the source.
-        if source == Source.DATASET:
+        if parameters.source == Source.DATASET:
             options = {
                 "file": "assets/dataset_{}.csv".format(self._settings.get("dataset_file"))
             }
             self._buffer = Dataset_Buffer(options)
-        elif source == Source.DUMP:
+        elif parameters.source == Source.DUMP:
             options = {
                 "file": "assets/dump_{}.json".format(self._settings.get("dump_file"))
             }
             self._buffer = Dump_Buffer(options)
-        elif source == Source.STREAM:
-            origin_x = int(self._input_boxes["origin_x"].text())
-            origin_y = int(self._input_boxes["origin_y"].text())
-            size_x = int(self._input_boxes["size_x"].text())
-            size_y = int(self._input_boxes["size_y"].text())
+        elif parameters.source == Source.STREAM:
+            origin = parameters.get("Origin")
+            size = parameters.get("Size")
 
-            if size_x == 0 or size_y == 0:
-                QtGui.QMessageBox.critical(self._controller.central_widget, "Invalid network dimensions",
-                                           "The network dimensions must be nonzero.")
+            if not all(dimension > 0 for dimension in size):
+                QtGui.QMessageBox.critical(self._controller.central_widget, "Invalid size",
+                                           "The network dimensions must be greater than zero.")
                 return
 
             options = {
                 "number_of_sensors": self._controller.xbee.number_of_sensors,
-                "origin": [origin_x, origin_y],
-                "size": [size_x, size_y]
+                "origin": origin,
+                "size": size
             }
             self._buffer = Stream_Buffer(options)
             self._controller.xbee.set_buffer(self._buffer)
@@ -316,7 +408,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             "SVD": SVD_Reconstructor,
             "Truncated SVD": Truncated_SVD_Reconstructor
         }
-        reconstructor_class = reconstructors[reconstructor]
+        reconstructor_class = reconstructors[parameters.get("Reconstructor")]
         self._reconstructor = reconstructor_class(self._controller.arguments)
 
         # Create the weight matrix.
