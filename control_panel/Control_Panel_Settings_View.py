@@ -1,7 +1,8 @@
 import json
 from PyQt4 import QtGui
 from Control_Panel_View import Control_Panel_View, Control_Panel_View_Name
-from Control_Panel_Widgets import QLineEditClear, SettingsWidget
+from Control_Panel_Widgets import QLineEditClear
+from Control_Panel_Settings_Widgets import SettingsWidget
 from Control_Panel_XBee_Sender import Control_Panel_XBee_Sender
 from ..settings import Settings
 from ..zigbee.XBee_Packet import XBee_Packet

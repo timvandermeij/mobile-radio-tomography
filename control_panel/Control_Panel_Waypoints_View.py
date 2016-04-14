@@ -2,7 +2,7 @@ import json
 import os
 from PyQt4 import QtGui
 from Control_Panel_View import Control_Panel_View
-from Control_Panel_Widgets import WaypointsTableWidget
+from Control_Panel_Waypoints_Widgets import WaypointsTableWidget
 from Control_Panel_XBee_Sender import Control_Panel_XBee_Sender
 from ..zigbee.XBee_Packet import XBee_Packet
 

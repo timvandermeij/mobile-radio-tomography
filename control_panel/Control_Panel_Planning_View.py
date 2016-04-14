@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 
 from PyQt4 import QtCore, QtGui
 from Control_Panel_View import Control_Panel_View, Control_Panel_View_Name
-from Control_Panel_Widgets import SettingsWidget, QToolBarFocus
+from Control_Panel_Widgets import QToolBarFocus
+from Control_Panel_Settings_Widgets import SettingsWidget
 from ..planning.Runner import Planning_Runner
 
 class Control_Panel_Planning_View(Control_Panel_View):
