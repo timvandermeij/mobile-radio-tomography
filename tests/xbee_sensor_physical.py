@@ -273,7 +273,7 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
             "parameter": "\x4E"
         }
         self.sensor._receive(raw_packet)
-        self.assertEqual(self.sensor._data[frame_id].get("rssi"), ord("\x4E"))
+        self.assertEqual(self.sensor._data[frame_id].get("rssi"), -ord("\x4E"))
 
         # AT response SH packets should be processed.
         self.sensor._address_set = False

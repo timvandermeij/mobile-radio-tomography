@@ -68,7 +68,7 @@
         },
         {
             "name": "rssi",
-            "format": "B"
+            "format": "b"
         }
     ],
     "ntp": [
