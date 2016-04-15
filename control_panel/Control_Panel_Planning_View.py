@@ -80,9 +80,6 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._item_height = self._plot_height / 4
 
         self._listWidget = QtGui.QListWidget()
-        frameWidth = self._listWidget.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth)
-        barWidth = self._listWidget.verticalScrollBar().sizeHint().width()
-        self._listWidget.setFixedWidth(self._item_width + frameWidth + barWidth)
         self._listWidget.setCurrentRow(0)
 
         self._stackedLayout = QtGui.QStackedLayout()
@@ -133,7 +130,6 @@ class Control_Panel_Planning_View(Control_Panel_View):
         list_item.setSizeHint(QtCore.QSize(self._item_width, self._item_height + height))
 
         item_label = QtGui.QLabel()
-        item_label.setFixedSize(self._item_width, self._item_height + height)
         item_label.setAlignment(QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
 
         self._listWidget.addItem(list_item)
@@ -146,7 +142,12 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
     def _draw_list_item(self, label, canvas):
         pixmap = QtGui.QPixmap.grabWidget(canvas)
-        label.setPixmap(pixmap.scaled(self._item_width, self._item_height))
+        # Scale the plot to a miniature. We do not care about the aspect ratio 
+        # since we force this through the plot and item sizes, but we want 
+        # a smooth transformation.
+        label.setPixmap(pixmap.scaled(self._item_width, self._item_height,
+                                      QtCore.Qt.IgnoreAspectRatio,
+                                      QtCore.Qt.SmoothTransformation))
 
         self._controller.app.processEvents()
 
