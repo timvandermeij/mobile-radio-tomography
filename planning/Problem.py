@@ -155,7 +155,8 @@ class Problem(object):
                     - point[self._bool_indices]
                 )
 
-            x_new[self._int_indices] = self._clip(x_new[self._int_indices])
+            if len(self._int_indices[0]) > 0:
+                x_new[self._int_indices] = self._clip(x_new[self._int_indices])
 
         return x_new
 
@@ -245,6 +246,7 @@ class Reconstruction_Plan(Problem):
         if not isinstance(arguments, Arguments):
             raise ValueError("'arguments' must be an instance of Arguments")
 
+        # Import the settings for the planning problem.
         self.settings = arguments.get_settings("planning_problem")
         self.N = self.settings.get("number_of_measurements")
         self.network_size = self.settings.get("network_size")
@@ -253,21 +255,33 @@ class Reconstruction_Plan(Problem):
         num_variables, domain = self.get_domain()
         super(Reconstruction_Plan, self).__init__(num_variables, domain)
 
-        # Initial weight matrix object which is filled with current locations 
-        # during evaluations.
+        # The actual network sizes excluding the padding.
         self.network_width = self.network_size[0] - self.padding[0]*2
         self.network_height = self.network_size[1] - self.padding[1]*2
-        size = [self.network_width, self.network_height]
-        self.weight_matrix = Weight_Matrix(arguments, self.padding, size)
+        self.size = [self.network_width, self.network_height]
+
+        # Initial weight matrix object which can be filled with current 
+        # locations during evaluations and reset to be reused.
+        self.weight_matrix = Weight_Matrix(arguments, self.padding, self.size)
+
+        # Resulting output from the weight matrix.
         self.matrix = None
         self.unsnappable = 0
         self.distances = None
 
+        # The maximum number of unsnappable points in an individual.
         self.unsnappable_max = self.N * self.settings.get("unsnappable_rate")
 
+        # A grid-based Geometry object that the Problem instance can use to 
+        # make lines and points, if necessary.
         self.geometry = Geometry()
 
     def get_domain(self):
+        """
+        Determine the domain of each variable and the number of variables that
+        the problem instance requires.
+        """
+
         raise NotImplementedError("Subclass must implement `get_domain`")
 
     def format_steps(self, steps):
@@ -280,9 +294,33 @@ class Reconstruction_Plan(Problem):
         return super(Reconstruction_Plan, self).format_steps(steps)
 
     def generate_positions(self, point, index):
+        """
+        Generate a pair of positions from an individual `point` using the
+        variable value at `index` and any dependent variable based on the index.
+
+        The result is a list containing the two positions, which themselves are
+        2-length lists with the position coordinates.
+        """
+
         raise NotImplementedError("Subclass must implement `generate_positions(point, index)`")
 
-    def get_positions(self, point):
+    def get_positions(self, point, weight_matrix):
+        """
+        Generate pairs of positions from an individual `point`, which is a list
+        of variable values.
+
+        The positions are checked against the given `weight_matrix` for
+        snappability and other constraints. The weight matrix is therefore
+        updated in this method, and it is not safe to use the same weight matrix
+        on multiple individuals without resetting it in between.
+
+        The result is a numpy array of selected (potentially snapped) positions
+        and the number of unsnappable positions. The numpy array has three
+        dimensions, the first grouping the position pairs, the second splitting
+        those pairs into one position, and finally the two coordinates of the
+        positions.
+        """
+
         unsnappable = 0
 
         # Generate positions, check snappability and create weight matrix
@@ -291,7 +329,7 @@ class Reconstruction_Plan(Problem):
         point = self.format_point(point)
         for i in range(self.N):
             sensor_points = self.generate_positions(point, i)
-            snapped_points = self.select_positions(sensor_points)
+            snapped_points = self.select_positions(sensor_points, weight_matrix)
             if snapped_points is None:
                 unsnappable += 1
             else:
@@ -299,9 +337,10 @@ class Reconstruction_Plan(Problem):
 
         return np.array(positions), unsnappable
 
-    def select_positions(self, sensor_points):
+    def select_positions(self, sensor_points, weight_matrix):
         """
-        Select the positions for the given `sensor_points`.
+        Select the positions for the given `sensor_points` using the weight
+        matrix passed into `weight_matrix`.
 
         This method updates the weight matrix with the given points, and
         returns the final positions for the sensors which may be changed by the
@@ -309,13 +348,14 @@ class Reconstruction_Plan(Problem):
         The method returns `None` when the positions could not be snapped.
         """
 
-        snapped_points = self.weight_matrix.update(*sensor_points)
+        snapped_points = weight_matrix.update(*sensor_points)
         return snapped_points
 
     def evaluate_point(self, point):
         self.weight_matrix.reset()
-        positions, self.unsnappable = self.get_positions(point)
+        positions, unsnappable = self.get_positions(point, self.weight_matrix)
 
+        # Set up variables used by the constraint and objective functions.
         if positions.size > 0:
             # Generate distances between all the pairs of sensor positions.
             self.distances = np.linalg.norm(positions[:,0,:]-positions[:,1,:], axis=1)
@@ -323,6 +363,7 @@ class Reconstruction_Plan(Problem):
             self.distances = np.array([])
 
         self.matrix = self.weight_matrix.output()
+        self.unsnappable = unsnappable
 
         return super(Reconstruction_Plan, self).evaluate_point(point)
 
@@ -455,9 +496,8 @@ class Reconstruction_Plan_Discrete(Reconstruction_Plan):
             if axis == -1:
                 continue
 
-            size = [self.network_width, self.network_height]
             other_axis = (axis+1)%2
-            diff = size[axis]
+            diff = self.size[axis]
             if point[i+axis*self.N] + diff > self.network_size[axis]:
                 diff = -diff
 
@@ -465,9 +505,9 @@ class Reconstruction_Plan_Discrete(Reconstruction_Plan):
             other_axis_point = point[i+other_axis*self.N]
             if (
                 0 <= other_axis_point < self.padding[other_axis] or
-               self.padding[other_axis] + size[other_axis] < other_axis_point < self.network_size[other_axis]
+               self.padding[other_axis] + self.size[other_axis] < other_axis_point < self.network_size[other_axis]
             ):
-                s = size[other_axis]/2 * s
+                s = self.size[other_axis]/2 * s
 
             point[i+(axis+2)*self.N] = point[i+axis*self.N] + diff
             point[i+(other_axis+2)*self.N] += s
@@ -480,8 +520,10 @@ class Reconstruction_Plan_Discrete(Reconstruction_Plan):
             [int(point[index+2*self.N]), int(point[index+3*self.N])]
         ]
 
-    def select_positions(self, sensor_points):
-        snapped_points = super(Reconstruction_Plan_Discrete, self).select_positions(sensor_points)
+    def select_positions(self, sensor_points, weight_matrix):
+        # Check whether the points are acceptable for the weight matrix, 
+        # otherwise we discard the points.
+        snapped_points = super(Reconstruction_Plan_Discrete, self).select_positions(sensor_points, weight_matrix)
         if snapped_points is None:
             return None
 

@@ -10,7 +10,7 @@ class Control_Panel_Window(QtGui.QMainWindow):
         super(Control_Panel_Window, self).__init__()
 
         self._menu_bar = None
-        self._toolbar = None
+        self._toolbars = []
 
         # Set the dimensions, title and icon of the window.
         self.setGeometry(0, 0, 900, 700)
@@ -32,6 +32,19 @@ class Control_Panel_Window(QtGui.QMainWindow):
 
         # Show the loading view (default).
         self.controller.show_view(Control_Panel_View_Name.LOADING)
+
+    def addToolBar(self, arg):
+        ret = super(Control_Panel_Window, self).addToolBar(arg)
+        if isinstance(arg, QtGui.QToolBar):
+            toolbar = arg
+        elif isinstance(ret, QtGui.QToolBar):
+            toolbar = ret
+        else:
+            raise TypeError("Expected a toolbar in argument or result")
+
+        self._toolbars.append(toolbar)
+
+        return toolbar
 
     def closeEvent(self, event):
         """

@@ -1,8 +1,13 @@
+import matplotlib
+matplotlib.use("Qt4Agg")
+import matplotlib.pyplot as plt
+
 from PyQt4 import QtCore, QtGui
 
 class Control_Panel_View_Name(object):
+    LOADING = 0
     DEVICES = 1
-    LOADING = 2
+    PLANNING = 2
     RECONSTRUCTION = 3
     WAYPOINTS = 4
     SETTINGS = 5
@@ -42,10 +47,10 @@ class Control_Panel_View(object):
         if menu_bar is not None:
             menu_bar.hide()
 
-        toolbar = self._controller.window._toolbar
-        if toolbar is not None:
+        for toolbar in self._controller.window._toolbars:
             self._controller.window.removeToolBar(toolbar)
-            self._controller.window._toolbar = None
+
+        self._controller.window._toolbars = []
 
         if layout is not None:
             for index in reversed(range(layout.count())):
@@ -58,6 +63,9 @@ class Control_Panel_View(object):
 
             # Delete the layout itself.
             QtCore.QObjectCleanupHandler().add(layout)
+
+        # Close all figures that the view may have opened.
+        plt.close('all')
 
     def _add_menu_bar(self):
         """

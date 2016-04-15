@@ -19,20 +19,25 @@ class Algorithm(object):
         self.problem = problem
         self.settings = arguments.get_settings("planning_algorithm")
         self.mu = self.settings.get("population_size")
+        self.t_current = 0
         self.t_max = self.settings.get("iteration_limit")
-        self.t_debug = self.settings.get("iteration_debug")
+        self.t_callback = self.settings.get("iteration_callback")
+        self.iteration_callback = None
 
         # Make steps as long as necessary, and convert to numpy array for easy 
         # per-component application.
         self.steps = self.problem.format_steps(self.settings.get("step_size"))
 
+    def set_iteration_callback(self, callback):
+        if not hasattr(callback, "__call__"):
+            raise TypeError("Iteration callback is not callable")
+
+        self.iteration_callback = callback
+
     def evolve(self):
         """
         Perform the evolutionary algorithm and find solutions.
         """
-
-        print("Settings: Problem {}, Algo {}, mu={}, t_max={}".format(self.problem.__class__.__name__, self.__class__.__name__, self.mu, self.t_max))
-        print("Steps: {}".format(self.steps))
 
         # For our initial population of size mu, generate random vectors with 
         # values in a feasible interval using domain specification.
@@ -43,16 +48,21 @@ class Algorithm(object):
 
         start_time = time.time()
 
-        # For t = 1, 2, ..., t_max
-        for t in xrange(1, self.t_max+1):
-            if t % self.t_debug == 0:
+        # For t_current = 1, 2, ..., t_max (updated at the end of the loop).
+        # We use an infinite iterable and stop when the maximum iteration is 
+        # reached so that the maximum iteration can be altered while running.
+        t_iter = itertools.count(self.t_current)
+
+        while self.t_current < self.t_max:
+            if self.t_current % self.t_callback == 0 and self.iteration_callback is not None:
                 cur_time = time.time() - start_time
-                print("Iteration {} ({} sec, {} it/s)".format(t, cur_time, t/float(cur_time)))
-                scores = list(sorted((i for i in range(self.mu) if Feasible[i]), key=lambda i: Objectives[i]))
-                if scores:
-                    idx = scores[len(scores)/2]
-                    print("Current knee point objectives: {}".format(Objectives[idx]))
-                print("Infeasible count: {}".format(self.mu - sum(Feasible)))
+                self.iteration_callback(self, {
+                    "iteration": self.t_current,
+                    "cur_time": cur_time,
+                    "population": P,
+                    "feasible": Feasible,
+                    "objectives": Objectives
+                })
 
             # Select random index s of the mu points
             s = np.random.randint(self.mu)
@@ -97,6 +107,8 @@ class Algorithm(object):
             del P[idx]
             del Feasible[idx]
             del Objectives[idx]
+
+            self.t_current = t_iter.next()
 
         return P, Objectives, Feasible
 
@@ -163,6 +175,13 @@ class Algorithm(object):
     def sort_contribution(self, Rk):
         return Rk
 
+    def get_name(self):
+        """
+        Get the displayable name of the algorithm.
+        """
+
+        raise NotImplementedError("Subclasses must implement `get_name`")
+
 class NSGA(Algorithm):
     def crowding_distance(self,Rk):
         """
@@ -194,6 +213,9 @@ class NSGA(Algorithm):
     def sort_contribution(self, Rk):
         return self.crowding_distance(Rk)
 
+    def get_name(self):
+        return "NSGA"
+
 class SMS_EMOA(Algorithm):
     def hypervolume_contribution(self, Rk):
         """
@@ -219,3 +241,6 @@ class SMS_EMOA(Algorithm):
 
     def sort_contribution(self, Rk):
         return self.hypervolume_contribution(Rk)
+
+    def get_name(self):
+        return "SMS-EMOA"
