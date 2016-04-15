@@ -83,6 +83,11 @@ class Weight_Matrix(object):
         # zero. A higher weight implies a higher influence on the signal strength.
         # Pixels of short links have a higher weight than those of longer links.
         length = np.sqrt((destination[0] - source[0]) ** 2 + (destination[1] - source[1]) ** 2)
+        if length == 0:
+            # Source and destination are equal, which might happen after
+            # snapping the points to the boundaries.
+            return None
+
         weight = (self._distances[source_index] + self._distances[destination_index] < length + self._lambda)
         row = (1.0 / np.sqrt(length)) * weight
         self._matrix = np.vstack([self._matrix, row])

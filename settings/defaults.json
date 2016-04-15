@@ -35,14 +35,6 @@
         "name": "Control panel (reconstruction view)",
         "parent": "reconstruction",
         "settings": {
-            "reconstruction_viewer_dimensions": {
-                "help": "Size in pixels for the width and height, respectively, of the viewer",
-                "type": "tuple",
-                "length": 2,
-                "subtype": "int",
-                "min": 0,
-                "default": [450, 450]
-            },
             "reconstruction_curve_points": {
                 "help": "Number of points to show on a plotted curve",
                 "type": "int",
@@ -674,12 +666,19 @@
     "reconstruction": {
         "name": "Reconstruction",
         "settings": {
-            "filename": {
+            "dataset_file": {
+                "help": "Filename part to use for dataset reconstruction",
+                "type": "file",
+                "format": "assets/dataset_{}.csv",
+                "required": true,
+                "default": "one_person_moving_square"
+            },
+            "dump_file": {
                 "help": "Filename part to use for dump reconstruction",
                 "type": "file",
-                "format": "assets/reconstruction_{}.json",
+                "format": "assets/dump_{}.json",
                 "required": true,
-                "default": "static"
+                "default": "static_manual"
             },
             "pause_time": {
                 "help": "Delay in seconds to wait before showing the next frame of a dump reconstruction",
@@ -692,7 +691,7 @@
                 "type": "string",
                 "required": true,
                 "keys": ["matplotlib.cm", "datad"],
-                "default": "pink"
+                "default": "RdGy"
             },
             "interpolation": {
                 "help": "Pixel interpolation for the reconstruction display",

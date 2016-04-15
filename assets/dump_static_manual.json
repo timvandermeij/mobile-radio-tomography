@@ -1,4 +1,5 @@
 {
+    "number_of_sensors": 2,
     "origin": [0, 0],
     "size": [3, 3],
     "packets": [

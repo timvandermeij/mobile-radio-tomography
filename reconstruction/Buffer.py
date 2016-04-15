@@ -7,6 +7,10 @@ class Buffer(object):
         Initialize the buffer object.
         """
 
+        if options is None:
+            raise ValueError("Options for the buffer have not been provided.")
+
+        self._number_of_sensors = 0
         self._origin = [0, 0]
         self._size = [0, 0]
         self._queue = Queue.Queue()
@@ -37,6 +41,14 @@ class Buffer(object):
         """
 
         return self._queue.qsize()
+
+    @property
+    def number_of_sensors(self):
+        """
+        Return the number of sensors in the network.
+        """
+
+        return self._number_of_sensors
 
     @property
     def origin(self):

@@ -268,7 +268,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
                 # RSSI value has been received. Update the original packet.
                 if raw_packet["frame_id"] in self._data:
                     original_packet = self._data[raw_packet["frame_id"]]
-                    original_packet.set("rssi", ord(raw_packet["parameter"]))
+                    original_packet.set("rssi", -ord(raw_packet["parameter"]))
             elif raw_packet["command"] == "SH":
                 # Serial number (high) has been received.
                 if self._address is None:
