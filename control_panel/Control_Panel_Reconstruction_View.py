@@ -107,6 +107,9 @@ class Graph(object):
         for index in range(len(self._graph_data)):
             self._graph_data[index] = []
 
+        for curve in self._graph_curves:
+            curve.clear()
+
 class Table(object):
     def __init__(self):
         """
@@ -368,6 +371,8 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         Show the reconstruction view.
         """
 
+        self._running = False
+
         self._add_menu_bar()
 
         # Create the image.
@@ -392,14 +397,14 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         panels.addTab(DumpPanel(panels, self._settings), Source.DUMP)
         panels.addTab(StreamPanel(panels, self._settings), Source.STREAM)
 
-        # Create the start button.
-        start_button = QtGui.QPushButton(QtGui.QIcon("assets/start.png"), "Start")
-        start_button.clicked.connect(lambda: self._start(panels.currentWidget()))
+        # Create the toggle button (using the stopped state as default).
+        self._toggle_button = QtGui.QPushButton(QtGui.QIcon("assets/start.png"), "Start")
+        self._toggle_button.clicked.connect(lambda: self._toggle(panels.currentWidget()))
 
         # Create the layout and add the widgets.
         vbox_left = QtGui.QVBoxLayout()
         vbox_left.addWidget(panels)
-        vbox_left.addWidget(start_button)
+        vbox_left.addWidget(self._toggle_button)
 
         vbox_right = QtGui.QVBoxLayout()
         vbox_right.addWidget(self._canvas)
@@ -409,6 +414,22 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         hbox = QtGui.QHBoxLayout(self._controller.central_widget)
         hbox.addLayout(vbox_left)
         hbox.addLayout(vbox_right)
+
+    def _toggle(self, parameters):
+        """
+        Toggle the state of the reconstruction (start or stop).
+        """
+
+        self._running = not self._running
+
+        if self._running:
+            self._toggle_button.setIcon(QtGui.QIcon("assets/stop.png"))
+            self._toggle_button.setText("Stop")
+
+            self._start(parameters)
+        else:
+            self._toggle_button.setIcon(QtGui.QIcon("assets/start.png"))
+            self._toggle_button.setText("Start")
 
     def _start(self, parameters):
         """
@@ -467,6 +488,11 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._graph.clear()
         self._table.clear()
 
+        # Clear the image.
+        self._axes.cla()
+        self._axes.axis("off")
+        self._canvas.draw()
+
         # Execute the reconstruction and visualization.
         self._rssi = []
         self._loop()
@@ -475,6 +501,10 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         """
         Execute the reconstruction loop.
         """
+
+        # Stop if the stop button has been pressed.
+        if not self._running:
+            return
 
         # If no packets are available yet, wait for them to arrive.
         if self._buffer.count() == 0:
