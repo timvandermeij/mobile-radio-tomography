@@ -185,6 +185,11 @@ class Algorithm(object):
             for idx in reversed(todelete):
                 del P[idx]
 
+        # If we only care about the first layer, then place all other 
+        # individuals in the second layer.
+        if not all_layers and len(P) > 0:
+            R.append(OrderedDict([(i, Objectives[i]) for i in P]))
+
         return R
 
     def sort_contribution(self, Rk):
