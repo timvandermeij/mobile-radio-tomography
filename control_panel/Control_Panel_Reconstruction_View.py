@@ -1,5 +1,4 @@
 # TODO:
-# - Dataset performance (reading with progress bar or packet generation on demand)
 # - Implement more reconstructors: Tikhonov and total variation
 # - Faster reconstruction: epsilon instead of zero
 # - Render after a chunk of measurements of a certain size, not after each measurement
