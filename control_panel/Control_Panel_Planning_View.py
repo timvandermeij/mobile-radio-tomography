@@ -304,7 +304,8 @@ class Control_Panel_Planning_View(Control_Panel_View):
             c = 0
             for name, data in self._graph_data.iteritems():
                 if name not in self._graph_plots:
-                    color = pg.intColor(c, hues=len(self._graph_data))
+                    color = pg.intColor(c, hues=len(self._graph_data),
+                                        maxValue=200)
                     plot = self._graph.plot(symbol='o', symbolBrush=color,
                                             symbolSize=5, pen=color, name=name)
                     self._graph_plots[name] = plot
