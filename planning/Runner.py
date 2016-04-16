@@ -219,7 +219,10 @@ class Planning_Runner(Threadable):
 
         axes.cla()
 
-        axes.set_title("Sensor positions for solution #{}/{} (index {}, f1 = {})".format(plot_number, count, i, self.Objectives[i][0]))
+        obj = []
+        for f, name in enumerate(self.problem.get_objective_names()):
+            obj.append("f{} ({}): {}".format(f+1, name, self.Objectives[i][f]))
+        axes.set_title("Sensor positions for solution #{}/{} (index {})\n{}".format(plot_number, count, i, ", ".join(obj)))
 
         # Create axes with limits that keep the network visible, make the plot 
         # square and display ticks and a grid at the network coordinates.
@@ -270,8 +273,9 @@ class Planning_Runner(Threadable):
         axes.cla()
 
         axes.set_title("Pareto front with {}, t={}".format(self.algorithm.get_name(), self.current_iteration))
-        axes.set_xlabel("Objective 1")
-        axes.set_ylabel("Objective 2")
+        names = self.problem.get_objective_names()
+        axes.set_xlabel("Objective 1 ({})".format(names[0]))
+        axes.set_ylabel("Objective 2 ({})".format(names[1]))
         for Rk in self.R:
             # Plot the front line of objective values for feasible individuals.
             # Enable the picker events for uses in the control panel.

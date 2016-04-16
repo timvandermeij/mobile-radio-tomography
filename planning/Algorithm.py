@@ -45,15 +45,23 @@ class Algorithm(object):
 
         # Evaluate objectives and constraints for points in the population.
         Feasible, Objectives = self.problem.evaluate(P)
+        Deletions = {
+            "infeasible": 0,
+            "dominated": 0,
+            "contribution": 0
+        }
 
         start_time = time.time()
 
         # For t_current = 1, 2, ..., t_max (updated at the end of the loop).
         # We use an infinite iterable and stop when the maximum iteration is 
         # reached so that the maximum iteration can be altered while running.
+        # We handle the callback for the maximum iteration itself as well.
         t_iter = itertools.count(self.t_current)
 
-        while self.t_current < self.t_max:
+        while self.t_current <= self.t_max:
+            self.t_current = t_iter.next()
+
             if self.t_current % self.t_callback == 0 and self.iteration_callback is not None:
                 cur_time = time.time() - start_time
                 self.iteration_callback(self, {
@@ -61,8 +69,12 @@ class Algorithm(object):
                     "cur_time": cur_time,
                     "population": P,
                     "feasible": Feasible,
-                    "objectives": Objectives
+                    "objectives": Objectives,
+                    "deletions": Deletions
                 })
+
+            if self.t_current >= self.t_max:
+                break
 
             # Select random index s of the mu points
             s = np.random.randint(self.mu)
@@ -84,9 +96,13 @@ class Algorithm(object):
             # First delete the infeasible solutions, then we will care about 
             # the nondominated solutions. This differs from the original 
             # implementation, hopefully this is a good decision.
-            if len(Delete) == 0:
+            if len(Delete) > 0:
+                Deletions["infeasible"] += 1
+            else:
                 R = self.sort_nondominated(Objectives, all_layers=False)
                 Delete = list(itertools.chain(*[Rk.keys() for Rk in R[1:]]))
+                if len(Delete) > 0:
+                    Deletions["dominated"] += 1
 
             if len(Delete) > 0:
                 # Randomly delete one of the solutions. If it is the new point, 
@@ -103,12 +119,11 @@ class Algorithm(object):
                 C = self.sort_contribution(R[0])
 
                 idx = np.argmin(C)
+                Deletions["contribution"] += 1
 
             del P[idx]
             del Feasible[idx]
             del Objectives[idx]
-
-            self.t_current = t_iter.next()
 
         return P, Objectives, Feasible
 

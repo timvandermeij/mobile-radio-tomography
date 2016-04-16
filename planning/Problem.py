@@ -199,6 +199,16 @@ class Problem(object):
 
         return []
 
+    def get_objective_names(self):
+        """
+        Get a list of names for the objective functions.
+
+        The names are short key-like descriptions for the objectives.
+        The list must be of the same length as `get_objectives`.
+        """
+
+        return []
+
     def get_constraints(self):
         """
         Get a list of constraint functions.
@@ -389,6 +399,9 @@ class Reconstruction_Plan(Problem):
             # columns, so that pixels are evenly measured by links
             #lambda x: np.var(self.matrix, axis=0).mean()
         ]
+
+    def get_objective_names(self):
+        return ["intersections", "sensor-distances"]
 
     def get_constraints(self):
         constraints = super(Reconstruction_Plan, self).get_constraints()

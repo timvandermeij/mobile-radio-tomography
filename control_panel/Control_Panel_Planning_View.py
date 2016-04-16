@@ -5,6 +5,8 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 
+import pyqtgraph as pg
+
 from PyQt4 import QtCore, QtGui
 from Control_Panel_View import Control_Panel_View, Control_Panel_View_Name
 from Control_Panel_Widgets import QToolBarFocus
@@ -76,6 +78,8 @@ class Control_Panel_Planning_View(Control_Panel_View):
         # which can then select one of the individuals.
         self._front_canvas.mpl_connect('pick_event', self._front_pick_event)
 
+        self._overview_items = 2
+
         self._item_width = self._plot_width / 4
         self._item_height = self._plot_height / 4
 
@@ -120,6 +124,20 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
         return axes, canvas
 
+    def _create_graph(self):
+        # Enable antialiasing and use a transparent background with black 
+        # text/lines.
+        pg.setConfigOptions(antialias=True, background=None, foreground="k")
+
+        graph = pg.PlotWidget()
+        graph.setStyleSheet("background: transparent")
+        graph.setXRange(0, self._runner.get_iteration_limit())
+        graph.setLabel("left", "Count")
+        graph.setLabel("bottom", "Iteration")
+        graph.addLegend()
+
+        return graph
+
     def _add_list_item(self, placeholder, canvas):
         list_item = QtGui.QListWidgetItem(placeholder)
         font = QtGui.QFont()
@@ -163,15 +181,15 @@ class Control_Panel_Planning_View(Control_Panel_View):
                              self._individual_canvases[i])
 
     def _redraw(self, i):
-        if i == 0:
-            # The Pareto front is always redrawn when possible, so we do not 
+        if i < self._overview_items:
+            # The overview plots are always redrawn when possible, so we do not 
             # need to draw it here. Disable the select button.
             self._selectButton.setEnabled(False)
             return
 
         # The solution plots are indexed from 1 in the list widget, but from 
         # 0 in the algorithm population and plot object lists.
-        i = i - 1
+        i = i - self._overview_items
 
         indices = self._runner.get_indices()
         if i not in indices:
@@ -201,7 +219,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
         for picked_point in zip(xdata[indices], ydata[indices]):
             points = self._runner.find_objectives(picked_point)
             if points:
-                self._listWidget.setCurrentRow(points[0] + 1)
+                self._listWidget.setCurrentRow(points[0] + self._overview_items)
                 return
 
     def _start(self):
@@ -220,15 +238,19 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
         self._runner.activate()
 
+        t_max = self._runner.get_iteration_limit()
+
         self._progress.setValue(0)
-        self._progress.setRange(0, self._runner.get_iteration_limit())
+        self._progress.setRange(0, t_max)
 
         # Remove old individual items from the list widget, then add the new 
         # individuals in the population.
         for i in range(self._listWidget.count() - 1, 0, -1):
             self._listWidget.takeItem(i)
             self._stackedLayout.takeAt(i)
-            plt.close(self._individual_canvases[i-1].figure)
+            if i >= self._overview_items:
+                canvas = self._individual_canvases[i - self._overview_items]
+                plt.close(canvas.figure)
 
         self._individual_labels = []
         self._individual_axes = []
@@ -236,6 +258,12 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
         size = self._runner.get_population_size()
         plt.rcParams.update({'figure.max_open_warning': size + 1})
+
+        self._graph = self._create_graph()
+        self._graph_plots = {}
+        self._graph_data = {}
+        self._graph_label = self._add_list_item("Statistics", self._graph)
+        self._graph_label.setStyleSheet("border-top: 1px solid grey")
 
         for i in range(1, size + 1):
             axes, canvas = self._create_plot()
@@ -264,12 +292,27 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._progress.setValue(self._runner.get_iteration_current())
 
         currentIndex = self._stackedLayout.currentIndex()
+        index = currentIndex - self._overview_items
         if self._runner.done:
-            if currentIndex != 0:
-                self._selectButton.setEnabled(True)
+            if currentIndex >= self._overview_items:
+                self._selectButton.setEnabled(self._runner.is_feasible(index))
 
             self._stop()
             self._timer.stop()
+
+        if self._updated:
+            c = 0
+            for name, data in self._graph_data.iteritems():
+                if name not in self._graph_plots:
+                    color = pg.intColor(c, hues=len(self._graph_data))
+                    plot = self._graph.plot(symbol='o', symbolBrush=color,
+                                            symbolSize=5, pen=color, name=name)
+                    self._graph_plots[name] = plot
+
+                self._graph_plots[name].setData(data)
+                c += 1
+
+            self._draw_list_item(self._graph_label, self._graph)
 
         if self._runner.done or self._updated:
             self._runner.make_pareto_plot(self._front_axes)
@@ -282,7 +325,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
             for i in range(size):
                 if not self._runner.is_feasible(i):
                     self._individual_labels[i].setText("(infeasible)")
-                elif currentIndex == i + 1 or self._runner.done:
+                elif index == i or self._runner.done:
                     self._draw_individual_solution(i, indices)
                 else:
                     text = ", ".join([str(x) for x in self._runner.get_objectives(i)])
@@ -295,14 +338,25 @@ class Control_Panel_Planning_View(Control_Panel_View):
         if currentIndex == 0:
             return
 
-        if not self._runner.is_feasible(currentIndex - 1):
+        i = currentIndex - self._overview_items
+        if not self._runner.is_feasible(i):
             return
 
-        positions, unsnappable = self._runner.get_positions(currentIndex - 1)
+        positions, unsnappable = self._runner.get_positions(i)
 
         self._controller.set_view_data(Control_Panel_View_Name.WAYPOINTS,
                                        "waypoints", positions.tolist())
         self._controller.show_view(Control_Panel_View_Name.WAYPOINTS)
 
+    def _add_graph_data(self, name, value, iteration):
+        if name not in self._graph_data:
+            self._graph_data[name] = {"x": [], "y": []}
+
+        self._graph_data[name]["x"].append(iteration)
+        self._graph_data[name]["y"].append(value)
+
     def iteration_callback(self, algorithm, data):
         self._updated = True
+
+        for key, value in data["deletions"].iteritems():
+            self._add_graph_data(key, value, data["iteration"])
