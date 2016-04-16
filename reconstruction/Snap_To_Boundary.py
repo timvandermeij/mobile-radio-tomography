@@ -1,10 +1,15 @@
 from collections import namedtuple
-import math
 
-Point = namedtuple('Point', 'x y')
+Point = namedtuple('Point', ['x', 'y'])
+
+class Snap_Boundary(object):
+    LEFT = 1
+    RIGHT = 2
+    TOP = 3
+    BOTTOM = 4
 
 class Snap_To_Boundary(object):
-    def __init__(self, origin, width, height):
+    def __init__(self, origin, width, height, snap_inside=False):
         """
         Initialize the snap to boundary object.
         """
@@ -12,21 +17,19 @@ class Snap_To_Boundary(object):
         self._origin = Point(origin[0], origin[1])
         self._width = width
         self._height = height
+        self._snap_inside = snap_inside
 
-    def _is_outside(self, start, end):
+    def is_outside(self, point):
         """
-        Check if the start and end points of a line are outside the network.
+        Check if a `Point` object `point` of is outside the network.
         """
 
-        start_in_network = (start.x > self._origin.x and
-                            start.x < self._origin.x + self._width and
-                            start.y > self._origin.y and
-                            start.y < self._origin.y + self._height)
-        end_in_network = (end.x > self._origin.x and
-                          end.x < self._origin.x + self._width and
-                          end.y > self._origin.y and
-                          end.y < self._origin.y + self._height)
-        return not (start_in_network or end_in_network)
+        in_network = (point.x > self._origin.x and
+                      point.x < self._origin.x + self._width and
+                      point.y > self._origin.y and
+                      point.y < self._origin.y + self._height)
+
+        return not in_network
 
     def _is_intersecting(self, start, end):
         """
@@ -77,22 +80,29 @@ class Snap_To_Boundary(object):
 
         return False
 
-    def _is_on_boundary(self, point):
+    def _get_boundary(self, point):
         """
         Check if a given point is positioned on a boundary.
+
+        Returns the `Snap_Boundary` identifier for that boundary, or `False`
+        if it is not on a boundary.
         """
 
-        point_on_horizontal_boundary = (
-            point.x >= self._origin.x and
-            point.x <= self._origin.x + self._width and
-            (point.y == self._origin.y or point.y == self._origin.y + self._height)
-        )
-        point_on_vertical_boundary = (
-            point.y >= self._origin.y and
-            point.y <= self._origin.y + self._height and
-            (point.x == self._origin.x or point.x == self._origin.x + self._width)
-        )
-        return (point_on_horizontal_boundary or point_on_vertical_boundary)
+        if point.x >= self._origin.x and point.x <= self._origin.x + self._width:
+            # On horizontal boundary or in between them.
+            if point.y == self._origin.y:
+                return Snap_Boundary.BOTTOM
+            if point.y == self._origin.y + self._height:
+                return Snap_Boundary.TOP
+
+        if point.y >= self._origin.y and point.y <= self._origin.y + self._height:
+            # On vertical boundary or in between them.
+            if point.x == self._origin.x:
+                return Snap_Boundary.LEFT
+            if point.x == self._origin.x + self._width:
+                return Snap_Boundary.RIGHT
+
+        return False
 
     def execute(self, start, end):
         """
@@ -106,8 +116,10 @@ class Snap_To_Boundary(object):
         if start == end:
             return None
 
-        # Ensure that the start and end points are outside the network.
-        if not self._is_outside(start, end):
+        # Ensure that the start and end points are outside the network, unless 
+        # the snapper is set to snap points inside the network as well.
+        outsiders = [self.is_outside(point) for point in [start, end]]
+        if not self._snap_inside and not all(outsiders):
             return None
 
         # Ensure that the line intersects at least one boundary of the network.
@@ -117,39 +129,96 @@ class Snap_To_Boundary(object):
         # Calculate the angle of the triangle.
         delta_x = end.x - start.x
         delta_y = end.y - start.y
-        angle = math.atan2(delta_y, delta_x)
+        if delta_x == 0:
+            slope = delta_y * float('inf')
+        else:
+            slope = delta_y / float(delta_x)
 
         # Snap the start and end points to the boundaries of the network.
+        # Make sure we start with a point that has a known boundary beforehand, 
+        # but ensure we order the output points as they were given in input.
+        order = iter if outsiders[0] or not outsiders[1] else reversed
         snapped_points = []
-        for point in [start, end]:
-            # There is no need to snap start or end points that are already on a boundary.
-            if self._is_on_boundary(point):
+        previous_boundary = None
+        for point in order([start, end]):
+            # There is no need to snap start or end points that are already on 
+            # a boundary.
+            boundary = self._get_boundary(point)
+            if boundary != False:
                 snapped_points.append(point)
+                previous_boundary = boundary
                 continue
 
             if point.y >= self._origin.y and point.y <= self._origin.y + self._height:
                 if point.x <= self._origin.x:
                     # Snap to left boundary.
                     adjacent_side = abs(self._origin.x - point.x)
-                    opposite_side = math.tan(angle) * adjacent_side
-                    snapped_point = Point(point.x + adjacent_side, point.y + opposite_side)
-                else:
+                    opposite_side = slope * adjacent_side
+                    snapped_point = Point(point.x + adjacent_side,
+                                          point.y + opposite_side)
+                    previous_boundary = Snap_Boundary.LEFT
+                elif point.x >= self._origin.x + self._width:
                     # Snap to right boundary.
                     adjacent_side = abs((self._origin.x + self._width) - point.x)
-                    opposite_side = math.tan(angle) * adjacent_side
-                    snapped_point = Point(point.x - adjacent_side, point.y - opposite_side)
+                    opposite_side = slope * adjacent_side
+                    snapped_point = Point(point.x - adjacent_side,
+                                          point.y - opposite_side)
+                    previous_boundary = Snap_Boundary.RIGHT
+                else:
+                    # Inside the network; snap away from the other point.
+                    target_boundaries = [Snap_Boundary.LEFT]
+                    if slope < 0:
+                        target_boundaries.append(Snap_Boundary.TOP)
+                    else:
+                        target_boundaries.append(Snap_Boundary.BOTTOM)
+
+                    # Alter the x coordinate to the left or right boundary, 
+                    # depending on where the previous point was snapped to.
+                    if previous_boundary in target_boundaries:
+                        bx = self._origin.x + self._width
+                    else:
+                        bx = self._origin.x
+
+                    # Alter the y coordinate to the top or bottom boundary, 
+                    # depending on the slope of the line and where the previous 
+                    # point was snapped to.
+                    if (slope < 0) != (previous_boundary in target_boundaries):
+                        by = self._origin.y + self._height
+                    else:
+                        by = self._origin.y
+
+                    dx = point.x - bx
+                    dy = point.y - by
+                    xopts = (dx, dy / float(slope) if slope != 0 else dx)
+                    yopts = (dx * slope, dy)
+                    snapped_point = None
+                    for opts in zip(xopts, yopts):
+                        snapped_point = Point(point.x - opts[0],
+                                              point.y - opts[1])
+                        boundary = self._get_boundary(snapped_point)
+                        if boundary != False:
+                            break
+
+                    if snapped_point is None:
+                        return None
+
+                    previous_boundary = boundary
             else:
                 if point.y <= self._origin.y:
                     # Snap to bottom boundary.
                     opposite_side = abs(self._origin.y - point.y)
-                    adjacent_side = opposite_side / float(math.tan(angle))
-                    snapped_point = Point(point.x + adjacent_side, point.y + opposite_side)
+                    adjacent_side = opposite_side / float(slope)
+                    snapped_point = Point(point.x + adjacent_side,
+                                          point.y + opposite_side)
+                    previous_boundary = Snap_Boundary.BOTTOM
                 else:
                     # Snap to top boundary.
                     opposite_side = abs((self._origin.y + self._height) - point.y)
-                    adjacent_side = opposite_side / float(math.tan(angle))
-                    snapped_point = Point(point.x - adjacent_side, point.y - opposite_side)
+                    adjacent_side = opposite_side / float(slope)
+                    snapped_point = Point(point.x - adjacent_side,
+                                          point.y - opposite_side)
+                    previous_boundary = Snap_Boundary.TOP
 
             snapped_points.append(snapped_point)
 
-        return snapped_points
+        return list(order(snapped_points))

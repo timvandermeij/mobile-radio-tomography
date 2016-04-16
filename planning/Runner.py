@@ -7,7 +7,6 @@ import thread
 import Algorithm
 from Problem import Reconstruction_Plan_Continuous, Reconstruction_Plan_Discrete
 from ..core.Threadable import Threadable
-from ..reconstruction.Weight_Matrix import Weight_Matrix
 
 class Planning_Runner(Threadable):
     """
@@ -185,8 +184,7 @@ class Planning_Runner(Threadable):
         if self.Feasible.size == 0:
             return np.empty(0), 0
 
-        weight_matrix = Weight_Matrix(self.arguments, self.problem.padding,
-                                      self.problem.size)
+        weight_matrix = self.problem.get_weight_matrix()
 
         return self.problem.get_positions(self.P[i], weight_matrix)
 

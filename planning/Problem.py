@@ -247,7 +247,8 @@ class Reconstruction_Plan(Problem):
             raise ValueError("'arguments' must be an instance of Arguments")
 
         # Import the settings for the planning problem.
-        self.settings = arguments.get_settings("planning_problem")
+        self.arguments = arguments
+        self.settings = self.arguments.get_settings("planning_problem")
         self.N = self.settings.get("number_of_measurements")
         self.network_size = self.settings.get("network_size")
         self.padding = self.settings.get("network_padding")
@@ -262,7 +263,7 @@ class Reconstruction_Plan(Problem):
 
         # Initial weight matrix object which can be filled with current 
         # locations during evaluations and reset to be reused.
-        self.weight_matrix = Weight_Matrix(arguments, self.padding, self.size)
+        self.weight_matrix = self.get_weight_matrix()
 
         # Resulting output from the weight matrix.
         self.matrix = None
@@ -283,6 +284,14 @@ class Reconstruction_Plan(Problem):
         """
 
         raise NotImplementedError("Subclass must implement `get_domain`")
+
+    def get_weight_matrix(self):
+        """
+        Create a clean weight matrix for the problem's parameters.
+        """
+
+        return Weight_Matrix(self.arguments, self.padding, self.size,
+                             snap_inside=True)
 
     def format_steps(self, steps):
         # Convert a list of step sizes that has the same number of elements as 
@@ -527,6 +536,16 @@ class Reconstruction_Plan_Discrete(Reconstruction_Plan):
         if snapped_points is None:
             return None
 
-        # Keep the unsnapped points since we may be able to perform 
-        # measurements on different grid positions.
-        return sensor_points
+        new_points = []
+        for sensor_point, snapped_point in zip(sensor_points, snapped_points):
+            # Keep valid unsnapped points since we may be able to perform 
+            # measurements on different grid positions in the padding region.
+            # Otherwise, ensure that the snapped point is on a grid position. 
+            # This possible loses accuracy but should still give a good 
+            # distribution of the points.
+            if weight_matrix.is_valid_point(sensor_point):
+                new_points.append(sensor_point)
+            else:
+                new_points.append([round(coord) for coord in snapped_point])
+
+        return new_points
