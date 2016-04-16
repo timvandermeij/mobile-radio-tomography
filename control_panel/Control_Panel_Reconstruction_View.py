@@ -1,12 +1,12 @@
 # TODO:
 # - Implement more reconstructors: Tikhonov and total variation
-# - Faster reconstruction: epsilon instead of zero
 # - Render after a chunk of measurements of a certain size, not after each measurement
 # - Remove old data to keep the weight matrix and RSSI vector compact
 # - Remove timers where possible: use the availability of data chunks instead
 # - Investigate canvas flipping
 # - Implement dump recorder
 # - Average measurements of the same link
+# - Tweak ellipse width/singular values/model (based on grid experiments)
 
 import colorsys
 import matplotlib
@@ -530,7 +530,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         if self._weight_matrix.update(source, destination) is not None:
             self._rssi.append(packet.get("rssi"))
 
-            if self._weight_matrix.check():
+            try:
                 pixels = self._reconstructor.execute(self._weight_matrix.output(), self._rssi)
 
                 # Render and draw the image with Matplotlib.
@@ -541,5 +541,8 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
                 # Delete the image from memory now that it is drawn.
                 self._axes.cla()
+            except:
+                # There is not enough data yet for the reconstruction algorithm.
+                pass
 
         QtCore.QTimer.singleShot(self._pause_time, self._loop)
