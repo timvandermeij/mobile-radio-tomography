@@ -1,7 +1,6 @@
 # TODO:
 # - Implement more reconstructors: Tikhonov and total variation
 # - Remove old data to keep the weight matrix and RSSI vector compact
-# - Remove timers where possible: use the availability of data chunks instead
 # - Investigate canvas flipping
 # - Implement dump recorder
 # - Average measurements of the same link

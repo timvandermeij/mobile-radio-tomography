@@ -714,7 +714,7 @@
                 "help": "Delay in seconds to wait before entering the next reconstruction loop iteration",
                 "type": "float",
                 "min": 0.0,
-                "default": 0.1
+                "default": 0.05
             },
             "cmap": {
                 "help": "Color map for the reconstruction display. It must be a valid matplotlib colormap.",
