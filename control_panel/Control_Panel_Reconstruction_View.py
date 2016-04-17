@@ -8,7 +8,6 @@
 # - Average measurements of the same link
 # - Tweak ellipse width/singular values/model (based on grid experiments)
 
-import colorsys
 import matplotlib
 matplotlib.use("Qt4Agg")
 import matplotlib.pyplot as plt
@@ -55,17 +54,16 @@ class Graph(object):
         # Create the data lists for the graph.
         self._graph_data = [[] for vehicle in range(1, self._number_of_sensors + 1)]
 
-        # Create the list of colors for the curves.
-        hsv_tuples = [(x * 1.0 / self._number_of_sensors, 0.5, 0.5) for x in range(self._number_of_sensors)]
-        rgb_tuples = []
-        for hsv in hsv_tuples:
-            rgb_tuples.append(map(lambda x: int(x * 255), colorsys.hsv_to_rgb(*hsv)))
-
         # Create the curves for the graph.
+        color_index = 0
         for vehicle in range(1, self._number_of_sensors + 1):
             index = vehicle - 1
+
+            color = pg.intColor(color_index, hues=len(self._graph_data), maxValue=200)
+            color_index += 1
+
             curve = self._graph.plot()
-            curve.setData(self._graph_data[index], pen=pg.mkPen(rgb_tuples[index], width=1.5))
+            curve.setData(self._graph_data[index], pen=pg.mkPen(color, width=1.5))
             self._graph_curves.append(curve)
 
     def create(self):
@@ -104,11 +102,11 @@ class Graph(object):
         Clear the graph.
         """
 
-        for index in range(len(self._graph_data)):
-            self._graph_data[index] = []
-
         for curve in self._graph_curves:
             curve.clear()
+
+        self._graph_data = []
+        self._graph_curves = []
 
 class Table(object):
     def __init__(self):
@@ -483,9 +481,9 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._weight_matrix = Weight_Matrix(self._controller.arguments, self._buffer.origin,
                                             self._buffer.size)
 
-        # Setup the graph and clear the graph and table.
-        self._graph.setup(self._buffer)
+        # Clear the graph and table and setup the graph.
         self._graph.clear()
+        self._graph.setup(self._buffer)
         self._table.clear()
 
         # Clear the image.
