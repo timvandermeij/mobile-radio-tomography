@@ -1,6 +1,5 @@
 # TODO:
 # - Implement more reconstructors: Tikhonov and total variation
-# - Render after a chunk of measurements of a certain size, not after each measurement
 # - Remove old data to keep the weight matrix and RSSI vector compact
 # - Remove timers where possible: use the availability of data chunks instead
 # - Investigate canvas flipping
@@ -438,6 +437,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._pause_time = self._settings.get("pause_time") * 1000
         self._cmap = self._settings.get("cmap")
         self._interpolation = self._settings.get("interpolation")
+        self._chunk_size = self._settings.get("chunk_size")
 
         # Create the buffer depending on the source.
         if parameters.source == Source.DATASET or parameters.source == Source.DUMP:
@@ -491,6 +491,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._canvas.draw()
 
         # Execute the reconstruction and visualization.
+        self._chunk_count = 0
         self._loop()
 
     def _loop(self):
@@ -518,23 +519,28 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             QtCore.QTimer.singleShot(self._pause_time, self._loop)
             return
 
-        # We can attempt to reconstruct an image when the coordinator successfully
-        # updated the weight matrix and the RSSI vector.
+        # We attempt to reconstruct an image when the coordinator successfully
+        # updated the weight matrix and the RSSI vector and when we have obtained
+        # the required number of measurements to fill a chunk.
         if self._coordinator.update(packet):
-            try:
-                pixels = self._reconstructor.execute(self._coordinator.get_weight_matrix(),
-                                                     self._coordinator.get_rssi_vector())
+            self._chunk_count += 1
+            if self._chunk_count >= self._chunk_size:
+                self._chunk_count = 0
 
-                # Render and draw the image with Matplotlib.
-                self._axes.axis("off")
-                self._axes.imshow(pixels.reshape(self._buffer.size), cmap=self._cmap,
-                                  origin="lower", interpolation=self._interpolation)
-                self._canvas.draw()
+                try:
+                    pixels = self._reconstructor.execute(self._coordinator.get_weight_matrix(),
+                                                         self._coordinator.get_rssi_vector())
 
-                # Delete the image from memory now that it is drawn.
-                self._axes.cla()
-            except:
-                # There is not enough data yet for the reconstruction algorithm.
-                pass
+                    # Render and draw the image with Matplotlib.
+                    self._axes.axis("off")
+                    self._axes.imshow(pixels.reshape(self._buffer.size), cmap=self._cmap,
+                                      origin="lower", interpolation=self._interpolation)
+                    self._canvas.draw()
+
+                    # Delete the image from memory now that it is drawn.
+                    self._axes.cla()
+                except:
+                    # There is not enough data yet for the reconstruction algorithm.
+                    pass
 
         QtCore.QTimer.singleShot(self._pause_time, self._loop)

@@ -711,7 +711,7 @@
                 "default": "static_manual"
             },
             "pause_time": {
-                "help": "Delay in seconds to wait before showing the next frame of a dump reconstruction",
+                "help": "Delay in seconds to wait before entering the next reconstruction loop iteration",
                 "type": "float",
                 "min": 0.0,
                 "default": 0.1
@@ -729,6 +729,12 @@
                 "required": false,
                 "keys": ["matplotlib.image", "AxesImage", "_interpd"],
                 "default": "hamming"
+            },
+            "chunk_size": {
+                "help": "Number of measurements to obtain before rendering a new image",
+                "type": "int",
+                "min": 1,
+                "default": 28
             }
         }
     },
