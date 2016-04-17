@@ -56,7 +56,7 @@ class Dataset_Buffer(Buffer):
 
         xbee_packet = XBee_Packet()
         xbee_packet.set("specification", "rssi_ground_station")
-        xbee_packet.set("sensor_id", destination_sensor_id)
+        xbee_packet.set("sensor_id", destination_sensor_id + 1)
         xbee_packet.set("from_latitude", source_sensor_position[0])
         xbee_packet.set("from_longitude", source_sensor_position[1])
         xbee_packet.set("from_valid", True)
