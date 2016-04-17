@@ -22,8 +22,12 @@ __all__ = [
 class Mission(object):
     """
     Mission trajactory utilities.
-    This includes generic methods to set up a mission and methods to check and handle actions during the mission.
-    Actual missions should be implemented as a subclass.
+
+    This includes generic methods to set up a mission and methods to check the
+    state of the vehicle and handle actions during the mission.
+
+    Actual missions are implemented as subclass of the `Mission_Guided` and
+    `Mission_Auto` classes.
     """
 
     def __init__(self, environment, settings):
@@ -36,9 +40,12 @@ class Mission(object):
 
     def distance_to_current_waypoint(self):
         """
-        Gets distance in meters to the current waypoint. 
-        It returns `None` for the first waypoint (Home location).
+        Gets distance in meters to the current waypoint.
+
+        This method returns `None` for the first waypoint (Home location) or
+        other non-waypoint commands (such as waiting indefinitely).
         """
+
         waypoint_location = self.vehicle.get_waypoint()
         if waypoint_location is None:
             return None
@@ -47,6 +54,11 @@ class Mission(object):
         return distance
 
     def setup(self):
+        """
+        Setup the mission by clearing any old missions, importing the mission
+        settings, and setting up dependent objects.
+        """
+
         # Clear the current mission
         self.clear_mission()
 
@@ -100,6 +112,12 @@ class Mission(object):
         self.vehicle.update_mission()
 
     def check_mission(self):
+        """
+        Check the mission's commands and display useful data about them.
+
+        We also extract the home location from the vehicle.
+        """
+
         print("{} commands in the mission!".format(self.vehicle.count_waypoints()))
 
         home_location = self.vehicle.home_location
@@ -115,11 +133,18 @@ class Mission(object):
 
         The list may be cached, and may be different from waypoints that are
         currently stored in the vehicle.
+
+        It is used by the AUTO missions to fill the mission commands.
+        Other missions may use it for their own waypoin tracking purposes.
         """
 
         return []
 
     def get_home_location(self):
+        """
+        Return the home location object from the vehicle.
+        """
+
         return self.vehicle.home_location
 
     def arm_and_takeoff(self):
@@ -161,26 +186,36 @@ class Mission(object):
         """
         Actually start the mission after arming and flying off.
         """
+
         raise NotImplementedError("Must be implemented in child class")
 
     def stop(self):
         """
-        Stop the vehicle and the mission immediately.
+        Stop the vehicle and end the mission immediately.
         """
+
         self.vehicle.armed = False
 
     def step(self):
         """
         Perform any calculations for the current vehicle state.
         """
+
         pass
 
     def check_sensor_distance(self, sensor_distance, yaw, pitch):
         """
-        Decide on doing something with the measured distance.
-        If we're too close, we should take action by stopping and going somewhere else.
-        Returns `True` if the sensor distance is close enough to be relevant for us.
+        Decide on handling a measured `sensor_distance` to an object.
+        If we are too close to an object, we should take action by stopping the
+        vehicle. Some missions may be able to go somewhere else based on this
+        information. The `RuntimeError` this raises may therefore be mitigated
+        by the mission class or the caller, e.g., `Monitor` or the mission
+        script.
+
+        Returns `True` if the sensor distance is close enough to be relevant
+        for the mission.
         """
+
         if sensor_distance == 0:
             print("Inside the object, abort mission.")
             sys.exit(1)
@@ -200,19 +235,29 @@ class Mission(object):
         We can perform other tasks when we are close to the next waypoint.
         Returns `False` when there are no more commands in the mission.
         """
+
         return True
 
     def get_space_size(self):
+        """
+        Get the space size in meters for the current mission.
+        """
+
         return self.size
 
     def get_memory_map(self):
+        """
+        Get the `Memory_Map` object.
+        """
+
         return self.memory_map
 
     def send_global_velocity(self, velocity_x, velocity_y, velocity_z):
         """
         Move vehicle in direction based on specified velocity vectors.
 
-        This should be used in GUIDED mode. See `vehicle.speed` that works in AUTO mode.
+        This should be used in GUIDED mode. See `vehicle.speed` that works in
+        AUTO mode.
         """
 
         self.vehicle.velocity = [velocity_x, velocity_y, velocity_z]
@@ -227,12 +272,22 @@ class Mission(object):
 
     def set_yaw(self, heading, relative=False, direction=0):
         """
-        Set the bearing `heading` of the vehicle in degrees. This becomes the yaw of the vehicle (the direction in which it is facing). The `heading` is a bearing, meaning that north is zero degrees and increasing counterclockwise.
+        Set the bearing `heading` of the vehicle in degrees. The heading becomes
+        the yaw of the vehicle (the direction in which it is facing).
+        The `heading` is a bearing, meaning that north is zero degrees and
+        values are increasing counterclockwise.
 
-        This command works in GUIDED mode and only works after a velocity command has been issued.
-        If `relative` is false, `heading` is the number of degrees off from northward direction, clockwise.
-        If `relative` is true, the `heading` is still given as a bearing, but respective to the vehicle's current yaw.
-        The `direction` gives the direction in which we should rotate: 1 is clockwise and -1 is counter. If `direction is 0, then use the direction in which we reach the requested heading the quickest.
+        This command works in GUIDED mode and may only work after a velocity
+        command has been issued, depending on the vehicle autopilot.
+
+        If `relative` is `False`, then `heading` is the number of degrees off
+        from northward direction, increasing counterclockwise as usual.
+        If `relative` is `True`, the `heading` is still given as a bearing, but
+        is now respective to the vehicle's current yaw.
+
+        The `direction` gives the direction in which we should rotate: `1` is
+        clockwise and `-1` is counterclockwise. If `direction` is `0`, then use
+        the direction in which we reach the requested `heading` the quickest.
         """
 
         if direction == 0:
@@ -247,10 +302,17 @@ class Mission(object):
 
     def set_sensor_yaw(self, heading, relative=False, direction=0):
         """
-        Set the yaw for the distance sensors.
-        This may be the yaw of the entire vehicle, or changing a servo output.
-        In either case, at least one of the distance sensors (if there are any) will in time point in the given direction.
+        Set the yaw `heading` for the distance sensors.
+
+        This may be accomplished by changing the yaw of the entire vehicle, or
+        by changing a servo PWM output to turn the distance sensor to a certain
+        angle. If vehicle angle changing is used, then the arguments `relative`
+        and `direction` have the same meaning as in `set_yaw`.
+
+        In either case, at least one of the distance sensors (if there are any)
+        will in time point in the given direction.
         """
+
         if not self.environment.get_servos():
             self.set_yaw(heading, relative, direction)
             return
@@ -268,6 +330,13 @@ class Mission(object):
         self.set_yaw(heading, relative, direction)
 
     def return_to_launch(self):
+        """
+        Set the vehicle in return-to-launch (RTL) mode, which depending on
+        vehicle type causes it to return to its home location.
+
+        Use only when ending a mission in a safe environment.
+        """
+
         print("Return to launch")
         self.vehicle.mode = VehicleMode("RTL")
 
@@ -296,6 +365,12 @@ class Mission_Auto(Mission):
         return self._waypoints
 
     def get_points(self):
+        """
+        Retrieve a list of waypoint locations for this mission.
+
+        This list is cached by `get_waypoints`.
+        """
+
         raise NotImplementedError("Must be implemented in child class")
 
     def add_takeoff(self):
@@ -369,6 +444,10 @@ class Mission_Auto(Mission):
     def check_waypoint(self):
         if self.vehicle.is_wait():
             if self._xbee_synchronization and self.environment.is_measurement_valid():
+                # The vehicle is waiting for measurements to become valid, and 
+                # they have, so go to the next waypoint. We do not need to give 
+                # an explicit waypoint here since the vehicle never changes the 
+                # waypoint in between here anyway.
                 time.sleep(self.settings.get("measurement_delay"))
                 print("Measurements are valid, continuing to next waypoint")
                 self.vehicle.set_next_waypoint()
@@ -392,8 +471,12 @@ class Mission_Auto(Mission):
             if distance < self.farness:
                 print("Distance to waypoint ({}): {} m".format(next_waypoint, distance))
                 if distance <= self.closeness:
+                    # We are close enough to the waypoint, so skip to the next 
+                    # one so that we vehicle can prepare itself for that. We 
+                    # pass an explicit waypoint number to avoid race conditions 
+                    # with the vehicle's AUTO mode changing it in the meantime.
                     print("Close enough: skip to next waypoint")
-                    self.vehicle.set_next_waypoint()
+                    self.vehicle.set_next_waypoint(next_waypoint + 1)
                     next_waypoint += 1
 
         return next_waypoint < self.vehicle.count_waypoints()
@@ -401,7 +484,9 @@ class Mission_Auto(Mission):
 class Mission_Guided(Mission):
     """
     A mission that uses the GUIDED mode to move on the fly.
-    This allows the mission to react to unknown situations determined using sensors.
+
+    This allows the mission to react to unknown situations determined using
+    sensors.
     """
 
     def start(self):
@@ -416,16 +501,21 @@ class Mission_Square(Mission_Auto):
         """
         Define the four waypoint locations of a square mission.
 
-        The waypoints are positioned to form a square of side length `2*size` around the specified `center` Location.
+        The waypoints are positioned to form a square of side length `2 * size`
+        around a given center location, which is the home location.
 
-        This method returns the points relative to the current location at the same altitude.
+        This method returns the points relative to the current location at the
+        same altitude.
         """
+
         points = []
+
         points.append(self.environment.get_location(self.size/2, -self.size/2))
         points.append(self.environment.get_location(self.size/2, self.size/2))
         points.append(self.environment.get_location(-self.size/2, self.size/2))
         points.append(self.environment.get_location(-self.size/2, -self.size/2))
         points.append(points[0])
+
         return points
 
     def check_waypoint(self):
@@ -504,7 +594,8 @@ class Mission_Search(Mission_Browse):
                     else:
                         dist = d + self.padding + self.closeness
                         angle = (i + right - 1) * self.yaw_angle_step * math.pi/180
-                        loc = self.geometry.get_location_angle(current_location, dist, angle)
+                        loc = self.geometry.get_location_angle(current_location,
+                                                               dist, angle)
 
                         if i == 0:
                             cycle_safe = right

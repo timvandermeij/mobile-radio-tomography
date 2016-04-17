@@ -90,6 +90,7 @@ class TestMissionCycle(EnvironmentTestCase):
 
         # The mission waits for the other XBee to send a valid location packet.
         self.vehicle._check_state()
+        self.assertEqual(self.vehicle._current_waypoint, 1)
         self.assertEqual(self.vehicle.get_waypoint(), None)
         self.assertTrue(self.environment.location_valid(other_valid=True, other_id=self.xbee.id + 1, other_index=1))
 
@@ -97,4 +98,5 @@ class TestMissionCycle(EnvironmentTestCase):
             self.mission.check_waypoint()
 
         self.vehicle._check_state()
+        self.assertEqual(self.vehicle._current_waypoint, 2)
         self.assertEqual(self.vehicle.get_waypoint(), LocationLocal(2,0,0))
