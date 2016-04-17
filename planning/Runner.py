@@ -113,10 +113,12 @@ class Planning_Runner(Threadable):
 
         return self.get_indices()
 
-    def get_indices(self):
+    def get_indices(self, sort=0):
         """
         Get the indices of the population list that are feasible.
-        The resulting list is sorted according to the first objective value.
+        The resulting list is sorted according to the objective values with
+        index given in `sort`. If the sort index is negative, then the indices
+        are not sorted.
 
         If the algorithm does not yet have (intermediate) results, an empty list
         is returned.
@@ -126,7 +128,8 @@ class Planning_Runner(Threadable):
             return []
 
         indices = [i for i in range(self.get_population_size()) if self.Feasible[i]]
-        indices = sorted(indices, key=lambda i: self.Objectives[i][0])
+        if sort >= 0:
+            indices = sorted(indices, key=lambda i: self.Objectives[i][sort])
 
         return indices
 
