@@ -701,7 +701,7 @@
                 "type": "file",
                 "format": "assets/dataset_{}.csv",
                 "required": true,
-                "default": "one_person_moving_square"
+                "default": "one_person_at_x18_y9"
             },
             "dump_file": {
                 "help": "Filename part to use for dump reconstruction",
