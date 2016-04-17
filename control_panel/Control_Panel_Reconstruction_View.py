@@ -18,10 +18,10 @@ from functools import partial
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from PyQt4 import QtGui, QtCore
 from Control_Panel_View import Control_Panel_View
+from ..reconstruction.Coordinator import Coordinator
 from ..reconstruction.Dataset_Buffer import Dataset_Buffer
 from ..reconstruction.Dump_Buffer import Dump_Buffer
 from ..reconstruction.Stream_Buffer import Stream_Buffer
-from ..reconstruction.Weight_Matrix import Weight_Matrix
 from ..reconstruction.Least_Squares_Reconstructor import Least_Squares_Reconstructor
 from ..reconstruction.SVD_Reconstructor import SVD_Reconstructor
 from ..reconstruction.Truncated_SVD_Reconstructor import Truncated_SVD_Reconstructor
@@ -477,9 +477,8 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         reconstructor_class = reconstructors[parameters.get("Reconstructor")]
         self._reconstructor = reconstructor_class(self._controller.arguments)
 
-        # Create the weight matrix.
-        self._weight_matrix = Weight_Matrix(self._controller.arguments, self._buffer.origin,
-                                            self._buffer.size)
+        # Create the coordinator.
+        self._coordinator = Coordinator(self._controller.arguments, self._buffer)
 
         # Clear the graph and table and setup the graph.
         self._graph.clear()
@@ -492,7 +491,6 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._canvas.draw()
 
         # Execute the reconstruction and visualization.
-        self._rssi = []
         self._loop()
 
     def _loop(self):
@@ -520,16 +518,12 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             QtCore.QTimer.singleShot(self._pause_time, self._loop)
             return
 
-        source = (packet.get("from_latitude"), packet.get("from_longitude"))
-        destination = (packet.get("to_latitude"), packet.get("to_longitude"))
-
-        # If the weight matrix has been updated, store the RSSI value and
-        # redraw the image if the weight matrix is complete.
-        if self._weight_matrix.update(source, destination) is not None:
-            self._rssi.append(packet.get("rssi"))
-
+        # We can attempt to reconstruct an image when the coordinator successfully
+        # updated the weight matrix and the RSSI vector.
+        if self._coordinator.update(packet):
             try:
-                pixels = self._reconstructor.execute(self._weight_matrix.output(), self._rssi)
+                pixels = self._reconstructor.execute(self._coordinator.get_weight_matrix(),
+                                                     self._coordinator.get_rssi_vector())
 
                 # Render and draw the image with Matplotlib.
                 self._axes.axis("off")
