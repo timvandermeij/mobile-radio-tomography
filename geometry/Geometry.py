@@ -9,12 +9,14 @@ __all__ = ["Geometry", "Geometry_Spherical"]
 class Geometry(object):
     """
     Geometry utility functions
+
     This is a class with functions that calculate distances, locations or 
     angles based on specific input.
-    This can be based on 
-    Note that some functions assume certain properties of the earth's surface, 
+
+    Note that some methods assume certain properties of the earth's surface, 
     such as it being spherical or being flat. Depending on these assumptions, 
-    these functions may have different accuracies across distances.
+    these functions may have different accuracies across distances. Different
+    subclasses make different assumptions about the geometry.
     Note that (`y`,`x`) = (`lat`,`lon`) = (`N`,`E`).
 
     The base class does uses meters as the base unit for coordinates.
@@ -563,7 +565,22 @@ class Geometry(object):
             dist = self.get_distance_meters(location1, loc_point)
             return (dist, loc_point)
 
+class Geometry_Grid(Geometry):
+    """
+    Geometry that operates in a grid-like environment where one can only move
+    north, east, south or west in discrete steps.
+    """
+
+    def get_distance_meters(self, location1, location2):
+        location1, location2 = self.equalize(location1, location2)
+        diff = self._diff_location(location1, location2)
+        return abs(diff.north) + abs(diff.east) + abs(diff.down)
+
 class Geometry_Spherical(Geometry):
+    """
+    Geometry that operates on a spherical Earth.
+    """
+
     # Radius of "spherical" earth
     EARTH_RADIUS = 6378137.0
 
