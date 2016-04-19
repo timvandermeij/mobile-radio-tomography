@@ -701,7 +701,7 @@
                 "type": "file",
                 "format": "assets/dataset_{}.csv",
                 "required": true,
-                "default": "one_person_at_x18_y9"
+                "default": "one_person_at_x3_y18"
             },
             "dump_file": {
                 "help": "Filename part to use for dump reconstruction",
@@ -714,7 +714,7 @@
                 "help": "Delay in seconds to wait before entering the next reconstruction loop iteration",
                 "type": "float",
                 "min": 0.0,
-                "default": 0.05
+                "default": 0.02
             },
             "cmap": {
                 "help": "Color map for the reconstruction display. It must be a valid matplotlib colormap.",
@@ -734,7 +734,7 @@
                 "help": "Number of measurements to obtain before rendering a new image",
                 "type": "int",
                 "min": 1,
-                "default": 28
+                "default": 100
             }
         }
     },
@@ -756,7 +756,7 @@
                 "help": "Number of singular values to compute",
                 "type": "int",
                 "min": 1,
-                "default": 2
+                "default": 30
             }
         }
     },
