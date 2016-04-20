@@ -17,9 +17,12 @@ class Greedy_Assignment(object):
     or use a different distance function.
     """
 
-    def __init__(self, geometry, number_of_vehicles=2):
+    def __init__(self, arguments, geometry):
+        self._settings = arguments.get_settings("planning_assignment")
         self._geometry = geometry
-        self._number_of_vehicles = number_of_vehicles
+
+        self._home_locations = self._settings.get("vehicle_home_locations")
+        self._number_of_vehicles = len(self._home_locations)
 
         self._vehicle_pairs = list(
             itertools.permutations(range(1, self._number_of_vehicles + 1), r=2)
@@ -38,7 +41,7 @@ class Greedy_Assignment(object):
         indices = np.unravel_index(np.argmin(totals), totals.shape)
         return indices, totals[indices]
 
-    def assign(self, home_positions, positions_pairs):
+    def assign(self, positions_pairs):
         """
         Assign the vehicles with current positions `home_positions` an ordering
         of the position pairs to be visited. `positions_pairs` must be a numpy
@@ -53,7 +56,7 @@ class Greedy_Assignment(object):
         """
 
         positions = np.array(positions_pairs)
-        current_positions = list(home_positions)
+        current_positions = list(self._home_locations)
 
         assignment = dict([
             (i, []) for i in range(1, self._number_of_vehicles + 1)

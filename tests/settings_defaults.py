@@ -96,18 +96,18 @@ class TestSettingsDefaults(unittest.TestCase):
 
             self.assertTrue(type_checker, msg.format(key, component, subkeys_format, type_checker))
 
-    def _check_setting(self, component, key, setting, dictinfo=False):
+    def _check_setting(self, component, key, setting, subinfo=False):
         """
         Check whether a setting with name `key` and information registration
         `setting`, which was retrieved from the component with name `component`,
         has all the keys it should have, depending on its type.
 
-        If `dictinfo` is given, then this does not check for the presence of
+        If `subinfo` is given, then this does not check for the presence of
         the 'help' and 'default' fields which are not needed for dictionary
-        subitems.
+        and list subtype subitems.
         """
 
-        if not dictinfo:
+        if not subinfo:
             self.assert_has_key(component, key, setting, "help")
             self.assert_has_key(component, key, setting, "default")
 
@@ -125,9 +125,13 @@ class TestSettingsDefaults(unittest.TestCase):
 
         if self._is_dict_type(setting):
             for dictkey in setting["dictinfo"]:
-                self._check_setting(component, "{}-{}".format(key, dictkey), setting["dictinfo"][dictkey], dictinfo=True)
+                self._check_setting(component, "{}-{}".format(key, dictkey),
+                                    setting["dictinfo"][dictkey], subinfo=True)
         elif self._is_sequence_type(setting):
             self.assert_has_key(component, key, setting, "subtype")
+            if isinstance(setting["subtype"], dict):
+                self._check_setting(component, "{}-sub".format(key),
+                                    setting["subtype"], subinfo=True)
 
     def test_settings_defaults(self):
         # Test whether all the settings in each components have appropriate 

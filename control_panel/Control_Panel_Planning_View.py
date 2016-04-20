@@ -34,7 +34,9 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._settings_toolbar.setStyleSheet("QToolBar {spacing: 8px;}")
 
         self._forms = {}
-        for component in ("planning", "planning_algorithm", "planning_problem"):
+        components = ("planning", "planning_assignment", "planning_algorithm",
+                      "planning_problem")
+        for component in components:
             form = SettingsWidget(self._controller.arguments, component,
                                   toolbar=self._settings_toolbar)
 
@@ -448,5 +450,8 @@ class Control_Panel_Planning_View(Control_Panel_View):
     def iteration_callback(self, algorithm, data):
         self._updated = True
 
+        t = data["iteration"]
+        speed = t / float(data["cur_time"])
+        self._add_graph_data("it/second",  speed, t)
         for key, value in data["deletions"].iteritems():
-            self._add_graph_data(key, value, data["iteration"])
+            self._add_graph_data(key, value, t)

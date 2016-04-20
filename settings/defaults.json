@@ -690,6 +690,30 @@
                 "min": 0.0,
                 "max": 1.0,
                 "default": 0.5
+            },
+            "delta_rate": {
+                "help": "Ratio between sensor distances and mission length. A higher value gives the sensor distances more weight in the objective, a lower value ",
+                "short": "Delta",
+                "type": "float",
+                "min": 0.0,
+                "max": 1.0,
+                "default": 0.5
+            }
+        }
+    },
+    "planning_assignment": {
+        "name": "Planning waypoint assignment problem",
+        "settings": {
+            "vehicle_home_locations": {
+                "help": "Home location coordinates for the vehicles",
+                "short": "Home locations",
+                "type": "list",
+                "subtype": {
+                    "type": "tuple",
+                    "length": 2,
+                    "subtype": "int"
+                },
+                "default": [[0, 0], [0, 9]]
             }
         }
     },

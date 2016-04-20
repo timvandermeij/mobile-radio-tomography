@@ -2,11 +2,14 @@ import numpy as np
 import unittest
 from ..geometry.Geometry import Geometry_Grid
 from ..planning.Greedy_Assignment import Greedy_Assignment
+from ..settings import Arguments
+from settings import SettingsTestCase
 
-class TestPlanningGreedyAssignment(unittest.TestCase):
+class TestPlanningGreedyAssignment(SettingsTestCase):
     def setUp(self):
+        self.arguments = Arguments("settings.json", [])
         self.geometry = Geometry_Grid()
-        self.assigner = Greedy_Assignment(self.geometry, number_of_vehicles=2)
+        self.assigner = Greedy_Assignment(self.arguments, self.geometry)
 
     def test_init(self):
         self.assertEqual(self.assigner._geometry, self.geometry)
@@ -14,7 +17,6 @@ class TestPlanningGreedyAssignment(unittest.TestCase):
         self.assertEqual(self.assigner._vehicle_pairs, [(1, 2), (2, 1)])
 
     def test_assign(self):
-        home_positions = [(0,0), (0,9)]
         positions = np.array([[[3, 0], [5, 6]],
                               [[2, 9], [0, 1]],
                               [[0, 0], [1, 6]],

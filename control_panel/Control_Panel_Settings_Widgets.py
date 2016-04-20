@@ -587,9 +587,14 @@ class ListFormWidget(FormWidget):
             sub_default = None
 
         sub_info = self.info.copy()
-        sub_info["type"] = sub_info.pop("subtype")
+        del sub_info["type"]
         if "length" in sub_info:
             del sub_info["length"]
+
+        if isinstance(sub_info["subtype"], dict):
+            sub_info.update(sub_info.pop("subtype"))
+        else:
+            sub_info["type"] = sub_info.pop("subtype")
 
         sub_info["value"] = sub_value
         sub_info["default"] = sub_default
