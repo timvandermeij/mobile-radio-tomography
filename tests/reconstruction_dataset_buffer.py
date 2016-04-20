@@ -42,7 +42,7 @@ class TestReconstructionDatasetBuffer(unittest.TestCase):
             packet = dataset_buffer.get()
             self.assertEqual(packet.get_all(), {
                 "specification": "rssi_ground_station",
-                "sensor_id": self.sensor_id,
+                "sensor_id": self.sensor_id + 1,
                 "from_latitude": self.positions[index][0],
                 "from_longitude": self.positions[index][1],
                 "from_valid": True,
