@@ -4,6 +4,8 @@
 # - Implement dump recorder
 # - Average measurements of the same link
 # - Tweak ellipse width/singular values/model (based on grid experiments)
+# - Extend calibration procedure for all data sources (change UI for calibrated RSSI)
+# - Put Matplotlib rendering on a separate thread
 
 import matplotlib
 matplotlib.use("Qt4Agg")
@@ -268,20 +270,25 @@ class DatasetPanel(Panel):
         that are specific to this data source.
         """
 
-        widget = QtGui.QWidget()
+        input_elements = {
+            "dataset_calibration_file": "Calibration file",
+            "dataset_file": "File"
+        }
 
-        widget_layout = QtGui.QHBoxLayout()
-        widget_layout.setContentsMargins(0, 0, 0, 0)
+        for key, label in input_elements.iteritems():
+            widget = QtGui.QWidget()
+            widget_layout = QtGui.QHBoxLayout()
+            widget_layout.setContentsMargins(0, 0, 0, 0)
 
-        file_box = QtGui.QLineEdit()
-        file_box.setText(self._settings.get("dataset_file"))
+            file_box = QtGui.QLineEdit()
+            file_box.setText(self._settings.get(key))
 
-        widget_layout.addWidget(file_box)
-        widget.setLayout(widget_layout)
+            widget_layout.addWidget(file_box)
+            widget.setLayout(widget_layout)
 
-        self._register("File", widget, partial(
-            lambda file_box: "assets/dataset_{}.csv".format(file_box.text()), file_box)
-        )
+            self._register(label, widget, partial(
+                lambda file_box: "assets/dataset_{}.csv".format(file_box.text()), file_box
+            ))
 
         super(DatasetPanel, self)._render()
 
@@ -439,15 +446,18 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
         # Create the buffer depending on the source.
         if parameters.source == Source.DATASET or parameters.source == Source.DUMP:
+            calibration_file = parameters.get("Calibration file")
             file = parameters.get("File")
 
-            if not os.path.exists(file):
-                QtGui.QMessageBox.critical(self._controller.central_widget, "Invalid file",
-                                           "File '{}' does not exist.".format(file))
-                return
+            for field in [calibration_file, file]:
+                if not os.path.exists(field):
+                    QtGui.QMessageBox.critical(self._controller.central_widget, "Invalid file",
+                                               "File '{}' does not exist.".format(field))
+                    return
 
             buffer_class = Dataset_Buffer if parameters.source == Source.DATASET else Dump_Buffer
             self._buffer = buffer_class({
+                "calibration_file": calibration_file,
                 "file": file
             })
         elif parameters.source == Source.STREAM:

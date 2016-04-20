@@ -720,12 +720,19 @@
     "reconstruction": {
         "name": "Reconstruction",
         "settings": {
+            "dataset_calibration_file": {
+                "help": "Filename part to use for dataset reconstruction calibration",
+                "type": "file",
+                "format": "assets/dataset_{}.csv",
+                "required": true,
+                "default": "empty"
+            },
             "dataset_file": {
                 "help": "Filename part to use for dataset reconstruction",
                 "type": "file",
                 "format": "assets/dataset_{}.csv",
                 "required": true,
-                "default": "one_person_at_x3_y18"
+                "default": "one_person_moving_square"
             },
             "dump_file": {
                 "help": "Filename part to use for dump reconstruction",

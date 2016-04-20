@@ -24,17 +24,34 @@ class Dataset_Buffer(Buffer):
         self._number_of_sensors = len(self._positions)
         self._size = [21, 21]
 
-        with open(options["file"], "r") as dataset_file:
-            for line in csv.reader(dataset_file):
-                destination_sensor_id = int(line[0])
+        self._calibration = {}
 
-                for source_sensor_id in range(self._number_of_sensors):
+        # Read the data from the empty network (for calibration).
+        with open(options["calibration_file"], "r") as dataset_calibration_file:
+            for line in csv.reader(dataset_calibration_file):
+                destination_id = int(line[0])
+
+                for source_id in range(self._number_of_sensors):
                     # Ignore entries that indicate sending to ourselves.
-                    if source_sensor_id == destination_sensor_id:
+                    if source_id == destination_id:
                         continue
 
-                    rssi = int(line[source_sensor_id + 1])
-                    self.put([source_sensor_id, destination_sensor_id, rssi])
+                    rssi = int(line[source_id + 1])
+                    self._calibration[(source_id, destination_id)] = rssi
+
+        # Read the data from the nonempty network.
+        with open(options["file"], "r") as dataset_file:
+            for line in csv.reader(dataset_file):
+                destination_id = int(line[0])
+
+                for source_id in range(self._number_of_sensors):
+                    # Ignore entries that indicate sending to ourselves.
+                    if source_id == destination_id:
+                        continue
+
+                    rssi = int(line[source_id + 1])
+                    calibrated_rssi = rssi - self._calibration[(source_id, destination_id)]
+                    self.put([source_id, destination_id, calibrated_rssi])
 
     def get(self):
         """
@@ -48,20 +65,20 @@ class Dataset_Buffer(Buffer):
 
         packet = self._queue.get()
 
-        source_sensor_id = packet[0]
-        source_sensor_position = self._positions[source_sensor_id]
-        destination_sensor_id = packet[1]
-        destination_sensor_position = self._positions[destination_sensor_id]
+        source_id = packet[0]
+        source_position = self._positions[source_id]
+        destination_id = packet[1]
+        destination_position = self._positions[destination_id]
         rssi = packet[2]
 
         xbee_packet = XBee_Packet()
         xbee_packet.set("specification", "rssi_ground_station")
-        xbee_packet.set("sensor_id", destination_sensor_id + 1)
-        xbee_packet.set("from_latitude", source_sensor_position[0])
-        xbee_packet.set("from_longitude", source_sensor_position[1])
+        xbee_packet.set("sensor_id", destination_id + 1)
+        xbee_packet.set("from_latitude", source_position[0])
+        xbee_packet.set("from_longitude", source_position[1])
         xbee_packet.set("from_valid", True)
-        xbee_packet.set("to_latitude", destination_sensor_position[0])
-        xbee_packet.set("to_longitude", destination_sensor_position[1])
+        xbee_packet.set("to_latitude", destination_position[0])
+        xbee_packet.set("to_longitude", destination_position[1])
         xbee_packet.set("to_valid", True)
         xbee_packet.set("rssi", rssi)
 
