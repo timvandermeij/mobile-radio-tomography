@@ -119,11 +119,12 @@ class Snap_To_Boundary(object):
         # Ensure that the start and end points are outside the network, unless 
         # the snapper is set to snap points inside the network as well.
         outsiders = [self.is_outside(point) for point in [start, end]]
-        if not self._snap_inside and not all(outsiders):
+        all_outside = all(outsiders)
+        if not self._snap_inside and not all_outside:
             return None
 
         # Ensure that the line intersects at least one boundary of the network.
-        if not self._is_intersecting(start, end):
+        if all_outside and not self._is_intersecting(start, end):
             return None
 
         # Calculate the angle of the triangle.
