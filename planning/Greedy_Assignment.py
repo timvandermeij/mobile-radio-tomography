@@ -67,12 +67,22 @@ class Greedy_Assignment(object):
         total_distance = 0
 
         while len(positions) > 0:
+            # The index of the distances matrix and the distance value itself.
             idx, distance = self._get_closest_pair(current_positions, positions)
+            # The chosen vehicle pair and the chosen measurement positions pair
             vehicle_pair, closest_pair = idx
 
-            for i, vehicle in enumerate(self._vehicle_pairs[vehicle_pair]):
+            # Determine the synchronization (waits) between the two vehicles in 
+            # the chosen vehicle pair. There are always two permutations here.
+            syncs = itertools.permutations(self._vehicle_pairs[vehicle_pair])
+            for i, sync_pair in enumerate(syncs):
+                vehicle, other_vehicle = sync_pair
+
                 new_position = list(positions[closest_pair, i, :])
-                assignment[vehicle].append(new_position)
+
+                # Create an assignment containing the full position and the 
+                # other vehicle's wait ID.
+                assignment[vehicle].append(new_position + [0, other_vehicle])
                 current_positions[vehicle-1] = new_position
 
             total_distance += distance

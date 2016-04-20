@@ -434,10 +434,10 @@ class Control_Panel_Planning_View(Control_Panel_View):
         if not self._runner.is_feasible(i):
             return
 
-        positions, unsnappable = self._runner.get_positions(i)
+        waypoints = self._runner.get_assignment(i)
 
         self._controller.set_view_data(Control_Panel_View_Name.WAYPOINTS,
-                                       "waypoints", positions.tolist())
+                                       "waypoints", waypoints)
         self._controller.show_view(Control_Panel_View_Name.WAYPOINTS)
 
     def _add_graph_data(self, name, value, iteration):

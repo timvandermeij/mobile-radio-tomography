@@ -286,6 +286,23 @@ class Planning_Runner(Threadable):
             o2 = [self.Objectives[i][1] for i in Rk if self.Feasible[i]]
             axes.plot(o1, o2, marker='o', picker=5)
 
+    def get_assignment(self, i):
+        """
+        Given an index `i` of an individual from a run of the algorithm, return
+        the dictionary of ordered waypoint assignments to vehicles.
+
+        If the algorithm does not yet have (intermediate) results or if the
+        solution is not feasible, then this method returns an empty dictionary
+        instead.
+        """
+        
+        positions, unsnappable = self.get_positions(i)
+        if positions.size == 0:
+            return {}
+
+        assignment, distance = self.problem.assigner.assign(positions)
+        return assignment
+
     def get_iteration_current(self):
         """
         Get the current iteration number that the algorithm is at.

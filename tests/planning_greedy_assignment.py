@@ -28,5 +28,7 @@ class TestPlanningGreedyAssignment(SettingsTestCase):
         self.assertEqual(positions.shape, (4, 2, 2))
 
         # We receive a good assignment.
-        self.assertEqual(assignment, {1: [[0, 0], [0, 1], [3, 0], [9, 1]],
-                                      2: [[1, 6], [2, 9], [5, 6], [4, 8]]})
+        self.assertEqual(assignment, {
+            1: [[0, 0, 0, 2], [0, 1, 0, 2], [3, 0, 0, 2], [9, 1, 0, 2]],
+            2: [[1, 6, 0, 1], [2, 9, 0, 1], [5, 6, 0, 1], [4, 8, 0, 1]]
+        })
