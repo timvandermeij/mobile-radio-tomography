@@ -1,3 +1,4 @@
+import copy
 from Weight_Matrix import Weight_Matrix
 
 class Coordinator(object):
@@ -25,7 +26,7 @@ class Coordinator(object):
         Get the RSSI vector (as a list).
         """
 
-        return self._rssi
+        return copy.copy(self._rssi)
 
     def update(self, packet):
         """

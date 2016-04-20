@@ -765,7 +765,7 @@
                 "help": "Number of measurements to obtain before rendering a new image",
                 "type": "int",
                 "min": 1,
-                "default": 100
+                "default": 50
             }
         }
     },

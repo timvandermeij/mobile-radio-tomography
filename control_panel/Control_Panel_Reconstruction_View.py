@@ -5,13 +5,13 @@
 # - Average measurements of the same link
 # - Tweak ellipse width/singular values/model (based on grid experiments)
 # - Extend calibration procedure for all data sources (change UI for calibrated RSSI)
-# - Put Matplotlib rendering on a separate thread
 
 import matplotlib
 matplotlib.use("Qt4Agg")
 import matplotlib.pyplot as plt
 import os.path
 import pyqtgraph as pg
+import thread
 from collections import OrderedDict
 from functools import partial
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
@@ -535,20 +535,26 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             if self._chunk_count >= self._chunk_size:
                 self._chunk_count = 0
 
-                try:
-                    pixels = self._reconstructor.execute(self._coordinator.get_weight_matrix(),
-                                                         self._coordinator.get_rssi_vector())
-
-                    # Render and draw the image with Matplotlib.
-                    self._axes.axis("off")
-                    self._axes.imshow(pixels.reshape(self._buffer.size), cmap=self._cmap,
-                                      origin="lower", interpolation=self._interpolation)
-                    self._canvas.draw()
-
-                    # Delete the image from memory now that it is drawn.
-                    self._axes.cla()
-                except:
-                    # There is not enough data yet for the reconstruction algorithm.
-                    pass
+                thread.start_new_thread(self._render, ())
 
         QtCore.QTimer.singleShot(self._pause_time, self._loop)
+
+    def _render(self):
+        """
+        Render and draw the image using Matplotlib. This runs in a separate thread.
+        """
+
+        try:
+            pixels = self._reconstructor.execute(self._coordinator.get_weight_matrix(),
+                                                 self._coordinator.get_rssi_vector())
+
+            self._axes.axis("off")
+            self._axes.imshow(pixels.reshape(self._buffer.size), cmap=self._cmap,
+                              origin="lower", interpolation=self._interpolation)
+            self._canvas.draw()
+
+            # Delete the image from memory now that it is drawn.
+            self._axes.cla()
+        except:
+            # There is not enough data yet for the reconstruction algorithm.
+            pass
