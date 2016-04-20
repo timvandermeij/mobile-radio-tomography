@@ -31,7 +31,10 @@ class Greedy_Assignment(object):
     def _get_closest_pair(self, current_positions, positions):
         distances = np.array([
             [
-                abs(current_positions[vehicle-1] - positions[:,i,:]).sum(axis=1)
+                # Given that both vehicles operate at the same time and 
+                # synchronize at the next waypoint, the time needed depends on 
+                # the longest distance that either vehicle needs to move
+                abs(current_positions[vehicle-1] - positions[:,i,:]).max(axis=1)
                 for i, vehicle in enumerate(vehicle_pair)
             ]
             for vehicle_pair in self._vehicle_pairs

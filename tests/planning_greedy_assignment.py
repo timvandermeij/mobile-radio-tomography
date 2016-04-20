@@ -1,5 +1,4 @@
 import numpy as np
-import unittest
 from ..geometry.Geometry import Geometry_Grid
 from ..planning.Greedy_Assignment import Greedy_Assignment
 from ..settings import Arguments
@@ -14,6 +13,7 @@ class TestPlanningGreedyAssignment(SettingsTestCase):
     def test_init(self):
         self.assertEqual(self.assigner._geometry, self.geometry)
         self.assertEqual(self.assigner._number_of_vehicles, 2)
+        self.assertEqual(self.assigner._home_locations, [[0, 0], [0, 9]])
         self.assertEqual(self.assigner._vehicle_pairs, [(1, 2), (2, 1)])
 
     def test_assign(self):
@@ -22,12 +22,11 @@ class TestPlanningGreedyAssignment(SettingsTestCase):
                               [[0, 0], [1, 6]],
                               [[4, 8], [9, 1]]])
 
-        assignment, distance = self.assigner.assign(home_positions, positions)
+        assignment, distance = self.assigner.assign(positions)
 
         # Input is left untouched.
-        self.assertEqual(home_positions, [(0, 0), (0, 9)])
         self.assertEqual(positions.shape, (4, 2, 2))
 
         # We receive a good assignment.
-        self.assertEqual(assignment, {1: [[0, 1], [0, 0], [3, 0], [9, 1]],
-                                      2: [[2, 9], [1, 6], [5, 6], [4, 8]]})
+        self.assertEqual(assignment, {1: [[0, 0], [0, 1], [3, 0], [9, 1]],
+                                      2: [[1, 6], [2, 9], [5, 6], [4, 8]]})

@@ -120,8 +120,13 @@ class Arguments(object):
             opt = key.replace('_', '-')
             if info["type"] in ("list", "tuple"):
                 kw["nargs"] = info["length"] if "length" in info else "*"
-                if "subtype" in info and info["subtype"] in self._type_names:
-                    kw["type"] = self._type_names[info["subtype"]]
+                if "subtype" in info:
+                    subtype = info["subtype"]
+                    if isinstance(subtype, dict):
+                        subtype = subtype["type"]
+
+                    if subtype in self._type_names:
+                        kw["type"] = self._type_names[subtype]
             elif info["type"] == "bool":
                 kw["action"] = "store_true"
                 argument_group.add_argument("--{}".format(opt), **kw)
