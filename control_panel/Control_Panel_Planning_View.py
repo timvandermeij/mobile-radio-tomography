@@ -77,13 +77,6 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._selectButton.setEnabled(False)
         self._selectButton.clicked.connect(self._select)
 
-        # Create the figure canvas for the main Pareto front image.
-        self._front_axes, self._front_canvas = self._create_plot()
-
-        # Register a picker to select a specific point in the Pareto front, 
-        # which can then select one of the individuals.
-        self._front_canvas.mpl_connect('pick_event', self._front_pick_event)
-
         self._overview_items = 2
 
         self._item_width = self._plot_width / 4
@@ -98,7 +91,8 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._sortSelector = QtGui.QComboBox()
         self._sortSelector.currentIndexChanged.connect(lambda i: self._resort(i))
 
-        self._reset()
+        self._init()
+        self._setup()
 
         # Create the layout and add the widgets.
         formLayout = QtGui.QFormLayout()
@@ -124,22 +118,15 @@ class Control_Panel_Planning_View(Control_Panel_View):
         hbox.addLayout(rightBox)
         hbox.addStretch(1)
 
-        self._front_label = self._add_list_item("Pareto front",
-                                                self._front_canvas)
+    def clear(self, layout=None):
+        if layout is self._controller.central_widget.layout():
+            self._stop()
+            self._cleanup()
 
-    def _reset(self):
-        self._listWidget.setCurrentRow(0)
+        super(Control_Panel_Planning_View, self).clear(layout)
 
-        # Remove old individual items from the list widget, then add the new 
-        # individuals in the population.
-        for i in range(self._listWidget.count() - 1, 0, -1):
-            self._listWidget.takeItem(i)
-            self._stackedLayout.takeAt(i)
-            if i >= self._overview_items:
-                canvas = self._individual_canvases[i - self._overview_items]
-                plt.close(canvas.figure)
-
-        # Reset variables that are altered during running to default state.
+    def _init(self):
+        # Set variables that are altered during running to default state.
         self._individual_labels = []
         self._individual_axes = []
         self._individual_canvases = []
@@ -147,7 +134,53 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._graph = None
         self._graph_plots = {}
         self._graph_data = {}
-        self._graph_label = None
+
+        self._front_canvas = None
+        self._front_axes = None
+        self._front_label = None
+
+    def _cleanup(self):
+        cleaner = QtCore.QObjectCleanupHandler()
+
+        # Remove old individual items from the list widget, then add the new 
+        # individuals in the population.
+        for i in range(self._listWidget.count() - 1, -1, -1):
+            self._listWidget.itemWidget(self._listWidget.item(i)).close()
+            self._listWidget.takeItem(i)
+            self._stackedLayout.takeAt(i).widget().close()
+            if i >= self._overview_items:
+                self._individual_axes[i - self._overview_items].cla()
+                canvas = self._individual_canvases[i - self._overview_items]
+                canvas.figure.clf()
+                plt.close(canvas.figure)
+                cleaner.add(canvas)
+
+        for plot in self._graph_plots.itervalues():
+            plot.clear()
+
+        if self._front_canvas is not None:
+            self._front_axes.cla()
+            self._front_canvas.figure.clf()
+            plt.close(self._front_canvas.figure)
+            cleaner.add(self._front_canvas)
+            self._front_canvas = None
+
+        cleaner.clear()
+
+        self._init()
+
+    def _setup(self):
+        # Create the figure canvas for the main Pareto front image.
+        self._front_axes, self._front_canvas = self._create_plot()
+
+        # Register a picker to select a specific point in the Pareto front, 
+        # which can then select one of the individuals.
+        self._front_canvas.mpl_connect('pick_event', self._front_pick_event)
+
+        self._front_label = self._add_list_item("Pareto front",
+                                                self._front_canvas, draw=False)
+
+        self._listWidget.setCurrentRow(0)
 
         # Populate the sort selector with current problem's objectives.
         self._populate_sort_selector()
@@ -194,7 +227,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
         return graph
 
-    def _add_list_item(self, placeholder, canvas):
+    def _add_list_item(self, placeholder, canvas, draw=True):
         list_item = QtGui.QListWidgetItem(placeholder)
         font = QtGui.QFont()
         font.setBold(True)
@@ -210,7 +243,8 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._listWidget.setItemWidget(list_item, item_label)
 
         self._stackedLayout.addWidget(canvas)
-        self._controller.app.processEvents()
+        if draw:
+            self._controller.app.processEvents()
 
         return item_label
 
@@ -355,6 +389,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._stop_action.setEnabled(True)
         self._selectButton.setEnabled(False)
 
+        self._controller.xbee.deactivate()
         self._runner.activate()
 
         t_max = self._runner.get_iteration_limit()
@@ -362,7 +397,8 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._progress.setValue(0)
         self._progress.setRange(0, t_max)
 
-        self._reset()
+        self._cleanup()
+        self._setup()
 
         size = self._runner.get_population_size()
         plt.rcParams.update({'figure.max_open_warning': size + 1})
@@ -390,6 +426,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
     def _stop(self):
         self._runner.deactivate()
+        self._controller.xbee.activate()
 
         self._start_action.setEnabled(True)
         self._stop_action.setEnabled(False)
