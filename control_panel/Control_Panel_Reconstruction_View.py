@@ -1,11 +1,11 @@
 # TODO:
 # - Implement more reconstructors: Tikhonov and total variation
 # - Investigate canvas flipping
-# - Implement dump recorder
 # - Average measurements of the same link
 # - Tweak ellipse width/singular values/model (based on grid experiments)
 # - Extend calibration procedure for all data sources (change UI for calibrated RSSI)
 
+import json
 import matplotlib
 matplotlib.use("Qt4Agg")
 import matplotlib.pyplot as plt
@@ -320,8 +320,8 @@ class Dump_Panel(Panel):
         widget.setLayout(widget_layout)
 
         self._register("File", widget, partial(
-            lambda file_box: "assets/dump_{}.json".format(file_box.text()), file_box)
-        )
+            lambda file_box: "assets/dump_{}.json".format(file_box.text()), file_box
+        ))
 
         super(Dump_Panel, self)._render()
 
@@ -357,10 +357,70 @@ class Stream_Panel(Panel):
             widget.setLayout(widget_layout)
 
             self._register(label, widget, partial(
-                lambda x_box, y_box: [int(x_box.text()), int(y_box.text())], x_box, y_box)
-            )
+                lambda x_box, y_box: [int(x_box.text()), int(y_box.text())], x_box, y_box
+            ))
+
+        # Create the record checkbox.
+        record_box = QtGui.QCheckBox("Yes")
+        self._register("Record", record_box, partial(
+            lambda record_box: record_box.isChecked(), record_box
+        ))
 
         super(Stream_Panel, self)._render()
+
+class Stream_Recorder(object):
+    def __init__(self, central_widget=None, options=None):
+        """
+        Initialize the stream recorder object.
+
+        The stream recorder keeps a copy of every incoming packet when recording mode is
+        enabled. When recording is stopped, the captured data is exported to a dump file.
+        """
+
+        if central_widget is None:
+            raise ValueError("Central widget for the stream recorder has not been provided.")
+
+        if options is None:
+            raise ValueError("Options for the stream recorder have not been provided.")
+
+        self._central_widget = central_widget
+
+        self._number_of_sensors = options["number_of_sensors"]
+        self._origin = options["origin"]
+        self._size = options["size"]
+
+        self._packets = []
+
+    def update(self, packet):
+        """
+        Update the stream recorder with information in `packet`.
+        """
+
+        self._packets.append(packet)
+
+    def export(self):
+        """
+        Export the packets (along with network information) to a dump file.
+        """
+
+        file_name = QtGui.QFileDialog.getSaveFileName(self._central_widget,
+                                                      "Export file", os.getcwd(),
+                                                      "JSON files (*.json)")
+
+        if file_name == "":
+            return
+
+        try:
+            with open(file_name, "w") as export_file:
+                json.dump({
+                    "number_of_sensors": self._number_of_sensors,
+                    "origin": self._origin,
+                    "size": self._size,
+                    "packets": [packet.get_dump() for packet in self._packets]
+                }, export_file)
+        except IOError as e:
+            message = "Could not open file '{}': {}".format(file_name, e.strerror)
+            QtGui.QMessageBox.critical(self._central_widget, "File error", message)
 
 class Source(object):
     DATASET = "Dataset"
@@ -374,6 +434,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         """
 
         self._running = False
+        self._stream_recorder = None
 
         self._add_menu_bar()
 
@@ -463,6 +524,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         elif parameters.source == Source.STREAM:
             origin = parameters.get("Origin")
             size = parameters.get("Size")
+            record = parameters.get("Record")
 
             if not all(dimension > 0 for dimension in size):
                 QtGui.QMessageBox.critical(self._controller.central_widget, "Invalid size",
@@ -475,6 +537,16 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
                 "size": size
             })
             self._controller.xbee.set_buffer(self._buffer)
+
+            if record:
+                # Create a stream recorder instance to record all incoming packets.
+                # The existence of this object is enough to let the loop handle the
+                # recording process.
+                self._stream_recorder = Stream_Recorder(self._controller.central_widget, {
+                    "number_of_sensors": self._controller.xbee.number_of_sensors,
+                    "origin": origin,
+                    "size": size
+                })
 
         # Create the reconstructor.
         reconstructors = {
@@ -509,6 +581,10 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
         # Stop if the stop button has been pressed.
         if not self._running:
+            if self._stream_recorder is not None:
+                self._stream_recorder.export()
+                self._stream_recorder = None
+
             return
 
         # If no packets are available yet, wait for them to arrive.
@@ -518,9 +594,11 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
         packet = self._buffer.get()
 
-        # Update the graph and table with the data from the packet.
+        # Update the graph, table and stream recorder (if applicable) with the packet.
         self._graph.update(packet)
         self._table.update(packet)
+        if self._stream_recorder is not None:
+            self._stream_recorder.update(packet)
 
         # Only use packets with valid source and destination locations.
         if not packet.get("from_valid") or not packet.get("to_valid"):

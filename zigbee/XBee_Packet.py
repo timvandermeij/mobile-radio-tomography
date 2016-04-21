@@ -62,6 +62,28 @@ class XBee_Packet(object):
 
         return self._contents
 
+    def get_dump(self):
+        """
+        Get all values in the contents key-value store and return them
+        in a list format for inclusion in a dump file. Such a list contains
+        the values of the RSSI ground station packet format (in order).
+        """
+
+        specification_name = self.get("specification")
+        if specification_name != "rssi_ground_station":
+            raise ValueError("Dumps can only be generated for RSSI ground station packets")
+
+        dump = []
+        specification = self._specifications[specification_name]
+        for field in specification:
+            if field["name"] == "id":
+                continue
+
+            value = self.get(field["name"])
+            dump.append(value)
+
+        return dump
+
     def serialize(self):
         """
         Serialize a contents dictionary as a single byte-encoded string.
