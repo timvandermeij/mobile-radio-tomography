@@ -254,13 +254,13 @@ class Panel(QtGui.QTableWidget):
             self.setItem(position, 0, label)
             self.setCellWidget(position, 1, widget)
 
-class DatasetPanel(Panel):
+class Dataset_Panel(Panel):
     def __init__(self, parent, settings):
         """
         Initialize the dataset panel object.
         """
 
-        super(DatasetPanel, self).__init__(parent, settings)
+        super(Dataset_Panel, self).__init__(parent, settings)
 
         self._source = Source.DATASET
 
@@ -290,15 +290,15 @@ class DatasetPanel(Panel):
                 lambda file_box: "assets/dataset_{}.csv".format(file_box.text()), file_box
             ))
 
-        super(DatasetPanel, self)._render()
+        super(Dataset_Panel, self)._render()
 
-class DumpPanel(Panel):
+class Dump_Panel(Panel):
     def __init__(self, parent, settings):
         """
         Initialize the dump panel object.
         """
 
-        super(DumpPanel, self).__init__(parent, settings)
+        super(Dump_Panel, self).__init__(parent, settings)
 
         self._source = Source.DUMP
 
@@ -323,15 +323,15 @@ class DumpPanel(Panel):
             lambda file_box: "assets/dump_{}.json".format(file_box.text()), file_box)
         )
 
-        super(DumpPanel, self)._render()
+        super(Dump_Panel, self)._render()
 
-class StreamPanel(Panel):
+class Stream_Panel(Panel):
     def __init__(self, parent, settings):
         """
         Initialize the stream panel object.
         """
 
-        super(StreamPanel, self).__init__(parent, settings)
+        super(Stream_Panel, self).__init__(parent, settings)
 
         self._source = Source.STREAM
 
@@ -360,7 +360,7 @@ class StreamPanel(Panel):
                 lambda x_box, y_box: [int(x_box.text()), int(y_box.text())], x_box, y_box)
             )
 
-        super(StreamPanel, self)._render()
+        super(Stream_Panel, self)._render()
 
 class Source(object):
     DATASET = "Dataset"
@@ -395,9 +395,9 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         # Create the panels.
         panels = QtGui.QTabWidget()
         panels.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Expanding)
-        panels.addTab(DatasetPanel(panels, self._settings), Source.DATASET)
-        panels.addTab(DumpPanel(panels, self._settings), Source.DUMP)
-        panels.addTab(StreamPanel(panels, self._settings), Source.STREAM)
+        panels.addTab(Dataset_Panel(panels, self._settings), Source.DATASET)
+        panels.addTab(Dump_Panel(panels, self._settings), Source.DUMP)
+        panels.addTab(Stream_Panel(panels, self._settings), Source.STREAM)
 
         # Create the toggle button (using the stopped state as default).
         self._toggle_button = QtGui.QPushButton(QtGui.QIcon("assets/start.png"), "Start")
