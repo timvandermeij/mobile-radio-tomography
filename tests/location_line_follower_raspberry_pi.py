@@ -6,6 +6,8 @@ from settings import SettingsTestCase
 
 class TestLocationLineFollowerRaspberryPi(ThreadableTestCase, SettingsTestCase):
     def setUp(self):
+        super(TestLocationLineFollowerRaspberryPi, self).setUp()
+
         # We need to mock the RPi.GPIO module as it is only available
         # on Raspberry Pi devices and these tests run on a PC.
         self.rpi_gpio_mock = MagicMock()

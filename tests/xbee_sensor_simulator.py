@@ -26,6 +26,8 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
         return True
 
     def setUp(self):
+        super(TestXBeeSensorSimulator, self).setUp()
+
         self.sensor_id = 1
         self.arguments = Arguments("settings.json", ["--xbee-id", "1"])
         self.settings = self.arguments.get_settings("xbee_sensor_simulator")

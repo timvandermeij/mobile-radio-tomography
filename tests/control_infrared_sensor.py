@@ -5,6 +5,8 @@ from ..settings import Arguments
 
 class TestControlInfraredSensor(ThreadableTestCase):
     def setUp(self):
+        super(TestControlInfraredSensor, self).setUp()
+
         # We need to mock the pylirc module as we do not want to use actual 
         # LIRC communication. We assume the pylirc module works as expected.
         self.pylirc_mock = MagicMock()
