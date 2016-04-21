@@ -54,11 +54,12 @@ class XBee_Sensor_Physical(XBee_Sensor):
         super(XBee_Sensor_Physical, self).activate()
 
         if not self._active:
+            self._active = True
+
             if self._serial_connection is None:
                 self.setup()
 
             self._join()
-            self._active = True
             thread.start_new_thread(self._loop, ())
 
     def _loop(self):
@@ -97,8 +98,10 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
         if self._active or self._serial_connection is not None:
             self._active = False
-            self._sensor.halt()
-            self._serial_connection.close()
+
+            if self._serial_connection is not None:
+                self._sensor.halt()
+                self._serial_connection = None
 
     def discover(self, callback):
         """
