@@ -692,7 +692,7 @@
                 "default": 0.5
             },
             "delta_rate": {
-                "help": "Ratio between sensor distances and mission length. A higher value gives the sensor distances more weight in the objective, a lower value ",
+                "help": "Ratio between sensor distances and mission length. A higher value gives the sensor distances more weight in the objective, a lower value gives the travel distance more weight.",
                 "short": "Delta",
                 "type": "float",
                 "min": 0.0,
