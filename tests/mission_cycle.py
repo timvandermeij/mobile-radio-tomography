@@ -78,8 +78,8 @@ class TestMissionCycle(EnvironmentTestCase):
             self.mission.check_waypoint()
 
         self.vehicle._check_state()
-        self.assertEqual(self.vehicle._current_waypoint, 0)
         self.assertEqual(self.vehicle._state.name, "move")
+        self.assertEqual(self.vehicle._current_waypoint, 0)
         self.assertEqual(self.vehicle.get_waypoint(), LocationLocal(1,0,0))
         self.assertNotEqual(self._ttl_device.readline(), "")
 
