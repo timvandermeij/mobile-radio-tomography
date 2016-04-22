@@ -4,9 +4,9 @@ import random
 import copy
 import Queue
 from core_thread_manager import ThreadableTestCase
-from mock import patch, MagicMock
 from ..core.Thread_Manager import Thread_Manager
 from ..zigbee.XBee_Packet import XBee_Packet
+from ..zigbee.XBee_Sensor import SensorClosedError
 from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 from ..settings import Arguments
 from settings import SettingsTestCase
@@ -27,21 +27,10 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
         return True
 
     def setUp(self):
-        # We need to mock the Matplotlib module as we do not want to use
-        # plotting facilities during the tests.
-        self.matplotlib_mock = MagicMock()
-        modules = {
-            'matplotlib': self.matplotlib_mock,
-            'matplotlib.pyplot': self.matplotlib_mock.pyplot
-        }
-
-        self.patcher = patch.dict('sys.modules', modules)
-        self.patcher.start()
+        super(TestXBeeSensorSimulator, self).setUp()
 
         self.sensor_id = 1
-        self.arguments = Arguments("settings.json", [
-            "--warnings", "--xbee-id", "1"
-        ])
+        self.arguments = Arguments("settings.json", ["--xbee-id", "1"])
         self.settings = self.arguments.get_settings("xbee_sensor_simulator")
         self.thread_manager = Thread_Manager()
         self.sensor = XBee_Sensor_Simulator(self.arguments,
@@ -50,6 +39,10 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
                                             self.location_callback,
                                             self.receive_callback,
                                             self.valid_callback)
+
+        # Mock the activation of the sensor by calling `setup` ourselves and 
+        # putting it in the active state. This does not actually start the 
+        # sensor thread.
         self.sensor.setup()
         self.sensor._active = True
 
@@ -71,6 +64,9 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
         # The custom packet queue must be empty.
         self.assertIsInstance(self.sensor._queue, Queue.Queue)
         self.assertEqual(self.sensor._queue.qsize(), 0)
+
+        # The sensor socket is set up by the call to `setup`.
+        self.assertIsInstance(self.sensor._sensor, socket.socket)
 
     def test_get_identity(self):
         # The identity of the device must be returned as a dictionary.
@@ -163,7 +159,28 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
                          self.sensor._scheduler.synchronize(copied_packet))
 
     def test_deactivate(self):
-        # After deactivation the socket should be closed.
+        # After deactivation the socket should be closed, and the sensor state 
+        # should be cleared.
+        sensor_socket = self.sensor._sensor
         self.sensor.deactivate()
+        self.assertFalse(self.sensor._active)
+        self.assertIsNone(self.sensor._sensor)
         with self.assertRaises(socket.error):
-            self.sensor._sensor.sendto("foo", ("127.0.0.1", 100))
+            sensor_socket.sendto("foo", ("127.0.0.1", 100))
+
+    def test_deactivate_thread(self):
+        # Actually start the sensor thread.
+        self.sensor._active = False
+        self.sensor.activate()
+
+        self.assertEqual(self.thread_manager._threads, {
+            "xbee_sensor": self.sensor
+        })
+
+        # Deactivate the thread.
+        self.sensor.deactivate()
+
+        self.assertEqual(self.thread_manager._threads, {})
+
+        with self.assertRaises(SensorClosedError):
+            self.sensor._send()

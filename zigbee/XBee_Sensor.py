@@ -7,6 +7,14 @@ from ..settings import Arguments
 from XBee_Packet import XBee_Packet
 from XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 
+class SensorClosedError(Exception):
+    """
+    A special exception indicating that the sensor was disabled by deactivate
+    during the execution of the sensor loop.
+    """
+
+    pass 
+
 class XBee_Sensor(Threadable):
     """
     Base XBee sensor class.

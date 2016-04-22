@@ -3,7 +3,7 @@ import socket
 import thread
 import time
 from XBee_Packet import XBee_Packet
-from XBee_Sensor import XBee_Sensor
+from XBee_Sensor import XBee_Sensor, SensorClosedError
 
 class XBee_Sensor_Simulator(XBee_Sensor):
     def __init__(self, arguments, thread_manager, usb_manager,
@@ -39,10 +39,11 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         super(XBee_Sensor_Simulator, self).activate()
 
         if not self._active:
+            self._active = True
+
             if self._sensor is None:
                 self.setup()
 
-            self._active = True
             thread.start_new_thread(self._loop, ())
 
     def _loop(self):
@@ -51,6 +52,8 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         """
 
         try:
+            buffer_size = self._settings.get("buffer_size")
+
             while self._active:
                 # If the sensor has been activated, this loop will only send
                 # enqueued custom packets. If the sensor has been started, we
@@ -66,7 +69,10 @@ class XBee_Sensor_Simulator(XBee_Sensor):
 
                 # Check if there is data to be processed.
                 try:
-                    data = self._sensor.recv(self._settings.get("buffer_size"))
+                    data = self._sensor.recv(buffer_size)
+                except AttributeError:
+                    # Socket was removed by deactivate, so end the loop.
+                    break
                 except socket.error:
                     time.sleep(self._loop_delay)
                     continue
@@ -75,6 +81,9 @@ class XBee_Sensor_Simulator(XBee_Sensor):
                 packet = XBee_Packet()
                 packet.unserialize(data)
                 self._receive(packet)
+        except SensorClosedError:
+            # Socket was removed by deactivate, so end the loop.
+            pass
         except:
             super(XBee_Sensor_Simulator, self).interrupt()
 
@@ -87,7 +96,12 @@ class XBee_Sensor_Simulator(XBee_Sensor):
 
         if self._active or self._sensor is not None:
             self._active = False
-            self._sensor.close()
+
+            if self._sensor is not None:
+                # Close the sensor and clean up so that the thread might get 
+                # the signal faster and we can correctly reactivate later on.
+                self._sensor.close()
+                self._sensor = None
 
     def discover(self, callback):
         """
@@ -132,7 +146,12 @@ class XBee_Sensor_Simulator(XBee_Sensor):
 
         super(XBee_Sensor_Simulator, self)._send_tx_frame(packet, to)
 
-        self._sensor.sendto(packet.serialize(), (self._ip, self._port + to))
+        serialized_packet = packet.serialize()
+
+        try:
+            self._sensor.sendto(serialized_packet, (self._ip, self._port + to))
+        except AttributeError:
+            raise SensorClosedError
 
     def _receive(self, packet):
         """

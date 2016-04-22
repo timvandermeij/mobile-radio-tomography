@@ -5,6 +5,8 @@ from ..location.Line_Follower import Line_Follower, Line_Follower_State, Line_Fo
 
 class TestLocationLineFollower(ThreadableTestCase):
     def setUp(self):
+        super(TestLocationLineFollower, self).setUp()
+
         self.location = (0, 0)
         self.direction = Line_Follower_Direction.UP
         # Set up a line follower for the other tests.

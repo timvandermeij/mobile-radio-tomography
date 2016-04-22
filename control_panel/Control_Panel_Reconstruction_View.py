@@ -1,15 +1,10 @@
 # TODO:
-# - Dataset performance (reading with progress bar or packet generation on demand)
 # - Implement more reconstructors: Tikhonov and total variation
-# - Faster reconstruction: epsilon instead of zero
-# - Render after a chunk of measurements of a certain size, not after each measurement
-# - Remove old data to keep the weight matrix and RSSI vector compact
-# - Remove timers where possible: use the availability of data chunks instead
 # - Investigate canvas flipping
 # - Implement dump recorder
 # - Average measurements of the same link
+# - Tweak ellipse width/singular values/model (based on grid experiments)
 
-import colorsys
 import matplotlib
 matplotlib.use("Qt4Agg")
 import matplotlib.pyplot as plt
@@ -20,10 +15,10 @@ from functools import partial
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from PyQt4 import QtGui, QtCore
 from Control_Panel_View import Control_Panel_View
+from ..reconstruction.Coordinator import Coordinator
 from ..reconstruction.Dataset_Buffer import Dataset_Buffer
 from ..reconstruction.Dump_Buffer import Dump_Buffer
 from ..reconstruction.Stream_Buffer import Stream_Buffer
-from ..reconstruction.Weight_Matrix import Weight_Matrix
 from ..reconstruction.Least_Squares_Reconstructor import Least_Squares_Reconstructor
 from ..reconstruction.SVD_Reconstructor import SVD_Reconstructor
 from ..reconstruction.Truncated_SVD_Reconstructor import Truncated_SVD_Reconstructor
@@ -56,17 +51,16 @@ class Graph(object):
         # Create the data lists for the graph.
         self._graph_data = [[] for vehicle in range(1, self._number_of_sensors + 1)]
 
-        # Create the list of colors for the curves.
-        hsv_tuples = [(x * 1.0 / self._number_of_sensors, 0.5, 0.5) for x in range(self._number_of_sensors)]
-        rgb_tuples = []
-        for hsv in hsv_tuples:
-            rgb_tuples.append(map(lambda x: int(x * 255), colorsys.hsv_to_rgb(*hsv)))
-
         # Create the curves for the graph.
+        color_index = 0
         for vehicle in range(1, self._number_of_sensors + 1):
             index = vehicle - 1
+
+            color = pg.intColor(color_index, hues=len(self._graph_data), maxValue=200)
+            color_index += 1
+
             curve = self._graph.plot()
-            curve.setData(self._graph_data[index], pen=pg.mkPen(rgb_tuples[index], width=1.5))
+            curve.setData(self._graph_data[index], pen=pg.mkPen(color, width=1.5))
             self._graph_curves.append(curve)
 
     def create(self):
@@ -105,8 +99,11 @@ class Graph(object):
         Clear the graph.
         """
 
-        for index in range(len(self._graph_data)):
-            self._graph_data[index] = []
+        for curve in self._graph_curves:
+            curve.clear()
+
+        self._graph_data = []
+        self._graph_curves = []
 
 class Table(object):
     def __init__(self):
@@ -369,6 +366,8 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         Show the reconstruction view.
         """
 
+        self._running = False
+
         self._add_menu_bar()
 
         # Create the image.
@@ -393,14 +392,14 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         panels.addTab(DumpPanel(panels, self._settings), Source.DUMP)
         panels.addTab(StreamPanel(panels, self._settings), Source.STREAM)
 
-        # Create the start button.
-        start_button = QtGui.QPushButton(QtGui.QIcon("assets/start.png"), "Start")
-        start_button.clicked.connect(lambda: self._start(panels.currentWidget()))
+        # Create the toggle button (using the stopped state as default).
+        self._toggle_button = QtGui.QPushButton(QtGui.QIcon("assets/start.png"), "Start")
+        self._toggle_button.clicked.connect(lambda: self._toggle(panels.currentWidget()))
 
         # Create the layout and add the widgets.
         vbox_left = QtGui.QVBoxLayout()
         vbox_left.addWidget(panels)
-        vbox_left.addWidget(start_button)
+        vbox_left.addWidget(self._toggle_button)
 
         vbox_right = QtGui.QVBoxLayout()
         vbox_right.addWidget(self._canvas)
@@ -411,6 +410,22 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         hbox.addLayout(vbox_left)
         hbox.addLayout(vbox_right)
 
+    def _toggle(self, parameters):
+        """
+        Toggle the state of the reconstruction (start or stop).
+        """
+
+        self._running = not self._running
+
+        if self._running:
+            self._toggle_button.setIcon(QtGui.QIcon("assets/stop.png"))
+            self._toggle_button.setText("Stop")
+
+            self._start(parameters)
+        else:
+            self._toggle_button.setIcon(QtGui.QIcon("assets/start.png"))
+            self._toggle_button.setText("Start")
+
     def _start(self, parameters):
         """
         Start the reconstruction process with all parameters from the panel.
@@ -420,6 +435,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._pause_time = self._settings.get("pause_time") * 1000
         self._cmap = self._settings.get("cmap")
         self._interpolation = self._settings.get("interpolation")
+        self._chunk_size = self._settings.get("chunk_size")
 
         # Create the buffer depending on the source.
         if parameters.source == Source.DATASET or parameters.source == Source.DUMP:
@@ -459,23 +475,31 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         reconstructor_class = reconstructors[parameters.get("Reconstructor")]
         self._reconstructor = reconstructor_class(self._controller.arguments)
 
-        # Create the weight matrix.
-        self._weight_matrix = Weight_Matrix(self._controller.arguments, self._buffer.origin,
-                                            self._buffer.size)
+        # Create the coordinator.
+        self._coordinator = Coordinator(self._controller.arguments, self._buffer)
 
-        # Setup the graph and clear the graph and table.
-        self._graph.setup(self._buffer)
+        # Clear the graph and table and setup the graph.
         self._graph.clear()
+        self._graph.setup(self._buffer)
         self._table.clear()
 
+        # Clear the image.
+        self._axes.cla()
+        self._axes.axis("off")
+        self._canvas.draw()
+
         # Execute the reconstruction and visualization.
-        self._rssi = []
+        self._chunk_count = 0
         self._loop()
 
     def _loop(self):
         """
         Execute the reconstruction loop.
         """
+
+        # Stop if the stop button has been pressed.
+        if not self._running:
+            return
 
         # If no packets are available yet, wait for them to arrive.
         if self._buffer.count() == 0:
@@ -493,24 +517,28 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             QtCore.QTimer.singleShot(self._pause_time, self._loop)
             return
 
-        source = (packet.get("from_latitude"), packet.get("from_longitude"))
-        destination = (packet.get("to_latitude"), packet.get("to_longitude"))
+        # We attempt to reconstruct an image when the coordinator successfully
+        # updated the weight matrix and the RSSI vector and when we have obtained
+        # the required number of measurements to fill a chunk.
+        if self._coordinator.update(packet):
+            self._chunk_count += 1
+            if self._chunk_count >= self._chunk_size:
+                self._chunk_count = 0
 
-        # If the weight matrix has been updated, store the RSSI value and
-        # redraw the image if the weight matrix is complete.
-        if self._weight_matrix.update(source, destination) is not None:
-            self._rssi.append(packet.get("rssi"))
+                try:
+                    pixels = self._reconstructor.execute(self._coordinator.get_weight_matrix(),
+                                                         self._coordinator.get_rssi_vector())
 
-            if self._weight_matrix.check():
-                pixels = self._reconstructor.execute(self._weight_matrix.output(), self._rssi)
+                    # Render and draw the image with Matplotlib.
+                    self._axes.axis("off")
+                    self._axes.imshow(pixels.reshape(self._buffer.size), cmap=self._cmap,
+                                      origin="lower", interpolation=self._interpolation)
+                    self._canvas.draw()
 
-                # Render and draw the image with Matplotlib.
-                self._axes.axis("off")
-                self._axes.imshow(pixels.reshape(self._buffer.size), cmap=self._cmap,
-                                  origin="lower", interpolation=self._interpolation)
-                self._canvas.draw()
-
-                # Delete the image from memory now that it is drawn.
-                self._axes.cla()
+                    # Delete the image from memory now that it is drawn.
+                    self._axes.cla()
+                except:
+                    # There is not enough data yet for the reconstruction algorithm.
+                    pass
 
         QtCore.QTimer.singleShot(self._pause_time, self._loop)
