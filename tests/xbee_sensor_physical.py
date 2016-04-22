@@ -7,6 +7,7 @@ from xbee import ZigBee
 from mock import patch
 from ..core.Thread_Manager import Thread_Manager
 from ..zigbee.XBee_Packet import XBee_Packet
+from ..zigbee.XBee_Sensor import SensorClosedError
 from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
 from ..settings import Arguments
 from core_usb_manager import USBManagerTestCase
@@ -119,7 +120,7 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
         self.sensor.deactivate()
         self.assertFalse(self.sensor._active)
         self.assertIsNone(self.sensor._serial_connection)
-        with self.assertRaises(serial.SerialException):
+        with self.assertRaises(SensorClosedError):
             self.sensor._send()
 
     def test_enqueue(self):

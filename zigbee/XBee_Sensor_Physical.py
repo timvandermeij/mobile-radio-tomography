@@ -6,7 +6,7 @@ import thread
 import time
 from xbee import ZigBee
 from XBee_Packet import XBee_Packet
-from XBee_Sensor import XBee_Sensor
+from XBee_Sensor import XBee_Sensor, SensorClosedError
 
 class XBee_Sensor_Physical(XBee_Sensor):
     def __init__(self, arguments, thread_manager, usb_manager,
@@ -86,6 +86,9 @@ class XBee_Sensor_Physical(XBee_Sensor):
                     self._send()
 
                 time.sleep(self._loop_delay)
+        except SensorClosedError:
+            # Serial connection was removed by deactivate, so end the loop.
+            pass
         except:
             super(XBee_Sensor_Physical, self).interrupt()
 
@@ -220,6 +223,9 @@ class XBee_Sensor_Physical(XBee_Sensor):
         """
 
         super(XBee_Sensor_Physical, self)._send_tx_frame(packet, to)
+
+        if self._serial_connection is None:
+            raise SensorClosedError
 
         self._sensor.send("tx", dest_addr_long=self._sensors[to], dest_addr="\xFF\xFE",
                           frame_id="\x00", data=packet.serialize())

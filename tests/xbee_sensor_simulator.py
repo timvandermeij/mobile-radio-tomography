@@ -6,7 +6,8 @@ import Queue
 from core_thread_manager import ThreadableTestCase
 from ..core.Thread_Manager import Thread_Manager
 from ..zigbee.XBee_Packet import XBee_Packet
-from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator, SocketClosedError
+from ..zigbee.XBee_Sensor import SensorClosedError
+from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 from ..settings import Arguments
 from settings import SettingsTestCase
 
@@ -181,5 +182,5 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
 
         self.assertEqual(self.thread_manager._threads, {})
 
-        with self.assertRaises(SocketClosedError):
+        with self.assertRaises(SensorClosedError):
             self.sensor._send()

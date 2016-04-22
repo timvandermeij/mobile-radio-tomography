@@ -3,15 +3,7 @@ import socket
 import thread
 import time
 from XBee_Packet import XBee_Packet
-from XBee_Sensor import XBee_Sensor
-
-class SocketClosedError(Exception):
-    """
-    A special exception indicating that the socket was disabled by deactivate
-    during the execution of the sensor loop.
-    """
-
-    pass
+from XBee_Sensor import XBee_Sensor, SensorClosedError
 
 class XBee_Sensor_Simulator(XBee_Sensor):
     def __init__(self, arguments, thread_manager, usb_manager,
@@ -89,7 +81,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
                 packet = XBee_Packet()
                 packet.unserialize(data)
                 self._receive(packet)
-        except SocketClosedError:
+        except SensorClosedError:
             # Socket was removed by deactivate, so end the loop.
             pass
         except:
@@ -159,7 +151,7 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         try:
             self._sensor.sendto(serialized_packet, (self._ip, self._port + to))
         except AttributeError:
-            raise SocketClosedError
+            raise SensorClosedError
 
     def _receive(self, packet):
         """
