@@ -51,11 +51,11 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
         self.sensor._id = self.sensor_id
 
     def tearDown(self):
-        super(TestXBeeSensorPhysical, self).tearDown()
-
         # Ensure the sensor is deactivated for tests that use `mock_setup` but 
         # do not deactivate it themselves.
         self.sensor.deactivate()
+
+        super(TestXBeeSensorPhysical, self).tearDown()
 
     def mock_setup(self):
         """
