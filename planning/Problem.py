@@ -2,7 +2,8 @@ import itertools
 import math
 import numpy as np
 
-from ..geometry.Geometry import Geometry
+from Greedy_Assignment import Greedy_Assignment
+from ..geometry.Geometry import Geometry_Grid
 from ..reconstruction.Weight_Matrix import Weight_Matrix
 from ..settings import Arguments
 
@@ -100,7 +101,10 @@ class Problem(object):
 
         return Feasible, Objectives
 
-    def evaluate_point(self, point):
+    def is_feasible(self, point):
+        return all(constraint(point) for constraint in self.constraints)
+
+    def evaluate_point(self, point, feasible=None):
         """
         Evaluate a single individual `point`.
         The `point` is a vector containing variable values.
@@ -109,10 +113,18 @@ class Problem(object):
         problem constraints, and calculates the objective function values for
         the vector. These two evaluations are returned, where the feasibility
         is a boolean and the objectives are a list of function values.
+
+        If `feasible` is given, then this method assumes that the feasibility
+        of the point is the values of `feasible`, and that the point already
+        has its final form provided by `format_point`.
         """
 
-        point = self.format_point(point)
-        Feasible = all(constraint(point) for constraint in self.constraints)
+        if feasible is None:
+            point = self.format_point(point)
+            Feasible = self.is_feasible(point)
+        else:
+            Feasible = feasible
+
         if Feasible:
             Objective = [float(objective(point)) for objective in self.objectives]
         else:
@@ -156,20 +168,22 @@ class Problem(object):
                 )
 
             if len(self._int_indices[0]) > 0:
-                x_new[self._int_indices] = self._clip(x_new[self._int_indices])
+                self._clip(x_new, self._int_indices)
 
         return x_new
 
-    def _clip(self, values):
+    def _clip(self, values, indices):
         """
-        Cyclically clip a vector of `values` so that all values remain within
-        the domain of the problem. Values that are too low are transferred by
-        the same magnitude below the upper bound, and vice versa.
+        Cyclically clip a vector of `values` so that the values with the given
+        `indices` remain within the domain of the problem. Values that are too
+        low are transferred by the same magnitude below the upper bound,
+        and vice versa.
         """
 
         low = self.domain[0]
         high = self.domain[1]
-        return np.remainder(values - low, high - low - 0.5) + low
+        clipped = np.remainder(values - low, high - low - 0.5) + low
+        values[indices] = clipped[indices]
 
     def format_point(self, point):
         """
@@ -199,6 +213,16 @@ class Problem(object):
 
         return []
 
+    def get_objective_names(self):
+        """
+        Get a list of names for the objective functions.
+
+        The names are short key-like descriptions for the objectives.
+        The list must be of the same length as `get_objectives`.
+        """
+
+        return []
+
     def get_constraints(self):
         """
         Get a list of constraint functions.
@@ -214,7 +238,7 @@ class Problem(object):
         constraints = [
             lambda x: np.all(x >= self.domain[0])
         ]
-        if len(self.domain) > 2:
+        if len(self.domain) > 2 and len(self._bool_indices[0]) > 0:
             # Using + and * as logical OR/AND operators to allow binary values.
             # We check whether either the normal bound is satisfied, or that 
             # the value is binary and is at most 1.
@@ -247,7 +271,8 @@ class Reconstruction_Plan(Problem):
             raise ValueError("'arguments' must be an instance of Arguments")
 
         # Import the settings for the planning problem.
-        self.settings = arguments.get_settings("planning_problem")
+        self.arguments = arguments
+        self.settings = self.arguments.get_settings("planning_problem")
         self.N = self.settings.get("number_of_measurements")
         self.network_size = self.settings.get("network_size")
         self.padding = self.settings.get("network_padding")
@@ -262,7 +287,7 @@ class Reconstruction_Plan(Problem):
 
         # Initial weight matrix object which can be filled with current 
         # locations during evaluations and reset to be reused.
-        self.weight_matrix = Weight_Matrix(arguments, self.padding, self.size)
+        self.weight_matrix = self.get_weight_matrix()
 
         # Resulting output from the weight matrix.
         self.matrix = None
@@ -274,7 +299,10 @@ class Reconstruction_Plan(Problem):
 
         # A grid-based Geometry object that the Problem instance can use to 
         # make lines and points, if necessary.
-        self.geometry = Geometry()
+        self.geometry = Geometry_Grid()
+
+        self.assigner = Greedy_Assignment(self.arguments, self.geometry)
+        self.delta_rate = self.settings.get("delta_rate")
 
     def get_domain(self):
         """
@@ -283,6 +311,14 @@ class Reconstruction_Plan(Problem):
         """
 
         raise NotImplementedError("Subclass must implement `get_domain`")
+
+    def get_weight_matrix(self):
+        """
+        Create a clean weight matrix for the problem's parameters.
+        """
+
+        return Weight_Matrix(self.arguments, self.padding, self.size,
+                             snap_inside=True)
 
     def format_steps(self, steps):
         # Convert a list of step sizes that has the same number of elements as 
@@ -351,21 +387,38 @@ class Reconstruction_Plan(Problem):
         snapped_points = weight_matrix.update(*sensor_points)
         return snapped_points
 
-    def evaluate_point(self, point):
+    def evaluate_point(self, point, feasible=None):
         self.weight_matrix.reset()
         positions, unsnappable = self.get_positions(point, self.weight_matrix)
 
         # Set up variables used by the constraint and objective functions.
         if positions.size > 0:
             # Generate distances between all the pairs of sensor positions.
-            self.distances = np.linalg.norm(positions[:,0,:]-positions[:,1,:], axis=1)
+            pair_diffs = positions[:,0,:] - positions[:,1,:]
+            self.sensor_distances = np.linalg.norm(pair_diffs, axis=1)
         else:
-            self.distances = np.array([])
+            self.sensor_distances = np.array([])
 
-        self.matrix = self.weight_matrix.output()
         self.unsnappable = unsnappable
 
-        return super(Reconstruction_Plan, self).evaluate_point(point)
+        # Check whether the point is feasible before performing more 
+        # calculations that are only used for objective functions.
+        if feasible is None:
+            point = self.format_point(point)
+            feasible = self.is_feasible(point)
+
+        if feasible:
+            self.matrix = self.weight_matrix.output()
+
+            # If the sensor distances to waypoint distances ratio is 1, then 
+            # there is no need to calculate the waypoint distance.
+            if self.delta_rate < 1.0:
+                assignments, distance = self.assigner.assign(positions)
+                self.travel_distance = distance
+            else:
+                self.travel_distance = 0.0
+
+        return super(Reconstruction_Plan, self).evaluate_point(point, feasible)
 
     def get_objectives(self):
         return [
@@ -375,11 +428,15 @@ class Reconstruction_Plan(Problem):
             # The distances of the links should be minimized, since a longer 
             # link is weaker and thus contributes less clearly to a solution of 
             # the reconstruction.
-            lambda x: self.distances.sum()
+            lambda x: self.delta_rate * self.sensor_distances.sum() + \
+                      (1 - self.delta_rate) * self.travel_distance
             # Matrix should have values that are similar to each other in the 
             # columns, so that pixels are evenly measured by links
             #lambda x: np.var(self.matrix, axis=0).mean()
         ]
+
+    def get_objective_names(self):
+        return ["intersections", "distances"]
 
     def get_constraints(self):
         constraints = super(Reconstruction_Plan, self).get_constraints()
@@ -527,6 +584,16 @@ class Reconstruction_Plan_Discrete(Reconstruction_Plan):
         if snapped_points is None:
             return None
 
-        # Keep the unsnapped points since we may be able to perform 
-        # measurements on different grid positions.
-        return sensor_points
+        new_points = []
+        for sensor_point, snapped_point in zip(sensor_points, snapped_points):
+            # Keep valid unsnapped points since we may be able to perform 
+            # measurements on different grid positions in the padding region.
+            # Otherwise, ensure that the snapped point is on a grid position. 
+            # This possible loses accuracy but should still give a good 
+            # distribution of the points.
+            if weight_matrix.is_valid_point(sensor_point):
+                new_points.append(sensor_point)
+            else:
+                new_points.append([round(coord) for coord in snapped_point])
+
+        return new_points

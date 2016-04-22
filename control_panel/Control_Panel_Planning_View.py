@@ -5,11 +5,17 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 
+import pyqtgraph as pg
+
 from PyQt4 import QtCore, QtGui
 from Control_Panel_View import Control_Panel_View, Control_Panel_View_Name
 from Control_Panel_Widgets import QToolBarFocus
 from Control_Panel_Settings_Widgets import SettingsWidget
 from ..planning.Runner import Planning_Runner
+
+class Planning_Sort_Order(object):
+    NONE = -2
+    FEASIBLE = -1
 
 class Control_Panel_Planning_View(Control_Panel_View):
     def show(self):
@@ -28,7 +34,9 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._settings_toolbar.setStyleSheet("QToolBar {spacing: 8px;}")
 
         self._forms = {}
-        for component in ("planning", "planning_algorithm", "planning_problem"):
+        components = ("planning", "planning_assignment", "planning_algorithm",
+                      "planning_problem")
+        for component in components:
             form = SettingsWidget(self._controller.arguments, component,
                                   toolbar=self._settings_toolbar)
 
@@ -69,6 +77,99 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._selectButton.setEnabled(False)
         self._selectButton.clicked.connect(self._select)
 
+        self._overview_items = 2
+
+        self._item_width = self._plot_width / 4
+        self._item_height = self._plot_height / 4
+
+        self._listWidget = QtGui.QListWidget()
+
+        self._stackedLayout = QtGui.QStackedLayout()
+        self._listWidget.currentRowChanged.connect(self._stackedLayout.setCurrentIndex)
+        self._stackedLayout.currentChanged.connect(lambda i: self._redraw(i))
+
+        self._sortSelector = QtGui.QComboBox()
+        self._sortSelector.currentIndexChanged.connect(lambda i: self._resort(i))
+
+        self._init()
+        self._setup()
+
+        # Create the layout and add the widgets.
+        formLayout = QtGui.QFormLayout()
+        formLayout.addRow("Sort order:", self._sortSelector)
+
+        leftBox = QtGui.QVBoxLayout()
+        leftBox.addWidget(self._listWidget)
+        leftBox.addLayout(formLayout)
+
+        topLayout = QtGui.QHBoxLayout()
+        topLayout.addWidget(self._progress)
+        topLayout.addWidget(self._selectButton)
+
+        rightBox = QtGui.QVBoxLayout()
+        rightBox.addStretch(1)
+        rightBox.addLayout(topLayout)
+        rightBox.addLayout(self._stackedLayout)
+        rightBox.addStretch(1)
+
+        hbox = QtGui.QHBoxLayout(self._controller.central_widget)
+        hbox.addLayout(leftBox)
+        hbox.addStretch(1)
+        hbox.addLayout(rightBox)
+        hbox.addStretch(1)
+
+    def clear(self, layout=None):
+        if layout is self._controller.central_widget.layout():
+            self._stop()
+            self._cleanup()
+
+        super(Control_Panel_Planning_View, self).clear(layout)
+
+    def _init(self):
+        # Set variables that are altered during running to default state.
+        self._individual_labels = []
+        self._individual_axes = []
+        self._individual_canvases = []
+
+        self._graph = None
+        self._graph_plots = {}
+        self._graph_data = {}
+
+        self._front_canvas = None
+        self._front_axes = None
+        self._front_label = None
+
+    def _cleanup(self):
+        cleaner = QtCore.QObjectCleanupHandler()
+
+        # Remove old individual items from the list widget, then add the new 
+        # individuals in the population.
+        for i in range(self._listWidget.count() - 1, -1, -1):
+            self._listWidget.itemWidget(self._listWidget.item(i)).close()
+            self._listWidget.takeItem(i)
+            self._stackedLayout.takeAt(i).widget().close()
+            if i >= self._overview_items:
+                self._individual_axes[i - self._overview_items].cla()
+                canvas = self._individual_canvases[i - self._overview_items]
+                canvas.figure.clf()
+                plt.close(canvas.figure)
+                cleaner.add(canvas)
+
+        for plot in self._graph_plots.itervalues():
+            plot.clear()
+
+        if self._front_canvas is not None:
+            self._front_axes.cla()
+            self._front_canvas.figure.clf()
+            plt.close(self._front_canvas.figure)
+            cleaner.add(self._front_canvas)
+            self._front_canvas = None
+
+        cleaner.clear()
+
+        self._init()
+
+    def _setup(self):
         # Create the figure canvas for the main Pareto front image.
         self._front_axes, self._front_canvas = self._create_plot()
 
@@ -76,35 +177,27 @@ class Control_Panel_Planning_View(Control_Panel_View):
         # which can then select one of the individuals.
         self._front_canvas.mpl_connect('pick_event', self._front_pick_event)
 
-        self._item_width = self._plot_width / 4
-        self._item_height = self._plot_height / 4
+        self._front_label = self._add_list_item("Pareto front",
+                                                self._front_canvas, draw=False)
 
-        self._listWidget = QtGui.QListWidget()
         self._listWidget.setCurrentRow(0)
 
-        self._stackedLayout = QtGui.QStackedLayout()
-        self._listWidget.currentRowChanged.connect(self._stackedLayout.setCurrentIndex)
-        self._stackedLayout.currentChanged.connect(lambda i: self._redraw(i))
+        # Populate the sort selector with current problem's objectives.
+        self._populate_sort_selector()
 
-        # Create the layout and add the widgets.
-        topLayout = QtGui.QHBoxLayout()
-        topLayout.addWidget(self._progress)
-        topLayout.addWidget(self._selectButton)
+    def _populate_sort_selector(self):
+        # Keep the current index while repopulating.
+        currentIndex = self._sortSelector.currentIndex()
 
-        vbox = QtGui.QVBoxLayout()
-        vbox.addStretch(1)
-        vbox.addLayout(topLayout)
-        vbox.addLayout(self._stackedLayout)
-        vbox.addStretch(1)
+        self._sortSelector.clear()
 
-        hbox = QtGui.QHBoxLayout(self._controller.central_widget)
-        hbox.addWidget(self._listWidget)
-        hbox.addStretch(1)
-        hbox.addLayout(vbox)
-        hbox.addStretch(1)
+        self._sortSelector.addItem("Unsorted population")
+        self._sortSelector.addItem("Feasibility")
 
-        self._front_label = self._add_list_item("Pareto front",
-                                                self._front_canvas)
+        for f, name in enumerate(self._runner.problem.get_objective_names()):
+            self._sortSelector.addItem("Objective {} ({})".format(f+1, name))
+
+        self._sortSelector.setCurrentIndex(max(0, currentIndex))
 
     def _create_plot(self):
         dpi = plt.rcParams['figure.dpi']
@@ -120,7 +213,21 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
         return axes, canvas
 
-    def _add_list_item(self, placeholder, canvas):
+    def _create_graph(self):
+        # Enable antialiasing and use a transparent background with black 
+        # text/lines.
+        pg.setConfigOptions(antialias=True, background=None, foreground="k")
+
+        graph = pg.PlotWidget()
+        graph.setStyleSheet("background: transparent")
+        graph.setXRange(0, self._runner.get_iteration_limit())
+        graph.setLabel("left", "Count")
+        graph.setLabel("bottom", "Iteration")
+        graph.addLegend()
+
+        return graph
+
+    def _add_list_item(self, placeholder, canvas, draw=True):
         list_item = QtGui.QListWidgetItem(placeholder)
         font = QtGui.QFont()
         font.setBold(True)
@@ -136,7 +243,8 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._listWidget.setItemWidget(list_item, item_label)
 
         self._stackedLayout.addWidget(canvas)
-        self._controller.app.processEvents()
+        if draw:
+            self._controller.app.processEvents()
 
         return item_label
 
@@ -151,37 +259,94 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
         self._controller.app.processEvents()
 
-    def _draw_individual_solution(self, i, indices):
-        axes = self._individual_axes[i]
+    def _draw_individual_solution(self, i, item_index, indices):
+        axes = self._individual_axes[item_index]
 
-        # The ranking of the solution in the ordered list of feasible solutions
-        c = indices.index(i)
-        self._runner.get_positions_plot(i, c, len(indices), axes=axes)
+        # The ranking of the solution in the sorted list is given in 
+        # item_index, while i is the actual index in the population.
+        self._runner.get_positions_plot(i, item_index, len(indices), axes=axes)
 
-        self._individual_canvases[i].draw()
-        self._draw_list_item(self._individual_labels[i],
-                             self._individual_canvases[i])
+        self._individual_canvases[item_index].draw()
+        self._draw_list_item(self._individual_labels[item_index],
+                             self._individual_canvases[item_index])
 
-    def _redraw(self, i):
-        if i == 0:
-            # The Pareto front is always redrawn when possible, so we do not 
+    def _get_sort_indices(self):
+        # The sort order index, which is -2 for unsorted and -1 for sort 
+        # feasible solutions first.
+        sort = self._sortSelector.currentIndex() + Planning_Sort_Order.NONE
+        indices = self._runner.get_indices(sort=sort)
+
+        return sort, indices
+
+    def _draw_solutions(self):
+        # The selected index in the list widget and stacked layout.
+        # The solution plots are indexed from 2 in the list widget, but from 
+        # 0 in the algorithm population and plot object lists.
+        currentIndex = self._stackedLayout.currentIndex()
+        item_index = currentIndex - self._overview_items
+
+        sort, indices = self._get_sort_indices()
+
+        if item_index >= 0:
+            if sort == Planning_Sort_Order.NONE:
+                feasible = self._runner.is_feasible(item_index)
+            else:
+                feasible = item_index < len(indices)
+
+            self._selectButton.setEnabled(feasible)
+
+        size = self._runner.get_population_size()
+
+        if sort == Planning_Sort_Order.NONE:
+            sort_order = range(size)
+        else:
+            sort_order = list(indices)
+            sort_order.extend(i for i in range(size) if i not in sort_order)
+
+        # The `index` is the index in the list widget (after sorting), while 
+        # `i` is the index inside the entire population.
+        for index, i in enumerate(sort_order):
+            if not self._runner.is_feasible(i):
+                self._individual_labels[index].setText("(infeasible)")
+            elif index == item_index or self._runner.done:
+                self._draw_individual_solution(i, index, indices)
+            else:
+                text = ", ".join(str(x) for x in self._runner.get_objectives(i))
+                self._individual_labels[index].setText(text)
+
+    def _redraw(self, item_index):
+        # Redraw a newly selected item index plot immediately.
+
+        if item_index < self._overview_items:
+            # The overview plots are always redrawn when possible, so we do not 
             # need to draw it here. Disable the select button.
             self._selectButton.setEnabled(False)
             return
 
-        # The solution plots are indexed from 1 in the list widget, but from 
+        # The solution plots are indexed from 2 in the list widget, but from 
         # 0 in the algorithm population and plot object lists.
-        i = i - 1
+        item_index = item_index - self._overview_items
 
-        indices = self._runner.get_indices()
-        if i not in indices:
+        sort, indices = self._get_sort_indices()
+        if item_index >= len(indices):
             # Solution is not feasible or there are no results yet.
             return
 
-        self._draw_individual_solution(i, indices)
+        i = indices[item_index]
+        self._draw_individual_solution(i, item_index, indices)
 
         if self._runner.done:
             self._selectButton.setEnabled(self._runner.is_feasible(i))
+
+    def _resort(self, sort_index):
+        if len(self._individual_labels) == 0:
+            return
+
+        # Clear labels and then start resorting.
+        for label in self._individual_labels:
+            label.clear()
+
+        self._draw_solutions()
 
     def _front_pick_event(self, event):
         # We only want points on front lines.
@@ -198,10 +363,16 @@ class Control_Panel_Planning_View(Control_Panel_View):
         ydata = event.artist.get_ydata()
         indices = event.ind
 
+        sort, sort_indices = self._get_sort_indices()
         for picked_point in zip(xdata[indices], ydata[indices]):
             points = self._runner.find_objectives(picked_point)
-            if points:
-                self._listWidget.setCurrentRow(points[0] + 1)
+            for i in points:
+                try:
+                    item_index = sort_indices.index(i) + self._overview_items
+                except ValueError:
+                    continue
+
+                self._listWidget.setCurrentRow(item_index)
                 return
 
     def _start(self):
@@ -218,24 +389,23 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._stop_action.setEnabled(True)
         self._selectButton.setEnabled(False)
 
+        self._controller.xbee.deactivate()
         self._runner.activate()
 
+        t_max = self._runner.get_iteration_limit()
+
         self._progress.setValue(0)
-        self._progress.setRange(0, self._runner.get_iteration_limit())
+        self._progress.setRange(0, t_max)
 
-        # Remove old individual items from the list widget, then add the new 
-        # individuals in the population.
-        for i in range(self._listWidget.count() - 1, 0, -1):
-            self._listWidget.takeItem(i)
-            self._stackedLayout.takeAt(i)
-            plt.close(self._individual_canvases[i-1].figure)
-
-        self._individual_labels = []
-        self._individual_axes = []
-        self._individual_canvases = []
+        self._cleanup()
+        self._setup()
 
         size = self._runner.get_population_size()
         plt.rcParams.update({'figure.max_open_warning': size + 1})
+
+        self._graph = self._create_graph()
+        self._graph_label = self._add_list_item("Statistics", self._graph)
+        self._graph_label.setStyleSheet("border-top: 1px solid grey")
 
         for i in range(1, size + 1):
             axes, canvas = self._create_plot()
@@ -256,6 +426,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
     def _stop(self):
         self._runner.deactivate()
+        self._controller.xbee.activate()
 
         self._start_action.setEnabled(True)
         self._stop_action.setEnabled(False)
@@ -263,30 +434,31 @@ class Control_Panel_Planning_View(Control_Panel_View):
     def _check(self):
         self._progress.setValue(self._runner.get_iteration_current())
 
-        currentIndex = self._stackedLayout.currentIndex()
         if self._runner.done:
-            if currentIndex != 0:
-                self._selectButton.setEnabled(True)
-
             self._stop()
             self._timer.stop()
+
+        if self._updated:
+            c = 0
+            for name, data in self._graph_data.iteritems():
+                if name not in self._graph_plots:
+                    color = pg.intColor(c, hues=len(self._graph_data),
+                                        maxValue=200)
+                    plot = self._graph.plot(symbol='o', symbolBrush=color,
+                                            symbolSize=5, pen=color, name=name)
+                    self._graph_plots[name] = plot
+
+                self._graph_plots[name].setData(data)
+                c += 1
+
+            self._draw_list_item(self._graph_label, self._graph)
 
         if self._runner.done or self._updated:
             self._runner.make_pareto_plot(self._front_axes)
             self._front_canvas.draw()
             self._draw_list_item(self._front_label, self._front_canvas)
 
-            size = self._runner.get_population_size()
-            indices = self._runner.get_indices()
-            c = 0
-            for i in range(size):
-                if not self._runner.is_feasible(i):
-                    self._individual_labels[i].setText("(infeasible)")
-                elif currentIndex == i + 1 or self._runner.done:
-                    self._draw_individual_solution(i, indices)
-                else:
-                    text = ", ".join([str(x) for x in self._runner.get_objectives(i)])
-                    self._individual_labels[i].setText(text)
+            self._draw_solutions()
 
         self._updated = False
 
@@ -295,14 +467,28 @@ class Control_Panel_Planning_View(Control_Panel_View):
         if currentIndex == 0:
             return
 
-        if not self._runner.is_feasible(currentIndex - 1):
+        i = currentIndex - self._overview_items
+        if not self._runner.is_feasible(i):
             return
 
-        positions, unsnappable = self._runner.get_positions(currentIndex - 1)
+        waypoints = self._runner.get_assignment(i)
 
         self._controller.set_view_data(Control_Panel_View_Name.WAYPOINTS,
-                                       "waypoints", positions.tolist())
+                                       "waypoints", waypoints)
         self._controller.show_view(Control_Panel_View_Name.WAYPOINTS)
+
+    def _add_graph_data(self, name, value, iteration):
+        if name not in self._graph_data:
+            self._graph_data[name] = {"x": [], "y": []}
+
+        self._graph_data[name]["x"].append(iteration)
+        self._graph_data[name]["y"].append(value)
 
     def iteration_callback(self, algorithm, data):
         self._updated = True
+
+        t = data["iteration"]
+        speed = t / float(data["cur_time"])
+        self._add_graph_data("it/second",  speed, t)
+        for key, value in data["deletions"].iteritems():
+            self._add_graph_data(key, value, t)

@@ -1,9 +1,9 @@
 import numpy as np
-from Snap_To_Boundary import Snap_To_Boundary
+from Snap_To_Boundary import Snap_To_Boundary, Point
 from ..settings import Arguments, Settings
 
 class Weight_Matrix(object):
-    def __init__(self, settings, origin, size):
+    def __init__(self, settings, origin, size, snap_inside=False):
         """
         Initialize the weight matrix object.
         """
@@ -17,16 +17,26 @@ class Weight_Matrix(object):
 
         self._origin = origin
         self._width, self._height = size
-        self._snapper = Snap_To_Boundary(self._origin, self._width, self._height)
+        self._snapper = Snap_To_Boundary(self._origin, self._width,
+                                         self._height, snap_inside=snap_inside)
 
         # Create a grid for the space covered by the network. This represents a pixel
         # grid that we use to determine which pixels are intersected by a link. The
         # value 0.5 is used to obtain the center of each pixel.
-        x = np.linspace(0.5, self._width - 0.5, self._width)
-        y = np.linspace(0.5, self._height - 0.5, self._height)
+        offsetX, offsetY = self._origin
+        x = np.linspace(offsetX + 0.5, offsetX + self._width - 0.5, self._width)
+        y = np.linspace(offsetY + 0.5, offsetY + self._height - 0.5, self._height)
         self._gridX, self._gridY = np.meshgrid(x, y)
 
         self.reset()
+
+    def is_valid_point(self, point):
+        """
+        Check whether a given `point` is a valid sensor position, i.e., it is
+        not inside of the network.
+        """
+
+        return self._snapper.is_outside(Point(point[0], point[1]))
 
     def update(self, source, destination):
         """

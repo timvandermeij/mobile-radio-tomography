@@ -636,7 +636,7 @@
                 "short": "Iterations",
                 "type": "int",
                 "min": 0,
-                "default": 100
+                "default": 1000
             },
             "iteration_callback": {
                 "help": "Number of iterations to show a progress report every so often",
@@ -651,7 +651,7 @@
                 "type": "list",
                 "subtype": "float",
                 "min": 0.0,
-                "default": [0.5]
+                "default": [0.25, 0.025]
             }
         }
     },
@@ -663,7 +663,7 @@
                 "short": "Measurements",
                 "type": "int",
                 "min": 1,
-                "default": 20
+                "default": 100
             },
             "network_size": {
                 "help": "Dimensions of the total space wherein the network lies, in number of grid cells",
@@ -672,7 +672,7 @@
                 "length": 2,
                 "subtype": "int",
                 "min": 1,
-                "default": [64, 64]
+                "default": [10, 10]
             },
             "network_padding": {
                 "help": "Number of full cells for each dimension and on every side where the vehicles are allowed to drive around the network",
@@ -690,6 +690,30 @@
                 "min": 0.0,
                 "max": 1.0,
                 "default": 0.5
+            },
+            "delta_rate": {
+                "help": "Ratio between sensor distances and mission length. A higher value gives the sensor distances more weight in the objective, a lower value gives the travel distance more weight.",
+                "short": "Delta",
+                "type": "float",
+                "min": 0.0,
+                "max": 1.0,
+                "default": 0.5
+            }
+        }
+    },
+    "planning_assignment": {
+        "name": "Planning waypoint assignment problem",
+        "settings": {
+            "vehicle_home_locations": {
+                "help": "Home location coordinates for the vehicles",
+                "short": "Home locations",
+                "type": "list",
+                "subtype": {
+                    "type": "tuple",
+                    "length": 2,
+                    "subtype": "int"
+                },
+                "default": [[0, 0], [0, 9]]
             }
         }
     },
