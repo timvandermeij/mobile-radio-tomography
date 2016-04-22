@@ -35,9 +35,9 @@ class ThreadableTestCase(unittest.TestCase):
             "Running threads: {}".format(threading.active_count())
         ]
 
-        super(ThreadableTestCase, self).tearDown()
-
         self.thread_manager.destroy()
+
+        super(ThreadableTestCase, self).tearDown()
 
         # Check whether all threads have been stopped after all the `tearDown` 
         # methods have finished.

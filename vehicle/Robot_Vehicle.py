@@ -72,8 +72,6 @@ class Robot_Vehicle(Vehicle):
         self._waypoints = []
         self._current_waypoint = -1
 
-        # Whether the robot is currently armed and driving around.
-        self._running = False
         # Current state of the robot. Possible states are:
         # - intersection: The robot is standing still at an intersection.
         # - rotate: The robot is rotating at an intersection. See
@@ -103,7 +101,7 @@ class Robot_Vehicle(Vehicle):
 
     def _state_loop(self):
         try:
-            while self._running:
+            while self._armed:
                 self._check_state()
                 time.sleep(self._loop_delay)
         except:
@@ -187,6 +185,7 @@ class Robot_Vehicle(Vehicle):
 
     @home_location.setter
     def home_location(self, value):
+        Vehicle.home_location.__set__(self, value)
         if isinstance(value, LocationLocal):
             self._home_location = (value.north, value.east)
         else:
@@ -204,11 +203,11 @@ class Robot_Vehicle(Vehicle):
             self._waypoints = [self._home_location]
             self._current_waypoint = -1
         elif value.name == "HALT":
-            self._running = False
+            self.armed = False
 
     @property
     def armed(self):
-        return self._running
+        return self._armed
 
     @armed.setter
     def armed(self, value):
@@ -218,14 +217,21 @@ class Robot_Vehicle(Vehicle):
             self.deactivate()
 
     def activate(self):
+        super(Robot_Vehicle, self).activate()
+
+        if self._armed:
+            return
+
         if self._line_follower is not None:
             self._line_follower.activate()
 
-        self._running = True
+        self._armed = True
         thread.start_new_thread(self._state_loop, ())
 
     def deactivate(self):
-        self._running = False
+        super(Robot_Vehicle, self).deactivate()
+
+        self._armed = False
         if self._line_follower is not None:
             self._line_follower.deactivate()
 
@@ -428,7 +434,7 @@ class Robot_Vehicle(Vehicle):
         return self._direction
 
     def _is_moving(self):
-        return self._running and self._state.name == "move"
+        return self._armed and self._state.name == "move"
 
     def _at_intersection(self):
         if self._state.name == "intersection":

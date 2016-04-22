@@ -22,13 +22,18 @@ class TestVehicleRobotVehicle(LocationTestCase, SettingsTestCase, ThreadableTest
         self.settings = self.arguments.get_settings("vehicle")
         self.settings.set("vehicle_class", "Robot_Vehicle")
 
-        Robot_Vehicle._setup_line_follower = MagicMock()
+        self._line_follower_patcher = patch.object(Robot_Vehicle, "_setup_line_follower")
+        self._line_follower_patcher.start()
 
         self.geometry = Geometry()
         self.thread_manager = Thread_Manager()
         self.vehicle = Vehicle.create(self.arguments, self.geometry,
                                       self.thread_manager, self.usb_manager)
         self.vehicle._line_follower = MagicMock()
+
+    def tearDown(self):
+        super(TestVehicleRobotVehicle, self).tearDown()
+        self._line_follower_patcher.stop()
     
     def test_init(self):
         self.assertEqual(self.vehicle.arguments, self.arguments)
@@ -121,7 +126,9 @@ class TestVehicleRobotVehicle(LocationTestCase, SettingsTestCase, ThreadableTest
         self.assertFalse(self.vehicle.armed)
 
         self.vehicle.armed = True
+        self.vehicle.armed = True
         self.assertTrue(self.vehicle.armed)
+        # The thread is only started once.
         self.assertEqual(thread_mock.call_count, 1)
 
         self.vehicle.mode = VehicleMode("GUIDED")

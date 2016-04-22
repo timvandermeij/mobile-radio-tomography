@@ -38,7 +38,11 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
         # Only use this when starting.
         self._serial_connection.write("HOME {} {} {}\n".format(int(self._home_location[0]), int(self._home_location[1]), self._get_zumo_direction(self._direction)))
 
-    @Robot_Vehicle_Arduino.home_location.setter
+    @property
+    def home_location(self):
+        return Robot_Vehicle_Arduino.home_location.__get__(self)
+
+    @home_location.setter
     def home_location(self, value):
         Robot_Vehicle_Arduino.home_location.__set__(self, value)
         self._update_home_location()
@@ -72,7 +76,7 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
 
     def _serial_loop(self):
         try:
-            while self._running:
+            while self._armed:
                 line = self._serial_connection.readline()
                 parts = line.lstrip('\0').rstrip().split(' ')
 

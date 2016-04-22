@@ -1,7 +1,6 @@
 import itertools
 from mock import patch
 from dronekit import LocationLocal
-from ..location.Line_Follower import Line_Follower
 from ..trajectory.Mission import Mission_Cycle
 from ..vehicle.Robot_Vehicle import Robot_State
 from environment import EnvironmentTestCase
@@ -62,8 +61,7 @@ class TestMissionCycle(EnvironmentTestCase):
             (0,2), (0,2), (0,2), (0,2)
         ])
 
-    @patch.object(Line_Follower, "_loop")
-    def test_mission(self, line_follower_arduino_read_mock):
+    def test_mission(self):
         with patch('sys.stdout'):
             self.mission.setup()
             self.mission.arm_and_takeoff()
