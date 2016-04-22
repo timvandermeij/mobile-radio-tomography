@@ -1,5 +1,6 @@
 import logging
 import thread
+import threading
 import unittest
 from mock import patch, call, Mock, MagicMock
 from ..core.Threadable import Threadable
@@ -11,14 +12,46 @@ class ThreadableTestCase(unittest.TestCase):
     all spawned threads are destroyed after the test.
     """
 
+    def setUp(self):
+        self._startup_threads = threading.active_count()
+
+        super(ThreadableTestCase, self).setUp()
+
     def tearDown(self):
+        if not hasattr(self, "_startup_threads"):
+            super(ThreadableTestCase, self).tearDown()
+
+            self.fail("setUp was not called")
+
+        if not hasattr(self, "thread_manager"):
+            super(ThreadableTestCase, self).tearDown()
+
+            self.fail("No thread manager found")
+
+        thread_info = ', '.join(self.thread_manager._threads.keys())
+        self._info = [
+            "Registered threads: {}".format(thread_info),
+            "Startup threads: {}".format(self._startup_threads),
+            "Running threads: {}".format(threading.active_count())
+        ]
+
         super(ThreadableTestCase, self).tearDown()
 
-        if hasattr(self, "thread_manager"):
-            self.thread_manager.destroy()
+        self.thread_manager.destroy()
 
-        if hasattr(self, "environment") and hasattr(self.environment, "thread_manager"):
-            self.environment.thread_manager.destroy()
+        # Check whether all threads have been stopped after all the `tearDown` 
+        # methods have finished.
+        self.addCleanup(self.check_remaining_threads)
+
+    def check_remaining_threads(self):
+        count = threading.active_count()
+        if count != self._startup_threads or self.thread_manager._threads:
+            self._info.insert(0, "Threads were not cleaned up correctly.")
+
+            thread_info = ', '.join(self.thread_manager._threads.keys())
+            self._info.append("Remaining threads: {}".format(thread_info))
+            self._info.append("Latent threads: {}".format(count))
+            self.fail('\n'.join(self._info))
 
 class Mock_Thread(Threadable):
     def __init__(self, thread_manager):
@@ -32,6 +65,8 @@ class Mock_Thread(Threadable):
 
 class TestCoreThreadManager(ThreadableTestCase):
     def setUp(self):
+        super(TestCoreThreadManager, self).setUp()
+
         # Initialize the thread manager.
         self.thread_manager = Thread_Manager()
 

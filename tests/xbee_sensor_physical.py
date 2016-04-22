@@ -7,6 +7,7 @@ from xbee import ZigBee
 from mock import patch
 from ..core.Thread_Manager import Thread_Manager
 from ..zigbee.XBee_Packet import XBee_Packet
+from ..zigbee.XBee_Sensor import SensorClosedError
 from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
 from ..settings import Arguments
 from core_usb_manager import USBManagerTestCase
@@ -49,6 +50,31 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
                                            self.valid_callback)
         self.sensor._id = self.sensor_id
 
+    def tearDown(self):
+        super(TestXBeeSensorPhysical, self).tearDown()
+
+        # Ensure the sensor is deactivated for tests that use `mock_setup` but 
+        # do not deactivate it themselves.
+        self.sensor.deactivate()
+
+    def mock_setup(self):
+        """
+        Mock the activation of the XBee sensor by setting it up and enabling
+        various flags that skip join checks. This does not actually start the
+        sensor loop thread.
+        """
+
+        # Set all status variables to True to avoid being stuck in
+        # the join loops. We cannot test the join process in the unit tests.
+        self.sensor._node_identifier_set = True
+        self.sensor._address_set = True
+        self.sensor._joined = True
+        self.sensor._synchronized = True
+
+        # The serial connection and sensor must be initialized.
+        self.sensor.setup()
+        self.sensor._active = True
+
     def test_initialization(self):
         self.assertEqual(self.sensor.id, self.sensor_id)
         self.assertTrue(hasattr(self.sensor._location_callback, "__call__"))
@@ -75,16 +101,9 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
         self.assertEqual(identity["joined"], False)
 
     def test_setup(self):
-        # Set all status variables to True to avoid being stuck in
-        # the join loops. We cannot test the join process in the unit tests.
-        self.sensor._node_identifier_set = True
-        self.sensor._address_set = True
-        self.sensor._joined = True
-        self.sensor._synchronized = True
+        self.mock_setup()
 
         # The serial connection and sensor must be initialized.
-        self.sensor.setup()
-        self.sensor._active = True
         self.assertIsInstance(self.sensor._serial_connection, serial.Serial)
         self.assertIsInstance(self.sensor._sensor, ZigBee)
         self.assertEqual(self.sensor._node_identifier_set, True)
@@ -92,10 +111,16 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
         self.assertEqual(self.sensor._joined, True)
         self.assertEqual(self.sensor._synchronized, True)
 
+    def test_deactivate(self):
+        self.mock_setup()
+
         # After deactivation the serial connection must be closed.
-        # Note that this also means that the sensor is halted.
+        # Note that this also means that the sensor object is halted, and the 
+        # sensor state is cleared.
         self.sensor.deactivate()
-        with self.assertRaises(serial.SerialException):
+        self.assertFalse(self.sensor._active)
+        self.assertIsNone(self.sensor._serial_connection)
+        with self.assertRaises(SensorClosedError):
             self.sensor._send()
 
     def test_enqueue(self):
@@ -146,17 +171,9 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
     def test_send(self, mock_send):
         self.sensor._address = "sensor_{}".format(self.sensor_id)
 
-        # Set all status variables to True to avoid being stuck in
-        # the join loops. We cannot test the join process in the unit tests.
-        self.sensor._node_identifier_set = True
-        self.sensor._address_set = True
-        self.sensor._joined = True
-        self.sensor._synchronized = True
-
         # Activate the sensor and ignore any _send() calls as we are not
         # interested in the initialization calls.
-        self.sensor.setup()
-        self.sensor._active = True
+        self.mock_setup()
         mock_send.call_count = 0
 
         # Packets must be sent to all other sensors except the ground sensor
@@ -189,22 +206,13 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
                          self.settings.get("number_of_sensors"))
         self.assertNotIn(42, self.sensor._data)
 
-        self.sensor.deactivate()
-
     @patch("xbee.ZigBee.send")
     def test_send_custom_packets(self, mock_send):
         self.sensor._address = "sensor_{}".format(self.sensor_id)
 
-        # Set all status variables to True to avoid being stuck in
-        # the join loops. We cannot test the join process in the unit tests.
-        self.sensor._node_identifier_set = True
-        self.sensor._address_set = True
-        self.sensor._joined = True
-        self.sensor._synchronized = True
-
         # Activate the sensor and ignore any _send() calls as we are not
         # interested in the initialization calls.
-        self.sensor.setup()
+        self.mock_setup()
         self.sensor._active = True
         mock_send.call_count = 0
 
@@ -224,18 +232,8 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
         self.assertEqual(mock_send.call_count, queue_length)
         self.assertEqual(self.sensor._queue.qsize(), 0)
 
-        self.sensor.deactivate()
-
     def test_receive(self):
-        # Set all status variables to True to avoid being stuck in
-        # the join loops. We cannot test the join process in the unit tests.
-        self.sensor._node_identifier_set = True
-        self.sensor._address_set = True
-        self.sensor._joined = True
-        self.sensor._synchronized = True
-
-        self.sensor.setup()
-        self.sensor._active = True
+        self.mock_setup()
 
         # Valid RX packets should be processed. Store the frame ID
         # for the DB call test following this test.
@@ -352,8 +350,6 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
         }
         self.sensor._receive(raw_packet)
         self.assertEqual(self.sensor._joined, True)
-
-        self.sensor.deactivate()
 
     @patch("subprocess.call")
     def test_ntp(self, mock_subprocess_call):

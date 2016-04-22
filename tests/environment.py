@@ -14,50 +14,64 @@ from core_thread_manager import ThreadableTestCase
 from core_usb_manager import USBManagerTestCase
 
 class EnvironmentTestCase(LocationTestCase, SettingsTestCase, ThreadableTestCase, USBManagerTestCase):
-    def register_arguments(self, argv, use_infrared_sensor=True):
+    def register_arguments(self, argv, simulated=True, distance_sensors=[], use_infrared_sensor=True):
         self._argv = argv
         self._argv.extend(["--xbee-type", "simulator", "--xbee-id", "1"])
 
-        self._use_infrared_sensor = use_infrared_sensor
-        if self._use_infrared_sensor:
+        self._simulated = simulated
+
+        self._modules = {}
+
+        if use_infrared_sensor:
+            # We need to mock the Infrared_Sensor module as it is only 
+            # available when LIRC is installed which is not a requirement for 
+            # running tests.
+            package = __package__.split('.')[0]
+            self._modules[package + '.control.Infrared_Sensor'] = MagicMock()
+
             self._argv.append("--infrared-sensor")
         else:
             self._argv.append("--no-infrared-sensor")
+
+        if distance_sensors:
+            if not self._simulated:
+                # We need to mock the RPi.GPIO module as it is only available 
+                # on Raspberry Pi devices and these tests run on a PC.
+                rpi_gpio_mock = MagicMock()
+                self._modules['RPi'] = rpi_gpio_mock
+                self._modules['RPi.GPIO'] = rpi_gpio_mock.GPIO
+
+            self._argv.append("--distance-sensors")
+            self._argv.extend([str(sensor) for sensor in distance_sensors])
 
     def setUp(self):
         super(EnvironmentTestCase, self).setUp()
 
         self.arguments = Arguments("settings.json", self._argv)
 
-        if self._use_infrared_sensor:
-            # We need to mock the Infrared_Sensor module as it is only 
-            # available when LIRC is installed which is not a requirement for 
-            # running tests.
-            package = __package__.split('.')[0]
-            self.infrared_sensor_mock = MagicMock()
-            modules = {
-                package + '.control.Infrared_Sensor': self.infrared_sensor_mock,
-            }
-
-            self._infrared_sensor_patcher = patch.dict('sys.modules', modules)
-            self._infrared_sensor_patcher.start()
+        if self._modules:
+            self._module_patcher = patch.dict('sys.modules', self._modules)
+            self._module_patcher.start()
 
         self.environment = Environment.setup(self.arguments,
                                              usb_manager=self.usb_manager,
-                                             simulated=True)
+                                             simulated=self._simulated)
+
+        # Make the environment thread manager available to the tearDown method 
+        # of the ThreadableTestCase.
+        self.thread_manager = self.environment.thread_manager
 
     def tearDown(self):
         super(EnvironmentTestCase, self).tearDown()
-        if self._use_infrared_sensor:
-            self._infrared_sensor_patcher.stop()
+        if self._modules:
+            self._module_patcher.stop()
 
 class TestEnvironment(EnvironmentTestCase):
     def setUp(self):
         self.register_arguments([
             "--geometry-class", "Geometry_Spherical",
-            "--vehicle-class", "Mock_Vehicle", "--distance-sensors", "0", "90",
-            "--number-of-sensors", "3"
-        ], use_infrared_sensor=True)
+            "--vehicle-class", "Mock_Vehicle", "--number-of-sensors", "3"
+        ], distance_sensors=[0, 90], use_infrared_sensor=True)
 
         super(TestEnvironment, self).setUp()
 
