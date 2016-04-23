@@ -2,7 +2,7 @@ import itertools
 from mock import patch
 from dronekit import LocationLocal
 from ..trajectory.Mission import Mission_Cycle
-from ..vehicle.Robot_Vehicle import Robot_State
+from ..vehicle.Robot_Vehicle import Robot_Vehicle, Robot_State
 from environment import EnvironmentTestCase
 
 class TestMissionCycle(EnvironmentTestCase):
@@ -61,7 +61,8 @@ class TestMissionCycle(EnvironmentTestCase):
             (0,2), (0,2), (0,2), (0,2)
         ])
 
-    def test_mission(self):
+    @patch.object(Robot_Vehicle, "_state_loop")
+    def test_mission(self, state_loop_mock):
         with patch('sys.stdout'):
             self.mission.setup()
             self.mission.arm_and_takeoff()
@@ -69,6 +70,7 @@ class TestMissionCycle(EnvironmentTestCase):
 
         self.assertEqual(self.vehicle.mode.name, "AUTO")
         self.assertTrue(self.vehicle.armed)
+        state_loop_mock.assert_called_once_with()
         self.assertEqual(self.vehicle._waypoints, list(itertools.chain(*[[waypoint, None] for waypoint in self.first_waypoints])))
         self.assertEqual(self.vehicle.get_waypoint(), None)
 
