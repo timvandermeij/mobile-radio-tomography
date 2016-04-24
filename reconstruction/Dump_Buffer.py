@@ -10,6 +10,23 @@ class Dump_Buffer(Buffer):
 
         super(Dump_Buffer, self).__init__(options)
 
+        self._calibration = {}
+
+        # Read the data from the empty network (for calibration).
+        # Note that the indices used here correspond to the fields in the
+        # RSSI ground station packet (in order).
+        with open(options["calibration_file"], "r") as dump_calibration_file:
+            data = json.load(dump_calibration_file)
+
+            for packet in data["packets"]:
+                source = (packet[1], packet[2])
+                destination = (packet[4], packet[5])
+
+                if packet[3] and packet[6]:
+                    key = (source, destination)
+                    if not key in self._calibration:
+                        self._calibration[key] = packet[7]
+
         # Read the provided dump file. The JSON file has the following structure:
         #
         # - number_of_sensors: number of sensors in the network (excluding ground station)
@@ -26,6 +43,11 @@ class Dump_Buffer(Buffer):
             self._size = data["size"]
 
             for packet in data["packets"]:
+                source = (packet[1], packet[2])
+                destination = (packet[4], packet[5])
+
+                key = (source, destination)
+                packet[7] -= self._calibration[key]
                 self.put(packet)
 
     def get(self):

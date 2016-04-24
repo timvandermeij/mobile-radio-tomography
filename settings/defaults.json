@@ -734,6 +734,13 @@
                 "required": true,
                 "default": "one_person_moving_square"
             },
+            "dump_calibration_file": {
+                "help": "Filename part to use for dump reconstruction calibration",
+                "type": "file",
+                "format": "assets/dump_{}.json",
+                "required": true,
+                "default": "empty"
+            },
             "dump_file": {
                 "help": "Filename part to use for dump reconstruction",
                 "type": "file",

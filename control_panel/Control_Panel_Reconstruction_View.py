@@ -308,20 +308,25 @@ class Dump_Panel(Panel):
         that are specific to this data source.
         """
 
-        widget = QtGui.QWidget()
+        input_elements = {
+            "dump_calibration_file": "Calibration file",
+            "dump_file": "File"
+        }
 
-        widget_layout = QtGui.QHBoxLayout()
-        widget_layout.setContentsMargins(0, 0, 0, 0)
+        for key, label in input_elements.iteritems():
+            widget = QtGui.QWidget()
+            widget_layout = QtGui.QHBoxLayout()
+            widget_layout.setContentsMargins(0, 0, 0, 0)
 
-        file_box = QtGui.QLineEdit()
-        file_box.setText(self._settings.get("dump_file"))
+            file_box = QtGui.QLineEdit()
+            file_box.setText(self._settings.get(key))
 
-        widget_layout.addWidget(file_box)
-        widget.setLayout(widget_layout)
+            widget_layout.addWidget(file_box)
+            widget.setLayout(widget_layout)
 
-        self._register("File", widget, partial(
-            lambda file_box: "assets/dump_{}.json".format(file_box.text()), file_box
-        ))
+            self._register(label, widget, partial(
+                lambda file_box: "assets/dump_{}.json".format(file_box.text()), file_box
+            ))
 
         super(Dump_Panel, self)._render()
 
