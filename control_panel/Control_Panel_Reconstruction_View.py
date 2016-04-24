@@ -346,6 +346,7 @@ class Stream_Panel(Panel):
         that are specific to this data source.
         """
 
+        # Create the origin and size inputs.
         for label in ["Origin", "Size"]:
             widget = QtGui.QWidget()
 
@@ -365,10 +366,25 @@ class Stream_Panel(Panel):
                 lambda x_box, y_box: [int(x_box.text()), int(y_box.text())], x_box, y_box
             ))
 
-        # Create the record checkbox.
-        record_box = QtGui.QCheckBox("Yes")
-        self._register("Record", record_box, partial(
-            lambda record_box: record_box.isChecked(), record_box
+        # Create the record and calibrate checkboxes.
+        for label in ["Record", "Calibrate"]:
+            checkbox = QtGui.QCheckBox("Yes")
+            self._register(label, checkbox, partial(
+                lambda checkbox: checkbox.isChecked(), checkbox
+            ))
+
+        # Create the calibration file input.
+        widget = QtGui.QWidget()
+        widget_layout = QtGui.QHBoxLayout()
+        widget_layout.setContentsMargins(0, 0, 0, 0)
+
+        file_box = QtGui.QLineEdit()
+
+        widget_layout.addWidget(file_box)
+        widget.setLayout(widget_layout)
+
+        self._register("Calibration file", widget, partial(
+            lambda file_box: "assets/stream_{}.json".format(file_box.text()), file_box
         ))
 
         super(Stream_Panel, self)._render()
@@ -530,20 +546,29 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             origin = parameters.get("Origin")
             size = parameters.get("Size")
             record = parameters.get("Record")
+            calibrate = parameters.get("Calibrate")
+            calibration_file = parameters.get("Calibration file")
 
             if not all(dimension > 0 for dimension in size):
                 QtGui.QMessageBox.critical(self._controller.central_widget, "Invalid size",
                                            "The network dimensions must be greater than zero.")
                 return
 
+            if not calibrate and not os.path.exists(calibration_file):
+                QtGui.QMessageBox.critical(self._controller.central_widget, "Invalid calibration file",
+                                           "The calibration file does not exist.")
+                return
+
             self._buffer = Stream_Buffer({
                 "number_of_sensors": self._controller.xbee.number_of_sensors,
                 "origin": origin,
-                "size": size
+                "size": size,
+                "calibrate": calibrate,
+                "calibration_file": calibration_file
             })
             self._controller.xbee.set_buffer(self._buffer)
 
-            if record:
+            if record or calibrate:
                 # Create a stream recorder instance to record all incoming packets.
                 # The existence of this object is enough to let the loop handle the
                 # recording process.
