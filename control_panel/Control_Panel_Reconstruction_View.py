@@ -526,16 +526,45 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._interpolation = self._settings.get("interpolation")
         self._chunk_size = self._settings.get("chunk_size")
 
-        # Create the buffer depending on the source.
+        # Create the buffer and reconstructor.
+        try:
+            self._create_buffer(parameters)
+            self._create_reconstructor(parameters)
+        except Exception as exception:
+            QtGui.QMessageBox.critical(self._controller.central_widget, "Initialization error",
+                                       exception.message)
+            self._toggle(parameters)
+            return
+
+        # Create the coordinator.
+        self._coordinator = Coordinator(self._controller.arguments, self._buffer)
+
+        # Clear the graph and table and setup the graph.
+        self._graph.clear()
+        self._graph.setup(self._buffer)
+        self._table.clear()
+
+        # Clear the image.
+        self._axes.cla()
+        self._axes.axis("off")
+        self._canvas.draw()
+
+        # Execute the reconstruction and visualization.
+        self._chunk_count = 0
+        self._loop()
+
+    def _create_buffer(self, parameters):
+        """
+        Create the buffer for the reconstruction process (depending on the data source).
+        """
+
         if parameters.source == Source.DATASET or parameters.source == Source.DUMP:
             calibration_file = parameters.get("Calibration file")
             file = parameters.get("File")
 
             for field in [calibration_file, file]:
                 if not os.path.exists(field):
-                    QtGui.QMessageBox.critical(self._controller.central_widget, "Invalid file",
-                                               "File '{}' does not exist.".format(field))
-                    return
+                    raise OSError("File '{}' does not exist.".format(field))
 
             buffer_class = Dataset_Buffer if parameters.source == Source.DATASET else Dump_Buffer
             self._buffer = buffer_class({
@@ -550,14 +579,10 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             calibration_file = parameters.get("Calibration file")
 
             if not all(dimension > 0 for dimension in size):
-                QtGui.QMessageBox.critical(self._controller.central_widget, "Invalid size",
-                                           "The network dimensions must be greater than zero.")
-                return
+                raise ValueError("The network dimensions must be greater than zero.")
 
             if not calibrate and not os.path.exists(calibration_file):
-                QtGui.QMessageBox.critical(self._controller.central_widget, "Invalid calibration file",
-                                           "The calibration file does not exist.")
-                return
+                raise OSError("File '{}' does not exist.".format(calibration_file))
 
             self._buffer = Stream_Buffer({
                 "number_of_sensors": self._controller.xbee.number_of_sensors,
@@ -578,7 +603,11 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
                     "size": size
                 })
 
-        # Create the reconstructor.
+    def _create_reconstructor(self, parameters):
+        """
+        Create the reconstructor for the reconstruction process.
+        """
+
         reconstructors = {
             "Least squares": Least_Squares_Reconstructor,
             "SVD": SVD_Reconstructor,
@@ -586,23 +615,6 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         }
         reconstructor_class = reconstructors[parameters.get("Reconstructor")]
         self._reconstructor = reconstructor_class(self._controller.arguments)
-
-        # Create the coordinator.
-        self._coordinator = Coordinator(self._controller.arguments, self._buffer)
-
-        # Clear the graph and table and setup the graph.
-        self._graph.clear()
-        self._graph.setup(self._buffer)
-        self._table.clear()
-
-        # Clear the image.
-        self._axes.cla()
-        self._axes.axis("off")
-        self._canvas.draw()
-
-        # Execute the reconstruction and visualization.
-        self._chunk_count = 0
-        self._loop()
 
     def _loop(self):
         """

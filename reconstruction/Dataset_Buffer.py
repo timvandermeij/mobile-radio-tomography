@@ -24,8 +24,6 @@ class Dataset_Buffer(Buffer):
         self._number_of_sensors = len(self._positions)
         self._size = [21, 21]
 
-        self._calibration = {}
-
         # Read the data from the empty network (for calibration).
         with open(options["calibration_file"], "r") as dataset_calibration_file:
             for line in csv.reader(dataset_calibration_file):

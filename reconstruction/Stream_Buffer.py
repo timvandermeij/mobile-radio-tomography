@@ -14,7 +14,6 @@ class Stream_Buffer(Buffer):
         self._size = options["size"]
 
         self._calibrate = options["calibrate"]
-        self._calibration = {}
 
         # Read the data from the empty network (for calibration).
         if not self._calibrate:

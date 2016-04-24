@@ -10,8 +10,6 @@ class Dump_Buffer(Buffer):
 
         super(Dump_Buffer, self).__init__(options)
 
-        self._calibration = {}
-
         # Read the data from the empty network (for calibration).
         # Note that the indices used here correspond to the fields in the
         # RSSI ground station packet (in order).
