@@ -34,8 +34,11 @@ class Dataset_Buffer(Buffer):
                     if source_id == destination_id:
                         continue
 
+                    source = self._positions[source_id]
+                    destination = self._positions[destination_id]
                     rssi = int(line[source_id + 1])
-                    self._calibration[(source_id, destination_id)] = rssi
+
+                    self._calibration[(source, destination)] = rssi
 
         # Read the data from the nonempty network.
         with open(options["file"], "r") as dataset_file:
@@ -47,8 +50,11 @@ class Dataset_Buffer(Buffer):
                     if source_id == destination_id:
                         continue
 
+                    source = self._positions[source_id]
+                    destination = self._positions[destination_id]
                     rssi = int(line[source_id + 1])
-                    self.put([source_id, destination_id, rssi])
+
+                    self.put([source, destination, rssi])
 
     def get(self):
         """
@@ -63,24 +69,23 @@ class Dataset_Buffer(Buffer):
 
         packet = self._queue.get()
 
-        source_id = packet[0]
-        source_position = self._positions[source_id]
-        destination_id = packet[1]
-        destination_position = self._positions[destination_id]
+        source = packet[0]
+        destination = packet[1]
+        destination_id = self._positions.index(destination) + 1
         rssi = packet[2]
 
         xbee_packet = XBee_Packet()
         xbee_packet.set("specification", "rssi_ground_station")
-        xbee_packet.set("sensor_id", destination_id + 1)
-        xbee_packet.set("from_latitude", source_position[0])
-        xbee_packet.set("from_longitude", source_position[1])
+        xbee_packet.set("sensor_id", destination_id)
+        xbee_packet.set("from_latitude", source[0])
+        xbee_packet.set("from_longitude", source[1])
         xbee_packet.set("from_valid", True)
-        xbee_packet.set("to_latitude", destination_position[0])
-        xbee_packet.set("to_longitude", destination_position[1])
+        xbee_packet.set("to_latitude", destination[0])
+        xbee_packet.set("to_longitude", destination[1])
         xbee_packet.set("to_valid", True)
         xbee_packet.set("rssi", rssi)
 
-        calibrated_rssi = rssi - self._calibration[(source_id, destination_id)]
+        calibrated_rssi = rssi - self._calibration[(source, destination)]
 
         return (xbee_packet, calibrated_rssi)
 
