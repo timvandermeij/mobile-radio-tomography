@@ -44,7 +44,7 @@ class TestReconstructionDatasetBuffer(unittest.TestCase):
             if index == self.sensor_id:
                 continue
 
-            packet = dataset_buffer.get()
+            packet, calibrated_rssi = dataset_buffer.get()
             self.assertEqual(packet.get_all(), {
                 "specification": "rssi_ground_station",
                 "sensor_id": self.sensor_id + 1,
@@ -54,8 +54,9 @@ class TestReconstructionDatasetBuffer(unittest.TestCase):
                 "to_latitude": self.positions[self.sensor_id][0],
                 "to_longitude": self.positions[self.sensor_id][1],
                 "to_valid": True,
-                "rssi": self.rssi[index] - self.calibration[index]
+                "rssi": self.rssi[index]
             })
+            self.assertEqual(calibrated_rssi, self.rssi[index] - self.calibration[index])
 
         self.assertEqual(dataset_buffer.get(), None)
         self.assertEqual(dataset_buffer.count(), 0)

@@ -31,9 +31,10 @@ class Stream_Buffer(Buffer):
 
     def get(self):
         """
-        Get a packet from the buffer (or None if the queue is empty). We subtract
-        the calibrated RSSI value from the original RSSI value if calibration mode
-        is not enabled.
+        Get a packet from the buffer (or None if the queue is empty). The return
+        value is a tuple of the original packet and the calibrated RSSI value.
+        If calibration mode is enabled, however, we return the original RSSI
+        value because there is no complete calibration yet.
         """
 
         if self._queue.empty():
@@ -41,11 +42,13 @@ class Stream_Buffer(Buffer):
 
         packet = self._queue.get()
 
-        if not self._calibrate:
-            source = (packet.get("from_latitude"), packet.get("from_longitude"))
-            destination = (packet.get("to_latitude"), packet.get("to_longitude"))
+        if self._calibrate:
+            # We are in calibration mode. There is no complete calibration yet,
+            # so return the original packet and original RSSI value.
+            return (packet, packet.get("rssi"))
 
-            key = (source, destination)
-            packet.set("rssi", packet.get("rssi") - self._calibration[key])
+        source = (packet.get("from_latitude"), packet.get("from_longitude"))
+        destination = (packet.get("to_latitude"), packet.get("to_longitude"))
+        calibrated_rssi = packet.get("rssi") - self._calibration[(source, destination)]
 
-        return packet
+        return (packet, calibrated_rssi)

@@ -2,8 +2,7 @@
 # - Implement more reconstructors: Tikhonov and total variation
 # - Investigate canvas flipping
 # - Average measurements of the same link
-# - Tweak ellipse width/singular values/model (based on grid experiments)
-# - Extend calibration procedure for all data sources (change UI for calibrated RSSI)
+# - Tweak calibration/ellipse width/singular values/model (based on grid experiments)
 
 import json
 import matplotlib
@@ -634,7 +633,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             QtCore.QTimer.singleShot(self._pause_time, self._loop)
             return
 
-        packet = self._buffer.get()
+        packet, calibrated_rssi = self._buffer.get()
 
         # Update the graph, table and stream recorder (if applicable) with the packet.
         self._graph.update(packet)
@@ -650,7 +649,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         # We attempt to reconstruct an image when the coordinator successfully
         # updated the weight matrix and the RSSI vector and when we have obtained
         # the required number of measurements to fill a chunk.
-        if self._coordinator.update(packet):
+        if self._coordinator.update(packet, calibrated_rssi):
             self._chunk_count += 1
             if self._chunk_count >= self._chunk_size:
                 self._chunk_count = 0

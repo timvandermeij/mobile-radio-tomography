@@ -48,14 +48,14 @@ class Dataset_Buffer(Buffer):
                         continue
 
                     rssi = int(line[source_id + 1])
-                    calibrated_rssi = rssi - self._calibration[(source_id, destination_id)]
-                    self.put([source_id, destination_id, calibrated_rssi])
+                    self.put([source_id, destination_id, rssi])
 
     def get(self):
         """
         Get a packet from the buffer (or None if the queue is empty). We create
         the XBee packet object from the list on demand (as further explained
-        in the `put` method).
+        in the `put` method). The return value is a tuple of the original packet
+        and the calibrated RSSI value.
         """
 
         if self._queue.empty():
@@ -80,7 +80,9 @@ class Dataset_Buffer(Buffer):
         xbee_packet.set("to_valid", True)
         xbee_packet.set("rssi", rssi)
 
-        return xbee_packet
+        calibrated_rssi = rssi - self._calibration[(source_id, destination_id)]
+
+        return (xbee_packet, calibrated_rssi)
 
     def put(self, packet):
         """

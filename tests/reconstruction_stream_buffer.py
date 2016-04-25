@@ -31,7 +31,7 @@ class TestReconstructionStreamBuffer(unittest.TestCase):
         packet.set("to_valid", True)
         packet.set("rssi", -38)
 
-        # If calibration mode is enabled, the original RSSI values must be fetched.
+        # If calibration mode is enabled, the original packet and RSSI value must be fetched.
         options = {
             "number_of_sensors": 42,
             "origin": [1, 1],
@@ -41,10 +41,21 @@ class TestReconstructionStreamBuffer(unittest.TestCase):
         stream_buffer = Stream_Buffer(options)
         stream_buffer.put(packet)
 
-        buffer_packet = stream_buffer.get()
-        self.assertEqual(buffer_packet.get("rssi"), -38)
+        buffer_packet, buffer_calibrated_rssi = stream_buffer.get()
+        self.assertEqual(buffer_packet.get_all(), {
+            "specification": "rssi_ground_station",
+            "sensor_id": 1,
+            "from_latitude": 1,
+            "from_longitude": 0,
+            "from_valid": True,
+            "to_latitude": 1,
+            "to_longitude": 10,
+            "to_valid": True,
+            "rssi": -38
+        })
+        self.assertEqual(buffer_calibrated_rssi, -38)
 
-        # If calibration mode is disabled, the calibrated RSSI values must be fetched.
+        # If calibration mode is disabled, the original packet and calibrated RSSI values must be fetched.
         options = {
             "number_of_sensors": 42,
             "origin": [1, 1],
@@ -55,5 +66,16 @@ class TestReconstructionStreamBuffer(unittest.TestCase):
         stream_buffer = Stream_Buffer(options)
         stream_buffer.put(packet)
 
-        buffer_packet = stream_buffer.get()
-        self.assertEqual(buffer_packet.get("rssi"), -38 - -34)
+        buffer_packet, buffer_calibrated_rssi = stream_buffer.get()
+        self.assertEqual(buffer_packet.get_all(), {
+            "specification": "rssi_ground_station",
+            "sensor_id": 1,
+            "from_latitude": 1,
+            "from_longitude": 0,
+            "from_valid": True,
+            "to_latitude": 1,
+            "to_longitude": 10,
+            "to_valid": True,
+            "rssi": -38
+        })
+        self.assertEqual(buffer_calibrated_rssi, -38 - -34)

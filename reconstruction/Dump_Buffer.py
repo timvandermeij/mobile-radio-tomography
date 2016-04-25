@@ -41,18 +41,14 @@ class Dump_Buffer(Buffer):
             self._size = data["size"]
 
             for packet in data["packets"]:
-                source = (packet[1], packet[2])
-                destination = (packet[4], packet[5])
-
-                key = (source, destination)
-                packet[7] -= self._calibration[key]
                 self.put(packet)
 
     def get(self):
         """
         Get a packet from the buffer (or None if the queue is empty). We create
         the XBee packet object from the list on demand (as further explained
-        in the `put` method).
+        in the `put` method). The return value is a tuple of the original packet
+        and the calibrated RSSI value.
         """
 
         if self._queue.empty():
@@ -71,7 +67,11 @@ class Dump_Buffer(Buffer):
         xbee_packet.set("to_valid", packet[6])
         xbee_packet.set("rssi", packet[7])
 
-        return xbee_packet
+        source = (packet[1], packet[2])
+        destination = (packet[4], packet[5])
+        calibrated_rssi = packet[7] - self._calibration[(source, destination)]
+
+        return (xbee_packet, calibrated_rssi)
 
     def put(self, packet):
         """

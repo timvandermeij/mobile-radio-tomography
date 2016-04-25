@@ -28,14 +28,16 @@ class Coordinator(object):
 
         return copy.copy(self._rssi)
 
-    def update(self, packet):
+    def update(self, packet, calibrated_rssi):
         """
-        Update the weight matrix and RSSI vector given an XBee packet object `packet`.
+        Update the weight matrix and RSSI vector given an XBee packet object `packet`
+        and a calibrated RSSI value `calibrated_rssi`. The latter parameter is equal
+        to the original RSSI for the stream data source when calibration mode is enabled.
         """
 
         source = (packet.get("from_latitude"), packet.get("from_longitude"))
         destination = (packet.get("to_latitude"), packet.get("to_longitude"))
-        rssi = packet.get("rssi")
+        rssi = calibrated_rssi
 
         # If the endpoints already exist (i.e., the link has already been measured before),
         # we can simply replace the existing RSSI value for the link. This keeps both the
