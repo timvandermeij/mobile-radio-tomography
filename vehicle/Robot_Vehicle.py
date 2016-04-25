@@ -185,7 +185,6 @@ class Robot_Vehicle(Vehicle):
 
     @home_location.setter
     def home_location(self, value):
-        Vehicle.home_location.__set__(self, value)
         if isinstance(value, LocationLocal):
             self._home_location = (value.north, value.east)
         else:
