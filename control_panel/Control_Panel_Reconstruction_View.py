@@ -275,17 +275,10 @@ class Dataset_Panel(Panel):
         }
 
         for key, label in input_elements.iteritems():
-            widget = QtGui.QWidget()
-            widget_layout = QtGui.QHBoxLayout()
-            widget_layout.setContentsMargins(0, 0, 0, 0)
-
             file_box = QtGui.QLineEdit()
             file_box.setText(self._settings.get(key))
 
-            widget_layout.addWidget(file_box)
-            widget.setLayout(widget_layout)
-
-            self._register(label, widget, partial(
+            self._register(label, file_box, partial(
                 lambda file_box: "assets/dataset_{}.csv".format(file_box.text()), file_box
             ))
 
@@ -313,17 +306,10 @@ class Dump_Panel(Panel):
         }
 
         for key, label in input_elements.iteritems():
-            widget = QtGui.QWidget()
-            widget_layout = QtGui.QHBoxLayout()
-            widget_layout.setContentsMargins(0, 0, 0, 0)
-
             file_box = QtGui.QLineEdit()
             file_box.setText(self._settings.get(key))
 
-            widget_layout.addWidget(file_box)
-            widget.setLayout(widget_layout)
-
-            self._register(label, widget, partial(
+            self._register(label, file_box, partial(
                 lambda file_box: "assets/dump_{}.json".format(file_box.text()), file_box
             ))
 
@@ -373,16 +359,9 @@ class Stream_Panel(Panel):
             ))
 
         # Create the calibration file input.
-        widget = QtGui.QWidget()
-        widget_layout = QtGui.QHBoxLayout()
-        widget_layout.setContentsMargins(0, 0, 0, 0)
-
         file_box = QtGui.QLineEdit()
 
-        widget_layout.addWidget(file_box)
-        widget.setLayout(widget_layout)
-
-        self._register("Calibration file", widget, partial(
+        self._register("Calibration file", file_box, partial(
             lambda file_box: "assets/stream_{}.json".format(file_box.text()), file_box
         ))
 
