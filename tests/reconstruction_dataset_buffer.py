@@ -5,6 +5,10 @@ class TestReconstructionDatasetBuffer(unittest.TestCase):
     def setUp(self):
         # The sensor ID and RSSI values come from the CSV file.
         self.sensor_id = 5
+        self.calibration = [
+            -62, -63, -58, -59, -49, -45, -58, -59, -56, -53, -57, -54, -60, -56,
+            -62, -70, -60, -63, -68, -66, -67, -70, -64, -60, -62, -62, -54, -60
+        ]
         self.rssi = [
             -63, -62, -60, -59, -52, -45, -58, -60, -61, -52, -58, -54, -60, -60,
             -62, -70, -60, -62, -66, -66, -67, -70, -68, -61, -62, -62, -54, -60
@@ -24,6 +28,7 @@ class TestReconstructionDatasetBuffer(unittest.TestCase):
         # populate the queue with XBee packets read from a CSV data file.
         # Verify that these are set correctly upon initialization.
         options = {
+            "calibration_file": "tests/reconstruction/dataset_empty.csv",
             "file": "tests/reconstruction/dataset.csv"
         }
         dataset_buffer = Dataset_Buffer(options)
@@ -39,7 +44,7 @@ class TestReconstructionDatasetBuffer(unittest.TestCase):
             if index == self.sensor_id:
                 continue
 
-            packet = dataset_buffer.get()
+            packet, calibrated_rssi = dataset_buffer.get()
             self.assertEqual(packet.get_all(), {
                 "specification": "rssi_ground_station",
                 "sensor_id": self.sensor_id + 1,
@@ -51,6 +56,7 @@ class TestReconstructionDatasetBuffer(unittest.TestCase):
                 "to_valid": True,
                 "rssi": self.rssi[index]
             })
+            self.assertEqual(calibrated_rssi, self.rssi[index] - self.calibration[index])
 
         self.assertEqual(dataset_buffer.get(), None)
         self.assertEqual(dataset_buffer.count(), 0)

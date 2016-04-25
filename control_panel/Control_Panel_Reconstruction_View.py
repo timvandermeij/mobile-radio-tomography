@@ -1,15 +1,16 @@
 # TODO:
 # - Implement more reconstructors: Tikhonov and total variation
 # - Investigate canvas flipping
-# - Implement dump recorder
 # - Average measurements of the same link
-# - Tweak ellipse width/singular values/model (based on grid experiments)
+# - Tweak calibration/ellipse width/singular values/model (based on grid experiments)
 
+import json
 import matplotlib
 matplotlib.use("Qt4Agg")
 import matplotlib.pyplot as plt
 import os.path
 import pyqtgraph as pg
+import thread
 from collections import OrderedDict
 from functools import partial
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
@@ -252,13 +253,13 @@ class Panel(QtGui.QTableWidget):
             self.setItem(position, 0, label)
             self.setCellWidget(position, 1, widget)
 
-class DatasetPanel(Panel):
+class Dataset_Panel(Panel):
     def __init__(self, parent, settings):
         """
         Initialize the dataset panel object.
         """
 
-        super(DatasetPanel, self).__init__(parent, settings)
+        super(Dataset_Panel, self).__init__(parent, settings)
 
         self._source = Source.DATASET
 
@@ -268,30 +269,28 @@ class DatasetPanel(Panel):
         that are specific to this data source.
         """
 
-        widget = QtGui.QWidget()
+        input_elements = {
+            "dataset_calibration_file": "Calibration file",
+            "dataset_file": "File"
+        }
 
-        widget_layout = QtGui.QHBoxLayout()
-        widget_layout.setContentsMargins(0, 0, 0, 0)
+        for key, label in input_elements.iteritems():
+            file_box = QtGui.QLineEdit()
+            file_box.setText(self._settings.get(key))
 
-        file_box = QtGui.QLineEdit()
-        file_box.setText(self._settings.get("dataset_file"))
+            self._register(label, file_box, partial(
+                lambda file_box: "assets/dataset_{}.csv".format(file_box.text()), file_box
+            ))
 
-        widget_layout.addWidget(file_box)
-        widget.setLayout(widget_layout)
+        super(Dataset_Panel, self)._render()
 
-        self._register("File", widget, partial(
-            lambda file_box: "assets/dataset_{}.csv".format(file_box.text()), file_box)
-        )
-
-        super(DatasetPanel, self)._render()
-
-class DumpPanel(Panel):
+class Dump_Panel(Panel):
     def __init__(self, parent, settings):
         """
         Initialize the dump panel object.
         """
 
-        super(DumpPanel, self).__init__(parent, settings)
+        super(Dump_Panel, self).__init__(parent, settings)
 
         self._source = Source.DUMP
 
@@ -301,30 +300,28 @@ class DumpPanel(Panel):
         that are specific to this data source.
         """
 
-        widget = QtGui.QWidget()
+        input_elements = {
+            "dump_calibration_file": "Calibration file",
+            "dump_file": "File"
+        }
 
-        widget_layout = QtGui.QHBoxLayout()
-        widget_layout.setContentsMargins(0, 0, 0, 0)
+        for key, label in input_elements.iteritems():
+            file_box = QtGui.QLineEdit()
+            file_box.setText(self._settings.get(key))
 
-        file_box = QtGui.QLineEdit()
-        file_box.setText(self._settings.get("dump_file"))
+            self._register(label, file_box, partial(
+                lambda file_box: "assets/dump_{}.json".format(file_box.text()), file_box
+            ))
 
-        widget_layout.addWidget(file_box)
-        widget.setLayout(widget_layout)
+        super(Dump_Panel, self)._render()
 
-        self._register("File", widget, partial(
-            lambda file_box: "assets/dump_{}.json".format(file_box.text()), file_box)
-        )
-
-        super(DumpPanel, self)._render()
-
-class StreamPanel(Panel):
+class Stream_Panel(Panel):
     def __init__(self, parent, settings):
         """
         Initialize the stream panel object.
         """
 
-        super(StreamPanel, self).__init__(parent, settings)
+        super(Stream_Panel, self).__init__(parent, settings)
 
         self._source = Source.STREAM
 
@@ -334,6 +331,7 @@ class StreamPanel(Panel):
         that are specific to this data source.
         """
 
+        # Create the origin and size inputs.
         for label in ["Origin", "Size"]:
             widget = QtGui.QWidget()
 
@@ -350,10 +348,78 @@ class StreamPanel(Panel):
             widget.setLayout(widget_layout)
 
             self._register(label, widget, partial(
-                lambda x_box, y_box: [int(x_box.text()), int(y_box.text())], x_box, y_box)
-            )
+                lambda x_box, y_box: [int(x_box.text()), int(y_box.text())], x_box, y_box
+            ))
 
-        super(StreamPanel, self)._render()
+        # Create the record and calibrate checkboxes.
+        for label in ["Record", "Calibrate"]:
+            checkbox = QtGui.QCheckBox("Yes")
+            self._register(label, checkbox, partial(
+                lambda checkbox: checkbox.isChecked(), checkbox
+            ))
+
+        # Create the calibration file input.
+        file_box = QtGui.QLineEdit()
+
+        self._register("Calibration file", file_box, partial(
+            lambda file_box: "assets/stream_{}.json".format(file_box.text()), file_box
+        ))
+
+        super(Stream_Panel, self)._render()
+
+class Stream_Recorder(object):
+    def __init__(self, central_widget=None, options=None):
+        """
+        Initialize the stream recorder object.
+
+        The stream recorder keeps a copy of every incoming packet when recording mode is
+        enabled. When recording is stopped, the captured data is exported to a dump file.
+        """
+
+        if central_widget is None:
+            raise ValueError("Central widget for the stream recorder has not been provided.")
+
+        if options is None:
+            raise ValueError("Options for the stream recorder have not been provided.")
+
+        self._central_widget = central_widget
+
+        self._number_of_sensors = options["number_of_sensors"]
+        self._origin = options["origin"]
+        self._size = options["size"]
+
+        self._packets = []
+
+    def update(self, packet):
+        """
+        Update the stream recorder with information in `packet`.
+        """
+
+        self._packets.append(packet)
+
+    def export(self):
+        """
+        Export the packets (along with network information) to a dump file.
+        """
+
+        file_name = QtGui.QFileDialog.getSaveFileName(self._central_widget,
+                                                      "Export file", os.getcwd(),
+                                                      "JSON files (*.json)")
+
+        if file_name == "":
+            return
+
+        try:
+            with open(file_name, "w") as export_file:
+                json.dump({
+                    "number_of_sensors": self._number_of_sensors,
+                    "origin": self._origin,
+                    "size": self._size,
+                    "packets": [packet.get_dump() for packet in self._packets]
+                }, export_file)
+        except IOError as e:
+            message = "Could not open file '{}': {}".format(file_name, e.strerror)
+            QtGui.QMessageBox.critical(self._central_widget, "File error", message)
 
 class Source(object):
     DATASET = "Dataset"
@@ -367,6 +433,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         """
 
         self._running = False
+        self._stream_recorder = None
 
         self._add_menu_bar()
 
@@ -388,9 +455,9 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         # Create the panels.
         panels = QtGui.QTabWidget()
         panels.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Expanding)
-        panels.addTab(DatasetPanel(panels, self._settings), Source.DATASET)
-        panels.addTab(DumpPanel(panels, self._settings), Source.DUMP)
-        panels.addTab(StreamPanel(panels, self._settings), Source.STREAM)
+        panels.addTab(Dataset_Panel(panels, self._settings), Source.DATASET)
+        panels.addTab(Dump_Panel(panels, self._settings), Source.DUMP)
+        panels.addTab(Stream_Panel(panels, self._settings), Source.STREAM)
 
         # Create the toggle button (using the stopped state as default).
         self._toggle_button = QtGui.QPushButton(QtGui.QIcon("assets/start.png"), "Start")
@@ -437,43 +504,15 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._interpolation = self._settings.get("interpolation")
         self._chunk_size = self._settings.get("chunk_size")
 
-        # Create the buffer depending on the source.
-        if parameters.source == Source.DATASET or parameters.source == Source.DUMP:
-            file = parameters.get("File")
-
-            if not os.path.exists(file):
-                QtGui.QMessageBox.critical(self._controller.central_widget, "Invalid file",
-                                           "File '{}' does not exist.".format(file))
-                return
-
-            buffer_class = Dataset_Buffer if parameters.source == Source.DATASET else Dump_Buffer
-            self._buffer = buffer_class({
-                "file": file
-            })
-        elif parameters.source == Source.STREAM:
-            origin = parameters.get("Origin")
-            size = parameters.get("Size")
-
-            if not all(dimension > 0 for dimension in size):
-                QtGui.QMessageBox.critical(self._controller.central_widget, "Invalid size",
-                                           "The network dimensions must be greater than zero.")
-                return
-
-            self._buffer = Stream_Buffer({
-                "number_of_sensors": self._controller.xbee.number_of_sensors,
-                "origin": origin,
-                "size": size
-            })
-            self._controller.xbee.set_buffer(self._buffer)
-
-        # Create the reconstructor.
-        reconstructors = {
-            "Least squares": Least_Squares_Reconstructor,
-            "SVD": SVD_Reconstructor,
-            "Truncated SVD": Truncated_SVD_Reconstructor
-        }
-        reconstructor_class = reconstructors[parameters.get("Reconstructor")]
-        self._reconstructor = reconstructor_class(self._controller.arguments)
+        # Create the buffer and reconstructor.
+        try:
+            self._create_buffer(parameters)
+            self._create_reconstructor(parameters)
+        except Exception as exception:
+            QtGui.QMessageBox.critical(self._controller.central_widget, "Initialization error",
+                                       exception.message)
+            self._toggle(parameters)
+            return
 
         # Create the coordinator.
         self._coordinator = Coordinator(self._controller.arguments, self._buffer)
@@ -492,6 +531,69 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._chunk_count = 0
         self._loop()
 
+    def _create_buffer(self, parameters):
+        """
+        Create the buffer for the reconstruction process (depending on the data source).
+        """
+
+        if parameters.source == Source.DATASET or parameters.source == Source.DUMP:
+            calibration_file = parameters.get("Calibration file")
+            file = parameters.get("File")
+
+            for field in [calibration_file, file]:
+                if not os.path.exists(field):
+                    raise OSError("File '{}' does not exist.".format(field))
+
+            buffer_class = Dataset_Buffer if parameters.source == Source.DATASET else Dump_Buffer
+            self._buffer = buffer_class({
+                "calibration_file": calibration_file,
+                "file": file
+            })
+        elif parameters.source == Source.STREAM:
+            origin = parameters.get("Origin")
+            size = parameters.get("Size")
+            record = parameters.get("Record")
+            calibrate = parameters.get("Calibrate")
+            calibration_file = parameters.get("Calibration file")
+
+            if not all(dimension > 0 for dimension in size):
+                raise ValueError("The network dimensions must be greater than zero.")
+
+            if not calibrate and not os.path.exists(calibration_file):
+                raise OSError("File '{}' does not exist.".format(calibration_file))
+
+            self._buffer = Stream_Buffer({
+                "number_of_sensors": self._controller.xbee.number_of_sensors,
+                "origin": origin,
+                "size": size,
+                "calibrate": calibrate,
+                "calibration_file": calibration_file
+            })
+            self._controller.xbee.set_buffer(self._buffer)
+
+            if record or calibrate:
+                # Create a stream recorder instance to record all incoming packets.
+                # The existence of this object is enough to let the loop handle the
+                # recording process.
+                self._stream_recorder = Stream_Recorder(self._controller.central_widget, {
+                    "number_of_sensors": self._controller.xbee.number_of_sensors,
+                    "origin": origin,
+                    "size": size
+                })
+
+    def _create_reconstructor(self, parameters):
+        """
+        Create the reconstructor for the reconstruction process.
+        """
+
+        reconstructors = {
+            "Least squares": Least_Squares_Reconstructor,
+            "SVD": SVD_Reconstructor,
+            "Truncated SVD": Truncated_SVD_Reconstructor
+        }
+        reconstructor_class = reconstructors[parameters.get("Reconstructor")]
+        self._reconstructor = reconstructor_class(self._controller.arguments)
+
     def _loop(self):
         """
         Execute the reconstruction loop.
@@ -499,6 +601,10 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
         # Stop if the stop button has been pressed.
         if not self._running:
+            if self._stream_recorder is not None:
+                self._stream_recorder.export()
+                self._stream_recorder = None
+
             return
 
         # If no packets are available yet, wait for them to arrive.
@@ -506,11 +612,13 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             QtCore.QTimer.singleShot(self._pause_time, self._loop)
             return
 
-        packet = self._buffer.get()
+        packet, calibrated_rssi = self._buffer.get()
 
-        # Update the graph and table with the data from the packet.
+        # Update the graph, table and stream recorder (if applicable) with the packet.
         self._graph.update(packet)
         self._table.update(packet)
+        if self._stream_recorder is not None:
+            self._stream_recorder.update(packet)
 
         # Only use packets with valid source and destination locations.
         if not packet.get("from_valid") or not packet.get("to_valid"):
@@ -520,25 +628,31 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         # We attempt to reconstruct an image when the coordinator successfully
         # updated the weight matrix and the RSSI vector and when we have obtained
         # the required number of measurements to fill a chunk.
-        if self._coordinator.update(packet):
+        if self._coordinator.update(packet, calibrated_rssi):
             self._chunk_count += 1
             if self._chunk_count >= self._chunk_size:
                 self._chunk_count = 0
 
-                try:
-                    pixels = self._reconstructor.execute(self._coordinator.get_weight_matrix(),
-                                                         self._coordinator.get_rssi_vector())
-
-                    # Render and draw the image with Matplotlib.
-                    self._axes.axis("off")
-                    self._axes.imshow(pixels.reshape(self._buffer.size), cmap=self._cmap,
-                                      origin="lower", interpolation=self._interpolation)
-                    self._canvas.draw()
-
-                    # Delete the image from memory now that it is drawn.
-                    self._axes.cla()
-                except:
-                    # There is not enough data yet for the reconstruction algorithm.
-                    pass
+                thread.start_new_thread(self._render, ())
 
         QtCore.QTimer.singleShot(self._pause_time, self._loop)
+
+    def _render(self):
+        """
+        Render and draw the image using Matplotlib. This runs in a separate thread.
+        """
+
+        try:
+            pixels = self._reconstructor.execute(self._coordinator.get_weight_matrix(),
+                                                 self._coordinator.get_rssi_vector())
+
+            self._axes.axis("off")
+            self._axes.imshow(pixels.reshape(self._buffer.size), cmap=self._cmap,
+                              origin="lower", interpolation=self._interpolation)
+            self._canvas.draw()
+
+            # Delete the image from memory now that it is drawn.
+            self._axes.cla()
+        except:
+            # There is not enough data yet for the reconstruction algorithm.
+            pass

@@ -10,6 +10,21 @@ class Dump_Buffer(Buffer):
 
         super(Dump_Buffer, self).__init__(options)
 
+        # Read the data from the empty network (for calibration).
+        # Note that the indices used here correspond to the fields in the
+        # RSSI ground station packet (in order).
+        with open(options["calibration_file"], "r") as dump_calibration_file:
+            data = json.load(dump_calibration_file)
+
+            for packet in data["packets"]:
+                source = (packet[1], packet[2])
+                destination = (packet[4], packet[5])
+
+                if packet[3] and packet[6]:
+                    key = (source, destination)
+                    if not key in self._calibration:
+                        self._calibration[key] = packet[7]
+
         # Read the provided dump file. The JSON file has the following structure:
         #
         # - number_of_sensors: number of sensors in the network (excluding ground station)
@@ -32,26 +47,24 @@ class Dump_Buffer(Buffer):
         """
         Get a packet from the buffer (or None if the queue is empty). We create
         the XBee packet object from the list on demand (as further explained
-        in the `put` method).
+        in the `put` method). The return value is a tuple of the original packet
+        and the calibrated RSSI value.
         """
 
         if self._queue.empty():
             return None
 
-        packet = self._queue.get()
+        dump = self._queue.get()
 
-        xbee_packet = XBee_Packet()
-        xbee_packet.set("specification", "rssi_ground_station")
-        xbee_packet.set("sensor_id", packet[0])
-        xbee_packet.set("from_latitude", packet[1])
-        xbee_packet.set("from_longitude", packet[2])
-        xbee_packet.set("from_valid", packet[3])
-        xbee_packet.set("to_latitude", packet[4])
-        xbee_packet.set("to_longitude", packet[5])
-        xbee_packet.set("to_valid", packet[6])
-        xbee_packet.set("rssi", packet[7])
+        packet = XBee_Packet()
+        packet.set("specification", "rssi_ground_station")
+        packet.set_dump(dump)
 
-        return xbee_packet
+        source = (packet.get("from_latitude"), packet.get("from_longitude"))
+        destination = (packet.get("to_latitude"), packet.get("to_longitude"))
+        calibrated_rssi = packet.get("rssi") - self._calibration[(source, destination)]
+
+        return (packet, calibrated_rssi)
 
     def put(self, packet):
         """

@@ -24,23 +24,44 @@ class Dataset_Buffer(Buffer):
         self._number_of_sensors = len(self._positions)
         self._size = [21, 21]
 
-        with open(options["file"], "r") as dataset_file:
-            for line in csv.reader(dataset_file):
-                destination_sensor_id = int(line[0])
+        # Read the data from the empty network (for calibration).
+        with open(options["calibration_file"], "r") as dataset_calibration_file:
+            for line in csv.reader(dataset_calibration_file):
+                destination_id = int(line[0])
 
-                for source_sensor_id in range(self._number_of_sensors):
+                for source_id in range(self._number_of_sensors):
                     # Ignore entries that indicate sending to ourselves.
-                    if source_sensor_id == destination_sensor_id:
+                    if source_id == destination_id:
                         continue
 
-                    rssi = int(line[source_sensor_id + 1])
-                    self.put([source_sensor_id, destination_sensor_id, rssi])
+                    source = self._positions[source_id]
+                    destination = self._positions[destination_id]
+                    rssi = int(line[source_id + 1])
+
+                    self._calibration[(source, destination)] = rssi
+
+        # Read the data from the nonempty network.
+        with open(options["file"], "r") as dataset_file:
+            for line in csv.reader(dataset_file):
+                destination_id = int(line[0])
+
+                for source_id in range(self._number_of_sensors):
+                    # Ignore entries that indicate sending to ourselves.
+                    if source_id == destination_id:
+                        continue
+
+                    source = self._positions[source_id]
+                    destination = self._positions[destination_id]
+                    rssi = int(line[source_id + 1])
+
+                    self.put([source, destination, rssi])
 
     def get(self):
         """
         Get a packet from the buffer (or None if the queue is empty). We create
         the XBee packet object from the list on demand (as further explained
-        in the `put` method).
+        in the `put` method). The return value is a tuple of the original packet
+        and the calibrated RSSI value.
         """
 
         if self._queue.empty():
@@ -48,24 +69,25 @@ class Dataset_Buffer(Buffer):
 
         packet = self._queue.get()
 
-        source_sensor_id = packet[0]
-        source_sensor_position = self._positions[source_sensor_id]
-        destination_sensor_id = packet[1]
-        destination_sensor_position = self._positions[destination_sensor_id]
+        source = packet[0]
+        destination = packet[1]
+        destination_id = self._positions.index(destination) + 1
         rssi = packet[2]
 
         xbee_packet = XBee_Packet()
         xbee_packet.set("specification", "rssi_ground_station")
-        xbee_packet.set("sensor_id", destination_sensor_id + 1)
-        xbee_packet.set("from_latitude", source_sensor_position[0])
-        xbee_packet.set("from_longitude", source_sensor_position[1])
+        xbee_packet.set("sensor_id", destination_id)
+        xbee_packet.set("from_latitude", source[0])
+        xbee_packet.set("from_longitude", source[1])
         xbee_packet.set("from_valid", True)
-        xbee_packet.set("to_latitude", destination_sensor_position[0])
-        xbee_packet.set("to_longitude", destination_sensor_position[1])
+        xbee_packet.set("to_latitude", destination[0])
+        xbee_packet.set("to_longitude", destination[1])
         xbee_packet.set("to_valid", True)
         xbee_packet.set("rssi", rssi)
 
-        return xbee_packet
+        calibrated_rssi = rssi - self._calibration[(source, destination)]
+
+        return (xbee_packet, calibrated_rssi)
 
     def put(self, packet):
         """

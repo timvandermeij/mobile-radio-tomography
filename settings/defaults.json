@@ -298,7 +298,7 @@
                 "help": "Size in meters of one dimension of the part of the space that the vehicle is allowed to be in",
                 "type": "float",
                 "min": 0.0,
-                "default": 100.0
+                "default": 10.0
             },
             "resolution": {
                 "help": "The number of entries in the memory map per meter in one dimension",
@@ -315,18 +315,18 @@
                 "help": "Mission class to use for the mission",
                 "type": "class",
                 "module": "trajectory.Mission",
-                "default": "Mission_Browse"
+                "default": "Mission_Cycle"
             },
             "measurement_delay": {
                 "help": "Time in seconds to wait at a waypoint to perform synchronized measurements",
                 "type": "float",
                 "min": 0.0,
-                "default": 1.0
+                "default": 0.5
             },
             "xbee_synchronization": {
                 "help": "Whether to wait for measurements to be complete at waypoints",
                 "type": "bool",
-                "default": false
+                "default": true
             }
         }
     },
@@ -720,12 +720,26 @@
     "reconstruction": {
         "name": "Reconstruction",
         "settings": {
+            "dataset_calibration_file": {
+                "help": "Filename part to use for dataset reconstruction calibration",
+                "type": "file",
+                "format": "assets/dataset_{}.csv",
+                "required": true,
+                "default": "empty"
+            },
             "dataset_file": {
                 "help": "Filename part to use for dataset reconstruction",
                 "type": "file",
                 "format": "assets/dataset_{}.csv",
                 "required": true,
-                "default": "one_person_at_x3_y18"
+                "default": "one_person_moving_square"
+            },
+            "dump_calibration_file": {
+                "help": "Filename part to use for dump reconstruction calibration",
+                "type": "file",
+                "format": "assets/dump_{}.json",
+                "required": true,
+                "default": "empty"
             },
             "dump_file": {
                 "help": "Filename part to use for dump reconstruction",
@@ -758,7 +772,7 @@
                 "help": "Number of measurements to obtain before rendering a new image",
                 "type": "int",
                 "min": 1,
-                "default": 100
+                "default": 50
             }
         }
     },

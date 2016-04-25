@@ -13,7 +13,9 @@ class Buffer(object):
         self._number_of_sensors = 0
         self._origin = [0, 0]
         self._size = [0, 0]
+
         self._queue = Queue.Queue()
+        self._calibration = {}
 
     def get(self):
         """
