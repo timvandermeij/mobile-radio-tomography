@@ -54,24 +54,17 @@ class Dump_Buffer(Buffer):
         if self._queue.empty():
             return None
 
-        packet = self._queue.get()
+        dump = self._queue.get()
 
-        xbee_packet = XBee_Packet()
-        xbee_packet.set("specification", "rssi_ground_station")
-        xbee_packet.set("sensor_id", packet[0])
-        xbee_packet.set("from_latitude", packet[1])
-        xbee_packet.set("from_longitude", packet[2])
-        xbee_packet.set("from_valid", packet[3])
-        xbee_packet.set("to_latitude", packet[4])
-        xbee_packet.set("to_longitude", packet[5])
-        xbee_packet.set("to_valid", packet[6])
-        xbee_packet.set("rssi", packet[7])
+        packet = XBee_Packet()
+        packet.set("specification", "rssi_ground_station")
+        packet.set_dump(dump)
 
-        source = (packet[1], packet[2])
-        destination = (packet[4], packet[5])
-        calibrated_rssi = packet[7] - self._calibration[(source, destination)]
+        source = (packet.get("from_latitude"), packet.get("from_longitude"))
+        destination = (packet.get("to_latitude"), packet.get("to_longitude"))
+        calibrated_rssi = packet.get("rssi") - self._calibration[(source, destination)]
 
-        return (xbee_packet, calibrated_rssi)
+        return (packet, calibrated_rssi)
 
     def put(self, packet):
         """

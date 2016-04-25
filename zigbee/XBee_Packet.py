@@ -84,6 +84,26 @@ class XBee_Packet(object):
 
         return dump
 
+    def set_dump(self, dump):
+        """
+        Set the values in the contents key-values store by reading the RSSI
+        ground station packet fields in order and taking the corresponding
+        value from the list in the `dump` parameter.
+        """
+
+        specification_name = self.get("specification")
+        if specification_name != "rssi_ground_station":
+            raise ValueError("Dumps can only be imported for RSSI ground station packets")
+
+        self.set("sensor_id", dump[0])
+        self.set("from_latitude", dump[1])
+        self.set("from_longitude", dump[2])
+        self.set("from_valid", dump[3])
+        self.set("to_latitude", dump[4])
+        self.set("to_longitude", dump[5])
+        self.set("to_valid", dump[6])
+        self.set("rssi", dump[7])
+
     def serialize(self):
         """
         Serialize a contents dictionary as a single byte-encoded string.

@@ -81,6 +81,34 @@ class TestXBeePacket(unittest.TestCase):
         packet.set("rssi", 67)
         self.assertEqual(packet.get_dump(), [1, 2, 3, True, 4, 5, False, 67])
 
+    def test_set_dump(self):
+        dump = [1, 2, 3, True, 4, 5, False, 67]
+
+        # Packets other than RSSI ground station packets should not be accepted.
+        packet = XBee_Packet()
+        packet.set("specification", "waypoint_clear")
+        packet.set("to_id", 5)
+        with self.assertRaises(ValueError):
+            packet.set_dump(dump)
+
+        # RSSI ground station packets should be accepted. We verify that all
+        # fields are set correctly.
+        packet = XBee_Packet()
+        packet.set("specification", "rssi_ground_station")
+        packet.set_dump(dump)
+
+        self.assertEqual(packet.get_all(), {
+            "specification": "rssi_ground_station",
+            "sensor_id": 1,
+            "from_latitude": 2,
+            "from_longitude": 3,
+            "from_valid": True,
+            "to_latitude": 4,
+            "to_longitude": 5,
+            "to_valid": False,
+            "rssi": 67
+        })
+
     def test_serialize(self):
         # A specification must be provided.
         with self.assertRaises(KeyError):
