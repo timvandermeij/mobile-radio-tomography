@@ -3,6 +3,11 @@ import numpy as np
 from Mission_Browse import Mission_Browse
 
 class Mission_Search(Mission_Browse):
+    """
+    Mission that moves around objects and avoids them while trying to stay as
+    close as possible to the object of interest.
+    """
+
     def setup(self):
         super(Mission_Search, self).setup()
         self.move_distance = 0

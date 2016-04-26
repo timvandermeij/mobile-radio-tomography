@@ -1,6 +1,10 @@
 from Mission_Auto import Mission_Auto
 
 class Mission_Square(Mission_Auto):
+    """
+    A mission that uses the autopilot to move to four waypoints in a square.
+    """
+
     def get_points(self):
         """
         Define the four waypoint locations of a square mission.
