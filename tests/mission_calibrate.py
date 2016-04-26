@@ -1,7 +1,7 @@
 from collections import deque
 from mock import patch
 from dronekit import LocationLocal
-from ..trajectory.Mission import Mission_Calibrate
+from ..mission.Mission_Calibrate import Mission_Calibrate
 from environment import EnvironmentTestCase
 
 class TestMissionCalibrate(EnvironmentTestCase):

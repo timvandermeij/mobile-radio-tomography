@@ -13,22 +13,20 @@ import traceback
 # running a Python script directly does not define the correct package
 from __init__ import __package__
 from environment.Environment import Environment
+from mission.Mission import Mission
 from settings import Arguments
-from trajectory import Mission
 from trajectory.Monitor import Monitor
 
 # Main mission program
 class Setup(object):
     def __init__(self, arguments):
         self.arguments = arguments
-        self.settings = self.arguments.get_settings("mission")
         self.activated = False
 
     def setup(self):
         self.environment = Environment.setup(self.arguments)
 
-        mission_class = self.settings.get("mission_class")
-        self.mission = Mission.__dict__[mission_class](self.environment, self.settings)
+        self.mission = Mission.create(self.environment, self.arguments)
 
         self.monitor = Monitor(self.mission, self.environment)
 

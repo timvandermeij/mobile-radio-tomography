@@ -1,6 +1,6 @@
 from mock import patch
 from dronekit import LocationLocal
-from ..trajectory.Mission import Mission_XBee
+from ..mission.Mission_XBee import Mission_XBee
 from ..vehicle.Robot_Vehicle import Robot_State
 from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 from ..zigbee.XBee_Packet import XBee_Packet

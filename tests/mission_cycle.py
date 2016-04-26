@@ -1,7 +1,7 @@
 import itertools
 from mock import patch
 from dronekit import LocationLocal
-from ..trajectory.Mission import Mission_Cycle
+from ..mission.Mission_Cycle import Mission_Cycle
 from ..vehicle.Robot_Vehicle import Robot_Vehicle, Robot_State
 from environment import EnvironmentTestCase
 
