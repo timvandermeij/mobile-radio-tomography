@@ -10,7 +10,7 @@ import pyqtgraph as pg
 from PyQt4 import QtCore, QtGui
 from Control_Panel_View import Control_Panel_View, Control_Panel_View_Name
 from Control_Panel_Widgets import QToolBarFocus
-from Control_Panel_Settings_Widgets import SettingsWidget
+from Control_Panel_Settings_Widgets import SettingsToolbarWidget
 from ..planning.Runner import Planning_Runner
 
 class Planning_Sort_Order(object):
@@ -37,8 +37,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
         components = ("planning", "planning_assignment", "planning_algorithm",
                       "planning_problem")
         for component in components:
-            form = SettingsWidget(self._controller.arguments, component,
-                                  toolbar=self._settings_toolbar)
+            form = SettingsToolbarWidget(self._controller.arguments, component)
 
             self._settings_toolbar.addWidget(form)
             self._forms[component] = form

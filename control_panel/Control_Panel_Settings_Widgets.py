@@ -6,7 +6,7 @@ from Control_Panel_Widgets import QLineEditToolButton
 class SettingsWidget(QtGui.QWidget):
     parentClicked = QtCore.pyqtSignal(str, name='parentClicked')
 
-    def __init__(self, arguments, component, toolbar=None, *a, **kw):
+    def __init__(self, arguments, component, *a, **kw):
         super(SettingsWidget, self).__init__(*a, **kw)
         self._type_names = {
             "int": "Integer",
@@ -37,38 +37,35 @@ class SettingsWidget(QtGui.QWidget):
         self._widgets = {}
         self._value_widgets = {}
 
-        if toolbar is None:
+        self._horizontal_mode = self.isHorizontal()
+        self._create_layout()
+
+        first = True
+        for key, info in self._settings.get_info():
+            valueWidget = self.make_value_widget(key, info)
+
+            self._widgets[key] = self._add_group_box(key, info, valueWidget, first)
+            self._value_widgets[key] = valueWidget
+            first = False
+
+        self.setLayout(self._layout)
+
+    def isHorizontal(self):
+        """
+        Check whether the widget's form items should be laid out in a most
+        horizontal way possible.
+        """
+
+        return False
+
+    def _create_layout(self):
+        if not self._horizontal_mode:
             self._layout = QtGui.QVBoxLayout()
 
             self._add_title_label()
             self._add_parent_button()
         else:
             self._layout = QtGui.QHBoxLayout()
-
-        first = True
-        for key, info in self._settings.get_info():
-            if first:
-                first = False
-            elif toolbar is None:
-                line = QtGui.QFrame()
-                line.setFrameShape(QtGui.QFrame.HLine)
-                line.setFrameShadow(QtGui.QFrame.Sunken)
-                self._layout.addWidget(line)
-
-            valueWidget = self.make_value_widget(key, info, toolbar is not None)
-
-            if toolbar is None:
-                self._widgets[key] = self._add_group_box(key, info, valueWidget)
-            else:
-                labelWidget = QtGui.QLabel("{}:".format(info["short"] if "short" in info else key))
-                labelWidget.setToolTip(self._arguments.get_help(key, info))
-                self._layout.addWidget(labelWidget)
-                self._layout.addWidget(valueWidget)
-                self._widgets[key] = valueWidget
-
-            self._value_widgets[key] = valueWidget
-
-        self.setLayout(self._layout)
 
     def _add_title_label(self):
         titleLabel = QtGui.QLabel("{} ({})".format(self._settings.name, self._component))
@@ -89,7 +86,15 @@ class SettingsWidget(QtGui.QWidget):
 
             self._layout.addWidget(parentButton)
 
-    def _add_group_box(self, key, info, valueWidget):
+    def _add_group_box(self, key, info, valueWidget, first=False):
+        if not first:
+            # Add a line separator between the group box widgets.
+            line = QtGui.QFrame()
+            line.setFrameShape(QtGui.QFrame.HLine)
+            line.setFrameShadow(QtGui.QFrame.Sunken)
+            self._layout.addWidget(line)
+
+        # Create the form and its rows.
         formLayout = QtGui.QFormLayout()
         formLayout.setRowWrapPolicy(QtGui.QFormLayout.WrapLongRows)
 
@@ -106,6 +111,7 @@ class SettingsWidget(QtGui.QWidget):
         valueLabel = QtGui.QLabel("Value:")
         formLayout.addRow(valueLabel, valueWidget)
 
+        # Create the group box.
         groupBox = QtGui.QGroupBox(key)
 
         groupBox.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
@@ -118,18 +124,51 @@ class SettingsWidget(QtGui.QWidget):
         return groupBox
 
     def get_settings(self):
+        """
+        Retrieve the `Settings` object for this settings widget.
+        """
+
         return self._settings
 
     def get_setting_widget(self, key):
+        """
+        Retrieve a specific `QtGui.QWidget` that wraps the input of a value for
+        the given settings key `key`.
+
+        If the settings widget does not have a widget for that key, then this
+        method raises a `KeyError`.
+        """
+
         if key not in self._widgets:
             raise KeyError("Setting '{}' in component '{}' does not have a widget.".format(key, self._component))
 
         return self._widgets[key]
 
     def format_type(self, info):
+        """
+        Retrieve a human-readable version for the settings type in the settings
+        information dictionary `info`.
+        """
+
         return self._type_names[info["type"]]
 
-    def make_value_widget(self, key, info, horizontal=False):
+    def make_value_widget(self, key, info, horizontal=None):
+        """
+        Create a `FormWidget` for inputting the value for a specific settings
+        key `key` with information dictionary `info`.
+
+        This widget can be used inside other widgets in the settings widget,
+        or for subwidgets in an existing `FormWidget`. This method picks the
+        best type of `FormWidget` for the given settings type.
+
+        If `horizontal` is provided, the `FormWidget` will be laid out as much
+        as possible in the given direction. Otherwise, this defaults to the
+        settings widget's `isHorizontal` mode.
+        """
+
+        if horizontal is None:
+            horizontal = self._horizontal_mode
+
         choices = self._arguments.get_choices(info)
         if choices is not None:
             widget = ChoicesFormWidget(self, key, info, horizontal)
@@ -141,6 +180,14 @@ class SettingsWidget(QtGui.QWidget):
         return widget
 
     def get_values(self):
+        """
+        Retrieve the current values from the input widgets that have changed
+        from the default.
+
+        The returned dictionary contains the settings keys and the changed
+        values.
+        """
+
         values = {}
         for key, widget in self._value_widgets.iteritems():
             if not widget.is_value_default():
@@ -150,6 +197,18 @@ class SettingsWidget(QtGui.QWidget):
 
     def _trigger_parent_clicked(self):
         self.parentClicked.emit(self._settings.parent.component_name)
+
+class SettingsToolbarWidget(SettingsWidget):
+    def isHorizontal(self):
+        return True
+
+    def _add_group_box(self, key, info, valueWidget, first=False):
+        labelWidget = QtGui.QLabel("{}:".format(info["short"] if "short" in info else key))
+        labelWidget.setToolTip(self._arguments.get_help(key, info))
+        self._layout.addWidget(labelWidget)
+        self._layout.addWidget(valueWidget)
+
+        return valueWidget
 
 class FormWidget(QtGui.QWidget):
     def __init__(self, form, key, info, horizontal=False, *a, **kw):
