@@ -1,7 +1,8 @@
 import math
-import numpy as np
+import sys
 from Mission_Browse import Mission_Browse
 from Mission_Square import Mission_Square
+from ..location.AStar import AStar
 
 class Mission_Pathfind(Mission_Browse, Mission_Square):
     """
@@ -27,6 +28,8 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
         self.padding = self.settings.get("padding")
         self.sensor_dist = sys.float_info.max
 
+        self._astar = AStar(self.geometry, self.memory_map)
+
     def get_waypoints(self):
         return self.points
 
@@ -43,10 +46,13 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
 
         if self.browsing:
             super(Mission_Pathfind, self).step()
-            if self.geometry.check_angle(self.start_yaw, self.yaw, self.yaw_angle_step * math.pi/180):
+            done = self.geometry.check_angle(self.start_yaw, self.yaw,
+                                             self.yaw_angle_step * math.pi/180)
+            if done:
                 self.browsing = False
 
-                points = self.astar(self.vehicle.location.global_relative_frame, self.points[self.next_waypoint])
+                points = self.astar(self.vehicle.location.global_relative_frame,
+                                    self.points[self.next_waypoint])
                 if not points:
                     raise RuntimeError("Could not find a suitable path to the next waypoint.")
 
@@ -57,8 +63,11 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
                 self.rotating = True
                 self.start_yaw = self.vehicle.attitude.yaw
         elif self.rotating:
-            # Keep track of whether we are rotating because of a goto command.
-            if self.geometry.check_angle(self.start_yaw, self.vehicle.attitude.yaw, self.yaw_angle_step * math.pi/180):
+            # Keep track of rotating due to a goto command.
+            near = self.geometry.check_angle(self.start_yaw,
+                                             self.vehicle.attitude.yaw,
+                                             self.yaw_angle_step * math.pi/180)
+            if near:
                 self.rotating = False
                 if self.check_scan():
                     return
@@ -83,6 +92,7 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
 
     def check_sensor_distance(self, sensor_distance, yaw, pitch):
         close = super(Mission_Pathfind, self).check_sensor_distance(sensor_distance, yaw, pitch)
+
         # Do not start scanning if we already are or if we are rotating because 
         # of a goto command.
         self.sensor_dist = sensor_distance
@@ -102,101 +112,7 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
         return False
 
     def astar(self, start, goal):
-        closeness = min(self.sensor_dist - self.padding, self.padding + self.closeness)
-        resolution = float(self.memory_map.get_resolution())
-        size = self.memory_map.get_size()
-        start_idx = self.memory_map.get_index(start)
-        goal_idx = self.memory_map.get_index(goal)
-        nonzero = self.memory_map.get_nonzero()
+        closeness = min(self.sensor_dist - self.padding,
+                        self.padding + self.closeness)
 
-        evaluated = set()
-        open_nodes = set([start_idx])
-        came_from = {}
-
-        # Cost along best known path
-        g = np.full((size,size), np.inf)
-        g[start_idx] = 0.0
-
-        # Estimated total cost from start to goal when passing through 
-        # a specific index.
-        f = np.full((size,size), np.inf)
-        f[start_idx] = self.cost(start, goal)
-
-        while open_nodes:
-            # Get the node in open_nodes with the lowest f score
-            open_idx = [idx for idx in open_nodes]
-            min_idx = np.argmin(f[[idx[0] for idx in open_idx], [idx[1] for idx in open_idx]])
-            current_idx = open_idx[min_idx]
-            if current_idx == goal_idx:
-                return self.reconstruct(came_from, goal_idx)
-
-            open_nodes.remove(current_idx)
-            evaluated.add(current_idx)
-            current = self.memory_map.get_location(*current_idx)
-            for neighbor_idx in self.neighbors(current_idx):
-                if neighbor_idx in evaluated:
-                    continue
-
-                try:
-                    if self.memory_map.get(neighbor_idx) == 1:
-                        continue
-                except KeyError:
-                    break
-
-                if self.too_close(neighbor_idx, nonzero, closeness, resolution):
-                    continue
-
-                neighbor = self.memory_map.get_location(*neighbor_idx)
-                tentative_g = g[current_idx] + self.geometry.get_distance_meters(current, neighbor)
-                open_nodes.add(neighbor_idx)
-                if tentative_g >= g[neighbor_idx]:
-                    # Not a better path
-                    continue
-
-                came_from[neighbor_idx] = current_idx
-                g[neighbor_idx] = tentative_g
-                f[neighbor_idx] = tentative_g + self.cost(neighbor, goal)
-
-        return []
-
-    def reconstruct(self, came_from, current):
-        # The path from goal point `current` to the start (in reversed form) 
-        # containing waypoints that should be followed to get to the goal point
-        total_path = []
-        previous = current
-
-        # The current trend of the differences between the points
-        trend = None
-        while current in came_from:
-            current = came_from.pop(current)
-
-            # Track the current trend of the point differences. If it is the 
-            # same kind of difference, then we may be able to skip this point 
-            # in our list of waypoints.
-            d = tuple(np.sign(current[i] - previous[i]) for i in [0,1])
-            if trend is None or (trend[0] != 0 and d[0] != trend[0]) or (trend[1] != 0 and d[1] != trend[1]):
-                trend = d
-                total_path.append(self.memory_map.get_location(*previous))
-            else:
-                trend = d
-
-            previous = current
-
-        return list(reversed(total_path))
-
-    def neighbors(self, current):
-        y, x = current
-        return [(y-1, x-1), (y-1, x), (y-1, x+1),
-                (y, x-1),             (y, x+1),
-                (y+1, x-1), (y+1, x), (y+1, x+1)]
-
-    def too_close(self, current, nonzero, closeness, resolution):
-        for idx in nonzero:
-            dist = math.sqrt(((current[0] - idx[0])/resolution)**2 + ((current[1] - idx[1])/resolution)**2)
-            if dist < closeness:
-                return True
-
-        return False
-
-    def cost(self, start, goal):
-        return self.geometry.get_distance_meters(start, goal)
+        return self._astar.assign(start, goal, closeness)
