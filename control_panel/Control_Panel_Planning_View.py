@@ -9,7 +9,6 @@ import pyqtgraph as pg
 
 from PyQt4 import QtCore, QtGui
 from Control_Panel_View import Control_Panel_View, Control_Panel_View_Name
-from Control_Panel_Widgets import QToolBarFocus
 from Control_Panel_Settings_Widgets import SettingsTableWidget
 from ..planning.Runner import Planning_Runner
 
@@ -414,10 +413,22 @@ class Control_Panel_Planning_View(Control_Panel_View):
         # Update the settings from the toolbox forms.
         for component, form in self._forms.iteritems():
             settings = self._controller.arguments.get_settings(component)
-            for key, value in form.get_values().iteritems():
+            values, allowed = form.get_values()
+            disallowed = [key for key, value in allowed.iteritems() if not value]
+            if disallowed:
+                keys = ", ".join("'{}'".format(key) for key in disallowed)
+                QtGui.QMessageBox.critical(self._controller.central_widget,
+                                           "Invalid value",
+                                           "The following settings from component '{}' have incorrect values: {}".format(form.get_title(), keys))
+                self._update_running(False)
+                return
+            for key, value in values.iteritems():
                 try:
                     settings.set(key, value)
-                except ValueError:
+                except ValueError as e:
+                    QtGui.QMessageBox.critical(self._controller.central_widget,
+                                               "Settings error", e.message)
+                    self._update_running(False)
                     return
 
         # Set the running state for the planning runner, and stop the XBee from 
@@ -481,7 +492,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
         # Stop the runner and update timer if the planning is done, then check 
         # for updates and final data.
-        if self._runner.done:
+        if self._runner.done or not self._running:
             self._stop()
             self._timer.stop()
 

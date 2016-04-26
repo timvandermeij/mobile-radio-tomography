@@ -152,6 +152,20 @@ class SettingsWidget(QtGui.QWidget):
 
         return self._widgets[key]
 
+    def get_value_widget(self, key):
+        """
+        Retrieve a specific `FormWidget` for the input of a value for the given
+        settings key `key`.
+
+        If the settings widget does not have a widget for that key, then this
+        method raises a `KeyError`.
+        """
+
+        if key not in self._value_widgets:
+            raise KeyError("Setting '{}' in component '{}' does not have a widget.".format(key, self._component))
+
+        return self._value_widgets[key]
+
     def format_type(self, info):
         """
         Retrieve a human-readable version for the settings type in the settings
@@ -197,11 +211,13 @@ class SettingsWidget(QtGui.QWidget):
         """
 
         values = {}
+        allowed = {}
         for key, widget in self._value_widgets.iteritems():
+            allowed[key] = widget.is_value_allowed()
             if not widget.is_value_default():
                 values[key] = widget.get_value()
 
-        return values
+        return values, allowed
 
     def _trigger_parent_clicked(self):
         self.parentClicked.emit(self._settings.parent.component_name)
@@ -287,28 +303,77 @@ class FormWidget(QtGui.QWidget):
         self.setup_form()
 
     def setup_form(self):
+        """
+        Setup the form widget's layout and other properties.
+        """
+
         pass
 
     def get_actions(self):
+        """
+        Get a list of context menu actions for the form widget.
+        """
+
         return self._actions
 
     def get_value(self):
+        """
+        Retrieve the current value of the form widget input.
+        """
+
         raise NotImplementedError("Subclasses must implement `get_value`")
 
     def set_value(self, value):
+        """
+        Change the current value of the form widget input.
+
+        This might only change the displayed state or even be ignored, and may
+        not be reflected in `get_value`. For default (or overridden default)
+        values, this is however desirable.
+        """
+
         raise NotImplementedError("Subclasses must implement `set_value(value)`")
 
     def reset_value(self):
+        """
+        Reset the value to the value it was at the start.
+
+        This is the overridden value from the current settings or the command
+        line arguments.
+        """
+
         self.set_value(self.info["value"])
 
     def set_default_value(self):
+        """
+        Reset the value to the factory defaults.
+
+        This is the value in the settings defaults specification.
+        """
+
         self.set_value(self.info["default"])
 
     def is_value_changed(self):
+        """
+        Check whether the current value is different from the overridden
+        default.
+        """
+
         return self.get_value() != self.info["value"]
 
     def is_value_default(self):
+        """
+        Check whether the current value is the same as the factory default.
+        """
         return self.get_value() == self.info["default"]
+
+    def is_value_allowed(self):
+        """
+        Check whether the current value is acceptable for this setting, as far
+        as the form widget is able to know.
+        """
+
+        return True
 
 class BooleanFormWidget(FormWidget):
     def setup_form(self):
@@ -429,6 +494,9 @@ class TextFormWidget(QLineEditValidated, FormWidget):
 
     def format_value(self, value):
         return str(value) if value is not None else ""
+
+    def is_value_allowed(self):
+        return self.hasAcceptableInput()
 
 class FileFormatValidator(QtGui.QRegExpValidator):
     def __init__(self, form_widget, *a, **kw):
@@ -590,6 +658,9 @@ class NumericSliderFormWidget(FormWidget):
         self._valueWidget.set_value(value)
         if self._slider is not None:
             self._update_slider(self._valueWidget.text())
+
+    def is_value_allowed(self):
+        return self._valueWidget.is_value_allowed()
 
     def _slider_to_value(self, value):
         minimum = self._slider.minimum()
@@ -800,6 +871,9 @@ class ListFormWidget(FormWidget):
             else:
                 self._layout.removeItem(item)
 
+    def is_value_allowed(self):
+        return all(sub_widget.is_value_allowed() for sub_widget in self._sub_widgets)
+
 class DictFormWidget(FormWidget):
     def setup_form(self):
         self._sub_widgets = {}
@@ -829,6 +903,9 @@ class DictFormWidget(FormWidget):
     def set_value(self, value):
         for key, subWidget in self._sub_widgets.iteritems():
             subWidget.set_value(value[key])
+
+    def is_value_allowed(self):
+        return all(sub_widget.is_value_allowed() for sub_widget in self._sub_widgets.itervalues())
 
 class ChoicesFormWidget(QtGui.QComboBox, FormWidget):
     def __init__(self, form, key, info, horizontal=False, *a, **kw):
