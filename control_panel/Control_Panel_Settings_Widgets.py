@@ -46,9 +46,8 @@ class SettingsWidget(QtGui.QWidget):
 
             self._widgets[key] = self._add_group_box(key, info, valueWidget, first)
             self._value_widgets[key] = valueWidget
+            self.resize_widget(key)
             first = False
-
-        self.setLayout(self._layout)
 
     def isHorizontal(self):
         """
@@ -67,8 +66,17 @@ class SettingsWidget(QtGui.QWidget):
         else:
             self._layout = QtGui.QHBoxLayout()
 
+        self.setLayout(self._layout)
+
+    def get_title(self):
+        """
+        Get a titular name of the settings widget.
+        """
+
+        return "{} ({})".format(self._settings.name, self._component)
+
     def _add_title_label(self):
-        titleLabel = QtGui.QLabel("{} ({})".format(self._settings.name, self._component))
+        titleLabel = QtGui.QLabel(self.get_title())
         titleLabel.setFrameStyle(QtGui.QFrame.Panel | QtGui.QFrame.Sunken)
         titleLabel.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
         titleLabel.setStyleSheet("QLabel { font-size: 24px; background: white }")
@@ -198,15 +206,67 @@ class SettingsWidget(QtGui.QWidget):
     def _trigger_parent_clicked(self):
         self.parentClicked.emit(self._settings.parent.component_name)
 
+    def resize_widget(self, key):
+        """
+        Handle resizing the value widget contents for setting key `key`.
+        """
+
+        pass
+
+    def _get_short_label(self, key, info):
+        return "{}:".format(info["short"] if "short" in info else key)
+
 class SettingsToolbarWidget(SettingsWidget):
     def isHorizontal(self):
         return True
 
     def _add_group_box(self, key, info, valueWidget, first=False):
-        labelWidget = QtGui.QLabel("{}:".format(info["short"] if "short" in info else key))
+        labelWidget = QtGui.QLabel(self._get_short_label(key, info))
         labelWidget.setToolTip(self._arguments.get_help(key, info))
         self._layout.addWidget(labelWidget)
         self._layout.addWidget(valueWidget)
+
+        return valueWidget
+
+class SettingsTableWidget(QtGui.QTableWidget, SettingsWidget):
+    def __init__(self, arguments, component, *a, **kw):
+        self._rows = {}
+        QtGui.QTableWidget.__init__(self, *a, **kw)
+        SettingsWidget.__init__(self, arguments, component, *a, **kw)
+
+    def _create_layout(self):
+        # Create the key and value columns.
+        self.setColumnCount(2)
+
+        # Let the columns take up the entire width of the table.
+        for index in range(2):
+            self.horizontalHeader().setResizeMode(index, QtGui.QHeaderView.Stretch)
+
+        self.verticalHeader().setResizeMode(QtGui.QHeaderView.Fixed)
+
+        # Hide the horizontal and vertical headers.
+        self.horizontalHeader().hide()
+        self.verticalHeader().hide()
+
+    def resize_widget(self, key):
+        if key not in self._rows:
+            return
+
+        size = self._widgets[key].sizeHint().height()
+        self.verticalHeader().resizeSection(self._rows[key], size)
+
+    def _add_group_box(self, key, info, valueWidget, first=False):
+        label = QtGui.QTableWidgetItem(self._get_short_label(key, info))
+        label.setToolTip(self._arguments.get_help(key, info))
+        label.setTextAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
+        label.setFlags(label.flags() & ~QtCore.Qt.ItemIsEditable & ~QtCore.Qt.ItemIsSelectable)
+
+        row = self.rowCount()
+        self.insertRow(row)
+        self.setItem(row, 0, label)
+        self.setCellWidget(row, 1, valueWidget)
+
+        self._rows[key] = row
 
         return valueWidget
 
@@ -680,6 +740,7 @@ class ListFormWidget(FormWidget):
             self._removeButtons.append(removeButton)
 
             self._fix_tab_order(add=True)
+            self.form.resize_widget(self.key)
 
     def _fix_tab_order(self, add=True):
         if self._addButton is None:
@@ -718,6 +779,7 @@ class ListFormWidget(FormWidget):
         self._removeButtons.remove(removeButton)
 
         self._fix_tab_order(add=False)
+        self.form.resize_widget(self.key)
 
     def get_value(self):
         return [sub_widget.get_value() for sub_widget in self._sub_widgets]
