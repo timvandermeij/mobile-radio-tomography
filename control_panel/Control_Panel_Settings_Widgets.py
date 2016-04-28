@@ -271,6 +271,10 @@ class SettingsTableWidget(QtGui.QTableWidget, SettingsWidget):
         self.horizontalHeader().hide()
         self.verticalHeader().hide()
 
+        # Disable tab key navigation of the table so the tab key navigation of 
+        # form input still works.
+        self.setTabKeyNavigation(False)
+
     def resize_widget(self, key):
         if key not in self._rows:
             return
@@ -514,7 +518,6 @@ class FileFormatValidator(QtGui.QRegExpValidator):
         self.settings = self.form_widget.settings
         self.key = self.form_widget.key
         self.info = self.form_widget.info
-        self.required = "required" in self.info and self.info["required"]
 
         regexp = self.settings.make_format_regex(self.info["format"])
         self.setRegExp(QtCore.QRegExp(regexp))
@@ -546,10 +549,10 @@ class FileFormWidget(TextFormWidget):
             return ""
 
         if "format" in self.info:
-            try:
-                return self.settings.check_format(self.key, self.info, value)
-            except ValueError:
-                pass
+            # Change the value to a short or formatted value. Always prefer the 
+            # short value for display unless there is no short version.
+            short, full = self.settings.format_file(self.info["format"], value)
+            value = short if short is not None else full
 
         return value
 
@@ -558,7 +561,11 @@ class FileFormWidget(TextFormWidget):
         if text == "":
             return None
 
-        return text
+        # Final format conversion step
+        try:
+            return self.settings.check_format(self.key, self.info, text)
+        except ValueError as e:
+            return self.info["value"]
 
     def _open_file(self):
         if "format" in self.info:
