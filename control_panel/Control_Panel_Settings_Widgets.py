@@ -1,5 +1,6 @@
 import os
 import re
+import string
 from PyQt4 import QtCore, QtGui
 from Control_Panel_Widgets import QLineEditToolButton
 
@@ -40,14 +41,17 @@ class SettingsWidget(QtGui.QWidget):
         self._horizontal_mode = self.isHorizontal()
         self._create_layout()
 
-        first = True
-        for key, info in self._settings.get_info():
-            valueWidget = self.make_value_widget(key, info)
+        self._first = True
+        self._add_settings(self._settings)
 
-            self._widgets[key] = self._add_group_box(key, info, valueWidget, first)
+    def _add_settings(self, settings):
+        for key, info in settings.get_info():
+            valueWidget = self.make_value_widget(settings, key, info)
+
+            self._widgets[key] = self._add_group_box(key, info, valueWidget)
             self._value_widgets[key] = valueWidget
             self.resize_widget(key)
-            first = False
+            self._first = False
 
     def isHorizontal(self):
         """
@@ -94,8 +98,8 @@ class SettingsWidget(QtGui.QWidget):
 
             self._layout.addWidget(parentButton)
 
-    def _add_group_box(self, key, info, valueWidget, first=False):
-        if not first:
+    def _add_group_box(self, key, info, valueWidget):
+        if not self._first:
             # Add a line separator between the group box widgets.
             line = QtGui.QFrame()
             line.setFrameShape(QtGui.QFrame.HLine)
@@ -174,7 +178,7 @@ class SettingsWidget(QtGui.QWidget):
 
         return self._type_names[info["type"]]
 
-    def make_value_widget(self, key, info, horizontal=None):
+    def make_value_widget(self, settings, key, info, horizontal=None):
         """
         Create a `FormWidget` for inputting the value for a specific settings
         key `key` with information dictionary `info`.
@@ -193,11 +197,11 @@ class SettingsWidget(QtGui.QWidget):
 
         choices = self._arguments.get_choices(info)
         if choices is not None:
-            widget = ChoicesFormWidget(self, key, info, horizontal)
+            widget = ChoicesFormWidget(self, key, info, settings, horizontal)
             widget.add_choices(choices)
         else:
             widget_type = self._type_widgets[info["type"]]
-            widget = widget_type(self, key, info, horizontal)
+            widget = widget_type(self, key, info, settings, horizontal)
 
         return widget
 
@@ -236,7 +240,7 @@ class SettingsToolbarWidget(SettingsWidget):
     def isHorizontal(self):
         return True
 
-    def _add_group_box(self, key, info, valueWidget, first=False):
+    def _add_group_box(self, key, info, valueWidget):
         labelWidget = QtGui.QLabel(self._get_short_label(key, info))
         labelWidget.setToolTip(self._arguments.get_help(key, info))
         self._layout.addWidget(labelWidget)
@@ -249,6 +253,9 @@ class SettingsTableWidget(QtGui.QTableWidget, SettingsWidget):
         self._rows = {}
         QtGui.QTableWidget.__init__(self, *a, **kw)
         SettingsWidget.__init__(self, arguments, component, *a, **kw)
+
+        if self._settings.parent is not None:
+            self._add_settings(self._settings.parent)
 
     def _create_layout(self):
         # Create the key and value columns.
@@ -268,10 +275,11 @@ class SettingsTableWidget(QtGui.QTableWidget, SettingsWidget):
         if key not in self._rows:
             return
 
-        size = self._widgets[key].sizeHint().height()
+        widget = self._widgets[key]
+        size = max(widget.height(), widget.sizeHint().height())
         self.verticalHeader().resizeSection(self._rows[key], size)
 
-    def _add_group_box(self, key, info, valueWidget, first=False):
+    def _add_group_box(self, key, info, valueWidget):
         label = QtGui.QTableWidgetItem(self._get_short_label(key, info))
         label.setToolTip(self._arguments.get_help(key, info))
         label.setTextAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
@@ -287,11 +295,12 @@ class SettingsTableWidget(QtGui.QTableWidget, SettingsWidget):
         return valueWidget
 
 class FormWidget(QtGui.QWidget):
-    def __init__(self, form, key, info, horizontal=False, *a, **kw):
+    def __init__(self, form, key, info, settings, horizontal=False, *a, **kw):
         super(FormWidget, self).__init__(*a, **kw)
         self.form = form
         self.key = key
         self.info = info
+        self.settings = settings
         self.horizontal = horizontal
 
         reset_action = QtGui.QAction("Reset to current value", self)
@@ -450,7 +459,7 @@ class QLineEditValidated(QtGui.QLineEdit):
             self.setCursorPosition(pos)
 
 class TextFormWidget(QLineEditValidated, FormWidget):
-    def __init__(self, form, key, info, horizontal=False, *a, **kw):
+    def __init__(self, form, key, info, settings, horizontal=False, *a, **kw):
         # Qt does not understand the concept of multiple inheritance, since it 
         # is written in C++. Therefore, the QLineEdit must be the first class 
         # we inherit from, otherwise setText (a slot method) does not function.
@@ -459,7 +468,7 @@ class TextFormWidget(QLineEditValidated, FormWidget):
         # See http://trevorius.com/scrapbook/python/pyqt-multiple-inheritance/ 
         # for more details.
         QLineEditValidated.__init__(self, *a, **kw)
-        FormWidget.__init__(self, form, key, info, horizontal, *a, **kw)
+        FormWidget.__init__(self, form, key, info, settings, horizontal, *a, **kw)
         self._background_color = ""
 
     def contextMenuEvent(self, event):
@@ -502,10 +511,10 @@ class FileFormatValidator(QtGui.QRegExpValidator):
     def __init__(self, form_widget, *a, **kw):
         super(FileFormatValidator, self).__init__(*a, **kw)
         self.form_widget = form_widget
+        self.settings = self.form_widget.settings
         self.key = self.form_widget.key
         self.info = self.form_widget.info
         self.required = "required" in self.info and self.info["required"]
-        self.settings = self.form_widget.form.get_settings()
 
         regexp = self.settings.make_format_regex(self.info["format"])
         self.setRegExp(QtCore.QRegExp(regexp))
@@ -538,7 +547,7 @@ class FileFormWidget(TextFormWidget):
 
         if "format" in self.info:
             try:
-                return self.form.get_settings().check_format(self.key, self.info, value)
+                return self.settings.check_format(self.key, self.info, value)
             except ValueError:
                 pass
 
@@ -578,6 +587,7 @@ class FileFormWidget(TextFormWidget):
 
     def resizeEvent(self, event):
         self.openButton.resizeEvent(event)
+        self.form.resize_widget(self.key)
 
 class NumericFormWidget(TextFormWidget):
     def setup_form(self):
@@ -620,7 +630,10 @@ class NumericFormWidget(TextFormWidget):
 
 class NumericSliderFormWidget(FormWidget):
     def setup_form(self):
-        self._valueWidget = NumericFormWidget(self.form, "{}-num".format(self.key), self.info)
+        self._valueWidget = NumericFormWidget(self.form,
+                                              "{}-num".format(self.key),
+                                              self.info, self.settings,
+                                              horizontal=self.horizontal)
         self._slider = None
 
         self._layout = QtGui.QHBoxLayout()
@@ -788,7 +801,7 @@ class ListFormWidget(FormWidget):
 
         sub_info["value"] = sub_value
         sub_info["default"] = sub_default
-        sub_widget = self.form.make_value_widget("{}-{}".format(self.key, position), sub_info, horizontal=True)
+        sub_widget = self.form.make_value_widget(self.settings, "{}-{}".format(self.key, position), sub_info, horizontal=True)
 
         self._sub_widgets.append(sub_widget)
 
@@ -890,7 +903,7 @@ class DictFormWidget(FormWidget):
             key_text = "{} ({}):".format(key, self.form.format_type(sub_info))
             keyLabel = QtGui.QLabel(key_text)
 
-            subWidget = self.form.make_value_widget("{}-{}".format(self.key, key), sub_info, horizontal=True)
+            subWidget = self.form.make_value_widget(self.settings, "{}-{}".format(self.key, key), sub_info, horizontal=True)
             formLayout.addRow(keyLabel, subWidget)
 
             self._sub_widgets[key] = subWidget
@@ -908,14 +921,22 @@ class DictFormWidget(FormWidget):
         return all(sub_widget.is_value_allowed() for sub_widget in self._sub_widgets.itervalues())
 
 class ChoicesFormWidget(QtGui.QComboBox, FormWidget):
-    def __init__(self, form, key, info, horizontal=False, *a, **kw):
-        QtGui.QLineEdit.__init__(self, *a, **kw)
-        FormWidget.__init__(self, form, key, info, horizontal, *a, **kw)
+    def __init__(self, form, key, info, settings, horizontal=False, *a, **kw):
+        QtGui.QComboBox.__init__(self, *a, **kw)
+        FormWidget.__init__(self, form, key, info, settings, horizontal, *a, **kw)
         self._types = {
             "int": int,
             "string": str,
             "float": float
         }
+
+        if "replace" in self.info:
+            replace = self.info["replace"]
+        else:
+            replace = ["", ""]
+
+        self._value_table = string.maketrans(*replace)
+        self._display_table = string.maketrans(*reversed(replace))
 
     def add_choices(self, choices):
         if self.count() == 0:
@@ -923,7 +944,7 @@ class ChoicesFormWidget(QtGui.QComboBox, FormWidget):
                 choices[0:0] = [""]
 
         for i, choice in enumerate(choices):
-            self.addItem(str(choice))
+            self.addItem(str(choice).translate(self._display_table))
             if choice == self.info["value"]:
                 self.setCurrentIndex(i)
 
@@ -941,8 +962,8 @@ class ChoicesFormWidget(QtGui.QComboBox, FormWidget):
         else:
             type_cast = str
 
-        return type_cast(self.currentText())
+        return type_cast(str(self.currentText()).translate(self._value_table))
 
     def set_value(self, value):
-        index = self.findText(str(value))
+        index = self.findText(str(value).translate(self._display_table))
         self.setCurrentIndex(index)

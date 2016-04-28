@@ -610,7 +610,7 @@
                 "short": "Algorithm",
                 "type": "class",
                 "module": "planning.Algorithm",
-                "replace": ["abcdefghijklmnopqrstuvwxyz-", "ABCDEFGHIJKLMNOPQRSTUVWXYZ_"],
+                "replace": ["-", "_"],
                 "default": "SMS_EMOA"
             },
             "discrete": {

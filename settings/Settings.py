@@ -126,6 +126,24 @@ class Settings(object):
     def make_format_regex(self, format):
         return re.escape(format).replace("\\{\\}", "(.*)")
 
+    def format_file(self, file_format, value):
+        if os.path.isfile(value):
+            full_value = value
+
+            regex = self.make_format_regex(file_format)
+            match = re.match(regex, value)
+            if match:
+                short_value = match.group(1)
+            else:
+                short_value = None
+        else:
+            short_value = value
+            full_value = file_format.format(value)
+            if not os.path.isfile(full_value):
+                full_value = None
+
+        return short_value, full_value
+
     def check_format(self, key, data, value):
         # A required value must be nonempty (not None and not a value that 
         # evaluates to false according to its type)
@@ -143,20 +161,13 @@ class Settings(object):
         #   value to the full path. We refuse nonexistent files, but full file 
         #   names not conforming to the format are allowed.
         if data["type"] == "file" and "format" in data and value is not None:
-            if os.path.isfile(value):
-                if required:
-                    regex = self.make_format_regex(data["format"])
-                    match = re.match(regex, value)
-                    if match:
-                        return match.group(1)
-                    else:
-                        raise ValueError("Setting '{}' for component '{}' must match the format '{}', value '{}' does not".format(key, self.component_name, data["format"].format("*"), value))
-            else:
-                full_value = data["format"].format(value)
-                if os.path.isfile(full_value):
-                    if not required:
-                        return full_value
-                else:
-                    raise ValueError("Setting '{}' for component '{}' must be given an existing file, not '{}'".format(key, self.component_name, value))
+            short_value, full_value = self.format_file(data["format"], value)
+            if required and short_value is None:
+                raise ValueError("Setting '{}' for component '{}' must match the format '{}', value '{}' does not".format(key, self.component_name, data["format"].format("*"), value))
+
+            if full_value is None:
+                raise ValueError("Setting '{}' for component '{}' must be given an existing file, not '{}'".format(key, self.component_name, value))
+
+            return short_value if required else full_value
 
         return value
