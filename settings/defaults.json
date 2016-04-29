@@ -756,7 +756,7 @@
                 "type": "class",
                 "module": "reconstruction.Reconstructor",
                 "replace": [" ", "_"],
-                "default": "Truncated_SVD_Reconstructor"
+                "default": "Total_Variation_Reconstructor"
             }
         }
     },
@@ -794,7 +794,7 @@
                 "type": "file",
                 "format": "assets/dump_{}.json",
                 "full_name": true,
-                "required": true,
+                "required": false,
                 "default": "empty"
             },
             "dump_file": {
@@ -803,7 +803,7 @@
                 "type": "file",
                 "format": "assets/dump_{}.json",
                 "full_name": true,
-                "required": true,
+                "required": false,
                 "default": "static_manual"
             }
         }
@@ -860,6 +860,40 @@
                 "type": "float",
                 "min": 0.0,
                 "default": 0.3
+            }
+        }
+    },
+    "reconstruction_total_variation": {
+        "name": "Reconstruction (total variation)",
+        "settings": {
+            "alpha": {
+                "help": "Factor that determines the importance of a smooth solution",
+                "short": "Alpha",
+                "type": "float",
+                "min": 0,
+                "max": 1,
+                "default": 0.4
+            },
+            "beta": {
+                "help": "Factor that determines the sharpness of the solution",
+                "short": "Beta",
+                "type": "float",
+                "min": 0,
+                "default": 0.001
+            },
+            "solver_method": {
+                "help": "Minimization method to use by the solver",
+                "short": "Solver method",
+                "type": "string",
+                "required": true,
+                "default": "L-BFGS-B"
+            },
+            "solver_iterations": {
+                "help": "Maximum number of iterations for the solver",
+                "short": "Solver iterations",
+                "type": "int",
+                "min": 1,
+                "default": 20
             }
         }
     },
