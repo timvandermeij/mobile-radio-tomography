@@ -31,11 +31,51 @@ class Control_Panel_Controller(object):
 
         # Create arguments (for obtaining various settings in views)
         # and a USB manager (for checking insertion of XBee devices).
-        # Initialize the XBee sensor for use by specific views.
         self.arguments = Arguments("settings.json", self._get_arguments())
         self.thread_manager = Thread_Manager()
         self.usb_manager = USB_Manager()
         self.usb_manager.index()
+
+        # Initialize the XBee sensor for use by specific views.
+        self.setup_xbee()
+
+        # Initialize settings components, in-process shared data and Settings 
+        # objects for the specific views.
+        self._view_components = {
+            Control_Panel_View_Name.LOADING: "control_panel_loading",
+            Control_Panel_View_Name.DEVICES: "control_panel_devices",
+            Control_Panel_View_Name.PLANNING: "control_panel_planning",
+            Control_Panel_View_Name.RECONSTRUCTION: "control_panel_reconstruction",
+            Control_Panel_View_Name.WAYPOINTS: "control_panel_waypoints",
+            Control_Panel_View_Name.SETTINGS: "control_panel_settings"
+        }
+        self._view_data = dict([(name, {}) for name in self._view_components.iterkeys()])
+        self.load_settings()
+
+        # After loading the settings, check if any unknown arguments have been 
+        # provided and show help in that case.
+        self.arguments.check_help()
+
+    def _get_arguments(self):
+        """
+        Retrieve arguments that are related to our settings, not any Qt-specific
+        command line arguments (if supported).
+        """
+
+        argv = []
+        for i, arg in enumerate(self.app.arguments()):
+            arg = str(arg)
+            if arg.startswith('--') or arg == '-h':
+                argv.append(arg)
+            elif i == 0 and not arg.startswith('-'):
+                argv.append(arg)
+
+        return argv
+
+    def setup_xbee(self):
+        """
+        Initialize the XBee object for specific views.
+        """
 
         settings = self.arguments.get_settings("control_panel")
         if settings.get("controller_xbee_simulation"):
@@ -49,31 +89,11 @@ class Control_Panel_Controller(object):
 
         self._packet_callbacks = {}
 
-        self._view_components = {
-            Control_Panel_View_Name.LOADING: "control_panel_loading",
-            Control_Panel_View_Name.DEVICES: "control_panel_devices",
-            Control_Panel_View_Name.PLANNING: "control_panel_planning",
-            Control_Panel_View_Name.RECONSTRUCTION: "control_panel_reconstruction",
-            Control_Panel_View_Name.WAYPOINTS: "control_panel_waypoints",
-            Control_Panel_View_Name.SETTINGS: "control_panel_settings"
-        }
-        self._view_data = dict([(name, {}) for name in self._view_components.iterkeys()])
-        self.load_settings()
-
-        self.arguments.check_help()
-
-    def _get_arguments(self):
-        argv = []
-        for i, arg in enumerate(self.app.arguments()):
-            arg = str(arg)
-            if arg.startswith('--') or arg == '-h':
-                argv.append(arg)
-            elif i == 0 and not arg.startswith('-'):
-                argv.append(arg)
-
-        return argv
-
     def load_settings(self):
+        """
+        Initialize `Settings` objects for specific views.
+        """
+
         self._view_settings = {}
         for view, component in self._view_components.iteritems():
             self._view_settings[view] = self.arguments.get_settings(component)
@@ -82,6 +102,10 @@ class Control_Panel_Controller(object):
         return (0, 0)
 
     def _receive(self, packet):
+        """
+        Handle a received custom `XBee_Packet`.
+        """
+
         specification = packet.get("specification")
         if specification in self._packet_callbacks:
             callback = self._packet_callbacks[specification]
@@ -91,12 +115,24 @@ class Control_Panel_Controller(object):
         return False
 
     def add_packet_callback(self, specification, callback):
+        """
+        Register a function `callback` to be called when an XBee packet with
+        the given `specification` is received.
+        """
+
         if not hasattr(callback, "__call__"):
             raise TypeError("The provided callback is not callable.")
 
         self._packet_callbacks[specification] = callback
 
     def remove_packet_callback(self, specification):
+        """
+        Unregister the callback for a given XBee packet `specification`.
+
+        If no such callback is registered for that specification, this method
+        does nothing.
+        """
+
         if specification in self._packet_callbacks:
             del self._packet_callbacks[specification]
 
