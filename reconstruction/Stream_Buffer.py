@@ -12,7 +12,6 @@ class Stream_Buffer(Buffer):
         self._origin = settings.get("stream_network_origin")
         self._size = settings.get("stream_network_size")
 
-        self._record = settings.get("stream_record")
         self._calibrate = settings.get("stream_calibrate")
 
         # Read the data from the empty network (for calibration).
@@ -37,14 +36,10 @@ class Stream_Buffer(Buffer):
         """
         Register the buffer in the XBee sensor `xbee`, and request the number
         of sensors from it.
-
-        The return value determines whether the buffer should be recorded.
         """
 
         self._number_of_sensors = xbee.number_of_sensors
         xbee.set_buffer(self)
-
-        return self._record or self._calibrate
 
     def get(self):
         """

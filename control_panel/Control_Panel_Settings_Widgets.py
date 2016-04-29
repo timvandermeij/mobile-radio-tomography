@@ -582,7 +582,8 @@ class FileFormWidget(TextFormWidget):
         if text == "":
             return None
 
-        # Final format conversion step
+        # Final format conversion step. We convert back any short formated file 
+        # name to the actual file name, if necessary.
         try:
             return self.settings.check_format(self.key, self.info, text)
         except ValueError as e:

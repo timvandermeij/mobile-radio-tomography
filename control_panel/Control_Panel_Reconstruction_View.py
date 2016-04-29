@@ -4,6 +4,7 @@
 # - Average measurements of the same link
 # - Tweak calibration/ellipse width/singular values/model (based on grid experiments)
 
+import importlib
 import json
 import matplotlib
 matplotlib.use("Qt4Agg")
@@ -18,9 +19,6 @@ from ..reconstruction.Coordinator import Coordinator
 from ..reconstruction.Dataset_Buffer import Dataset_Buffer
 from ..reconstruction.Dump_Buffer import Dump_Buffer
 from ..reconstruction.Stream_Buffer import Stream_Buffer
-from ..reconstruction.Least_Squares_Reconstructor import Least_Squares_Reconstructor
-from ..reconstruction.SVD_Reconstructor import SVD_Reconstructor
-from ..reconstruction.Truncated_SVD_Reconstructor import Truncated_SVD_Reconstructor
 
 class Graph(object):
     def __init__(self, settings):
@@ -198,7 +196,7 @@ class Stream_Recorder(object):
 
         self._packets.append(packet)
 
-    def export(self, central_widget):
+    def export(self):
         """
         Export the packets (along with network information) to a dump file.
         """
@@ -328,7 +326,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             keys = ", ".join("'{}'".format(key) for key in disallowed)
             QtGui.QMessageBox.critical(self._controller.central_widget,
                                        "Invalid value",
-                                       "The following settings have incorrect values: {}".format(form.get_title(), keys))
+                                       "The following settings have incorrect values: {}".format(keys))
             self._toggle()
             return
 
@@ -340,7 +338,6 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
                                            "Settings error", e.message)
                 self._toggle()
                 return
-
 
         # Fetch the settings for the reconstruction.
         self._pause_time = self._settings.get("reconstruction_pause_time") * 1000
@@ -391,9 +388,9 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._buffer = buffer_class(settings)
 
         if isinstance(self._buffer, Stream_Buffer):
-            record = self._buffer.register_xbee(self._controller.xbee)
+            self._buffer.register_xbee(self._controller.xbee)
 
-            if record:
+            if settings.get("stream_record") or settings.get("stream_calibrate"):
                 # Create a stream recorder instance to record all incoming 
                 # packets. The existence of this object is enough to let the 
                 # loop handle the recording process.
@@ -404,12 +401,12 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         Create the reconstructor for the reconstruction process.
         """
 
-        reconstructors = {
-            "Least_Squares_Reconstructor": Least_Squares_Reconstructor,
-            "SVD_Reconstructor": SVD_Reconstructor,
-            "Truncated_SVD_Reconstructor": Truncated_SVD_Reconstructor
-        }
-        reconstructor_class = reconstructors[settings.get("reconstructor")]
+        package = __package__.split('.')[0]
+
+        reconstructor = settings.get("reconstructor")
+        reconstructor_module = importlib.import_module("{}.reconstruction.{}".format(package, reconstructor))
+        reconstructor_class = reconstructor_module.__dict__[reconstructor]
+
         self._reconstructor = reconstructor_class(self._controller.arguments)
 
     def _loop(self):

@@ -52,11 +52,10 @@ class TestReconstructionStreamBuffer(SettingsTestCase):
         # Stream buffers only know their number of sensors once an XBee is 
         # registered. This also registers the buffer in the XBee.
         stream_buffer = Stream_Buffer(self.settings)
-        record = stream_buffer.register_xbee(self.mock_sensor)
+        stream_buffer.register_xbee(self.mock_sensor)
 
         self.assertEqual(stream_buffer.number_of_sensors, 42)
         self.mock_sensor.set_buffer.assert_called_once_with(stream_buffer)
-        self.assertTrue(record)
 
     def test_get(self):
         # If calibration mode is enabled, the original packet and RSSI value 
