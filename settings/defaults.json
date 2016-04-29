@@ -60,6 +60,13 @@
                 "type": "int",
                 "min": 5,
                 "default": 20
+            },
+            "reconstruction_pause_time": {
+                "help": "Delay in seconds to wait before entering the next reconstruction loop iteration",
+                "short": "Pause time",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.02
             }
         }
     },
@@ -720,42 +727,9 @@
     "reconstruction": {
         "name": "Reconstruction",
         "settings": {
-            "dataset_calibration_file": {
-                "help": "Filename part to use for dataset reconstruction calibration",
-                "type": "file",
-                "format": "assets/dataset_{}.csv",
-                "required": true,
-                "default": "empty"
-            },
-            "dataset_file": {
-                "help": "Filename part to use for dataset reconstruction",
-                "type": "file",
-                "format": "assets/dataset_{}.csv",
-                "required": true,
-                "default": "one_person_moving_square"
-            },
-            "dump_calibration_file": {
-                "help": "Filename part to use for dump reconstruction calibration",
-                "type": "file",
-                "format": "assets/dump_{}.json",
-                "required": true,
-                "default": "empty"
-            },
-            "dump_file": {
-                "help": "Filename part to use for dump reconstruction",
-                "type": "file",
-                "format": "assets/dump_{}.json",
-                "required": true,
-                "default": "static_manual"
-            },
-            "pause_time": {
-                "help": "Delay in seconds to wait before entering the next reconstruction loop iteration",
-                "type": "float",
-                "min": 0.0,
-                "default": 0.02
-            },
             "cmap": {
                 "help": "Color map for the reconstruction display. It must be a valid matplotlib colormap.",
+                "short": "Color map",
                 "type": "string",
                 "required": true,
                 "keys": ["matplotlib.cm", "datad"],
@@ -763,6 +737,7 @@
             },
             "interpolation": {
                 "help": "Pixel interpolation for the reconstruction display",
+                "short": "Interpolation",
                 "type": "string",
                 "required": false,
                 "keys": ["matplotlib.image", "AxesImage", "_interpd"],
@@ -770,9 +745,110 @@
             },
             "chunk_size": {
                 "help": "Number of measurements to obtain before rendering a new image",
+                "short": "Chunk size",
                 "type": "int",
                 "min": 1,
                 "default": 50
+            },
+            "reconstructor": {
+                "help": "Reconstruction algorithm to use",
+                "short": "Reconstructor",
+                "type": "class",
+                "module": "reconstruction.Reconstructor",
+                "replace": [" ", "_"],
+                "default": "SVD_Reconstructor"
+            }
+        }
+    },
+    "reconstruction_dataset": {
+        "name": "Reconstruction (dataset source)",
+        "parent": "reconstruction",
+        "settings": {
+            "dataset_calibration_file": {
+                "help": "Filename part to use for dataset reconstruction calibration",
+                "short": "Calibration file",
+                "type": "file",
+                "format": "assets/dataset_{}.csv",
+                "full_name": true,
+                "required": true,
+                "default": "empty"
+            },
+            "dataset_file": {
+                "help": "Filename part to use for dataset reconstruction",
+                "short": "Dataset file",
+                "type": "file",
+                "format": "assets/dataset_{}.csv",
+                "full_name": true,
+                "required": true,
+                "default": "one_person_moving_square"
+            }
+        }
+    },
+    "reconstruction_dump": {
+        "name": "Reconstruction (dump source)",
+        "parent": "reconstruction",
+        "settings": {
+            "dump_calibration_file": {
+                "help": "Filename part to use for dump reconstruction calibration",
+                "short": "Calibration file",
+                "type": "file",
+                "format": "assets/dump_{}.json",
+                "full_name": true,
+                "required": true,
+                "default": "empty"
+            },
+            "dump_file": {
+                "help": "Filename part to use for dump reconstruction",
+                "short": "Dump file",
+                "type": "file",
+                "format": "assets/dump_{}.json",
+                "full_name": true,
+                "required": true,
+                "default": "static_manual"
+            }
+        }
+    },
+    "reconstruction_stream": {
+        "name": "Reconstruction (stream source)",
+        "parent": "reconstruction",
+        "settings": {
+            "stream_network_size": {
+                "help": "The size of the network, in pixels of the resulting image",
+                "short": "Network size",
+                "type": "tuple",
+                "length": 2,
+                "subtype": "int",
+                "min": 1,
+                "default": [10, 10]
+            },
+            "stream_network_origin": {
+                "help": "The distance of the network from the origin",
+                "short": "Origin",
+                "type": "tuple",
+                "length": 2,
+                "subtype": "int",
+                "default": [0, 0]
+            },
+            "stream_record": {
+                "help": "Whether to record the received XBee packets for saving afterward",
+                "short": "Record",
+                "type": "bool",
+                "default": false
+            },
+            "stream_calibrate": {
+                "help": "Whether to assume that the current mission is a calibration. If disabled, then the calibration file is used.",
+                "short": "Calibrate mode",
+                "type": "bool",
+                "default": false
+            },
+            "stream_calibration_file": {
+                "help": "Calibration file to use for initial calibration",
+                "short": "Calibration file",
+                "type": "file",
+                "format": "assets/stream_{}.json",
+                "full_name": true,
+                "required": false,
+                "default": null
             }
         }
     },

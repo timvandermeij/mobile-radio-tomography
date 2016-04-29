@@ -210,8 +210,9 @@ class SettingsWidget(QtGui.QWidget):
         Retrieve the current values from the input widgets that have changed
         from the default.
 
-        The returned dictionary contains the settings keys and the changed
-        values.
+        The returned values are two dictionaries. The first dictionary contains
+        the settings keys and the changed values, while the second dictionary
+        contains the allowed state of each value widget by their settings key.
         """
 
         values = {}
@@ -222,6 +223,26 @@ class SettingsWidget(QtGui.QWidget):
                 values[key] = widget.get_value()
 
         return values, allowed
+
+    def get_all_values(self):
+        """
+        Retrieve the current values from the input widgets, even when they are
+        the same as the default.
+
+        The returned values are a dictionary and a list. The dictionary contains
+        the settings keys and the current values, while the second list contains
+        the settings keys that have disallowed values.
+        """
+
+        values = {}
+        disallowed = []
+        for key, widget in self._value_widgets.iteritems():
+            if not widget.is_value_allowed():
+                disallowed.append(key)
+
+            values[key] = widget.get_value()
+
+        return values, disallowed
 
     def _trigger_parent_clicked(self):
         self.parentClicked.emit(self._settings.parent.component_name)

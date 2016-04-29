@@ -413,8 +413,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
         # Update the settings from the toolbox forms.
         for component, form in self._forms.iteritems():
             settings = self._controller.arguments.get_settings(component)
-            values, allowed = form.get_values()
-            disallowed = [key for key, value in allowed.iteritems() if not value]
+            values, disallowed = form.get_all_values()
             if disallowed:
                 keys = ", ".join("'{}'".format(key) for key in disallowed)
                 QtGui.QMessageBox.critical(self._controller.central_widget,

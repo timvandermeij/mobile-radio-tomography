@@ -1,7 +1,9 @@
-import unittest
+from mock import patch
 from ..reconstruction.Dataset_Buffer import Dataset_Buffer
+from ..settings import Arguments, Settings
+from settings import SettingsTestCase
 
-class TestReconstructionDatasetBuffer(unittest.TestCase):
+class TestReconstructionDatasetBuffer(SettingsTestCase):
     def setUp(self):
         # The sensor ID and RSSI values come from the CSV file.
         self.sensor_id = 5
@@ -15,7 +17,7 @@ class TestReconstructionDatasetBuffer(unittest.TestCase):
         ]
 
         # The size and positions come from the Utah dataset specification.
-        self.size = [21, 21]
+        self.size = (21, 21)
         self.positions = [
             (0, 0), (0, 3), (0, 6), (0, 9), (0, 12), (0, 15), (0, 18),
             (0, 21), (3, 21), (6, 21), (9, 21), (12, 21), (15, 21), (18, 21),
@@ -23,18 +25,22 @@ class TestReconstructionDatasetBuffer(unittest.TestCase):
             (21, 0), (18, 0), (15, 0), (12, 0), (9, 0), (6, 0), (2, 0)
         ]
 
-    def test_initialization(self):
+    @patch.object(Settings, "check_format", wraps=lambda key, data, value: value)
+    def test_initialization(self, format_mock):
         # Dataset buffers are regular buffers with the exception that they
         # populate the queue with XBee packets read from a CSV data file.
         # Verify that these are set correctly upon initialization.
-        options = {
-            "calibration_file": "tests/reconstruction/dataset_empty.csv",
-            "file": "tests/reconstruction/dataset.csv"
-        }
-        dataset_buffer = Dataset_Buffer(options)
+        # We mock the Settings.check_format method so that we can pass test 
+        # files instead of assets to the arguments.
+        arguments = Arguments("settings.json", [
+            "--dataset-calibration-file", "tests/reconstruction/dataset_empty.csv",
+            "--dataset-file", "tests/reconstruction/dataset.csv"
+        ])
+        settings = arguments.get_settings("reconstruction_dataset")
+        dataset_buffer = Dataset_Buffer(settings)
 
         self.assertEqual(dataset_buffer.number_of_sensors, len(self.positions))
-        self.assertEqual(dataset_buffer.origin, [0, 0])
+        self.assertEqual(dataset_buffer.origin, (0, 0))
         self.assertEqual(dataset_buffer.size, self.size)
 
         # One data point is ignored because a sensor cannot send to itself.

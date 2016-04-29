@@ -65,7 +65,7 @@ class TestReconstructionBuffer(unittest.TestCase):
         self.assertEqual(self.buffer.number_of_sensors, 0)
 
     def test_origin(self):
-        self.assertEqual(self.buffer.origin, [0, 0])
+        self.assertEqual(self.buffer.origin, (0, 0))
 
     def test_size(self):
-        self.assertEqual(self.buffer.size, [0, 0])
+        self.assertEqual(self.buffer.size, (0, 0))

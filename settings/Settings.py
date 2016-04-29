@@ -161,6 +161,11 @@ class Settings(object):
         #   value to the full path. We refuse nonexistent files, but full file 
         #   names not conforming to the format are allowed.
         if data["type"] == "file" and "format" in data and value is not None:
+            if "full_name" in data:
+                full_name = data["full_name"]
+            else:
+                full_name = not required
+
             short_value, full_value = self.format_file(data["format"], value)
             if required and short_value is None:
                 raise ValueError("Setting '{}' for component '{}' must match the format '{}', value '{}' does not".format(key, self.component_name, data["format"].format("*"), value))
@@ -168,6 +173,6 @@ class Settings(object):
             if full_value is None:
                 raise ValueError("Setting '{}' for component '{}' must be given an existing file, not '{}'".format(key, self.component_name, value))
 
-            return short_value if required else full_value
+            return full_value if full_name else short_value
 
         return value

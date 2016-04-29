@@ -2,17 +2,17 @@ import Queue
 from ..zigbee.XBee_Packet import XBee_Packet
 
 class Buffer(object):
-    def __init__(self, options=None):
+    def __init__(self, settings=None):
         """
         Initialize the buffer object.
         """
 
-        if options is None:
-            raise ValueError("Options for the buffer have not been provided.")
+        if settings is None:
+            raise ValueError("Settings for the buffer have not been provided.")
 
         self._number_of_sensors = 0
-        self._origin = [0, 0]
-        self._size = [0, 0]
+        self._origin = (0, 0)
+        self._size = (0, 0)
 
         self._queue = Queue.Queue()
         self._calibration = {}
