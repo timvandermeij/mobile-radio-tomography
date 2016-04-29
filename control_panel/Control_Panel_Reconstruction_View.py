@@ -246,7 +246,9 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         tabs.addTab(self._graph.create(), "Graph")
         tabs.addTab(self._table.create(), "Table")
 
-        # Create the panels.
+        # Create the panels. These are tabs containing the forms for each input 
+        # source (dataset, dump and stream). Additionally, there is a stacked 
+        # widget for the reconstructor-specific settings.
         self._sources = [
             {
                 "title": "Dataset",
@@ -268,13 +270,29 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._panels = QtGui.QTabWidget()
         self._panels.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Expanding)
 
-        self._forms = []
+        self._stackedWidget = QtGui.QStackedWidget()
+        self._stackedWidget.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Maximum)
+
+        self._source_forms = []
+        self._reconstructor_forms = {}
+
         for source in self._sources:
             form = SettingsTableWidget(self._controller.arguments,
                                        source["component"])
-            self._panels.addTab(form, source["title"])
 
-            self._forms.append(form)
+            # Handle changes to the reconstructor combo box selection to show 
+            # its settings in the stacked widget.
+            reconstructor_box = form.get_value_widget("reconstructor")
+            reconstructor_box.currentIndexChanged[QtCore.QString].connect(self._update_reconstructor)
+
+            # Register the source settings widget.
+            self._panels.addTab(form, source["title"])
+            self._source_forms.append(form)
+
+        # Update the stacked widget when switching tabs in the panel, and 
+        # ensure the first stacked widget is loaded.
+        self._panels.currentChanged.connect(self._update_form)
+        self._update_form(0)
 
         # Create the toggle button (using the stopped state as default).
         self._toggle_button = QtGui.QPushButton(QtGui.QIcon("assets/start.png"), "Start")
@@ -283,6 +301,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         # Create the layout and add the widgets.
         vbox_left = QtGui.QVBoxLayout()
         vbox_left.addWidget(self._panels)
+        vbox_left.addWidget(self._stackedWidget)
         vbox_left.addWidget(self._toggle_button)
 
         vbox_right = QtGui.QVBoxLayout()
@@ -310,15 +329,70 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             self._toggle_button.setIcon(QtGui.QIcon("assets/start.png"))
             self._toggle_button.setText("Start")
 
-    def _start(self):
+    def _update_form(self, index):
         """
-        Start the reconstruction process.
+        Update the stacked widget with the reconstructor settings widget based
+        on the reconstructor combo box in the current source form.
         """
 
-        # Determine the current panel and update the settings from the form.
-        panel_id = self._panels.currentIndex()
-        source = self._sources[panel_id]
-        form = self._forms[panel_id]
+        form = self._source_forms[index]
+
+        reconstructor_box = form.get_value_widget("reconstructor")
+        self._update_reconstructor(reconstructor_box.currentText())
+
+    def _update_reconstructor_policy(self, policy):
+        """
+        Adjust the size of the stacked widget based on the given `policy`.
+        """
+
+        currentWidget = self._stackedWidget.currentWidget()
+        if currentWidget is not None:
+            currentWidget.setSizePolicy(policy, policy)
+            currentWidget.adjustSize()
+            self._stackedWidget.adjustSize()
+
+    def _update_reconstructor(self, text):
+        """
+        Update the stacked widget with the reconstructor settings widget based
+        on the `text` in the reconstructor combo box in the current source form.
+        """
+
+        parts = str(text).split(' ')[:-1]
+        name = '_'.join(parts).lower()
+        component = "reconstruction_{}".format(name)
+
+        # The stacked widget may no longer need the current size.
+        self._update_reconstructor_policy(QtGui.QSizePolicy.Ignored)
+
+        if component in self._reconstructor_forms:
+            # The selected reconstructor's settings have been shown before, so 
+            # only switch to it and update the size.
+            self._stackedWidget.setCurrentWidget(self._reconstructor_forms[component])
+            self._update_reconstructor_policy(QtGui.QSizePolicy.Expanding)
+            return
+
+        # Create the settings widget if the reconstructor class has a component 
+        # of the format "reconstruction_*" without the _Reconstructor trail.
+        try:
+            settings = self._controller.arguments.get_settings(component)
+        except KeyError:
+            form = QtGui.QWidget()
+        else:
+            form = SettingsTableWidget(self._controller.arguments, component)
+
+        # Register the new reconstructor form and show it in correct size.
+        self._reconstructor_forms[component] = form
+        index = self._stackedWidget.addWidget(form)
+        self._stackedWidget.setCurrentIndex(index)
+        self._update_reconstructor_policy(QtGui.QSizePolicy.Expanding)
+
+    def _set_form_settings(self, form):
+        """
+        Retrieve and update settings from a settings form widget.
+
+        If an error occurs, it is displayed and the method returns `None`
+        instead of the `Settings` object.
+        """
 
         settings = form.get_settings()
         values, disallowed = form.get_all_values()
@@ -327,8 +401,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             QtGui.QMessageBox.critical(self._controller.central_widget,
                                        "Invalid value",
                                        "The following settings have incorrect values: {}".format(keys))
-            self._toggle()
-            return
+            return None
 
         for key, value in values.iteritems():
             try:
@@ -336,6 +409,30 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             except ValueError as e:
                 QtGui.QMessageBox.critical(self._controller.central_widget,
                                            "Settings error", e.message)
+                return None
+
+        return settings
+
+    def _start(self):
+        """
+        Start the reconstruction process.
+        """
+
+        # Determine the current panel and update the settings from the form.
+        panel_id = self._panels.currentIndex()
+        source = self._sources[panel_id]
+        source_form = self._source_forms[panel_id]
+
+        settings = self._set_form_settings(source_form)
+        if settings is None:
+            self._toggle()
+            return
+
+        # Update reconstructor settings, if one that has settings is selected.
+        reconstructor_form = self._stackedWidget.currentWidget()
+        if isinstance(reconstructor_form, SettingsTableWidget):
+            reconstructor_settings = self._set_form_settings(reconstructor_form)
+            if reconstructor_settings is None:
                 self._toggle()
                 return
 

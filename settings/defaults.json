@@ -868,6 +868,7 @@
         "settings": {
             "singular_values": {
                 "help": "Number of singular values to compute",
+                "short": "Singular values",
                 "type": "int",
                 "min": 1,
                 "default": 30
