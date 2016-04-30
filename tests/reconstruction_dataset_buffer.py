@@ -30,7 +30,7 @@ class TestReconstructionDatasetBuffer(SettingsTestCase):
         # Dataset buffers are regular buffers with the exception that they
         # populate the queue with XBee packets read from a CSV data file.
         # Verify that these are set correctly upon initialization.
-        # We mock the Settings.check_format method so that we can pass test 
+        # We mock the `Settings.check_format` method so that we can pass test 
         # files instead of assets to the arguments.
         arguments = Arguments("settings.json", [
             "--dataset-calibration-file", "tests/reconstruction/dataset_empty.csv",

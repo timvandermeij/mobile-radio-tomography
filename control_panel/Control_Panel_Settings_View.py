@@ -99,7 +99,8 @@ class Control_Panel_Settings_View(Control_Panel_View):
 
         warnLayout = QtGui.QVBoxLayout()
         for i, key in disallowed:
-            warnLayout.addWidget(QtGui.QLabel("Setting '{}' from component '{}' has incorrect value.".format(key, self._components[i])))
+            message = "Setting '{}' from component '{}' has an incorrect value."
+            warnLayout.addWidget(QtGui.QLabel(message.format(key, self._components[i])))
 
         groupWarnings = QtGui.QGroupBox("Warnings")
         groupWarnings.setLayout(warnLayout)

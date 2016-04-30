@@ -9,7 +9,7 @@ class TestReconstructionDumpBuffer(SettingsTestCase):
         # Dump buffers are regular buffers with the exception that they
         # populate the queue with XBee packets read from a JSON data file.
         # Verify that these are set correctly upon initialization.
-        # We mock the Settings.check_format method so that we can pass test 
+        # We mock the `Settings.check_format` method so that we can pass test 
         # files instead of assets to the arguments.
         arguments = Arguments("settings.json", [
             "--dump-calibration-file", "tests/reconstruction/dump_empty.json",

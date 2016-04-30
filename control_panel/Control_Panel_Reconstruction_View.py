@@ -9,6 +9,7 @@ import json
 import matplotlib
 matplotlib.use("Qt4Agg")
 import matplotlib.pyplot as plt
+import os
 import pyqtgraph as pg
 import thread
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
@@ -178,14 +179,16 @@ class Stream_Recorder(object):
         """
 
         if controller is None:
-            raise ValueError("Controller for the stream recorder have not been provided.")
+            raise ValueError("Controller for the stream recorder has not been provided.")
 
         if settings is None:
             raise ValueError("Settings for the stream recorder have not been provided.")
 
+        self._controller = controller
+
         self._number_of_sensors = controller.xbee.number_of_sensors
-        self._origin = settings.get("stream_origin")
-        self._size = settings.get("stream_size")
+        self._origin = settings.get("stream_network_origin")
+        self._size = settings.get("stream_network_size")
 
         self._packets = []
 
@@ -201,7 +204,7 @@ class Stream_Recorder(object):
         Export the packets (along with network information) to a dump file.
         """
 
-        file_name = QtGui.QFileDialog.getSaveFileName(controller.central_widget,
+        file_name = QtGui.QFileDialog.getSaveFileName(self._controller.central_widget,
                                                       "Export file", os.getcwd(),
                                                       "JSON files (*.json)")
 
@@ -218,7 +221,7 @@ class Stream_Recorder(object):
                 }, export_file)
         except IOError as e:
             message = "Could not open file '{}': {}".format(file_name, e.strerror)
-            QtGui.QMessageBox.critical(controller.central_widget, "File error", message)
+            QtGui.QMessageBox.critical(self._controller.central_widget, "File error", message)
 
 class Control_Panel_Reconstruction_View(Control_Panel_View):
     def show(self):
@@ -264,7 +267,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
                 "title": "Stream",
                 "component": "reconstruction_stream",
                 "buffer": Stream_Buffer
-            },
+            }
         ]
 
         self._panels = QtGui.QTabWidget()
@@ -331,7 +334,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
     def _update_form(self, index):
         """
-        Update the stacked widget with the reconstructor settings widget based
+        Update the stacked widget with the reconstructor settings based
         on the reconstructor combo box in the current source form.
         """
 
@@ -353,8 +356,8 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
     def _update_reconstructor(self, text):
         """
-        Update the stacked widget with the reconstructor settings widget based
-        on the `text` in the reconstructor combo box in the current source form.
+        Update the stacked widget with the reconstructor settings based on
+        the `text` in the reconstructor combo box in the current source form.
         """
 
         parts = str(text).split(' ')[:-1]

@@ -756,7 +756,7 @@
                 "type": "class",
                 "module": "reconstruction.Reconstructor",
                 "replace": [" ", "_"],
-                "default": "SVD_Reconstructor"
+                "default": "Truncated_SVD_Reconstructor"
             }
         }
     },
@@ -813,13 +813,13 @@
         "parent": "reconstruction",
         "settings": {
             "stream_network_size": {
-                "help": "The size of the network, in pixels of the resulting image",
+                "help": "The size of the network, in pixels of the resulting image (zero-based)",
                 "short": "Network size",
                 "type": "tuple",
                 "length": 2,
                 "subtype": "int",
                 "min": 1,
-                "default": [10, 10]
+                "default": [9, 9]
             },
             "stream_network_origin": {
                 "help": "The distance of the network from the origin",

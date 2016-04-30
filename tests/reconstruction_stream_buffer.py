@@ -27,8 +27,8 @@ class TestReconstructionStreamBuffer(SettingsTestCase):
 
     def test_initialization(self):
         # Stream buffers are regular buffers with the exception that they
-        # use settings to set the origin and size.
-        # Verify that these are set correctly upon initialization. 
+        # use settings to set the origin and size. Verify that these are
+        # set correctly upon initialization. 
         stream_buffer = Stream_Buffer(self.settings)
 
         self.assertEqual(stream_buffer.number_of_sensors, 0)
