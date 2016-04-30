@@ -2,22 +2,25 @@ import json
 from Buffer import Buffer
 
 class Stream_Buffer(Buffer):
-    def __init__(self, options=None):
+    def __init__(self, settings=None):
         """
         Initialize the stream buffer object.
         """
 
-        super(Stream_Buffer, self).__init__(options)
+        super(Stream_Buffer, self).__init__(settings)
 
-        self._number_of_sensors = options["number_of_sensors"]
-        self._origin = options["origin"]
-        self._size = options["size"]
+        self._origin = settings.get("stream_network_origin")
+        self._size = settings.get("stream_network_size")
 
-        self._calibrate = options["calibrate"]
+        self._calibrate = settings.get("stream_calibrate")
 
         # Read the data from the empty network (for calibration).
         if not self._calibrate:
-            with open(options["calibration_file"], "r") as stream_calibration_file:
+            calibration_filename = settings.get("stream_calibration_file")
+            if calibration_filename is None:
+                raise ValueError("If calibration mode is disabled, then a calibration file must be provided.")
+
+            with open(calibration_filename, "r") as stream_calibration_file:
                 data = json.load(stream_calibration_file)
 
                 for packet in data["packets"]:
@@ -26,8 +29,17 @@ class Stream_Buffer(Buffer):
 
                     if packet[3] and packet[6]:
                         key = (source, destination)
-                        if not key in self._calibration:
+                        if key not in self._calibration:
                             self._calibration[key] = packet[7]
+
+    def register_xbee(self, xbee):
+        """
+        Register the buffer in the XBee sensor `xbee`, and request the number
+        of sensors from it.
+        """
+
+        self._number_of_sensors = xbee.number_of_sensors
+        xbee.set_buffer(self)
 
     def get(self):
         """

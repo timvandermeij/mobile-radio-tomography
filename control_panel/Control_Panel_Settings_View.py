@@ -81,9 +81,12 @@ class Control_Panel_Settings_View(Control_Panel_View):
 
     def _save(self):
         flat_settings = {}
+        disallowed = []
         for i, widget in enumerate(self._widgets):
             if widget is not None:
-                flat_settings.update(widget.get_values())
+                values, allowed = widget.get_values()
+                flat_settings.update(values)
+                disallowed.extend([(i, key) for key, value in allowed.iteritems() if not value])
 
         pretty_json = json.dumps(flat_settings, indent=4, sort_keys=True)
 
@@ -93,6 +96,18 @@ class Control_Panel_Settings_View(Control_Panel_View):
         textEdit = QtGui.QTextEdit()
         textEdit.setPlainText(pretty_json)
         textEdit.setReadOnly(True)
+
+        warnLayout = QtGui.QVBoxLayout()
+        for i, key in disallowed:
+            message = "Setting '{}' from component '{}' has an incorrect value."
+            warnLayout.addWidget(QtGui.QLabel(message.format(key, self._components[i])))
+
+        groupWarnings = QtGui.QGroupBox("Warnings")
+        groupWarnings.setLayout(warnLayout)
+
+        scrollWarnings = QtGui.QScrollArea()
+        scrollWarnings.setWidgetResizable(True)
+        scrollWarnings.setWidget(groupWarnings)
 
         groundCheckBox = QtGui.QCheckBox("Ground station")
         groundCheckBox.setChecked(True)
@@ -122,9 +137,9 @@ class Control_Panel_Settings_View(Control_Panel_View):
         groupBox = QtGui.QGroupBox("Save locations")
         groupBox.setLayout(boxLayout)
 
-        scrollArea = QtGui.QScrollArea()
-        scrollArea.setWidgetResizable(True)
-        scrollArea.setWidget(groupBox)
+        scrollBox = QtGui.QScrollArea()
+        scrollBox.setWidgetResizable(True)
+        scrollBox.setWidget(groupBox)
 
         dialogButtons = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel)
         dialogButtons.accepted.connect(dialog.accept)
@@ -132,7 +147,9 @@ class Control_Panel_Settings_View(Control_Panel_View):
 
         dialogLayout = QtGui.QVBoxLayout()
         dialogLayout.addWidget(textEdit)
-        dialogLayout.addWidget(scrollArea)
+        if disallowed:
+            dialogLayout.addWidget(scrollWarnings)
+        dialogLayout.addWidget(scrollBox)
         dialogLayout.addWidget(dialogButtons)
 
         dialog.setLayout(dialogLayout)

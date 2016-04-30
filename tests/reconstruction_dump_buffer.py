@@ -1,20 +1,26 @@
-import unittest
+from mock import patch
 from ..reconstruction.Dump_Buffer import Dump_Buffer
+from ..settings import Arguments, Settings
+from settings import SettingsTestCase
 
-class TestReconstructionDumpBuffer(unittest.TestCase):
-    def test_initialization(self):
+class TestReconstructionDumpBuffer(SettingsTestCase):
+    @patch.object(Settings, "check_format", wraps=lambda key, data, value: value)
+    def test_initialization(self, format_mock):
         # Dump buffers are regular buffers with the exception that they
         # populate the queue with XBee packets read from a JSON data file.
         # Verify that these are set correctly upon initialization.
-        options = {
-            "calibration_file": "tests/reconstruction/dump_empty.json",
-            "file": "tests/reconstruction/dump.json"
-        }
-        dump_buffer = Dump_Buffer(options)
+        # We mock the `Settings.check_format` method so that we can pass test 
+        # files instead of assets to the arguments.
+        arguments = Arguments("settings.json", [
+            "--dump-calibration-file", "tests/reconstruction/dump_empty.json",
+            "--dump-file", "tests/reconstruction/dump.json"
+        ])
+        settings = arguments.get_settings("reconstruction_dump")
+        dump_buffer = Dump_Buffer(settings)
 
         self.assertEqual(dump_buffer.number_of_sensors, 2)
-        self.assertEqual(dump_buffer.origin, [0, 0])
-        self.assertEqual(dump_buffer.size, [10, 10])
+        self.assertEqual(dump_buffer.origin, (0, 0))
+        self.assertEqual(dump_buffer.size, (10, 10))
 
         self.assertEqual(dump_buffer.count(), 2)
 

@@ -9,8 +9,7 @@ import pyqtgraph as pg
 
 from PyQt4 import QtCore, QtGui
 from Control_Panel_View import Control_Panel_View, Control_Panel_View_Name
-from Control_Panel_Widgets import QToolBarFocus
-from Control_Panel_Settings_Widgets import SettingsWidget
+from Control_Panel_Settings_Widgets import SettingsTableWidget
 from ..planning.Runner import Planning_Runner
 
 class Planning_Sort_Order(object):
@@ -21,6 +20,8 @@ class Control_Panel_Planning_View(Control_Panel_View):
     def show(self):
         self._add_menu_bar()
 
+        # Set up the planning runner and related state and update variables.
+        self._running = False
         self._runner = Planning_Runner(self._controller.arguments,
                                        self._controller.thread_manager,
                                        self.iteration_callback)
@@ -28,78 +29,83 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._updated = False
         self._update_interval = self._settings.get("planning_update_interval")
 
-        # Create the settings toolbar.
-        self._settings_toolbar = QToolBarFocus(self._controller.app, "Settings")
-        self._settings_toolbar.setMovable(False)
-        self._settings_toolbar.setStyleSheet("QToolBar {spacing: 8px;}")
-
-        self._forms = {}
-        components = ("planning", "planning_assignment", "planning_algorithm",
-                      "planning_problem")
-        for component in components:
-            form = SettingsWidget(self._controller.arguments, component,
-                                  toolbar=self._settings_toolbar)
-
-            self._settings_toolbar.addWidget(form)
-            self._forms[component] = form
-
-        self._controller.window.addToolBar(self._settings_toolbar)
-
-        # Create the actions toolbar
-        self._start_action = QtGui.QAction(QtGui.QIcon("assets/start.png"),
-                                           "Start",
-                                           self._controller.central_widget)
-        self._start_action.triggered.connect(self._start)
-
-        self._stop_action = QtGui.QAction(QtGui.QIcon("assets/stop.png"),
-                                           "Stop",
-                                           self._controller.central_widget)
-        self._stop_action.setEnabled(False)
-        self._stop_action.triggered.connect(self._stop)
-
-        actions_toolbar = self._controller.window.addToolBar("Planning")
-        actions_toolbar.setMovable(False)
-        actions_toolbar.setSizePolicy(QtGui.QSizePolicy.Minimum,
-                                      QtGui.QSizePolicy.Preferred)
-        actions_toolbar.setStyleSheet("QToolBar {spacing: 8px;}")
-        actions_toolbar.addAction(self._start_action)
-        actions_toolbar.addAction(self._stop_action)
-
+        # The fixed plot dimensions upon which we base our layout sizes as well 
+        # as the plot canvases themselves. This avoids laggy resize events.
         self._plot_width, self._plot_height = self._settings.get("planning_plot_dimensions")
 
-        # Create a progress bar.
+        # Create the progress bar.
         self._progress = QtGui.QProgressBar()
         self._progress.setMaximumWidth(self._plot_width)
 
+        # Create a select button for selecting an individual feasible solution.
         self._selectButton = QtGui.QPushButton()
         self._selectButton.setText("Select")
         self._selectButton.setToolTip("Select current solution to use waypoints from")
         self._selectButton.setEnabled(False)
         self._selectButton.clicked.connect(self._select)
 
-        self._overview_items = 2
-
-        self._item_width = self._plot_width / 4
-        self._item_height = self._plot_height / 4
-
+        # Create a list widget for selecting between different plots, namely 
+        # the Pareto front plot, a graph with statistics and result plots of 
+        # individual solutions. The list widget contains labels, current values 
+        # of objective functions and/or miniature plot images.
         self._listWidget = QtGui.QListWidget()
 
+        # The size of miniature plot images in the list widget.
+        self._item_width = self._plot_width / 3
+        self._item_height = self._plot_height / 3
+
+        # The number of items at the start of the list widget that are not 
+        # individual solution plots; namely, the Pareto front and statistics 
+        # graph. This is used for index conversion between the list widget and 
+        # the planning population.
+        self._overview_items = 2
+
+        # Create a stacked layout for switching between the plot widgets, and 
+        # connect it to the list widget and instant redrawing of the plot.
         self._stackedLayout = QtGui.QStackedLayout()
         self._listWidget.currentRowChanged.connect(self._stackedLayout.setCurrentIndex)
         self._stackedLayout.currentChanged.connect(lambda i: self._redraw(i))
 
+        # Create the settings table toolboxes.
+        self._forms = {}
+        components = ("planning", "planning_assignment", "planning_algorithm",
+                      "planning_problem")
+
+        toolbox = QtGui.QToolBox()
+        for component in components:
+            form = SettingsTableWidget(self._controller.arguments, component)
+
+            title = form.get_title()
+            index = toolbox.addItem(form, title)
+            toolbox.setItemToolTip(index, title)
+
+            self._forms[component] = form
+        
+        # Create the sort selector.
         self._sortSelector = QtGui.QComboBox()
         self._sortSelector.currentIndexChanged.connect(lambda i: self._resort(i))
 
+        # Create the toggle button (using the stopped state as default).
+        self._toggle_button = QtGui.QPushButton(QtGui.QIcon("assets/start.png"), "Start")
+        self._toggle_button.clicked.connect(self._toggle)
+
+        # Create the form layout and add the sort selector and toggle button.
+        formLayout = QtGui.QFormLayout()
+        formLayout.addRow("Sort order:", self._sortSelector)
+        formLayout.addRow(self._toggle_button)
+
+        # Create the tab widget.
+        self._tabWidget = QtGui.QTabWidget()
+        self._tabWidget.addTab(toolbox, "Settings")
+        self._tabWidget.addTab(self._listWidget, "Runner state")
+
+        # Initialize more state variables and setup plots for initial display.
         self._init()
         self._setup()
 
-        # Create the layout and add the widgets.
-        formLayout = QtGui.QFormLayout()
-        formLayout.addRow("Sort order:", self._sortSelector)
-
+        # Create the layout and add all the widgets and other layouts into it.
         leftBox = QtGui.QVBoxLayout()
-        leftBox.addWidget(self._listWidget)
+        leftBox.addWidget(self._tabWidget)
         leftBox.addLayout(formLayout)
 
         topLayout = QtGui.QHBoxLayout()
@@ -375,38 +381,85 @@ class Control_Panel_Planning_View(Control_Panel_View):
                 self._listWidget.setCurrentRow(item_index)
                 return
 
+    def _toggle(self):
+        """
+        Handle the toggle button to toggle the state of the planning runner 
+        (start or stop).
+        """
+
+        if not self._running:
+            self._start()
+        else:
+            self._stop()
+
+    def _update_running(self, running):
+        """
+        Toggle the running state of the toggle button (started of stopped).
+        """
+
+        if not running:
+            self._toggle_button.setIcon(QtGui.QIcon("assets/start.png"))
+            self._toggle_button.setText("Start")
+        else:
+            self._toggle_button.setIcon(QtGui.QIcon("assets/stop.png"))
+            self._toggle_button.setText("Stop")
+
+        self._running = running
+
     def _start(self):
+        # Update the toggle button state
+        self._update_running(True)
+
+        # Update the settings from the toolbox forms.
         for component, form in self._forms.iteritems():
             settings = self._controller.arguments.get_settings(component)
-            for key, value in form.get_values().iteritems():
+            values, disallowed = form.get_all_values()
+            if disallowed:
+                keys = ", ".join("'{}'".format(key) for key in disallowed)
+                QtGui.QMessageBox.critical(self._controller.central_widget,
+                                           "Invalid value",
+                                           "The following settings from component '{}' have incorrect values: {}".format(form.get_title(), keys))
+                self._update_running(False)
+                return
+            for key, value in values.iteritems():
                 try:
                     settings.set(key, value)
-                except ValueError:
+                except ValueError as e:
+                    QtGui.QMessageBox.critical(self._controller.central_widget,
+                                               "Settings error", e.message)
+                    self._update_running(False)
                     return
 
-        self._settings_toolbar.layout().setExpanded(False)
-        self._start_action.setEnabled(False)
-        self._stop_action.setEnabled(True)
-        self._selectButton.setEnabled(False)
-
+        # Set the running state for the planning runner, and stop the XBee from 
+        # taking up cycles during the algorithm.
         self._controller.xbee.deactivate()
         self._runner.activate()
 
+        # Change the tab widget to show the runner state.
+        self._tabWidget.setCurrentIndex(1)
+        self._selectButton.setEnabled(False)
+
+        # Update the progress bar to show the correct iteration completion.
         t_max = self._runner.get_iteration_limit()
 
         self._progress.setValue(0)
         self._progress.setRange(0, t_max)
 
+        # Clean up an old run and set up the new Pareto front plot and label.
         self._cleanup()
         self._setup()
 
+        # Ensure we are allowed to make the matplotlib figures that we need, 
+        # but do not allow more for memory leak detection.
         size = self._runner.get_population_size()
         plt.rcParams.update({'figure.max_open_warning': size + 1})
 
+        # Create the statistics graph.
         self._graph = self._create_graph()
         self._graph_label = self._add_list_item("Statistics", self._graph)
         self._graph_label.setStyleSheet("border-top: 1px solid grey")
 
+        # Create the plots and labels for the individual solutions.
         for i in range(1, size + 1):
             axes, canvas = self._create_plot()
 
@@ -418,6 +471,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
             self._individual_axes.append(axes)
             self._individual_canvases.append(canvas)
 
+        # Start the timer for updating plots and labels.
         self._timer = QtCore.QTimer()
         self._timer.setInterval(self._update_interval * 1000)
         self._timer.setSingleShot(False)
@@ -425,20 +479,24 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._timer.start()
 
     def _stop(self):
+        # Set the planning runner state to stopped, and reactivate the XBee.
+        self._update_running(False)
         self._runner.deactivate()
         self._controller.xbee.activate()
 
-        self._start_action.setEnabled(True)
-        self._stop_action.setEnabled(False)
-
     def _check(self):
+        # Update progress bar completion percentage every time, not only when 
+        # new iteration callback data has arrived.
         self._progress.setValue(self._runner.get_iteration_current())
 
-        if self._runner.done:
+        # Stop the runner and update timer if the planning is done, then check 
+        # for updates and final data.
+        if self._runner.done or not self._running:
             self._stop()
             self._timer.stop()
 
         if self._updated:
+            # Update the graph with updated iteration statistics.
             c = 0
             for name, data in self._graph_data.iteritems():
                 if name not in self._graph_plots:
@@ -454,6 +512,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
             self._draw_list_item(self._graph_label, self._graph)
 
         if self._runner.done or self._updated:
+            # Draw the plots for the Pareto front and any selected solution.
             self._runner.make_pareto_plot(self._front_axes)
             self._front_canvas.draw()
             self._draw_list_item(self._front_label, self._front_canvas)

@@ -1,45 +1,68 @@
-import unittest
+from mock import MagicMock
 from ..zigbee.XBee_Packet import XBee_Packet
 from ..reconstruction.Stream_Buffer import Stream_Buffer
+from ..settings import Arguments
+from settings import SettingsTestCase
 
-class TestReconstructionStreamBuffer(unittest.TestCase):
+class TestReconstructionStreamBuffer(SettingsTestCase):
+    def setUp(self):
+        arguments = Arguments("settings.json", [
+            "--stream-network-origin", "1", "1",
+            "--stream-network-size", "15", "15",
+            "--stream-calibrate"
+        ])
+        self.settings = arguments.get_settings("reconstruction_stream")
+        self.mock_sensor = MagicMock(number_of_sensors=42)
+
+        self.packet = XBee_Packet()
+        self.packet.set("specification", "rssi_ground_station")
+        self.packet.set("sensor_id", 1)
+        self.packet.set("from_latitude", 1)
+        self.packet.set("from_longitude", 0)
+        self.packet.set("from_valid", True)
+        self.packet.set("to_latitude", 1)
+        self.packet.set("to_longitude", 10)
+        self.packet.set("to_valid", True)
+        self.packet.set("rssi", -38)
+
     def test_initialization(self):
         # Stream buffers are regular buffers with the exception that they
-        # use options to set the number of sensors, origin and size.
-        # Verify that these are set correctly upon initialization.
-        options = {
-            "number_of_sensors": 42,
-            "origin": [1, 1],
-            "size": [15, 15],
-            "calibrate": True
-        }
-        stream_buffer = Stream_Buffer(options)
+        # use settings to set the origin and size. Verify that these are
+        # set correctly upon initialization. 
+        stream_buffer = Stream_Buffer(self.settings)
 
-        self.assertEqual(stream_buffer.number_of_sensors, options["number_of_sensors"])
-        self.assertEqual(stream_buffer.origin, options["origin"])
-        self.assertEqual(stream_buffer.size, options["size"])
+        self.assertEqual(stream_buffer.number_of_sensors, 0)
+        self.assertEqual(stream_buffer.origin, (1, 1))
+        self.assertEqual(stream_buffer.size, (15, 15))
+
+    def test_initialization_without_calibration(self):
+        # When calibration mode is disabled, a calibration file for initial 
+        # calibration must be provided.
+        self.settings.set("stream_calibrate", False)
+        with self.assertRaises(ValueError):
+            stream_buffer = Stream_Buffer(self.settings)
+
+        # A full path is allowed, and dump files also work.
+        self.settings.set("stream_calibration_file", "tests/reconstruction/dump.json")
+        stream_buffer = Stream_Buffer(self.settings)
+        # The calibration initialization reads in all packets.
+        self.assertEqual(len(stream_buffer._calibration), 2)
+
+    def test_register_xbee(self):
+        # Stream buffers only know their number of sensors once an XBee is 
+        # registered. This also registers the buffer in the XBee.
+        stream_buffer = Stream_Buffer(self.settings)
+        stream_buffer.register_xbee(self.mock_sensor)
+
+        self.assertEqual(stream_buffer.number_of_sensors, 42)
+        self.mock_sensor.set_buffer.assert_called_once_with(stream_buffer)
 
     def test_get(self):
-        packet = XBee_Packet()
-        packet.set("specification", "rssi_ground_station")
-        packet.set("sensor_id", 1)
-        packet.set("from_latitude", 1)
-        packet.set("from_longitude", 0)
-        packet.set("from_valid", True)
-        packet.set("to_latitude", 1)
-        packet.set("to_longitude", 10)
-        packet.set("to_valid", True)
-        packet.set("rssi", -38)
-
-        # If calibration mode is enabled, the original packet and RSSI value must be fetched.
-        options = {
-            "number_of_sensors": 42,
-            "origin": [1, 1],
-            "size": [15, 15],
-            "calibrate": True
-        }
-        stream_buffer = Stream_Buffer(options)
-        stream_buffer.put(packet)
+        # If calibration mode is enabled, the original packet and RSSI value 
+        # must be fetched.
+        stream_buffer = Stream_Buffer(self.settings)
+        stream_buffer.register_xbee(self.mock_sensor)
+        stream_buffer.put(self.packet)
 
         buffer_packet, buffer_calibrated_rssi = stream_buffer.get()
         self.assertEqual(buffer_packet.get_all(), {
@@ -55,16 +78,15 @@ class TestReconstructionStreamBuffer(unittest.TestCase):
         })
         self.assertEqual(buffer_calibrated_rssi, -38)
 
-        # If calibration mode is disabled, the original packet and calibrated RSSI values must be fetched.
-        options = {
-            "number_of_sensors": 42,
-            "origin": [1, 1],
-            "size": [15, 15],
-            "calibrate": False,
-            "calibration_file": "tests/reconstruction/stream_empty.json"
-        }
-        stream_buffer = Stream_Buffer(options)
-        stream_buffer.put(packet)
+    def test_get_with_calibration_file(self):
+        # If calibration mode is disabled, the original packet and calibrated 
+        # RSSI values must be fetched.
+        self.settings.set("stream_calibrate", False)
+        self.settings.set("stream_calibration_file",
+                          "tests/reconstruction/stream_empty.json")
+        stream_buffer = Stream_Buffer(self.settings)
+        stream_buffer.register_xbee(self.mock_sensor)
+        stream_buffer.put(self.packet)
 
         buffer_packet, buffer_calibrated_rssi = stream_buffer.get()
         self.assertEqual(buffer_packet.get_all(), {

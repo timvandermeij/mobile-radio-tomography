@@ -3,17 +3,18 @@ from Buffer import Buffer
 from ..zigbee.XBee_Packet import XBee_Packet
 
 class Dump_Buffer(Buffer):
-    def __init__(self, options=None):
+    def __init__(self, settings=None):
         """
         Initialize the dump buffer object.
         """
 
-        super(Dump_Buffer, self).__init__(options)
+        super(Dump_Buffer, self).__init__(settings)
 
         # Read the data from the empty network (for calibration).
         # Note that the indices used here correspond to the fields in the
         # RSSI ground station packet (in order).
-        with open(options["calibration_file"], "r") as dump_calibration_file:
+        calibration_filename = settings.get("dump_calibration_file")
+        with open(calibration_filename, "r") as dump_calibration_file:
             data = json.load(dump_calibration_file)
 
             for packet in data["packets"]:
@@ -33,12 +34,12 @@ class Dump_Buffer(Buffer):
         # - packets: a list containing one list per packet, where each packet list
         #            contains the data from the XBee packet specification
         #            "rssi_ground_station" (in order)
-        with open(options["file"], "r") as dump_file:
+        with open(settings.get("dump_file"), "r") as dump_file:
             data = json.load(dump_file)
 
             self._number_of_sensors = data["number_of_sensors"]
-            self._origin = data["origin"]
-            self._size = data["size"]
+            self._origin = tuple(data["origin"])
+            self._size = tuple(data["size"])
 
             for packet in data["packets"]:
                 self.put(packet)

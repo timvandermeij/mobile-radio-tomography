@@ -68,7 +68,14 @@ class Arguments(object):
         Retrieve a list of option choices from a module or a (nested) attribute.
         """
 
-        data = importlib.import_module(location[0])
+        try:
+            data = importlib.import_module(location[0])
+        except ImportError:
+            # Module is not installed. Instead of dieing, simply allow every 
+            # value. If the module is of importance outside of the setting, 
+            # then the error will be handled in a better way there.
+            return None
+
         for attr in location[1:]:
             data = getattr(data, attr)
 
@@ -161,8 +168,10 @@ class Arguments(object):
 
                 settings.set(key, value)
             except ValueError as e:
-                self.parser.print_help()
-                self.parser.exit(status=1, message=str(e))
+                # Display errors from setting the value as a usage message.
+                # This makes the error display wonky when running this in unit 
+                # tests, but the runner scripts need this for good display.
+                self.parser.error(str(e))
 
     def check_help(self):
         """

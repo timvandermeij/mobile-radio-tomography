@@ -4,25 +4,22 @@
 # - Average measurements of the same link
 # - Tweak calibration/ellipse width/singular values/model (based on grid experiments)
 
+import importlib
 import json
 import matplotlib
 matplotlib.use("Qt4Agg")
 import matplotlib.pyplot as plt
-import os.path
+import os
 import pyqtgraph as pg
 import thread
-from collections import OrderedDict
-from functools import partial
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from PyQt4 import QtGui, QtCore
+from Control_Panel_Settings_Widgets import SettingsTableWidget
 from Control_Panel_View import Control_Panel_View
 from ..reconstruction.Coordinator import Coordinator
 from ..reconstruction.Dataset_Buffer import Dataset_Buffer
 from ..reconstruction.Dump_Buffer import Dump_Buffer
 from ..reconstruction.Stream_Buffer import Stream_Buffer
-from ..reconstruction.Least_Squares_Reconstructor import Least_Squares_Reconstructor
-from ..reconstruction.SVD_Reconstructor import SVD_Reconstructor
-from ..reconstruction.Truncated_SVD_Reconstructor import Truncated_SVD_Reconstructor
 
 class Graph(object):
     def __init__(self, settings):
@@ -172,203 +169,8 @@ class Table(object):
         for index in reversed(range(self._table.rowCount())):
             self._table.removeRow(index)
 
-class Panel(QtGui.QTableWidget):
-    def __init__(self, parent, settings):
-        """
-        Initialize the panel object.
-        """
-
-        QtGui.QTableWidget.__init__(self, parent)
-
-        self._settings = settings
-        self._source = None
-
-        # Maintain an object that maps a label to a lambda function responsible
-        # for returning the value of the widget. This is used to fetch all entered
-        # values in a structured manner when the reconstruction process is started.
-        self._data = {}
-
-        # Create the key and value columns.
-        self.setColumnCount(2)
-
-        # Let the columns take up the entire width of the table.
-        for index in range(2):
-            self.horizontalHeader().setResizeMode(index, QtGui.QHeaderView.Stretch)
-
-        # Hide the horizontal and vertical headers.
-        self.horizontalHeader().hide()
-        self.verticalHeader().hide()
-
-        # Populate the panel with default items.
-        self._items = OrderedDict()
-
-        reconstructor = QtGui.QComboBox()
-        reconstructor.addItems(["Least squares", "SVD", "Truncated SVD"])
-        reconstructor.setCurrentIndex(2)
-
-        self._register("Reconstructor", reconstructor,
-                       partial(lambda reconstructor: str(reconstructor.currentText()), reconstructor))
-        self._render()
-
-    @property
-    def source(self):
-        """
-        Return the data source corresponding to this panel.
-        """
-
-        return self._source
-
-    def get(self, label):
-        """
-        Get the value of the widget identified by its `label` using
-        the associated lambda function.
-        """
-
-        if label not in self._data:
-            raise ValueError("Lambda function for label '{}' has not been registered".format(label))
-
-        return self._data[label]()
-
-    def _register(self, label, widget, lambda_function):
-        """
-        Register an item for the table with a `label`, a `widget` and a
-        `lambda_function` that takes care of fetching the value of the widget.
-        """
-
-        self._items[label] = widget
-        self._data[label] = lambda_function
-
-    def _render(self):
-        """
-        Render the panel with all registered items.
-        """
-
-        for label, widget in self._items.iteritems():
-            position = self.rowCount()
-
-            label = QtGui.QTableWidgetItem("{}:".format(label))
-            label.setFlags(label.flags() & ~QtCore.Qt.ItemIsEditable & ~QtCore.Qt.ItemIsSelectable)
-
-            self.insertRow(position)
-            self.setItem(position, 0, label)
-            self.setCellWidget(position, 1, widget)
-
-class Dataset_Panel(Panel):
-    def __init__(self, parent, settings):
-        """
-        Initialize the dataset panel object.
-        """
-
-        super(Dataset_Panel, self).__init__(parent, settings)
-
-        self._source = Source.DATASET
-
-    def _render(self):
-        """
-        Render the panel with both the default items and items
-        that are specific to this data source.
-        """
-
-        input_elements = {
-            "dataset_calibration_file": "Calibration file",
-            "dataset_file": "File"
-        }
-
-        for key, label in input_elements.iteritems():
-            file_box = QtGui.QLineEdit()
-            file_box.setText(self._settings.get(key))
-
-            self._register(label, file_box, partial(
-                lambda file_box: "assets/dataset_{}.csv".format(file_box.text()), file_box
-            ))
-
-        super(Dataset_Panel, self)._render()
-
-class Dump_Panel(Panel):
-    def __init__(self, parent, settings):
-        """
-        Initialize the dump panel object.
-        """
-
-        super(Dump_Panel, self).__init__(parent, settings)
-
-        self._source = Source.DUMP
-
-    def _render(self):
-        """
-        Render the panel with both the default items and items
-        that are specific to this data source.
-        """
-
-        input_elements = {
-            "dump_calibration_file": "Calibration file",
-            "dump_file": "File"
-        }
-
-        for key, label in input_elements.iteritems():
-            file_box = QtGui.QLineEdit()
-            file_box.setText(self._settings.get(key))
-
-            self._register(label, file_box, partial(
-                lambda file_box: "assets/dump_{}.json".format(file_box.text()), file_box
-            ))
-
-        super(Dump_Panel, self)._render()
-
-class Stream_Panel(Panel):
-    def __init__(self, parent, settings):
-        """
-        Initialize the stream panel object.
-        """
-
-        super(Stream_Panel, self).__init__(parent, settings)
-
-        self._source = Source.STREAM
-
-    def _render(self):
-        """
-        Render the panel with both the default items and items
-        that are specific to this data source.
-        """
-
-        # Create the origin and size inputs.
-        for label in ["Origin", "Size"]:
-            widget = QtGui.QWidget()
-
-            widget_layout = QtGui.QHBoxLayout()
-            widget_layout.setContentsMargins(0, 0, 0, 0)
-
-            x_box = QtGui.QLineEdit()
-            x_box.setText("0")
-            y_box = QtGui.QLineEdit()
-            y_box.setText("0")
-
-            widget_layout.addWidget(x_box)
-            widget_layout.addWidget(y_box)
-            widget.setLayout(widget_layout)
-
-            self._register(label, widget, partial(
-                lambda x_box, y_box: [int(x_box.text()), int(y_box.text())], x_box, y_box
-            ))
-
-        # Create the record and calibrate checkboxes.
-        for label in ["Record", "Calibrate"]:
-            checkbox = QtGui.QCheckBox("Yes")
-            self._register(label, checkbox, partial(
-                lambda checkbox: checkbox.isChecked(), checkbox
-            ))
-
-        # Create the calibration file input.
-        file_box = QtGui.QLineEdit()
-
-        self._register("Calibration file", file_box, partial(
-            lambda file_box: "assets/stream_{}.json".format(file_box.text()), file_box
-        ))
-
-        super(Stream_Panel, self)._render()
-
 class Stream_Recorder(object):
-    def __init__(self, central_widget=None, options=None):
+    def __init__(self, controller=None, settings=None):
         """
         Initialize the stream recorder object.
 
@@ -376,17 +178,17 @@ class Stream_Recorder(object):
         enabled. When recording is stopped, the captured data is exported to a dump file.
         """
 
-        if central_widget is None:
-            raise ValueError("Central widget for the stream recorder has not been provided.")
+        if controller is None:
+            raise ValueError("Controller for the stream recorder has not been provided.")
 
-        if options is None:
-            raise ValueError("Options for the stream recorder have not been provided.")
+        if settings is None:
+            raise ValueError("Settings for the stream recorder have not been provided.")
 
-        self._central_widget = central_widget
+        self._controller = controller
 
-        self._number_of_sensors = options["number_of_sensors"]
-        self._origin = options["origin"]
-        self._size = options["size"]
+        self._number_of_sensors = controller.xbee.number_of_sensors
+        self._origin = settings.get("stream_network_origin")
+        self._size = settings.get("stream_network_size")
 
         self._packets = []
 
@@ -402,7 +204,7 @@ class Stream_Recorder(object):
         Export the packets (along with network information) to a dump file.
         """
 
-        file_name = QtGui.QFileDialog.getSaveFileName(self._central_widget,
+        file_name = QtGui.QFileDialog.getSaveFileName(self._controller.central_widget,
                                                       "Export file", os.getcwd(),
                                                       "JSON files (*.json)")
 
@@ -419,12 +221,7 @@ class Stream_Recorder(object):
                 }, export_file)
         except IOError as e:
             message = "Could not open file '{}': {}".format(file_name, e.strerror)
-            QtGui.QMessageBox.critical(self._central_widget, "File error", message)
-
-class Source(object):
-    DATASET = "Dataset"
-    DUMP = "Dump"
-    STREAM = "Stream"
+            QtGui.QMessageBox.critical(self._controller.central_widget, "File error", message)
 
 class Control_Panel_Reconstruction_View(Control_Panel_View):
     def show(self):
@@ -452,20 +249,62 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         tabs.addTab(self._graph.create(), "Graph")
         tabs.addTab(self._table.create(), "Table")
 
-        # Create the panels.
-        panels = QtGui.QTabWidget()
-        panels.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Expanding)
-        panels.addTab(Dataset_Panel(panels, self._settings), Source.DATASET)
-        panels.addTab(Dump_Panel(panels, self._settings), Source.DUMP)
-        panels.addTab(Stream_Panel(panels, self._settings), Source.STREAM)
+        # Create the panels. These are tabs containing the forms for each input 
+        # source (dataset, dump and stream). Additionally, there is a stacked 
+        # widget for the reconstructor-specific settings.
+        self._sources = [
+            {
+                "title": "Dataset",
+                "component": "reconstruction_dataset",
+                "buffer": Dataset_Buffer
+            },
+            {
+                "title": "Dump",
+                "component": "reconstruction_dump",
+                "buffer": Dump_Buffer
+            },
+            {
+                "title": "Stream",
+                "component": "reconstruction_stream",
+                "buffer": Stream_Buffer
+            }
+        ]
+
+        self._panels = QtGui.QTabWidget()
+        self._panels.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Expanding)
+
+        self._stackedWidget = QtGui.QStackedWidget()
+        self._stackedWidget.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Maximum)
+
+        self._source_forms = []
+        self._reconstructor_forms = {}
+
+        for source in self._sources:
+            form = SettingsTableWidget(self._controller.arguments,
+                                       source["component"])
+
+            # Handle changes to the reconstructor combo box selection to show 
+            # its settings in the stacked widget.
+            reconstructor_box = form.get_value_widget("reconstructor")
+            reconstructor_box.currentIndexChanged[QtCore.QString].connect(self._update_reconstructor)
+
+            # Register the source settings widget.
+            self._panels.addTab(form, source["title"])
+            self._source_forms.append(form)
+
+        # Update the stacked widget when switching tabs in the panel, and 
+        # ensure the first stacked widget is loaded.
+        self._panels.currentChanged.connect(self._update_form)
+        self._update_form(0)
 
         # Create the toggle button (using the stopped state as default).
         self._toggle_button = QtGui.QPushButton(QtGui.QIcon("assets/start.png"), "Start")
-        self._toggle_button.clicked.connect(lambda: self._toggle(panels.currentWidget()))
+        self._toggle_button.clicked.connect(self._toggle)
 
         # Create the layout and add the widgets.
         vbox_left = QtGui.QVBoxLayout()
-        vbox_left.addWidget(panels)
+        vbox_left.addWidget(self._panels)
+        vbox_left.addWidget(self._stackedWidget)
         vbox_left.addWidget(self._toggle_button)
 
         vbox_right = QtGui.QVBoxLayout()
@@ -477,7 +316,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         hbox.addLayout(vbox_left)
         hbox.addLayout(vbox_right)
 
-    def _toggle(self, parameters):
+    def _toggle(self):
         """
         Toggle the state of the reconstruction (start or stop).
         """
@@ -488,34 +327,143 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             self._toggle_button.setIcon(QtGui.QIcon("assets/stop.png"))
             self._toggle_button.setText("Stop")
 
-            self._start(parameters)
+            self._start()
         else:
             self._toggle_button.setIcon(QtGui.QIcon("assets/start.png"))
             self._toggle_button.setText("Start")
 
-    def _start(self, parameters):
+    def _update_form(self, index):
         """
-        Start the reconstruction process with all parameters from the panel.
+        Update the stacked widget with the reconstructor settings based
+        on the reconstructor combo box in the current source form.
         """
 
+        form = self._source_forms[index]
+
+        reconstructor_box = form.get_value_widget("reconstructor")
+        self._update_reconstructor(reconstructor_box.currentText())
+
+    def _update_reconstructor_policy(self, policy):
+        """
+        Adjust the size of the stacked widget based on the given `policy`.
+        """
+
+        currentWidget = self._stackedWidget.currentWidget()
+        if currentWidget is not None:
+            currentWidget.setSizePolicy(policy, policy)
+            currentWidget.adjustSize()
+            self._stackedWidget.adjustSize()
+
+    def _update_reconstructor(self, text):
+        """
+        Update the stacked widget with the reconstructor settings based on
+        the `text` in the reconstructor combo box in the current source form.
+        """
+
+        parts = str(text).split(' ')[:-1]
+        name = '_'.join(parts).lower()
+        component = "reconstruction_{}".format(name)
+
+        # The stacked widget may no longer need the current size.
+        self._update_reconstructor_policy(QtGui.QSizePolicy.Ignored)
+
+        if component in self._reconstructor_forms:
+            # The selected reconstructor's settings have been shown before, so 
+            # only switch to it and update the size.
+            self._stackedWidget.setCurrentWidget(self._reconstructor_forms[component])
+            self._update_reconstructor_policy(QtGui.QSizePolicy.Expanding)
+            return
+
+        # Create the settings widget if the reconstructor class has a component 
+        # of the format "reconstruction_*" without the _Reconstructor trail.
+        try:
+            settings = self._controller.arguments.get_settings(component)
+        except KeyError:
+            form = QtGui.QWidget()
+        else:
+            form = SettingsTableWidget(self._controller.arguments, component)
+
+        # Register the new reconstructor form and show it in correct size.
+        self._reconstructor_forms[component] = form
+        index = self._stackedWidget.addWidget(form)
+        self._stackedWidget.setCurrentIndex(index)
+        self._update_reconstructor_policy(QtGui.QSizePolicy.Expanding)
+
+    def _set_form_settings(self, form):
+        """
+        Retrieve and update settings from a settings form widget.
+
+        If an error occurs, it is displayed and the method returns `None`
+        instead of the `Settings` object.
+        """
+
+        settings = form.get_settings()
+        values, disallowed = form.get_all_values()
+        if disallowed:
+            keys = ", ".join("'{}'".format(key) for key in disallowed)
+            QtGui.QMessageBox.critical(self._controller.central_widget,
+                                       "Invalid value",
+                                       "The following settings have incorrect values: {}".format(keys))
+            return None
+
+        for key, value in values.iteritems():
+            try:
+                settings.set(key, value)
+            except ValueError as e:
+                QtGui.QMessageBox.critical(self._controller.central_widget,
+                                           "Settings error", e.message)
+                return None
+
+        return settings
+
+    def _start(self):
+        """
+        Start the reconstruction process.
+        """
+
+        # Determine the current panel and update the settings from the form.
+        panel_id = self._panels.currentIndex()
+        source = self._sources[panel_id]
+        source_form = self._source_forms[panel_id]
+
+        settings = self._set_form_settings(source_form)
+        if settings is None:
+            self._toggle()
+            return
+
+        # Update reconstructor settings, if one that has settings is selected.
+        reconstructor_form = self._stackedWidget.currentWidget()
+        if isinstance(reconstructor_form, SettingsTableWidget):
+            reconstructor_settings = self._set_form_settings(reconstructor_form)
+            if reconstructor_settings is None:
+                self._toggle()
+                return
+
         # Fetch the settings for the reconstruction.
-        self._pause_time = self._settings.get("pause_time") * 1000
-        self._cmap = self._settings.get("cmap")
-        self._interpolation = self._settings.get("interpolation")
-        self._chunk_size = self._settings.get("chunk_size")
+        self._pause_time = self._settings.get("reconstruction_pause_time") * 1000
+        self._cmap = settings.get("cmap")
+        self._interpolation = settings.get("interpolation")
+        self._chunk_size = settings.get("chunk_size")
 
         # Create the buffer and reconstructor.
         try:
-            self._create_buffer(parameters)
-            self._create_reconstructor(parameters)
-        except Exception as exception:
-            QtGui.QMessageBox.critical(self._controller.central_widget, "Initialization error",
-                                       exception.message)
-            self._toggle(parameters)
+            self._create_buffer(source, settings)
+            self._create_reconstructor(settings)
+        except IOError as e:
+            QtGui.QMessageBox.critical(self._controller.central_widget,
+                                       "File error",
+                                       "Could not open file '{}': {}".format(e.filename, e.strerror))
+            self._toggle()
+            return
+        except Exception as e:
+            QtGui.QMessageBox.critical(self._controller.central_widget,
+                                       "Initialization error", e.message)
+            self._toggle()
             return
 
         # Create the coordinator.
-        self._coordinator = Coordinator(self._controller.arguments, self._buffer)
+        self._coordinator = Coordinator(self._controller.arguments,
+                                        self._buffer)
 
         # Clear the graph and table and setup the graph.
         self._graph.clear()
@@ -531,67 +479,34 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._chunk_count = 0
         self._loop()
 
-    def _create_buffer(self, parameters):
+    def _create_buffer(self, source, settings):
         """
         Create the buffer for the reconstruction process (depending on the data source).
         """
 
-        if parameters.source == Source.DATASET or parameters.source == Source.DUMP:
-            calibration_file = parameters.get("Calibration file")
-            file = parameters.get("File")
+        buffer_class = source["buffer"]
+        self._buffer = buffer_class(settings)
 
-            for field in [calibration_file, file]:
-                if not os.path.exists(field):
-                    raise OSError("File '{}' does not exist.".format(field))
+        if isinstance(self._buffer, Stream_Buffer):
+            self._buffer.register_xbee(self._controller.xbee)
 
-            buffer_class = Dataset_Buffer if parameters.source == Source.DATASET else Dump_Buffer
-            self._buffer = buffer_class({
-                "calibration_file": calibration_file,
-                "file": file
-            })
-        elif parameters.source == Source.STREAM:
-            origin = parameters.get("Origin")
-            size = parameters.get("Size")
-            record = parameters.get("Record")
-            calibrate = parameters.get("Calibrate")
-            calibration_file = parameters.get("Calibration file")
+            if settings.get("stream_record") or settings.get("stream_calibrate"):
+                # Create a stream recorder instance to record all incoming 
+                # packets. The existence of this object is enough to let the 
+                # loop handle the recording process.
+                self._stream_recorder = Stream_Recorder(self._controller, settings)
 
-            if not all(dimension > 0 for dimension in size):
-                raise ValueError("The network dimensions must be greater than zero.")
-
-            if not calibrate and not os.path.exists(calibration_file):
-                raise OSError("File '{}' does not exist.".format(calibration_file))
-
-            self._buffer = Stream_Buffer({
-                "number_of_sensors": self._controller.xbee.number_of_sensors,
-                "origin": origin,
-                "size": size,
-                "calibrate": calibrate,
-                "calibration_file": calibration_file
-            })
-            self._controller.xbee.set_buffer(self._buffer)
-
-            if record or calibrate:
-                # Create a stream recorder instance to record all incoming packets.
-                # The existence of this object is enough to let the loop handle the
-                # recording process.
-                self._stream_recorder = Stream_Recorder(self._controller.central_widget, {
-                    "number_of_sensors": self._controller.xbee.number_of_sensors,
-                    "origin": origin,
-                    "size": size
-                })
-
-    def _create_reconstructor(self, parameters):
+    def _create_reconstructor(self, settings):
         """
         Create the reconstructor for the reconstruction process.
         """
 
-        reconstructors = {
-            "Least squares": Least_Squares_Reconstructor,
-            "SVD": SVD_Reconstructor,
-            "Truncated SVD": Truncated_SVD_Reconstructor
-        }
-        reconstructor_class = reconstructors[parameters.get("Reconstructor")]
+        package = __package__.split('.')[0]
+
+        reconstructor = settings.get("reconstructor")
+        reconstructor_module = importlib.import_module("{}.reconstruction.{}".format(package, reconstructor))
+        reconstructor_class = reconstructor_module.__dict__[reconstructor]
+
         self._reconstructor = reconstructor_class(self._controller.arguments)
 
     def _loop(self):

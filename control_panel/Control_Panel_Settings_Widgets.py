@@ -1,12 +1,13 @@
 import os
 import re
+import string
 from PyQt4 import QtCore, QtGui
 from Control_Panel_Widgets import QLineEditToolButton
 
 class SettingsWidget(QtGui.QWidget):
     parentClicked = QtCore.pyqtSignal(str, name='parentClicked')
 
-    def __init__(self, arguments, component, toolbar=None, *a, **kw):
+    def __init__(self, arguments, component, *a, **kw):
         super(SettingsWidget, self).__init__(*a, **kw)
         self._type_names = {
             "int": "Integer",
@@ -37,7 +38,31 @@ class SettingsWidget(QtGui.QWidget):
         self._widgets = {}
         self._value_widgets = {}
 
-        if toolbar is None:
+        self._horizontal_mode = self.isHorizontal()
+        self._create_layout()
+
+        self._first = True
+        self._add_settings(self._settings)
+
+    def _add_settings(self, settings):
+        for key, info in settings.get_info():
+            valueWidget = self.make_value_widget(settings, key, info)
+
+            self._widgets[key] = self._add_group_box(key, info, valueWidget)
+            self._value_widgets[key] = valueWidget
+            self.resize_widget(key)
+            self._first = False
+
+    def isHorizontal(self):
+        """
+        Check whether the widget's form items should be laid out in a most
+        horizontal way possible.
+        """
+
+        return False
+
+    def _create_layout(self):
+        if not self._horizontal_mode:
             self._layout = QtGui.QVBoxLayout()
 
             self._add_title_label()
@@ -45,33 +70,17 @@ class SettingsWidget(QtGui.QWidget):
         else:
             self._layout = QtGui.QHBoxLayout()
 
-        first = True
-        for key, info in self._settings.get_info():
-            if first:
-                first = False
-            elif toolbar is None:
-                line = QtGui.QFrame()
-                line.setFrameShape(QtGui.QFrame.HLine)
-                line.setFrameShadow(QtGui.QFrame.Sunken)
-                self._layout.addWidget(line)
-
-            valueWidget = self.make_value_widget(key, info, toolbar is not None)
-
-            if toolbar is None:
-                self._widgets[key] = self._add_group_box(key, info, valueWidget)
-            else:
-                labelWidget = QtGui.QLabel("{}:".format(info["short"] if "short" in info else key))
-                labelWidget.setToolTip(self._arguments.get_help(key, info))
-                self._layout.addWidget(labelWidget)
-                self._layout.addWidget(valueWidget)
-                self._widgets[key] = valueWidget
-
-            self._value_widgets[key] = valueWidget
-
         self.setLayout(self._layout)
 
+    def get_title(self):
+        """
+        Get a titular name of the settings widget.
+        """
+
+        return "{} ({})".format(self._settings.name, self._component)
+
     def _add_title_label(self):
-        titleLabel = QtGui.QLabel("{} ({})".format(self._settings.name, self._component))
+        titleLabel = QtGui.QLabel(self.get_title())
         titleLabel.setFrameStyle(QtGui.QFrame.Panel | QtGui.QFrame.Sunken)
         titleLabel.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
         titleLabel.setStyleSheet("QLabel { font-size: 24px; background: white }")
@@ -90,6 +99,14 @@ class SettingsWidget(QtGui.QWidget):
             self._layout.addWidget(parentButton)
 
     def _add_group_box(self, key, info, valueWidget):
+        if not self._first:
+            # Add a line separator between the group box widgets.
+            line = QtGui.QFrame()
+            line.setFrameShape(QtGui.QFrame.HLine)
+            line.setFrameShadow(QtGui.QFrame.Sunken)
+            self._layout.addWidget(line)
+
+        # Create the form and its rows.
         formLayout = QtGui.QFormLayout()
         formLayout.setRowWrapPolicy(QtGui.QFormLayout.WrapLongRows)
 
@@ -106,6 +123,7 @@ class SettingsWidget(QtGui.QWidget):
         valueLabel = QtGui.QLabel("Value:")
         formLayout.addRow(valueLabel, valueWidget)
 
+        # Create the group box.
         groupBox = QtGui.QGroupBox(key)
 
         groupBox.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
@@ -118,45 +136,196 @@ class SettingsWidget(QtGui.QWidget):
         return groupBox
 
     def get_settings(self):
+        """
+        Retrieve the `Settings` object for this settings widget.
+        """
+
         return self._settings
 
     def get_setting_widget(self, key):
+        """
+        Retrieve a specific `QtGui.QWidget` that wraps the input of a value for
+        the given settings key `key`.
+
+        If the settings widget does not have a widget for that key, then this
+        method raises a `KeyError`.
+        """
+
         if key not in self._widgets:
             raise KeyError("Setting '{}' in component '{}' does not have a widget.".format(key, self._component))
 
         return self._widgets[key]
 
+    def get_value_widget(self, key):
+        """
+        Retrieve a specific `FormWidget` for the input of a value for the given
+        settings key `key`.
+
+        If the settings widget does not have a widget for that key, then this
+        method raises a `KeyError`.
+        """
+
+        if key not in self._value_widgets:
+            raise KeyError("Setting '{}' in component '{}' does not have a widget.".format(key, self._component))
+
+        return self._value_widgets[key]
+
     def format_type(self, info):
+        """
+        Retrieve a human-readable version for the settings type in the settings
+        information dictionary `info`.
+        """
+
         return self._type_names[info["type"]]
 
-    def make_value_widget(self, key, info, horizontal=False):
+    def make_value_widget(self, settings, key, info, horizontal=None):
+        """
+        Create a `FormWidget` for inputting the value for a specific settings
+        key `key` with information dictionary `info`.
+
+        This widget can be used inside other widgets in the settings widget,
+        or for subwidgets in an existing `FormWidget`. This method picks the
+        best type of `FormWidget` for the given settings type.
+
+        If `horizontal` is provided, the `FormWidget` will be laid out as much
+        as possible in the given direction. Otherwise, this defaults to the
+        settings widget's `isHorizontal` mode.
+        """
+
+        if horizontal is None:
+            horizontal = self._horizontal_mode
+
         choices = self._arguments.get_choices(info)
         if choices is not None:
-            widget = ChoicesFormWidget(self, key, info, horizontal)
+            widget = ChoicesFormWidget(self, key, info, settings, horizontal)
             widget.add_choices(choices)
         else:
             widget_type = self._type_widgets[info["type"]]
-            widget = widget_type(self, key, info, horizontal)
+            widget = widget_type(self, key, info, settings, horizontal)
 
         return widget
 
     def get_values(self):
+        """
+        Retrieve the current values from the input widgets that have changed
+        from the default.
+
+        The returned values are two dictionaries. The first dictionary contains
+        the settings keys and the changed values, while the second dictionary
+        contains the allowed state of each value widget by their settings key.
+        """
+
         values = {}
+        allowed = {}
         for key, widget in self._value_widgets.iteritems():
+            allowed[key] = widget.is_value_allowed()
             if not widget.is_value_default():
                 values[key] = widget.get_value()
 
-        return values
+        return values, allowed
+
+    def get_all_values(self):
+        """
+        Retrieve the current values from the input widgets, even when they are
+        the same as the default.
+
+        The returned values are a dictionary and a list. The dictionary contains
+        the settings keys and the current values, while the second list contains
+        the settings keys that have disallowed values.
+        """
+
+        values = {}
+        disallowed = []
+        for key, widget in self._value_widgets.iteritems():
+            if not widget.is_value_allowed():
+                disallowed.append(key)
+
+            values[key] = widget.get_value()
+
+        return values, disallowed
 
     def _trigger_parent_clicked(self):
         self.parentClicked.emit(self._settings.parent.component_name)
 
+    def resize_widget(self, key):
+        """
+        Handle resizing the value widget contents for setting key `key`.
+        """
+
+        pass
+
+    def _get_short_label(self, key, info):
+        return "{}:".format(info["short"] if "short" in info else key)
+
+class SettingsToolbarWidget(SettingsWidget):
+    def isHorizontal(self):
+        return True
+
+    def _add_group_box(self, key, info, valueWidget):
+        labelWidget = QtGui.QLabel(self._get_short_label(key, info))
+        labelWidget.setToolTip(self._arguments.get_help(key, info))
+        self._layout.addWidget(labelWidget)
+        self._layout.addWidget(valueWidget)
+
+        return valueWidget
+
+class SettingsTableWidget(QtGui.QTableWidget, SettingsWidget):
+    def __init__(self, arguments, component, *a, **kw):
+        self._rows = {}
+        QtGui.QTableWidget.__init__(self, *a, **kw)
+        SettingsWidget.__init__(self, arguments, component, *a, **kw)
+
+        if self._settings.parent is not None:
+            self._add_settings(self._settings.parent)
+
+    def _create_layout(self):
+        # Create the key and value columns.
+        self.setColumnCount(2)
+
+        # Let the columns take up the entire width of the table.
+        for index in range(2):
+            self.horizontalHeader().setResizeMode(index, QtGui.QHeaderView.Stretch)
+
+        self.verticalHeader().setResizeMode(QtGui.QHeaderView.Fixed)
+
+        # Hide the horizontal and vertical headers.
+        self.horizontalHeader().hide()
+        self.verticalHeader().hide()
+
+        # Disable tab key navigation of the table so the tab key navigation of 
+        # form input still works.
+        self.setTabKeyNavigation(False)
+
+    def resize_widget(self, key):
+        if key not in self._rows:
+            return
+
+        widget = self._widgets[key]
+        size = max(widget.height(), widget.sizeHint().height())
+        self.verticalHeader().resizeSection(self._rows[key], size)
+
+    def _add_group_box(self, key, info, valueWidget):
+        label = QtGui.QTableWidgetItem(self._get_short_label(key, info))
+        label.setToolTip(self._arguments.get_help(key, info))
+        label.setTextAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
+        label.setFlags(label.flags() & ~QtCore.Qt.ItemIsEditable & ~QtCore.Qt.ItemIsSelectable)
+
+        row = self.rowCount()
+        self.insertRow(row)
+        self.setItem(row, 0, label)
+        self.setCellWidget(row, 1, valueWidget)
+
+        self._rows[key] = row
+
+        return valueWidget
+
 class FormWidget(QtGui.QWidget):
-    def __init__(self, form, key, info, horizontal=False, *a, **kw):
+    def __init__(self, form, key, info, settings, horizontal=False, *a, **kw):
         super(FormWidget, self).__init__(*a, **kw)
         self.form = form
         self.key = key
         self.info = info
+        self.settings = settings
         self.horizontal = horizontal
 
         reset_action = QtGui.QAction("Reset to current value", self)
@@ -168,28 +337,77 @@ class FormWidget(QtGui.QWidget):
         self.setup_form()
 
     def setup_form(self):
+        """
+        Setup the form widget's layout and other properties.
+        """
+
         pass
 
     def get_actions(self):
+        """
+        Get a list of context menu actions for the form widget.
+        """
+
         return self._actions
 
     def get_value(self):
+        """
+        Retrieve the current value of the form widget input.
+        """
+
         raise NotImplementedError("Subclasses must implement `get_value`")
 
     def set_value(self, value):
+        """
+        Change the current value of the form widget input.
+
+        This might only change the displayed state or even be ignored, and may
+        not be reflected in `get_value`. For default (or overridden default)
+        values, this is however desirable.
+        """
+
         raise NotImplementedError("Subclasses must implement `set_value(value)`")
 
     def reset_value(self):
+        """
+        Reset the value to the value it was at the start.
+
+        This is the overridden value from the current settings or the command
+        line arguments.
+        """
+
         self.set_value(self.info["value"])
 
     def set_default_value(self):
+        """
+        Reset the value to the factory defaults.
+
+        This is the value in the settings defaults specification.
+        """
+
         self.set_value(self.info["default"])
 
     def is_value_changed(self):
+        """
+        Check whether the current value is different from the overridden
+        default.
+        """
+
         return self.get_value() != self.info["value"]
 
     def is_value_default(self):
+        """
+        Check whether the current value is the same as the factory default.
+        """
         return self.get_value() == self.info["default"]
+
+    def is_value_allowed(self):
+        """
+        Check whether the current value is acceptable for this setting, as far
+        as the form widget is able to know.
+        """
+
+        return True
 
 class BooleanFormWidget(FormWidget):
     def setup_form(self):
@@ -266,7 +484,7 @@ class QLineEditValidated(QtGui.QLineEdit):
             self.setCursorPosition(pos)
 
 class TextFormWidget(QLineEditValidated, FormWidget):
-    def __init__(self, form, key, info, horizontal=False, *a, **kw):
+    def __init__(self, form, key, info, settings, horizontal=False, *a, **kw):
         # Qt does not understand the concept of multiple inheritance, since it 
         # is written in C++. Therefore, the QLineEdit must be the first class 
         # we inherit from, otherwise setText (a slot method) does not function.
@@ -275,7 +493,7 @@ class TextFormWidget(QLineEditValidated, FormWidget):
         # See http://trevorius.com/scrapbook/python/pyqt-multiple-inheritance/ 
         # for more details.
         QLineEditValidated.__init__(self, *a, **kw)
-        FormWidget.__init__(self, form, key, info, horizontal, *a, **kw)
+        FormWidget.__init__(self, form, key, info, settings, horizontal, *a, **kw)
         self._background_color = ""
 
     def contextMenuEvent(self, event):
@@ -311,14 +529,16 @@ class TextFormWidget(QLineEditValidated, FormWidget):
     def format_value(self, value):
         return str(value) if value is not None else ""
 
+    def is_value_allowed(self):
+        return self.hasAcceptableInput()
+
 class FileFormatValidator(QtGui.QRegExpValidator):
     def __init__(self, form_widget, *a, **kw):
         super(FileFormatValidator, self).__init__(*a, **kw)
         self.form_widget = form_widget
+        self.settings = self.form_widget.settings
         self.key = self.form_widget.key
         self.info = self.form_widget.info
-        self.required = "required" in self.info and self.info["required"]
-        self.settings = self.form_widget.form.get_settings()
 
         regexp = self.settings.make_format_regex(self.info["format"])
         self.setRegExp(QtCore.QRegExp(regexp))
@@ -350,10 +570,10 @@ class FileFormWidget(TextFormWidget):
             return ""
 
         if "format" in self.info:
-            try:
-                return self.form.get_settings().check_format(self.key, self.info, value)
-            except ValueError:
-                pass
+            # Change the value to a short or formatted value. Always prefer the 
+            # short value for display unless there is no short version.
+            short, full = self.settings.format_file(self.info["format"], value)
+            value = short if short is not None else full
 
         return value
 
@@ -362,7 +582,12 @@ class FileFormWidget(TextFormWidget):
         if text == "":
             return None
 
-        return text
+        # Final format conversion step. We convert back any short formated file 
+        # name to the actual file name, if necessary.
+        try:
+            return self.settings.check_format(self.key, self.info, text)
+        except ValueError as e:
+            return self.info["value"]
 
     def _open_file(self):
         if "format" in self.info:
@@ -391,6 +616,7 @@ class FileFormWidget(TextFormWidget):
 
     def resizeEvent(self, event):
         self.openButton.resizeEvent(event)
+        self.form.resize_widget(self.key)
 
 class NumericFormWidget(TextFormWidget):
     def setup_form(self):
@@ -433,7 +659,10 @@ class NumericFormWidget(TextFormWidget):
 
 class NumericSliderFormWidget(FormWidget):
     def setup_form(self):
-        self._valueWidget = NumericFormWidget(self.form, "{}-num".format(self.key), self.info)
+        self._valueWidget = NumericFormWidget(self.form,
+                                              "{}-num".format(self.key),
+                                              self.info, self.settings,
+                                              horizontal=self.horizontal)
         self._slider = None
 
         self._layout = QtGui.QHBoxLayout()
@@ -471,6 +700,9 @@ class NumericSliderFormWidget(FormWidget):
         self._valueWidget.set_value(value)
         if self._slider is not None:
             self._update_slider(self._valueWidget.text())
+
+    def is_value_allowed(self):
+        return self._valueWidget.is_value_allowed()
 
     def _slider_to_value(self, value):
         minimum = self._slider.minimum()
@@ -598,7 +830,7 @@ class ListFormWidget(FormWidget):
 
         sub_info["value"] = sub_value
         sub_info["default"] = sub_default
-        sub_widget = self.form.make_value_widget("{}-{}".format(self.key, position), sub_info, horizontal=True)
+        sub_widget = self.form.make_value_widget(self.settings, "{}-{}".format(self.key, position), sub_info, horizontal=True)
 
         self._sub_widgets.append(sub_widget)
 
@@ -621,6 +853,7 @@ class ListFormWidget(FormWidget):
             self._removeButtons.append(removeButton)
 
             self._fix_tab_order(add=True)
+            self.form.resize_widget(self.key)
 
     def _fix_tab_order(self, add=True):
         if self._addButton is None:
@@ -659,6 +892,7 @@ class ListFormWidget(FormWidget):
         self._removeButtons.remove(removeButton)
 
         self._fix_tab_order(add=False)
+        self.form.resize_widget(self.key)
 
     def get_value(self):
         return [sub_widget.get_value() for sub_widget in self._sub_widgets]
@@ -679,6 +913,9 @@ class ListFormWidget(FormWidget):
             else:
                 self._layout.removeItem(item)
 
+    def is_value_allowed(self):
+        return all(sub_widget.is_value_allowed() for sub_widget in self._sub_widgets)
+
 class DictFormWidget(FormWidget):
     def setup_form(self):
         self._sub_widgets = {}
@@ -695,7 +932,7 @@ class DictFormWidget(FormWidget):
             key_text = "{} ({}):".format(key, self.form.format_type(sub_info))
             keyLabel = QtGui.QLabel(key_text)
 
-            subWidget = self.form.make_value_widget("{}-{}".format(self.key, key), sub_info, horizontal=True)
+            subWidget = self.form.make_value_widget(self.settings, "{}-{}".format(self.key, key), sub_info, horizontal=True)
             formLayout.addRow(keyLabel, subWidget)
 
             self._sub_widgets[key] = subWidget
@@ -709,15 +946,26 @@ class DictFormWidget(FormWidget):
         for key, subWidget in self._sub_widgets.iteritems():
             subWidget.set_value(value[key])
 
+    def is_value_allowed(self):
+        return all(sub_widget.is_value_allowed() for sub_widget in self._sub_widgets.itervalues())
+
 class ChoicesFormWidget(QtGui.QComboBox, FormWidget):
-    def __init__(self, form, key, info, horizontal=False, *a, **kw):
-        QtGui.QLineEdit.__init__(self, *a, **kw)
-        FormWidget.__init__(self, form, key, info, horizontal, *a, **kw)
+    def __init__(self, form, key, info, settings, horizontal=False, *a, **kw):
+        QtGui.QComboBox.__init__(self, *a, **kw)
+        FormWidget.__init__(self, form, key, info, settings, horizontal, *a, **kw)
         self._types = {
             "int": int,
             "string": str,
             "float": float
         }
+
+        if "replace" in self.info:
+            replace = self.info["replace"]
+        else:
+            replace = ["", ""]
+
+        self._value_table = string.maketrans(*replace)
+        self._display_table = string.maketrans(*reversed(replace))
 
     def add_choices(self, choices):
         if self.count() == 0:
@@ -725,7 +973,7 @@ class ChoicesFormWidget(QtGui.QComboBox, FormWidget):
                 choices[0:0] = [""]
 
         for i, choice in enumerate(choices):
-            self.addItem(str(choice))
+            self.addItem(str(choice).translate(self._display_table))
             if choice == self.info["value"]:
                 self.setCurrentIndex(i)
 
@@ -743,8 +991,8 @@ class ChoicesFormWidget(QtGui.QComboBox, FormWidget):
         else:
             type_cast = str
 
-        return type_cast(self.currentText())
+        return type_cast(str(self.currentText()).translate(self._value_table))
 
     def set_value(self, value):
-        index = self.findText(str(value))
+        index = self.findText(str(value).translate(self._display_table))
         self.setCurrentIndex(index)

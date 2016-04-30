@@ -3,12 +3,12 @@ from Buffer import Buffer
 from ..zigbee.XBee_Packet import XBee_Packet
 
 class Dataset_Buffer(Buffer):
-    def __init__(self, options=None):
+    def __init__(self, settings=None):
         """
         Initialize the dataset buffer object.
         """
 
-        super(Dataset_Buffer, self).__init__(options)
+        super(Dataset_Buffer, self).__init__(settings)
 
         # Read the provided dataset file. The CSV file is a radio tomographic
         # imaging dataset provided by the University of Utah. Refer to
@@ -22,10 +22,11 @@ class Dataset_Buffer(Buffer):
             (21, 0), (18, 0), (15, 0), (12, 0), (9, 0), (6, 0), (2, 0)
         ]
         self._number_of_sensors = len(self._positions)
-        self._size = [21, 21]
+        self._size = (21, 21)
 
         # Read the data from the empty network (for calibration).
-        with open(options["calibration_file"], "r") as dataset_calibration_file:
+        calibration_filename = settings.get("dataset_calibration_file")
+        with open(calibration_filename, "r") as dataset_calibration_file:
             for line in csv.reader(dataset_calibration_file):
                 destination_id = int(line[0])
 
@@ -41,7 +42,7 @@ class Dataset_Buffer(Buffer):
                     self._calibration[(source, destination)] = rssi
 
         # Read the data from the nonempty network.
-        with open(options["file"], "r") as dataset_file:
+        with open(settings.get("dataset_file"), "r") as dataset_file:
             for line in csv.reader(dataset_file):
                 destination_id = int(line[0])
 
