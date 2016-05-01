@@ -9,10 +9,11 @@ Leiden University and CWI Amsterdam, both located in the Netherlands.
 Prerequisites
 =============
 
-In order to use the framework you must have the following software installed on your
-system. The framework has been developed for Linux, but can be made to work on Windows
-or any other operating system since all prerequisites are also available for those
-systems, perhaps with slightly different installation procedures.
+In order to use the framework you must have the following software installed on 
+your system. The framework has been developed for Linux, but can be made to 
+work on Windows or any other operating system since all prerequisites are also 
+available for those systems, perhaps with slightly different installation 
+procedures.
 
 * Git
 * Binaries and development headers for the [LIRC](http://www.lirc.org/) package 
@@ -25,64 +26,78 @@ systems, perhaps with slightly different installation procedures.
   systems. If it is also not delivered by a package manager, one can also
   [install it with get-pip.py](https://pip.pypa.io/en/latest/installing.html).
   Ensure that you have the correct version of `pip` with `pip --version` or use
-  `pip2` instead.
+  `pip2` instead. See the [Python packages](#python-packages) section below for 
+  installing the required packages using `pip`.
+* ArduPilot for vehicle simulation. See the [ArduPilot](#ardupilot) section 
+  below for more details.
 
-  Use `pip install --user <package>` to install or upgrade each of the 
-  following packages, sorted by purpose:
-  * General packages:
+For all commands in this file, replace `python2` with `python` if your
+operating system does not need to distinguish between Python 2 and Python 3.
+
+Python packages
+---------------
+Use `pip install --user <package>` to install or upgrade each of the following 
+packages, sorted by purpose:
+
+* General packages:
     * matplotlib
     * NumPy
     * scipy
-  * Control panel:
+* Control panel:
     * PyQtGraph
-  * Physical sensor/communication interfaces:
+    * markdown
+    * py-gfm
+* Physical sensor/communication interfaces:
     * pyserial
     * RPi.GPIO
     * wiringpi
     * xbee
     * pylirc2
     * pyudev
-  * Vehicle trajectory mission interfaces:
+* Vehicle trajectory mission interfaces:
     * lxml
     * pexpect
     * pymavlink
     * mavproxy
     * dronekit
-  * Environment simulation:
+* Environment simulation:
     * PyOpenGL
     * simpleparse
     * PyVRML97 (you may need to use `pip install --user "PyVRML97==2.3.0b1"`)
     * PyDispatcher
     * pyglet
-  * Testing:
+* Testing:
     * mock
     * importchecker
-* In order to use the map display of ArduPilot, make sure that OpenCV and 
-  wxWidgets as well as their respective Python bindings are installed and 
-  available. If not, the following directions might help you get it:
-  * OpenCV: This is sometimes provided by the package manager. It can also be 
-    installed from the [official download](http://opencv.org/downloads.html) 
-    using the appropriate 
-    [documentation](http://docs.opencv.org/2.4/doc/tutorials/introduction/table_of_content_introduction/table_of_content_introduction.html). 
-    Note that for Linux, you must change the install prefix for `cmake` if you 
-    do not have superuser rights. You can speed up the installation by passing 
-    `-j4` to the `cmake` command.
-  * wxWidgets: Again, if this is not provided by the package manager, see an 
-    [explanation](http://wiki.wxpython.org/How%20to%20install%20wxPython) on 
-    how to install from source. This requires wxGTK as well as the wxWidgets 
-    library itself: these are combined within 
-    a [download](http://www.wxwidgets.org/downloads/). You can install without 
-    superuser rights using `./configure --with-gtk --prefix=$HOME/.local`.
-* ArduPilot for vehicle simulation. Download the latest code using:
 
-        $ git clone https://github.com/diydrones/ardupilot.git
+ArduPilot
+---------
 
-  Then, add the following line to your `~/.bashrc`:
+Download the latest code using:
 
-      export PATH=$PATH:$HOME/ardupilot/Tools/autotest
+    $ git clone https://github.com/diydrones/ardupilot.git
 
-For all commands in this file, replace `python2` with `python` if your
-operating system does not need to distinguish between Python 2 and Python 3.
+Then, add the following line to your `~/.bashrc`:
+
+    export PATH=$PATH:$HOME/ardupilot/Tools/autotest
+
+In order to use the map display of ArduPilot, make sure that OpenCV and 
+wxWidgets as well as their respective Python bindings are installed and 
+available. If not, the following directions might help you get it:
+
+* OpenCV: This is sometimes provided by the package manager. It can also be 
+  installed from the [official download](http://opencv.org/downloads.html) 
+  using the appropriate 
+  [documentation](http://docs.opencv.org/2.4/doc/tutorials/introduction/table_of_content_introduction/table_of_content_introduction.html). 
+  Note that for Linux, you must change the install prefix for `cmake` if you do 
+  not have superuser rights. You can speed up the installation by passing `-j4` 
+  to the `cmake` command.
+* wxWidgets: Again, if this is not provided by the package manager, see an 
+  [explanation](http://wiki.wxpython.org/How%20to%20install%20wxPython) on how 
+  to install from source. This requires wxGTK as well as the wxWidgets library 
+  itself: these are combined within 
+  a [download](http://www.wxwidgets.org/downloads/). You can install without 
+  superuser rights using `./configure --with-gtk --prefix=$HOME/.local`.
 
 Cloning the repository
 ======================
@@ -96,8 +111,8 @@ code. Open a terminal and run the following commands.
 Running the tools
 =================
 
-Now that we have a copy of the software, we can run the tools. Use `sudo` if
-your user is not part of the `dialout` or `uucp` group.
+Now that we have a copy of the software, we can run the tools. Use `sudo` in 
+front of commands if your user is not part of the `dialout` or `uucp` group.
 
 XBee configurator
 -----------------
@@ -210,9 +225,9 @@ You can use the planning problem to generate random sensor positions and
 optimize them according to certain objectives, such as intersections at each 
 grid pixel in the sensor network, sensor distances and vehicle move distances. 
 You can start the planner in a terminal with `python2 plan_reconstruct.py`, or 
-use the planning view in the control panel. See the control panel section for 
-more details. The terminal-based planner supports exporting the resulting 
-positions in JSON format.
+use the planning view. See [its control panel section](#planning-view) for more 
+details. The terminal-based planner supports exporting the resulting positions 
+in JSON format.
 
 Control panel
 -------------
@@ -241,9 +256,9 @@ simulated version or run `python2 control_panel.py
 The devices view displays status information about the XBee sensors in the 
 network. It displays their numerical identifier, their category type, their 
 address identifier and their joined status. The number of sensors is determined 
-by a setting; adjust this setting in the settings view if necessary. If not all 
-sensors are detected, ensure that the vehicles are completely started and use 
-the Refresh button to discover them.
+by a setting; adjust this setting in the [settings view](#settings-view) if 
+necessary. If not all sensors are detected, ensure that the vehicles are 
+completely started and use the Refresh button to discover them.
 
 ### Planning view
 
@@ -265,8 +280,8 @@ the total time needed for the mission.
 
 The reconstruction view converts a dataset, dump or XBee data stream with 
 signal strength measurements to input for the reconstructor, such as weight 
-matrices and grid pixel data. The result of the reconstruction is visualizaed 
-as a set of two-dimensional images. We provide multiple reconstructors:
+matrices and grid pixel data. The result of the reconstruction is visualized as 
+a set of two-dimensional images. We provide multiple reconstructors:
 
 * Least squares
 * SVD
@@ -292,7 +307,8 @@ change all settings in this interface, sorted by component and with
 descriptions and a search filter. Validation checks ensure that the settings 
 values are correct. The settings can be saved in override files on the ground 
 station and also sent to the vehicles, selectable in the save dialog. If some 
-vehicles are not selectable, return to the devices view to discover them.
+vehicles are not selectable, return to the [devices view](#devices-view) to 
+discover them.
 
 Running the tests
 =================

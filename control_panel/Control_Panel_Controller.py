@@ -1,8 +1,11 @@
 from collections import OrderedDict
 from functools import partial
+import re
 import sys
 import traceback
-from PyQt4 import QtGui
+import markdown
+from mdx_partial_gfm import PartialGithubFlavoredMarkdownExtension
+from PyQt4 import QtCore, QtGui
 from Control_Panel_View import Control_Panel_View_Name
 from Control_Panel_Devices_View import Control_Panel_Devices_View
 from Control_Panel_Loading_View import Control_Panel_Loading_View
@@ -55,6 +58,8 @@ class Control_Panel_Controller(object):
         # After loading the settings, check if any unknown arguments have been 
         # provided and show help in that case.
         self.arguments.check_help()
+
+        self._help_file = "README.md"
 
     def _get_arguments(self):
         """
@@ -235,3 +240,55 @@ class Control_Panel_Controller(object):
 
             view_menu.addAction(action)
             self._view_actions[view_name] = action
+
+        # Add a help menu
+        help_menu = self.window._menu_bar.addMenu("Help")
+
+        help_action = QtGui.QAction("Contents", self.window)
+        help_action.setShortcut(QtCore.Qt.Key_F1)
+        help_action.triggered.connect(self._show_help)
+
+        help_menu.addAction(help_action)
+
+    def _show_help(self):
+        dialog = QtGui.QDialog(self.central_widget)
+        dialog.setWindowTitle("Help")
+
+        with open(self._help_file, "r") as readme_file:
+            readme_text = readme_file.read()
+
+        md = markdown.Markdown(extensions=[
+            PartialGithubFlavoredMarkdownExtension(), "markdown.extensions.toc"
+        ])
+        readme_text = re.sub(r'(\[!.*)', '[TOC]', readme_text)
+        html = md.convert(readme_text)
+
+        textBrowser = QtGui.QTextBrowser()
+        textBrowser.setSource(QtCore.QUrl(self._help_file))
+        textBrowser.setHtml(html)
+        textBrowser.setOpenLinks(False)
+        textBrowser.anchorClicked.connect(partial(self._click_help, textBrowser))
+
+        dialogButtons = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Ok)
+        dialogButtons.accepted.connect(dialog.accept)
+
+        dialogLayout = QtGui.QVBoxLayout()
+        dialogLayout.addWidget(textBrowser)
+        dialogLayout.addWidget(dialogButtons)
+
+        dialog.setLayout(dialogLayout)
+        windowSize = self.central_widget.size()
+        dialog.setMinimumHeight(windowSize.height() / 2)
+        dialog.setMinimumWidth(windowSize.width() / 2)
+
+        dialog.exec_()
+
+    def _click_help(self, textBrowser, link):
+        linkWithoutFragment = textBrowser.source().resolved(link)
+        linkWithoutFragment.setFragment(QtCore.QString())
+
+        if textBrowser.source() == linkWithoutFragment:
+            if link.hasFragment():
+                textBrowser.scrollToAnchor(link.fragment())
+        else:
+            QtGui.QDesktopServices.openUrl(link)
