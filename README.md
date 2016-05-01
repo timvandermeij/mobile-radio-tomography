@@ -203,20 +203,96 @@ the `lircd.conf` file and place it in the `control/remotes` folder. Then
 create a `lircrc` file using the same remote name there to bind the buttons
 to the events. Finally change the remote name in the settings file.
 
-Reconstruction and visualization
---------------------------------
+Planner
+-------
 
-The reconstruction and visualization components convert a dataset with signal
-strength measurements to a set of two-dimensional images. We provide multiple
-reconstructors:
+You can use the planning problem to generate random sensor positions and 
+optimize them according to certain objectives, such as intersections at each 
+grid pixel in the sensor network, sensor distances and vehicle move distances. 
+You can start the planner in a terminal with `python2 plan_reconstruct.py`, or 
+use the planning view in the control panel. See the control panel section for 
+more details. The terminal-based planner supports exporting the resulting 
+positions in JSON format.
+
+Control panel
+-------------
+
+The control panel is a graphical user interface that can be run on the ground 
+station to provide status information and interfaces to tools. Run `make`, 
+`make control_panel` or `python2 control_panel.py` in a terminal to open the 
+control panel.
+
+The control panel consists of various views that provide different details and 
+tools, but work in concert with each other. We list the various views below.
+
+### Loading view
+
+When starting the control panel, it starts in a splash screen that is 
+responsible for setting up XBee-related components.
+
+The loading view checks whether a physical XBee sensor configured as a ground 
+station sensor is connected through USB; otherwise, it waits for its insertion. 
+If you do not have a physical XBee, then use the button to switch to the 
+simulated version or run `python2 control_panel.py 
+--controller-xbee-simulation` to start the control panel in this mode.
+
+### Devices view
+
+The devices view displays status information about the XBee sensors in the 
+network. It displays their numerical identifier, their category type, their 
+address identifier and their joined status. The number of sensors is determined 
+by a setting; adjust this setting in the settings view if necessary. If not all 
+sensors are detected, ensure that the vehicles are completely started and use 
+the Refresh button to discover them.
+
+### Planning view
+
+The planning view is an interface to the planning problem algorithm runner. It 
+makes it possible generate random sensor positions and optimize them. The 
+positions around the sensor network may be at continuous or grid-based discrete 
+locations. The multiobjective optimization algorithm attempts to find feasible 
+positioning solutions for which no other known solution is better in all 
+objectives. You can tune the algorithm and problem parameters using the 
+settings toolboxes.
+
+It is possible to see the progress of the Pareto front, statistics and 
+individual solutions during the run, so that you can see whether the run is 
+going to be useful. Afterward, you can select a solution, whose sensor 
+positions are sorted and assigned over the vehicles in such a way to decrease 
+the total time needed for the mission.
+
+### Reconstruction view
+
+The reconstruction view converts a dataset, dump or XBee data stream with 
+signal strength measurements to input for the reconstructor, such as weight 
+matrices and grid pixel data. The result of the reconstruction is visualizaed 
+as a set of two-dimensional images. We provide multiple reconstructors:
 
 * Least squares
 * SVD
 * Truncated SVD
 
-Run `python2 control_panel.py` in a terminal to open the control panel. The
-toolbar allows you to change the reconstructor and start the reconstruction
-and visualization process.
+The settings panels allows you to change the reconstructor and start the 
+reconstruction and visualization process. The raw data is shown in a graph and 
+table form. The stream source can also be recorded to a JSON dump format for 
+calibration or analysis.
+
+### Waypoints view
+
+The waypoints view makes it possible to define a mission when the vehicles are 
+operating in the `Mission_XBee` mission. You can add waypoints in each table 
+and optionally synchronize between vehicles at each waypoint. It is possible to 
+import and export JSON waypoints for later usage. The waypoints are sent to the 
+vehicles using custom XBee packets.
+
+### Settings view
+
+The settings view is a human-friendly interface to the settings files. You can 
+change all settings in this interface, sorted by component and with 
+descriptions and a search filter. Validation checks ensure that the settings 
+values are correct. The settings can be saved in override files on the ground 
+station and also sent to the vehicles, selectable in the save dialog. If some 
+vehicles are not selectable, return to the devices view to discover them.
 
 Running the tests
 =================
