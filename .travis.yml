@@ -12,6 +12,6 @@ install:
   - pip install PyDispatcher
   - pip install importchecker
   - pip install pyudev
-script: python2 test.py
+script: make test
 notifications:
   email: false

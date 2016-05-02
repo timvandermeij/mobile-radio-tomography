@@ -23,6 +23,17 @@ class Control_Panel_Loading_View(Control_Panel_View):
         vbox.addWidget(self._label)
         vbox.addStretch(1)
 
+        if isinstance(self._controller.xbee, XBee_Sensor_Physical):
+            button = QtGui.QPushButton("Switch to simulated XBee")
+            button.clicked.connect(self._switch)
+
+            hbox = QtGui.QHBoxLayout()
+            hbox.addStretch(1)
+            hbox.addWidget(button)
+            hbox.addStretch(1)
+
+            vbox.addLayout(hbox)
+
         # Wait for insertion of the ground station XBee.
         self._xbee_insertion_delay = self._settings.get("loading_xbee_insertion_delay") * 1000
         QtCore.QTimer.singleShot(self._xbee_insertion_delay, lambda: self._insertion_loop())
@@ -63,3 +74,12 @@ class Control_Panel_Loading_View(Control_Panel_View):
             self._controller.show_view(Control_Panel_View_Name.DEVICES)
         except KeyError:
             QtCore.QTimer.singleShot(self._xbee_insertion_delay, lambda: self._insertion_loop())
+
+    def _switch(self):
+        """
+        Switch the controller XBee from physical to simulated XBees.
+        """
+
+        settings = self._controller.arguments.get_settings("control_panel")
+        settings.set("controller_xbee_simulation", True)
+        self._controller.setup_xbee()
