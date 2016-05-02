@@ -15,9 +15,10 @@ register: docs/raspberry-pi/$(SERVICE)
 	cp docs/raspberry-pi/$(SERVICE) /etc/systemd/system
 	systemctl enable $(SERVICE)
 
-.PHONY: disable
-disable:
+.PHONY: unregister
+unregister:
 	systemctl disable $(SERVICE)
+	-$(RM) /etc/systemd/system/$(SERVICE)
 
 .PHONY: start
 start:

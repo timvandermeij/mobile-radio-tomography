@@ -287,7 +287,7 @@ a set of two-dimensional images. We provide multiple reconstructors:
 * SVD
 * Truncated SVD
 
-The settings panels allows you to change the reconstructor and start the 
+The settings panels allow you to change the reconstructor and start the 
 reconstruction and visualization process. The raw data is shown in a graph and 
 table form. The stream source can also be recorded to a JSON dump format for 
 calibration or analysis.
@@ -318,7 +318,7 @@ we expect them to behave and therefore to reduce the risk of introducing
 regressions during development. The tests have to be executed from the
 root folder using the following command:
 
-    $ python2 test.py
+    $ make test
 
 This command is executed automatically by Travis CI for each pull request
 or push to a branch.
