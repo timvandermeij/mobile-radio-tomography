@@ -285,6 +285,7 @@ a set of two-dimensional images. We provide multiple reconstructors:
 
 * Least squares
 * SVD
+* Total variation
 * Truncated SVD
 
 The settings panels allow you to change the reconstructor and start the 

@@ -9,7 +9,7 @@ class Least_Squares_Reconstructor(Reconstructor):
 
         super(Least_Squares_Reconstructor, self).__init__(settings)
 
-    def execute(self, weight_matrix, rssi):
+    def execute(self, weight_matrix, rssi, buffer=None, guess=None):
         """
         Perform the least-squares algorithm. We aim to solve
         `Ax = b` where `A` is the weight matrix and `b` is a column

@@ -1,6 +1,6 @@
 __all__ = [
     "Least_Squares_Reconstructor", "SVD_Reconstructor",
-    "Truncated_SVD_Reconstructor"
+    "Total_Variation_Reconstructor", "Truncated_SVD_Reconstructor"
 ]
 
 class Reconstructor(object):
@@ -11,5 +11,5 @@ class Reconstructor(object):
 
         self._settings = settings
 
-    def execute(self):
-        raise NotImplementedError("Subclasses must implement execute(weight_matrix, rssi)")
+    def execute(self, weight_matrix, rssi, buffer=None, guess=None):
+        raise NotImplementedError("Subclasses must implement execute(weight_matrix, rssi, buffer, guess)")
