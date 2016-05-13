@@ -310,7 +310,6 @@ class Robot_Vehicle(Vehicle):
             self.set_speeds(value, value)
 
     def _get_yaw(self):
-        # TODO: Perhaps we want a more precise attitude... gyroscope?
         if isinstance(self._state, Robot_State_Rotate):
             direction = self._state.current_direction
         else:

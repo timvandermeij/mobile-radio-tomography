@@ -32,5 +32,4 @@ class Distance_Sensor(object):
         if bearing is None:
             bearing = self.environment.get_pitch()
 
-        # TODO: "Rotate" based on fixed sensor angle. Do we need a range?
-        return 2*math.pi-bearing
+        return 2*math.pi - bearing
