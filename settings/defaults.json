@@ -1052,6 +1052,18 @@
                 "type": "int",
                 "min": 0,
                 "default": 1
+            },
+            "profile_sort": {
+                "help": "Sort method to use for the profile statistics",
+                "type": "string",
+                "keys": ["pstats", "Stats", "sort_arg_dict_default"],
+                "default": "tottime"
+            },
+            "profile_limit": {
+                "help": "Maximum number of items to show from the profile statistics",
+                "type": "int",
+                "min": 0,
+                "default": 7
             }
         }
     }
