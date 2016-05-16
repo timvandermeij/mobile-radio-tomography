@@ -1,10 +1,14 @@
 import glob
 import os
+import sys
 import unittest
 from subprocess import check_output
+from __init__ import __package__
+from settings import Arguments
 
 class Test_Run(object):
-    def __init__(self):
+    def __init__(self, arguments):
+        self._settings = arguments.get_settings("test_runner")
         self._failed = False
 
     def is_passed(self):
@@ -19,9 +23,12 @@ class Test_Run(object):
         Execute the unit tests.
         """
 
+        pattern = self._settings.get("pattern")
+        verbosity = self._settings.get("verbosity")
+
         loader = unittest.TestLoader()
-        tests = loader.discover("tests", pattern="*.py", top_level_dir="..")
-        runner = unittest.runner.TextTestRunner()
+        tests = loader.discover("tests", pattern=pattern, top_level_dir="..")
+        runner = unittest.runner.TextTestRunner(verbosity=verbosity)
         result = runner.run(tests)
 
         if not result.wasSuccessful():
@@ -35,7 +42,7 @@ class Test_Run(object):
         there are unused imports.
         """
 
-        excludes = ["__package__", "scipy.sparse.linalg"]
+        excludes = self._settings.get("import_exclude")
         output = check_output(["importchecker", "."])
         unused_imports = []
         for line in output.splitlines():
@@ -79,8 +86,15 @@ class Test_Run(object):
         for file in files:
             os.remove(file)
 
-def main():
-    test_run = Test_Run()
+def main(argv):
+    arguments = Arguments("settings.json", argv)
+
+    test_run = Test_Run(arguments)
+
+    arguments.check_help()
+
+    # Clean up the logs directory so that old logs are not considered when 
+    # checking for exception logs.
     test_run.clear_logs_directory()
 
     print("> Executing unit tests")
@@ -103,4 +117,4 @@ def main():
         exit(1)
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
