@@ -283,7 +283,6 @@ signal strength measurements to input for the reconstructor, such as weight
 matrices and grid pixel data. The result of the reconstruction is visualized as 
 a set of two-dimensional images. We provide multiple reconstructors:
 
-* Least squares
 * SVD
 * Total variation
 * Truncated SVD

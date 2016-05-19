@@ -1,6 +1,5 @@
 __all__ = [
-    "Least_Squares_Reconstructor", "SVD_Reconstructor",
-    "Total_Variation_Reconstructor", "Truncated_SVD_Reconstructor"
+    "SVD_Reconstructor", "Total_Variation_Reconstructor", "Truncated_SVD_Reconstructor"
 ]
 
 class Reconstructor(object):
