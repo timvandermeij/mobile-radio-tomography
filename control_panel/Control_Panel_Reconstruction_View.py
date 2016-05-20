@@ -1,6 +1,7 @@
 # TODO:
 # - Implement more reconstructors: Tikhonov and total variation
 # - Investigate canvas flipping
+# - Implement smoothening using percentiles
 # - Average measurements of the same link
 # - Tweak calibration/ellipse width/singular values/model (based on grid experiments)
 
