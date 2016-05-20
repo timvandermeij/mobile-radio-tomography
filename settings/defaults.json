@@ -1032,5 +1032,39 @@
                 "default": 0.4
             }
         }
+    },
+    "test_runner": {
+        "name": "Test runner",
+        "settings": {
+            "pattern": {
+                "help": "Shell-style pattern that determines tests to run. Only tests in files that match are included.",
+                "type": "string",
+                "default": "*.py"
+            },
+            "import_exclude": {
+                "help": "List of imports to ignore in the unused import checker",
+                "type": "list",
+                "subtype": "string",
+                "default": ["__package__", "scipy.sparse.linalg"]
+            },
+            "verbosity": {
+                "help": "Level of verboseness of the test runner",
+                "type": "int",
+                "min": 0,
+                "default": 1
+            },
+            "profile_sort": {
+                "help": "Sort method to use for the profile statistics",
+                "type": "string",
+                "keys": ["pstats", "Stats", "sort_arg_dict_default"],
+                "default": "tottime"
+            },
+            "profile_limit": {
+                "help": "Maximum number of items to show from the profile statistics",
+                "type": "int",
+                "min": 0,
+                "default": 7
+            }
+        }
     }
 }

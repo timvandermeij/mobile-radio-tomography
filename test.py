@@ -1,10 +1,53 @@
 import glob
 import os
+import sys
 import unittest
+from cProfile import Profile
+from pstats import Stats
 from subprocess import check_output
+from __init__ import __package__
+from settings import Arguments
+
+class TestResultFactory(object):
+    """
+    A factory that creates appropriate test result objects when it is called.
+    """
+
+    def __init__(self, settings):
+        self._settings = settings
+
+    def __call__(self, stream, descriptions, verbosity):
+        return BenchTestResult(self._settings, stream, descriptions, verbosity)
+
+class BenchTestResult(unittest.runner.TextTestResult):
+    """
+    A textual test result formatter that can display additional information
+    such as profile output and benchmarks.
+    """
+
+    def __init__(self, settings, stream, descriptions, verbosity):
+        super(BenchTestResult, self).__init__(stream, descriptions, verbosity)
+        self._sort = settings.get("profile_sort")
+        self._limit = settings.get("profile_limit")
+        self._benchmark = verbosity > 2
+
+    def startTest(self, test):
+        super(BenchTestResult, self).startTest(test)
+        if self._benchmark:
+            self._profiler = Profile()
+            self._profiler.enable()
+
+    def stopTest(self, test):
+        super(BenchTestResult, self).stopTest(test)
+        if self._benchmark:
+            self._profiler.disable()
+            stats = Stats(self._profiler)
+            stats.sort_stats(self._sort)
+            stats.print_stats(self._limit)
 
 class Test_Run(object):
-    def __init__(self):
+    def __init__(self, arguments):
+        self._settings = arguments.get_settings("test_runner")
         self._failed = False
 
     def is_passed(self):
@@ -19,9 +62,15 @@ class Test_Run(object):
         Execute the unit tests.
         """
 
+        pattern = self._settings.get("pattern")
+        verbosity = self._settings.get("verbosity")
+
         loader = unittest.TestLoader()
-        tests = loader.discover("tests", pattern="*.py", top_level_dir="..")
-        runner = unittest.runner.TextTestRunner()
+        tests = loader.discover("tests", pattern=pattern, top_level_dir="..")
+
+        factory = TestResultFactory(self._settings)
+        runner = unittest.runner.TextTestRunner(verbosity=verbosity,
+                                                resultclass=factory)
         result = runner.run(tests)
 
         if not result.wasSuccessful():
@@ -35,7 +84,7 @@ class Test_Run(object):
         there are unused imports.
         """
 
-        excludes = ["__package__", "scipy.sparse.linalg"]
+        excludes = self._settings.get("import_exclude")
         output = check_output(["importchecker", "."])
         unused_imports = []
         for line in output.splitlines():
@@ -79,8 +128,15 @@ class Test_Run(object):
         for file in files:
             os.remove(file)
 
-def main():
-    test_run = Test_Run()
+def main(argv):
+    arguments = Arguments("settings.json", argv)
+
+    test_run = Test_Run(arguments)
+
+    arguments.check_help()
+
+    # Clean up the logs directory so that old logs are not considered when 
+    # checking for exception logs.
     test_run.clear_logs_directory()
 
     print("> Executing unit tests")
@@ -103,4 +159,4 @@ def main():
         exit(1)
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
