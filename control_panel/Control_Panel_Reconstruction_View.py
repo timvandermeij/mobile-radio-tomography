@@ -1,7 +1,5 @@
 # TODO:
-# - Implement more reconstructors: Tikhonov and total variation
 # - Investigate canvas flipping
-# - Implement smoothening using percentiles
 # - Average measurements of the same link
 # - Tweak calibration/ellipse width/singular values/model (based on grid experiments)
 
@@ -10,6 +8,7 @@ import json
 import matplotlib
 matplotlib.use("Qt4Agg")
 import matplotlib.pyplot as plt
+import numpy as np
 import os
 import pyqtgraph as pg
 import thread
@@ -442,9 +441,13 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
         # Fetch the settings for the reconstruction.
         self._pause_time = self._settings.get("reconstruction_pause_time") * 1000
-        self._cmap = settings.get("cmap")
+        self._percentiles = settings.get("percentiles")
         self._interpolation = settings.get("interpolation")
         self._chunk_size = settings.get("chunk_size")
+
+        # Prepare the color map for the reconstruction.
+        cmap = plt.get_cmap(settings.get("cmap"))
+        self._cmap = np.array([cmap(color) for color in range(256)]) * 255
 
         # Create the buffer and reconstructor.
         try:
@@ -560,14 +563,21 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         """
 
         try:
+            # Get the list of pixel values from the reconstructor.
             pixels = self._reconstructor.execute(self._coordinator.get_weight_matrix(),
                                                  self._coordinator.get_rssi_vector(),
                                                  buffer=self._buffer, guess=self._previous_pixels)
             self._previous_pixels = pixels
 
+            # Reshape the list of pixel values to form the image. Smoothen the image
+            # by suppressing pixel values that do not correspond to high attenuation.
+            pixels = pixels.reshape(self._buffer.size)
+            levels = [np.percentile(pixels, self._percentiles[0]), np.percentile(pixels, self._percentiles[1])]
+            image = pg.functions.makeRGBA(pixels, levels=levels, lut=self._cmap)[0]
+
+            # Draw the image onto the canvas and apply interpolation.
             self._axes.axis("off")
-            self._axes.imshow(pixels.reshape(self._buffer.size), cmap=self._cmap,
-                              origin="lower", interpolation=self._interpolation)
+            self._axes.imshow(image, origin="lower", interpolation=self._interpolation)
             self._canvas.draw()
 
             # Delete the image from memory now that it is drawn.
