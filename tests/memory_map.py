@@ -56,6 +56,7 @@ class TestMemoryMap(EnvironmentTestCase):
 
         self.assertEqual(len(memory_map.get_nonzero()), 1)
         self.assertIn(in_bounds, memory_map.get_nonzero())
+        self.assertTrue(np.array_equal(memory_map.get_nonzero_array(), [in_bounds]))
         loc = memory_map.get_location(250, 250)
         location = self.environment.get_location()
         self.assertEqual(loc, location)
@@ -79,7 +80,9 @@ class TestMemoryMap(EnvironmentTestCase):
         self.assertEqual(memory_map.get_index(location), idx)
         self.assertEqual(len(memory_map.get_nonzero()), 1)
         self.assertIn(idx, memory_map.get_nonzero())
+        self.assertTrue(np.array_equal(memory_map.get_nonzero_array(), [idx]))
         loc = memory_map.get_location(*idx)
+        self.assertEqual(memory_map.get_nonzero_locations()[0], loc)
         self.assertAlmostEqual(loc.north, location.north, delta=self.coord_delta)
         self.assertAlmostEqual(loc.east, location.east, delta=self.coord_delta)
         self.assertEqual(loc.down, location.down)

@@ -7,8 +7,11 @@ class Memory_Map(object):
 
     def __init__(self, environment, memory_size, resolution=1, altitude=0.0):
         """
-        Create a memory map with a given number of meters per dimension `memory_size`, number of entries per meter `resolution` at the operating altitude `altitude` in meters.
+        Create a memory map with a given number of meters per dimension
+        `memory_size`, number of entries per meter `resolution`
+        at the operating altitude `altitude` in meters.
         """
+
         self.environment = environment
         self.geometry = self.environment.get_geometry()
 
@@ -21,8 +24,9 @@ class Memory_Map(object):
         # The `bl` and `tr` are the first and last points that fit in the 
         # matrix in both dimensions, respectively. The bounds are based off 
         # from the current vehicle location.
-        self.bl = self.environment.get_location(-memory_size/2, -memory_size/2, self.altitude)
-        self.tr = self.environment.get_location(memory_size/2, memory_size/2, self.altitude)
+        offset = memory_size/2
+        self.bl = self.environment.get_location(-offset, -offset, self.altitude)
+        self.tr = self.environment.get_location(offset, offset, self.altitude)
 
         dlat, dlon, dalt = self.geometry.diff_location_meters(self.bl, self.tr)
         self.dlat = dlat
@@ -32,37 +36,44 @@ class Memory_Map(object):
         """
         Get the number of entries in each dimension.
         """
+
         return self.size
 
     def get_resolution(self):
         """
         Get the number of entries per meter in each dimension.
         """
+
         return self.resolution
 
     def get_index(self, loc):
         """
-        Convert location coordinates to indices for a two-dimensional matrix.
+        Convert a location `loc` to indices for a two-dimensional matrix.
         """
+
         dlat, dlon, dalt = self.geometry.diff_location_meters(self.bl, loc)
         y = (dlat / self.dlat) * self.size
         x = (dlon / self.dlon) * self.size
-        return (int(y),int(x))
+        return (int(y), int(x))
 
     def get_xy_index(self, loc):
         """
-        Convert location coordinates to indices for plotting (x,y).
+        Convert a location `loc` to indices for plotting (x,y).
 
-        For any positioning other than displaying an image, matplotlib assumes the value is given in (x,y) order instead of (y,x).
+        For any positioning other than displaying an image, matplotlib assumes
+        the value is given in (x,y) order instead of (y,x).
         """
+
         return tuple(reversed(self.get_index(loc)))
 
     def index_in_bounds(self, i, j):
         """
         Check whether a given index is within the bounds of the memory map.
 
-        The two-dimensional index is given separately as `i` and `j`, corresponding to y and x coordinates, respectively.
+        The two-dimensional index is given separately as `i` and `j`,
+        corresponding to y and x coordinates, respectively.
         """
+
         if 0 <= i < self.size and 0 <= j < self.size:
             return True
 
@@ -70,17 +81,18 @@ class Memory_Map(object):
 
     def location_in_bounds(self, loc):
         """
-        Check whether a given location `loc` is within the bounds of the memory map.
+        Check whether a location `loc` is within the bounds of the memory map.
         """
+
         return self.index_in_bounds(*self.get_index(loc))
 
     def get(self, idx):
         """
         Retrieve the memory map value for a given index `idx`.
 
-        The index is given as a sequence type.
-        If the index is not within the bounds of the map, a `KeyError` is raised.
-        Otherwise, the value in the map is returned.
+        The index is given as a sequence type (y,x).
+        If the index is not within the bounds of the map, this method raises
+        a `KeyError`. Otherwise, the numeric value in the map is returned.
         """
         i,j = idx
         if self.index_in_bounds(i,j):
@@ -93,9 +105,10 @@ class Memory_Map(object):
         Set the memory map value for a given index `idx` to a numerical `value`.
 
         The index is given as a sequence type.
-        If the index is not within the bounds of the map, a `KeyError` is raised.
-        Otherwise, the value is set within the map.
+        If the index is not within the bounds of the map, this method raises
+        a `KeyError`. Otherwise, the value is set within the map.
         """
+
         i,j = idx
         if self.index_in_bounds(i,j):
             self.map[i,j] = value
@@ -110,31 +123,53 @@ class Memory_Map(object):
         The given location is at the same altitude as the memory map.
         It might be an imprecise location for the grid index.
         """
-        return self.geometry.get_location_meters(self.bl, i/float(self.resolution), j/float(self.resolution))
+
+        return self.geometry.get_location_meters(self.bl,
+                                                 i/float(self.resolution),
+                                                 j/float(self.resolution))
 
     def get_map(self):
         """
         Retrieve a numpy array containing the memory map values.
         """
+
         return self.map
 
     def get_nonzero(self):
         """
-        Retrieve the indices where the map is nonzero, i.e. there is an object.
+        Retrieve the indices of the map where there is an object.
+
+        An object has a value of 1 stored in the map index.
+
+        Returns a list of tuple indices.
         """
+
         return zip(*np.nonzero(self.map == 1))
+
+    def get_nonzero_array(self):
+        """
+        Retrieve an array of indices of the map where there is an object.
+
+        Returns a numpy array with 2 columns with one index per row.
+        """
+
+        return np.array(np.nonzero(self.map == 1)).T
 
     def get_nonzero_locations(self):
         """
-        Retrieve Location objects for the indices where there is an object.
+        Retrieve location objects for the indices where there is an object.
         """
+
         return [self.get_location(*idx) for idx in self.get_nonzero()]
 
     def handle_sensor(self, sensor_distance, angle):
         """
-        Given a distance sensor's measured distance `sensor_distance` and its current angle `angle`, add the detected point to the memory map.
+        Add a detected object point to the map, given a distance sensor's
+        measured distance `sensor_distance` and its current angle `angle`.
+
         Returns the calculated location of the detected point.
         """
+
         # Estimate the location of the point based on the distance from the 
         # distance sensor as well as our own angle.
         location = self.environment.get_location()
