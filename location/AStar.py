@@ -8,6 +8,7 @@ class AStar(object):
 
     def __init__(self, geometry, memory_map):
         self._geometry = geometry
+        self._neighbors = self._geometry.get_neighbor_offsets()
         self._memory_map = memory_map
         self._resolution = float(self._memory_map.get_resolution())
         self._size = self._memory_map.get_size()
@@ -23,7 +24,22 @@ class AStar(object):
 
         start_idx = self._memory_map.get_index(start)
         goal_idx = self._memory_map.get_index(goal)
+
+        # Calculate the regions of influence of the objects in the memory map.
+        # We consider these regions to be too close and thus unsafe.
         nonzero = self._memory_map.get_nonzero_array()
+        # The closeness radius in memory map coordinate units
+        radius = (closeness * self._resolution)**2
+        close = np.zeros((self._size, self._size))
+        for idx in nonzero:
+            # Center of the mask
+            a, b = idx
+            # Open meshlike grid
+            y, x = np.ogrid[-a:self._size-a, -b:self._size-b]
+            # The circular mask of the region of influence of the object. This 
+            # region is too close to that object.
+            mask = x*x + y*y <= radius
+            close[mask] = 1
 
         evaluated = set()
         open_nodes = set([start_idx])
@@ -40,35 +56,47 @@ class AStar(object):
 
         while open_nodes:
             # Get the node in open_nodes with the lowest f score
-            open_idx = [idx for idx in open_nodes]
-            min_idx = np.argmin(f[[idx[0] for idx in open_idx], [idx[1] for idx in open_idx]])
-            current_idx = open_idx[min_idx]
+            open_indices = zip(*open_nodes)
+            min_idx = np.argmin(f[open_indices])
+            current_idx = (open_indices[0][min_idx], open_indices[1][min_idx])
+
+            # If we reached the goal index, then we have found the fastest 
+            # safest path to it, thus reconstruct this path.
             if current_idx == goal_idx:
                 return self._reconstruct(came_from, goal_idx)
 
+            # Evaluate the new node
             open_nodes.remove(current_idx)
             evaluated.add(current_idx)
             current = self._memory_map.get_location(*current_idx)
-            for neighbor_idx in self._get_neighbors(current_idx):
+            for neighbor_coord in self._get_neighbors(current_idx):
+                # Create the neighbor index and check whether we have evaluated 
+                # it before.
+                neighbor_idx = tuple(neighbor_coord)
                 if neighbor_idx in evaluated:
                     continue
 
-                try:
-                    if self._memory_map.get(neighbor_idx) == 1:
-                        continue
-                except KeyError:
+                # Check whether the neighbor index is still in bounds. We can 
+                # break if it is not in bounds, because that means that the 
+                # current location is close to the memory map bounds, which 
+                # could be considered unsafe.
+                if not self._memory_map.index_in_bounds(*neighbor_idx):
                     break
 
-                if self._is_too_close(neighbor_idx, nonzero, closeness):
+                # Check whether the neighbor index is inside the region of 
+                # influence of any other object.
+                if close[neighbor_idx]:
                     continue
 
+                # Calculate the new tentative distances to the point
                 neighbor = self._memory_map.get_location(*neighbor_idx)
                 tentative_g = g[current_idx] + self._get_cost(current, neighbor)
-                open_nodes.add(neighbor_idx)
                 if tentative_g >= g[neighbor_idx]:
-                    # Not a better path
+                    # Not a better path, thus we do not need to update anything 
+                    # for this neighbor which has a different, faster path.
                     continue
 
+                open_nodes.add(neighbor_idx)
                 came_from[neighbor_idx] = current_idx
                 g[neighbor_idx] = tentative_g
                 f[neighbor_idx] = tentative_g + self._get_cost(neighbor, goal)
@@ -101,14 +129,7 @@ class AStar(object):
         return list(reversed(total_path))
 
     def _get_neighbors(self, current):
-        y, x = current
-        return [(y-1, x-1), (y-1, x), (y-1, x+1),
-                (y, x-1),             (y, x+1),
-                (y+1, x-1), (y+1, x), (y+1, x+1)]
-
-    def _is_too_close(self, current, nonzero, closeness):
-        diff = (current - nonzero) / self._resolution
-        return any(np.sqrt((diff**2).sum(axis=1)) < closeness)
+        return current + self._neighbors
 
     def _get_cost(self, start, goal):
         return self._geometry.get_distance_meters(start, goal)
