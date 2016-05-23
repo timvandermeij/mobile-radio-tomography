@@ -31,3 +31,13 @@ class TestAStar(EnvironmentTestCase):
                                  LocationLocal(4,4,self.altitude),
                                  1/float(self.resolution))
         self.assertNotEqual(path, [])
+
+    def test_assign_impossible(self):
+        for i in xrange(0, 21):
+            self.memory_map.set((i,20), 1)
+            self.memory_map.set((20,i), 1)
+
+        path = self.astar.assign(LocationLocal(0,0,self.altitude),
+                                 LocationLocal(5,5,self.altitude),
+                                 1/float(self.resolution))
+        self.assertEqual(path, [])

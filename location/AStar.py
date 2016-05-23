@@ -1,4 +1,3 @@
-import math
 import numpy as np
 
 class AStar(object):
@@ -24,7 +23,7 @@ class AStar(object):
 
         start_idx = self._memory_map.get_index(start)
         goal_idx = self._memory_map.get_index(goal)
-        nonzero = self._memory_map.get_nonzero()
+        nonzero = self._memory_map.get_nonzero_array()
 
         evaluated = set()
         open_nodes = set([start_idx])
@@ -108,14 +107,8 @@ class AStar(object):
                 (y+1, x-1), (y+1, x), (y+1, x+1)]
 
     def _is_too_close(self, current, nonzero, closeness):
-        for idx in nonzero:
-            # Calculate the distance between the nonzero indices in the memory 
-            # map. Speed up by doing locally.
-            dist = math.sqrt(((current[0] - idx[0])/self._resolution)**2 + ((current[1] - idx[1])/self._resolution)**2)
-            if dist < closeness:
-                return True
-
-        return False
+        diff = (current - nonzero) / self._resolution
+        return any(np.sqrt((diff**2).sum(axis=1)) < closeness)
 
     def _get_cost(self, start, goal):
         return self._geometry.get_distance_meters(start, goal)
