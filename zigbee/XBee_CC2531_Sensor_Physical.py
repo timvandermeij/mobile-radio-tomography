@@ -1,7 +1,5 @@
 import random
 import struct
-import time
-from XBee_Packet import XBee_Packet
 from XBee_Sensor_Physical import XBee_Sensor_Physical
 
 class CC2531_Packet(object):
@@ -48,33 +46,10 @@ class XBee_CC2531_Sensor_Physical(XBee_Sensor_Physical):
 
             self._cc2531_serial_connection.write(struct.pack("<HH", CC2531_Packet.TX, destination))
 
-    def _process_rx(self, raw_packet):
+    def _process_rssi_broadcast_packet(self, packet):
         """
-        Process RX packets and handle NTP and RSSI requests.
+        Process a received packet with RSSI measurements.
         """
-
-        packet = XBee_Packet()
-        packet.unserialize(raw_packet["rf_data"])
-
-        if self._check_receive(packet):
-            return
-
-        if packet.get("specification") == "ntp":
-            if packet.get("timestamp_2") == 0:
-                packet.set("timestamp_2", time.time())
-                packet.set("timestamp_3", time.time())
-                self._send_tx_frame(packet, packet.get("sensor_id"))
-            else:
-                packet.set("timestamp_4", time.time())
-                self._ntp(packet)
-
-            return
-
-        if self._id == 0:
-            if self._buffer is not None:
-                self._buffer.put(packet)
-
-            return
 
         # Synchronize the scheduler using the timestamp in the packet.
         self._next_timestamp = self._scheduler.synchronize(packet)

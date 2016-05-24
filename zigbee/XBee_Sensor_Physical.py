@@ -226,21 +226,34 @@ class XBee_Sensor_Physical(XBee_Sensor):
         Process RX packets and handle NTP and RSSI requests.
         """
 
+        # Convert the raw packet to an XBee packet according to specifications.
         packet = XBee_Packet()
         packet.unserialize(raw_packet["rf_data"])
 
+        # Check whether the packet is not private and pass it along to the 
+        # receive callback.
         if self._check_receive(packet):
             return
 
+        # Handle NTP synchronization packets.
         if packet.get("specification") == "ntp":
             self._ntp.process(packet)
             return
 
+        # Handle a RSSI ground station packet.
         if self._id == 0:
             if self._buffer is not None:
                 self._buffer.put(packet)
 
             return
+
+        # Handle a received RSSI broadcast packet.
+        self._process_rssi_broadcast_packet(packet)
+
+    def _process_rssi_broadcast_packet(self, packet):
+        """
+        Process a received packet with RSSI measurements.
+        """
 
         # Synchronize the scheduler using the timestamp in the packet.
         self._next_timestamp = self._scheduler.synchronize(packet)
