@@ -201,71 +201,87 @@ class XBee_Sensor_Physical(XBee_Sensor):
         """
 
         if raw_packet["id"] == "rx":
-            packet = XBee_Packet()
-            packet.unserialize(raw_packet["rf_data"])
-
-            if self._check_receive(packet):
-                return
-
-            if packet.get("specification") == "ntp":
-                self._ntp.process(packet)
-                return
-
-            if self._id == 0:
-                if self._buffer is not None:
-                    self._buffer.put(packet)
-
-                return
-
-            # Synchronize the scheduler using the timestamp in the packet.
-            self._next_timestamp = self._scheduler.synchronize(packet)
-
-            # Create the packet for the ground station.
-            ground_station_packet = self._make_rssi_ground_station_packet(packet)
-
-            # Generate a frame ID to be able to match this packet and the
-            # associated RSSI (DB command) request.
-            frame_id = chr(random.randint(1, 255))
-            self._data[frame_id] = ground_station_packet
-
-            # Request the RSSI value for the received packet.
-            self._sensor.send("at", command="DB", frame_id=frame_id)
+            self._process_rx(raw_packet)
         elif raw_packet["id"] == "at_response":
-            if raw_packet["command"] == "DB":
-                # RSSI value has been received. Update the original packet.
-                if raw_packet["frame_id"] in self._data:
-                    original_packet = self._data[raw_packet["frame_id"]]
-                    original_packet.set("rssi", -ord(raw_packet["parameter"]))
-            elif raw_packet["command"] == "SH":
-                # Serial number (high) has been received.
-                if self._address is None:
-                    self._address = raw_packet["parameter"]
-                elif raw_packet["parameter"] not in self._address:
-                    self._address = raw_packet["parameter"] + self._address
-                    self._address_set = True
-            elif raw_packet["command"] == "SL":
-                # Serial number (low) has been received.
-                if self._address is None:
-                    self._address = raw_packet["parameter"]
-                elif raw_packet["parameter"] not in self._address:
-                    self._address = self._address + raw_packet["parameter"]
-                    self._address_set = True
-            elif raw_packet["command"] == "NI":
-                # Node identifier has been received.
-                self._id = int(raw_packet["parameter"])
-                self._scheduler.id = self._id
-                self._node_identifier_set = True
-            elif raw_packet["command"] == "AI":
-                # Association indicator has been received.
-                if raw_packet["parameter"] == "\x00":
-                    self._joined = True
-            elif raw_packet["command"] == "ND":
-                # Node discovery packet has been received.
-                packet = raw_packet["parameter"]
-                self._discovery_callback({
-                    "id": int(packet["node_identifier"]),
-                    "address": self._format_address(packet["source_addr_long"])
-                })
+            self._process_at_response(raw_packet)
+
+    def _process_rx(self, raw_packet):
+        """
+        Process RX packets and handle NTP and RSSI requests.
+        """
+
+        packet = XBee_Packet()
+        packet.unserialize(raw_packet["rf_data"])
+
+        if self._check_receive(packet):
+            return
+
+        if packet.get("specification") == "ntp":
+            self._ntp.process(packet)
+            return
+
+        if self._id == 0:
+            if self._buffer is not None:
+                self._buffer.put(packet)
+
+            return
+
+        # Synchronize the scheduler using the timestamp in the packet.
+        self._next_timestamp = self._scheduler.synchronize(packet)
+
+        # Create the packet for the ground station.
+        ground_station_packet = self._make_rssi_ground_station_packet(packet)
+
+        # Generate a frame ID to be able to match this packet and the
+        # associated RSSI (DB command) request.
+        frame_id = chr(random.randint(1, 255))
+        self._data[frame_id] = ground_station_packet
+
+        # Request the RSSI value for the received packet.
+        self._sensor.send("at", command="DB", frame_id=frame_id)
+
+    def _process_at_response(self, raw_packet):
+        """
+        Process AT response packets, for example for setting the node
+        identifier and getting the RSSI value.
+        """
+
+        if raw_packet["command"] == "DB":
+            # RSSI value has been received. Update the original packet.
+            if raw_packet["frame_id"] in self._data:
+                original_packet = self._data[raw_packet["frame_id"]]
+                original_packet.set("rssi", -ord(raw_packet["parameter"]))
+        elif raw_packet["command"] == "SH":
+            # Serial number (high) has been received.
+            if self._address is None:
+                self._address = raw_packet["parameter"]
+            elif raw_packet["parameter"] not in self._address:
+                self._address = raw_packet["parameter"] + self._address
+                self._address_set = True
+        elif raw_packet["command"] == "SL":
+            # Serial number (low) has been received.
+            if self._address is None:
+                self._address = raw_packet["parameter"]
+            elif raw_packet["parameter"] not in self._address:
+                self._address = self._address + raw_packet["parameter"]
+                self._address_set = True
+        elif raw_packet["command"] == "NI":
+            # Node identifier has been received.
+            self._id = int(raw_packet["parameter"])
+            self._scheduler.id = self._id
+            self._node_identifier_set = True
+        elif raw_packet["command"] == "AI":
+            # Association indicator has been received.
+            if raw_packet["parameter"] == "\x00":
+                self._joined = True
+        elif raw_packet["command"] == "ND":
+            # Node discovery packet has been received.
+            packet = raw_packet["parameter"]
+            data = {
+                "id": int(packet["node_identifier"]),
+                "address": self._format_address(packet["source_addr_long"])
+            }
+            self._discovery_callback(data)
 
     def _format_address(self, address):
         """
