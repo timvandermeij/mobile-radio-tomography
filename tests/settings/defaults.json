@@ -21,6 +21,12 @@
                 "type": "list",
                 "default": [1, 2, 3],
                 "subtype": "int"
+            },
+            "select": {
+                "type": "string",
+                "choices": ["a", "b", "c"],
+                "default": "b",
+                "required": false
             }
         }
     },

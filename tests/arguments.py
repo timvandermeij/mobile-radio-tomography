@@ -77,6 +77,23 @@ class TestArguments(SettingsTestCase):
         child = arguments.get_settings("child")
         self.assertTrue(child.get("baz"))
 
+    def test_required_settings(self):
+        arguments = Arguments("tests/settings/settings.json", ['--long-name'],
+                              defaults_file="tests/settings/defaults.json")
+
+        # Buffer help output so it doesn't mess up the test output and we can 
+        # actually test whether it prints help.
+        output = StringIO()
+        with patch('sys.stdout', output):
+            with patch('sys.stderr', output):
+                # Test whether the argument parser calls sys.exit on help.
+                # This can be caught as an exception.
+                with self.assertRaises(SystemExit):
+                    settings = arguments.get_settings("foo")
+                    arguments.check_help()
+
+        self.assertRegexpMatches(output.getvalue(), "expected one argument")
+
     def test_nonexistent_settings(self):
         arguments = Arguments("tests/settings/settings.json", ['--qux', '42'],
                               defaults_file="tests/settings/defaults.json")
@@ -99,6 +116,15 @@ class TestArguments(SettingsTestCase):
         info = {"help": "Help text"}
         self.assertEqual(arguments.get_help("okey", info), info["help"])
         self.assertEqual(arguments.get_help("long_setting", {}), "Long setting")
+
+    def test_choices(self):
+        arguments = Arguments("tests/settings/settings.json", ['--select='],
+                              defaults_file="tests/settings/defaults.json")
+
+        # It is possible to select an empty default when the setting is not 
+        # required.
+        settings = arguments.get_settings("foo")
+        self.assertEqual(settings.get("select"), "")
 
     def test_get_choices(self):
         arguments = Arguments("tests/settings/settings.json", [],

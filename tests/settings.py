@@ -58,7 +58,8 @@ class TestSettings(SettingsTestCase):
             "bar": 2,
             "baz": True,
             "long_name": "new_text",
-            "items": [1, 2, 3]
+            "items": [1, 2, 3],
+            "select": "b"
         }
         for key, value in settings.get_all():
             self.assertEqual(value, expected[key])
@@ -95,6 +96,13 @@ class TestSettings(SettingsTestCase):
                 "default": [1, 2, 3],
                 "value": [1, 2, 3],
                 "subtype": "int"
+            },
+            "select": {
+                "type": "string",
+                "choices": ["a", "b", "c"],
+                "default": "b",
+                "value": "b",
+                "required": False
             }
         }
         for key, value in settings.get_info():
@@ -108,7 +116,7 @@ class TestSettings(SettingsTestCase):
     def test_keys(self):
         settings = Settings("tests/settings/settings.json", "foo",
                             defaults_file="tests/settings/defaults.json")
-        expected = set(("bar", "baz", "long_name", "items"))
+        expected = set(("bar", "baz", "long_name", "items", "select"))
         for key in settings.keys():
             self.assertIn(key, expected)
             # Disallow key to be multiple times in iterator, and test afterward 
@@ -134,6 +142,9 @@ class TestSettings(SettingsTestCase):
                             defaults_file="tests/settings/defaults.json")
         with self.assertRaisesRegexp(ValueError, "nonempty"):
             settings.set("long_name", "")
+
+        # Non-required settings can be set to empty value.
+        settings.set("select", "")
 
     def test_min_max_set(self):
         settings = Settings("tests/settings/settings.json", "foo",
