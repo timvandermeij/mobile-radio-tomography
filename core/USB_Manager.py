@@ -4,14 +4,17 @@ import serial
 class USB_Device_Fingerprint(object):
     XBEE = ["0403", "6015"]
     TTL = ["1a86", "7523"]
+    CC2531 = ["0451", "16a8"]
 
 class USB_Device_Category(object):
     XBEE = 1
     TTL = 2
+    CC2531 = 3
 
 class USB_Device_Baud_Rate(object):
     XBEE = 57600
     TTL = 9600
+    CC2531 = 38400
 
 class USB_Device(object):
     def __init__(self):
@@ -26,9 +29,19 @@ class USB_Manager(object):
         Initialize the USB manager.
         """
 
+        self._reset()
+
+    def _reset(self):
+        """
+        Reset internal state of the USB manager index.
+
+        Use `clear` to ensure all serial objects are closed.
+        """
+
         self._devices = {
             USB_Device_Category.XBEE: [],
-            USB_Device_Category.TTL: []
+            USB_Device_Category.TTL: [],
+            USB_Device_Category.CC2531: []
         }
 
     def index(self):
@@ -45,6 +58,9 @@ class USB_Manager(object):
             elif fingerprint == USB_Device_Fingerprint.TTL:
                 baud_rate = USB_Device_Baud_Rate.TTL
                 category = USB_Device_Category.TTL
+            elif fingerprint == USB_Device_Fingerprint.CC2531:
+                baud_rate = USB_Device_Baud_Rate.CC2531
+                category = USB_Device_Category.CC2531
             else:
                 continue
 
@@ -78,6 +94,14 @@ class USB_Manager(object):
         """
 
         return self._get_device(USB_Device_Category.TTL, path)
+
+    def get_cc2531_device(self, path=None):
+        """
+        Get the first available CC2531 device. If `path` is provided, get the
+        TTL device with its path equal to `path`.
+        """
+
+        return self._get_device(USB_Device_Category.CC2531, path)
 
     def _get_device(self, category, path):
         """
@@ -126,7 +150,4 @@ class USB_Manager(object):
                 if serial_object is not None and serial_object.isOpen():
                     serial_object.close()
 
-        self._devices = {
-            USB_Device_Category.XBEE: [],
-            USB_Device_Category.TTL: []
-        }
+        self._reset()
