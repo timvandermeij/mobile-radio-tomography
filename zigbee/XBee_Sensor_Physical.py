@@ -43,7 +43,8 @@ class XBee_Sensor_Physical(XBee_Sensor):
         else:
             self._serial_connection = self._usb_manager.get_xbee_device()
 
-        self._sensor = ZigBee(self._serial_connection, callback=self._receive)
+        self._sensor = ZigBee(self._serial_connection, callback=self._receive,
+                              error_callback=self._error)
         time.sleep(self._settings.get("startup_delay"))
 
         self._identify()
@@ -105,7 +106,15 @@ class XBee_Sensor_Physical(XBee_Sensor):
             self._active = False
 
             if self._serial_connection is not None:
-                self._sensor.halt()
+                # Halt the internal xbee library thread to ensure that this 
+                # unregistered thread is also stopped.
+                # Only do so when the thread is still alive. For example, in 
+                # tests the connection may be started but not the thread. Then 
+                # the halt method may raise an exception about joining a thread 
+                # before it is started.
+                if self._sensor.is_alive():
+                    self._sensor.halt()
+
                 self._serial_connection = None
 
     def discover(self, callback):
@@ -194,6 +203,13 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
         self._sensor.send("tx", dest_addr_long=self._sensors[to], dest_addr="\xFF\xFE",
                           frame_id="\x00", data=packet.serialize())
+
+    def _error(self, e):
+        """
+        Handle an exception within the XBee sensor thread.
+        """
+
+        super(XBee_Sensor_Physical, self).interrupt()
 
     def _receive(self, raw_packet):
         """

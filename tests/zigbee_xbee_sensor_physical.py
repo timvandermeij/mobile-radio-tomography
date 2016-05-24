@@ -62,6 +62,8 @@ class TestZigBeeXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, Setti
 
         super(TestZigBeeXBeeSensorPhysical, self).tearDown()
 
+        self.check_remaining_threads()
+
     def mock_setup(self):
         """
         Mock the activation of the XBee sensor by setting it up and enabling
@@ -355,3 +357,36 @@ class TestZigBeeXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, Setti
         }
         self.sensor._receive(raw_packet)
         self.assertEqual(self.sensor._joined, True)
+
+    @patch.object(XBee_Sensor_Physical, "_receive", side_effect=ValueError)
+    @patch.object(XBee_Sensor_Physical, "_error")
+    def test_receive_error(self, error_mock, receive_mock):
+        packet = XBee_Packet()
+        packet.set("specification", "rssi_broadcast")
+        packet.set("latitude", 123456789.12)
+        packet.set("longitude", 123459678.34)
+        packet.set("valid", True)
+        packet.set("waypoint_index", 1)
+        packet.set("sensor_id", 2)
+        packet.set("timestamp", time.time())
+        raw_packet = {
+            "id": "rx",
+            "rf_data": packet.serialize()
+        }
+
+        # Patch the frame reading method of xbee.ZigBee to return our raw 
+        # packet so that we can check that the receive mock gets this packet.
+        # Patch the start method of xbee.ZigBee so that it does not acutally 
+        # start the thread, so we get a deterministic number of calls in the 
+        # run method of xbee.ZigBee.
+        with patch.object(ZigBee, "wait_read_frame", return_value=raw_packet):
+            with patch.object(ZigBee, "start"):
+                self.mock_setup()
+                self.sensor._sensor.run()
+
+                receive_mock.assert_called_once_with(raw_packet)
+
+                # Ensure that the error mock receives the exception from the 
+                # receive mock.
+                self.assertEqual(error_mock.call_count, 1)
+                self.assertIsInstance(error_mock.call_args[0][0], ValueError)
