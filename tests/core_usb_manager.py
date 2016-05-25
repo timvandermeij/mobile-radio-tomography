@@ -22,7 +22,7 @@ class USBManagerTestCase(unittest.TestCase):
         # Initialize the USB manager.
         self.usb_manager = USB_Manager()
 
-        # Create a virtual serial ports of the mocked USB devices.
+        # Create virtual serial ports for the mocked USB devices.
         slave_xbee = os.openpty()[1]
         self._xbee_port = os.ttyname(slave_xbee)
 

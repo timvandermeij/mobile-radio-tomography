@@ -240,7 +240,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
             self._ntp.process(packet)
             return
 
-        # Handle a RSSI ground station packet.
+        # Handle an RSSI ground station packet.
         if self._id == 0:
             if self._buffer is not None:
                 self._buffer.put(packet)
