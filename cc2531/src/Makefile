@@ -6,7 +6,7 @@ SDAS8051 = sdas8051
 
 # Include paths, object definitions and compilation flags
 ROOT = $(realpath .)
-CC_USB_ROOT = $(ROOT)/../lib/cc-usb-firmware/source/components
+CC_USB_ROOT = $(ROOT)/../lib/cc-usb-firmware
 MULTI_SPIN_ROOT = $(ROOT)/../lib/multi-spin-3.0
 INCLUDES =	-I$(MULTI_SPIN_ROOT) \
 			-I$(CC_USB_ROOT)/usb/class_cdc \

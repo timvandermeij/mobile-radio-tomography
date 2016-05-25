@@ -23,9 +23,12 @@ evaluation board:
 ## References
 
 This software is based on code from the following sources. Note that the libraries
-in this framework are not the full libraries as present on the following links,
-but have instead been stripped and edited for our purposes.
+in this framework are not the complete libraries as present on the following links,
+but they were stripped and edited for our purposes.
 
 - Radio tomography toolchain: https://github.com/timvandermeij/radio-tomography
+  (GPL v3 license)
 - multi-Spin 2.0: https://sites.google.com/site/boccamaurizio/home/software-data
-- Texas Instruments CC USB library: http://www.ti.com/lit/zip/swrc088
+  (GPL v3 license)
+- Texas Instruments CC USB firmware library: http://www.ti.com/lit/zip/swrc088
+  (separate license in all files)
