@@ -50,18 +50,13 @@ void usb_irq_handler() __interrupt 6 {
     usbirqHandler();
 }
 
-// Clear the RX buffer
-void clearRxBuffer() {
-    RFST = 0xED;
-}
-
-void main() {
+void initialize() {
+    // Initialize the board, LEDs and USB
     ledInit();
-
     halBoardInit();
     halUartInit(HAL_UART_BAUDRATE_38400);
 
-    // Set up the radio module
+    // Initialize the radio module
     rfConfig.addr = PAN;
     rfConfig.pan = PAN;
     rfConfig.channel = CHANNEL;
@@ -70,47 +65,62 @@ void main() {
 
     // Enable interrupts 
     EA = 1;
+}
+
+void processUsb() {
+    // Process incoming configuration or TX packets from the USB connection
+    ledOn(RED_LED);
+
+    halUartRead((uint8*)&id, sizeof(id));
+
+    switch(id) {
+        case CONFIGURATION_PACKET:
+            halUartRead((uint8*)&configurationPacket, sizeof(configurationPacket));
+            source = configurationPacket.source;
+            rfConfig.addr = PAN + source;
+            radioInit(&rfConfig);
+            break;
+
+        case TX_PACKET:
+            halUartRead((uint8*)&txPacket, sizeof(txPacket));
+            rxPacket.source = source;
+            sendPacket((char*)&rxPacket, sizeof(rxPacket), rfConfig.pan,
+                       PAN + txPacket.destination, rfConfig.addr);
+            break;
+    }
+
+    ledOff(RED_LED);
+}
+
+void processRadio() {
+    // Process incoming RX packets on the radio module (for RSSI measurements)
+    if(isPacketReady()) {
+        if(receivePacket((char*)&rxPacket, sizeof(rxPacket), &rssi) == sizeof(rxPacket)) {
+            ledOn(RED_LED);
+
+            // Clear the RX buffer
+            RFST = 0xED;
+
+            // Transfer the packet over USB
+            usbPacket.source = rxPacket.source;
+            usbPacket.rssi = rssi;
+            halUartWrite((uint8*)&usbPacket, sizeof(usbPacket));
+
+            ledOff(RED_LED);
+        }
+    }
+}
+
+void main() {
+    initialize();
 
     while(1) {
         HAL_PROCESS();
 
-        // Send packets
-        if (halUartGetNumRxBytes() > 0) {
-            ledOn(RED_LED);
-
-            halUartRead((uint8*)&id, sizeof(id));
-
-            switch(id) {
-                case CONFIGURATION_PACKET:
-                    halUartRead((uint8*)&configurationPacket, sizeof(configurationPacket));
-                    source = configurationPacket.source;
-                    rfConfig.addr = PAN + source;
-                    radioInit(&rfConfig);
-                    break;
-
-                case TX_PACKET:
-                    halUartRead((uint8*)&txPacket, sizeof(txPacket));
-                    rxPacket.source = source;
-                    sendPacket((char*)&rxPacket, sizeof(rxPacket), rfConfig.pan, PAN + txPacket.destination, rfConfig.addr);
-                    break;
-            }
-
-            ledOff(RED_LED);
+        if(halUartGetNumRxBytes() > 0) {
+            processUsb();
         }
 
-        // Receive packets
-        if(isPacketReady()) {
-            if(receivePacket((char*)&rxPacket, sizeof(rxPacket), &rssi) == sizeof(rxPacket)) {
-                ledOn(RED_LED);
-                clearRxBuffer();
-
-                // Transfer the packet over USB
-                usbPacket.source = rxPacket.source;
-                usbPacket.rssi = rssi;
-                halUartWrite((uint8*)&usbPacket, sizeof(usbPacket));
-
-                ledOff(RED_LED);
-            }
-        }
+        processRadio();
     }
 }
