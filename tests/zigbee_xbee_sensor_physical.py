@@ -62,8 +62,6 @@ class TestZigBeeXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, Setti
 
         super(TestZigBeeXBeeSensorPhysical, self).tearDown()
 
-        self.check_remaining_threads()
-
     def mock_setup(self):
         """
         Mock the activation of the XBee sensor by setting it up and enabling

@@ -140,19 +140,16 @@ class TestArguments(SettingsTestCase):
         modules = {
             "mock_module": mock_module
         }
-        patcher = patch.dict('sys.modules', modules)
-        patcher.start()
-        info = {"keys": ["mock_module", "mock_member"]}
-        self.assertEqual(arguments.get_choices(info), expected)
-        mock_module.mock_member.keys.assert_called_once_with()
-        patcher.stop()
+        with patch.dict('sys.modules', modules):
+            info = {"keys": ["mock_module", "mock_member"]}
+            self.assertEqual(arguments.get_choices(info), expected)
+            mock_module.mock_member.keys.assert_called_once_with()
 
         expected = ['c', 'd']
         mock_module = MagicMock(__all__=expected)
         modules = {
             __package__.split('.')[0] + ".mock_module": mock_module
         }
-        patcher = patch.dict('sys.modules', modules)
-        patcher.start()
-        info = {"module": "mock_module"}
-        self.assertEqual(arguments.get_choices(info), expected)
+        with patch.dict('sys.modules', modules):
+            info = {"module": "mock_module"}
+            self.assertEqual(arguments.get_choices(info), expected)
