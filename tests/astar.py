@@ -27,9 +27,9 @@ class TestAStar(EnvironmentTestCase):
     def test_assign(self):
         self.memory_map.set((0,20), 1)
         self.memory_map.set((20,0), 1)
-        path = self.astar.assign(LocationLocal(0,0,self.altitude),
-                                 LocationLocal(4,4,self.altitude),
-                                 1/float(self.resolution))
+        path = self.astar.assign(LocationLocal(0, 0, self.altitude),
+                                 LocationLocal(4, 4, self.altitude),
+                                 1.0)
         self.assertNotEqual(path, [])
 
     def test_assign_impossible(self):
@@ -37,7 +37,35 @@ class TestAStar(EnvironmentTestCase):
             self.memory_map.set((i,20), 1)
             self.memory_map.set((20,i), 1)
 
-        path = self.astar.assign(LocationLocal(0,0,self.altitude),
-                                 LocationLocal(5,5,self.altitude),
+        path = self.astar.assign(LocationLocal(0, 0, self.altitude),
+                                 LocationLocal(5, 5, self.altitude),
                                  1/float(self.resolution))
         self.assertEqual(path, [])
+
+class TestAStarGrid(EnvironmentTestCase):
+    def setUp(self):
+        self.register_arguments([
+            "--vehicle-class", "Mock_Vehicle",
+            "--geometry-class", "Geometry_Grid"
+        ], use_infrared_sensor=False)
+
+        super(TestAStarGrid, self).setUp()
+
+        self.size = 10
+        self.resolution = 1
+        self.altitude = 4.0
+        self.memory_map = Memory_Map(self.environment, self.size,
+                                     self.resolution, self.altitude)
+        self.astar = AStar(self.environment.get_geometry(), self.memory_map,
+                           allow_at_bounds=True)
+
+    def test_assign_grid(self):
+        n = self.size
+        for i in xrange(1, n-1):
+            for j in xrange(1, n-1):
+                self.memory_map.set((i,j), 1)
+
+        path = self.astar.assign(LocationLocal(-n/2, -n/2, self.altitude),
+                                 LocationLocal(n/2-1, n/2-1, self.altitude),
+                                 1/float(self.resolution))
+        self.assertNotEqual(path, [])

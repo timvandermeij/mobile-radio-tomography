@@ -6,10 +6,13 @@ class AStar(object):
     paths and detected objects.
     """
 
-    def __init__(self, geometry, memory_map):
+    def __init__(self, geometry, memory_map, allow_at_bounds=False):
         self._geometry = geometry
-        self._neighbors = self._geometry.get_neighbor_offsets()
         self._memory_map = memory_map
+
+        self._allow_at_bounds = allow_at_bounds
+
+        self._neighbors = self._geometry.get_neighbor_offsets()
         self._resolution = float(self._memory_map.get_resolution())
         self._size = self._memory_map.get_size()
 
@@ -38,7 +41,7 @@ class AStar(object):
             y, x = np.ogrid[-a:self._size-a, -b:self._size-b]
             # The circular mask of the region of influence of the object. This 
             # region is too close to that object.
-            mask = x*x + y*y <= radius
+            mask = x*x + y*y < radius
             close[mask] = 1
 
         evaluated = set()
@@ -79,9 +82,13 @@ class AStar(object):
                 # Check whether the neighbor index is still in bounds. We can 
                 # break if it is not in bounds, because that means that the 
                 # current location is close to the memory map bounds, which 
-                # could be considered unsafe.
+                # could be considered unsafe. But if we want to have to 
+                # possibility to move at the boundary, then continue instead.
                 if not self._memory_map.index_in_bounds(*neighbor_idx):
-                    break
+                    if self._allow_at_bounds:
+                        continue
+                    else:
+                        break
 
                 # Check whether the neighbor index is inside the region of 
                 # influence of any other object.
