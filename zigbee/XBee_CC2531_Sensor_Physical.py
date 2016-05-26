@@ -7,17 +7,6 @@ class CC2531_Packet(object):
     TX = 2
 
 class XBee_CC2531_Sensor_Physical(XBee_Sensor_Physical):
-    def __init__(self, arguments, thread_manager, usb_manager,
-                 location_callback, receive_callback, valid_callback):
-        """
-        Initialize the physical XBee sensor working with the CC2531
-        USB dongle for RSSI measurements.
-        """
-
-        super(XBee_CC2531_Sensor_Physical, self).__init__(arguments, thread_manager,
-                                                          usb_manager, location_callback,
-                                                          receive_callback, valid_callback)
-
     def setup(self):
         """
         Setup the serial connection and identify the sensor.
