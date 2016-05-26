@@ -20,11 +20,6 @@ from settings import SettingsTestCase
 
 class TestZigBeeXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTestCase):
     def location_callback(self):
-        """
-        Get the current GPS location (latitude and longitude pair) and the
-        current waypoint index.
-        """
-
         return (random.uniform(1.0, 50.0), random.uniform(1.0, 50.0)), random.randint(0, 5)
 
     def receive_callback(self, packet):
@@ -38,21 +33,14 @@ class TestZigBeeXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, Setti
 
         self.sensor_id = 1
 
-        self.arguments = Arguments("settings.json", [
-            "--port", self._xbee_port,
-            "--sensors", "sensor_0", "sensor_1", "sensor_2", "sensor_3",
-            "sensor_4", "sensor_5", "sensor_6", "sensor_7", "sensor_8"
-        ])
+        self.arguments = Arguments("settings.json", ["--port", self._xbee_port])
         self.settings = self.arguments.get_settings("xbee_sensor_physical")
         self.thread_manager = Thread_Manager()
 
         self.usb_manager.index()
-        self.sensor = XBee_Sensor_Physical(self.arguments,
-                                           self.thread_manager,
-                                           self.usb_manager,
-                                           self.location_callback,
-                                           self.receive_callback,
-                                           self.valid_callback)
+        self.sensor = XBee_Sensor_Physical(self.arguments, self.thread_manager,
+                                           self.usb_manager, self.location_callback,
+                                           self.receive_callback, self.valid_callback)
         self.sensor._id = self.sensor_id
 
     def tearDown(self):

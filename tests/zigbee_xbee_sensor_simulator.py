@@ -13,11 +13,6 @@ from settings import SettingsTestCase
 
 class TestZigBeeXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
     def location_callback(self):
-        """
-        Get the current GPS location (latitude and longitude pair) and the
-        current waypoint index.
-        """
-
         return (random.uniform(1.0, 50.0), random.uniform(1.0, 50.0)), random.randint(0, 5)
 
     def receive_callback(self, packet):
@@ -33,12 +28,9 @@ class TestZigBeeXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
         self.arguments = Arguments("settings.json", ["--xbee-id", "1"])
         self.settings = self.arguments.get_settings("xbee_sensor_simulator")
         self.thread_manager = Thread_Manager()
-        self.sensor = XBee_Sensor_Simulator(self.arguments,
-                                            self.thread_manager,
-                                            None,
-                                            self.location_callback,
-                                            self.receive_callback,
-                                            self.valid_callback)
+        self.sensor = XBee_Sensor_Simulator(self.arguments, self.thread_manager,
+                                            None, self.location_callback,
+                                            self.receive_callback, self.valid_callback)
 
         # Mock the activation of the sensor by calling `setup` ourselves and 
         # putting it in the active state. This does not actually start the 
