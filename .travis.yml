@@ -11,6 +11,7 @@ install:
   - pip install PyVRML97
   - pip install PyDispatcher
   - pip install importchecker
+  - pip install coverage
   - pip install pyudev
 script: make test
 notifications:
