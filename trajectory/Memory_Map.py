@@ -18,8 +18,9 @@ class Memory_Map(object):
         # The number of entries per dimension
         self.size = int(memory_size * resolution)
         self.resolution = resolution
-        self.map = np.zeros((self.size, self.size))
         self.altitude = altitude
+
+        self.clear()
 
         # The `bl` and `tr` are the first and last points that fit in the 
         # matrix in both dimensions, respectively. The bounds are based off 
@@ -31,6 +32,13 @@ class Memory_Map(object):
         dlat, dlon, dalt = self.geometry.diff_location_meters(self.bl, self.tr)
         self.dlat = dlat
         self.dlon = dlon
+
+    def clear(self):
+        """
+        Clear the memory map.
+        """
+
+        self.map = np.zeros((self.size, self.size))
 
     def get_size(self):
         """

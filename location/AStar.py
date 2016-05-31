@@ -22,7 +22,11 @@ class AStar(object):
         the vehicle from the Location `start` to the Location `goal` while not
         going through objects or getting closer than `closeness` meters to them.
 
-        If no such assignment can be found, then an empty list is returned.
+        When a safe and fast path is found, then it returns the list of
+        Locations that describe path waypoints and the distance cost.
+
+        If no such assignment can be found, then an empty list and infinity is
+        returned.
         """
 
         start_idx = self._memory_map.get_index(start)
@@ -66,7 +70,7 @@ class AStar(object):
             # If we reached the goal index, then we have found the fastest 
             # safest path to it, thus reconstruct this path.
             if current_idx == goal_idx:
-                return self._reconstruct(came_from, goal_idx)
+                return self._reconstruct(came_from, goal_idx), g[goal_idx]
 
             # Evaluate the new node
             open_nodes.remove(current_idx)
@@ -82,8 +86,8 @@ class AStar(object):
                 # Check whether the neighbor index is still in bounds. We can 
                 # break if it is not in bounds, because that means that the 
                 # current location is close to the memory map bounds, which 
-                # could be considered unsafe. But if we want to have to 
-                # possibility to move at the boundary, then continue instead.
+                # could be considered unsafe. But if we have the possibility to 
+                # move at the boundary, then try the next neighbor instead.
                 if not self._memory_map.index_in_bounds(*neighbor_idx):
                     if self._allow_at_bounds:
                         continue
@@ -108,7 +112,7 @@ class AStar(object):
                 g[neighbor_idx] = tentative_g
                 f[neighbor_idx] = tentative_g + self._get_cost(neighbor, goal)
 
-        return []
+        return [], np.inf
 
     def _reconstruct(self, came_from, current):
         # The path from goal point `current` to the start (in reversed form) 

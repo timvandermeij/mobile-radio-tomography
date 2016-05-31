@@ -115,4 +115,5 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
         closeness = min(self.sensor_dist - self.padding,
                         self.padding + self.closeness)
 
-        return self._astar.assign(start, goal, closeness)
+        path, distance = self._astar.assign(start, goal, closeness)
+        return path
