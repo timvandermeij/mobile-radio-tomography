@@ -116,13 +116,29 @@ class USB_Manager(object):
 
     def clear(self):
         """
-        Clear the list of USB devices and destroy any associated serial objects.
+        Clear the list of USB devices and destroy any associated serial objects,
+        canceling all operations and closing the connections.
         """
 
         for category in self._devices:
             for device in self._devices[category]:
-                if device.serial_object is not None and device.serial_object.isOpen():
-                    device.serial_object.close()
+                serial_object = device.serial_object
+                if serial_object is not None and serial_object.isOpen():
+                    # Abort any blocking read and write operations before 
+                    # closing. This prevent confusing exceptions about bad file 
+                    # descriptors. Often, clear is called at the end of 
+                    # a program, and whether the program finished successfully 
+                    # or not, we do not need to know whether the serial 
+                    # connections were still blocked or not.
+                    # The cancel_* methods are new in pyserial 3.1.0, and 
+                    # before that the interrupted blocking read/writes were 
+                    # more lenient with throwing exceptions.
+                    if hasattr(serial_object, 'cancel_read'):
+                        serial_object.cancel_read()
+                    if hasattr(serial_object, 'cancel_write'):
+                        serial_object.cancel_write()
+
+                    serial_object.close()
 
         self._devices = {
             USB_Device_Category.XBEE: [],
