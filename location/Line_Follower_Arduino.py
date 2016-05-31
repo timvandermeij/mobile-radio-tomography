@@ -49,7 +49,7 @@ class Line_Follower_Arduino(Line_Follower):
         # Read a line with raw sensor values. This is blocking until such a line is presented
         # over the serial connection, so this should be run in a separate thread.
         raw_sensor_values = None
-        while raw_sensor_values is None and self._running:
+        while raw_sensor_values is None:
             try:
                 line = self._serial_connection.readline()
             except (SerialException, TypeError) as e:
@@ -63,9 +63,12 @@ class Line_Follower_Arduino(Line_Follower):
 
             try:
                 raw_sensor_values = [float(sensor_value) for sensor_value in line.lstrip('\0').rstrip().split(' ')]
-            except:
+            except (ValueError, AttributeError):
                 # Ignore lines that we cannot parse.
                 pass
+
+            if not self._running:
+                return None
 
         # Keep only the values of the LEDs we are interested in.
         sensor_values = []
