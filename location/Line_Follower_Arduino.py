@@ -52,12 +52,12 @@ class Line_Follower_Arduino(Line_Follower):
         while raw_sensor_values is None and self._running:
             try:
                 line = self._serial_connection.readline()
-            except SerialException as e:
+            except (SerialException, TypeError) as e:
                 # Ignore serial exceptions when we are stopped, since they are 
                 # about reading from closed ports and consequently bad file 
                 # descriptors.
                 if not self._running:
-                    return
+                    return None
 
                 raise e
 
