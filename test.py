@@ -1,10 +1,16 @@
+# Core imports
 import glob
 import os
 import sys
-import unittest
 from cProfile import Profile
 from pstats import Stats
 from subprocess import check_output
+
+# Unit test imports
+import unittest
+from mock import patch
+
+# Package imports
 from __init__ import __package__
 from settings import Arguments
 
@@ -61,6 +67,13 @@ class Test_Run(object):
         """
         Execute the unit tests.
         """
+
+        # Import pymavlink.mavutil with a patched output in order to suppress 
+        # the debugging print that occurs while importing it. This makes later 
+        # imports skip this debug print.
+        with patch('sys.stdout'):
+            from pymavlink import mavutil
+            sys.modules["pymavlink.mavutil"] = mavutil
 
         pattern = self._settings.get("pattern")
         verbosity = self._settings.get("verbosity")
