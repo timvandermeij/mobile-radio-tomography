@@ -36,8 +36,9 @@ operating system does not need to distinguish between Python 2 and Python 3.
 
 Python packages
 ---------------
-Use `pip install --user <package>` to install or upgrade each of the following 
-packages, sorted by purpose:
+Use  `pip install --user <package>` to install or upgrade each of the following 
+packages, or `pip install -r requirements` to install all of them in one go. 
+The packages are sorted by purpose as follows:
 
 * General packages:
     * matplotlib
@@ -69,6 +70,7 @@ packages, sorted by purpose:
 * Testing:
     * mock
     * importchecker
+    * coverage
 
 ArduPilot
 ---------
