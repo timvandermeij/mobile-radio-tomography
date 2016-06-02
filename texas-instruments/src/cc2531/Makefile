@@ -6,8 +6,8 @@ SDAS8051 = sdas8051
 
 # Include paths, object definitions and compilation flags
 ROOT = $(realpath .)
-CC_USB_ROOT = $(ROOT)/../lib/cc-usb-firmware
-MULTI_SPIN_ROOT = $(ROOT)/../lib/multi-spin-3.0
+CC_USB_ROOT = $(ROOT)/../../lib/cc-usb-firmware
+MULTI_SPIN_ROOT = $(ROOT)/../../lib/multi-spin-3.0
 INCLUDES =	-I$(MULTI_SPIN_ROOT) \
 			-I$(CC_USB_ROOT)/usb/class_cdc \
 			-I$(CC_USB_ROOT)/usb/library \
@@ -36,7 +36,6 @@ OBJS =	$(ROOT)/cc2531.rel \
 		$(CC_USB_ROOT)/utils/util_buffer.rel \
 		$(MULTI_SPIN_ROOT)/leds.rel \
 		$(MULTI_SPIN_ROOT)/rf.rel
-USB_DESCRIPTOR = $(CC_USB_ROOT)/usb/class_cdc/usb_cdc_descriptor
 WARNINGS = --disable-warning 85 --Werror
 HARDWARE = -DBUF_SIZE=192 -DUSB_UART -Dchip=2531 --model-large
 CODE = -DNDEBUG --opt-code-size
