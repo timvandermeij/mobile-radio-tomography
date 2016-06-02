@@ -90,6 +90,12 @@ class Test_Run(object):
             from pymavlink import mavutil
             sys.modules["pymavlink.mavutil"] = mavutil
 
+        # Discard the module cache for the package modules imported in the test 
+        # runner. This ensures that they are reimported in the tests, which 
+        # makes the coverage consider start-up calls again.
+        for module in ["settings", "settings.Settings", "settings.Arguments"]:
+            del sys.modules["{}.{}".format(__package__, module)]
+
         pattern = self._settings.get("pattern")
         verbosity = self._settings.get("verbosity")
 
