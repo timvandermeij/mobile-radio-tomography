@@ -1,4 +1,10 @@
-# vim files
+# System-specific indexes and backups
+.#*
+.DS_Store
+Thumbs.db
+
+# Vim backup files
+*.un~
 *.swp
 *~
 
@@ -25,3 +31,15 @@ __pycache__/
 *.tlog
 *.raw
 terrain/
+
+# Texas Instruments processed and compiled files
+*.asm
+*.hex
+*.ihx
+*.map
+*.mem
+*.lk
+*.lst
+*.rel
+*.rst
+*.sym
