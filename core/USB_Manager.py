@@ -5,16 +5,19 @@ class USB_Device_Fingerprint(object):
     XBEE = ["0403", "6015"]
     TTL = ["1a86", "7523"]
     CC2531 = ["0451", "16a8"]
+    CC2530 = ["204", "64"]
 
 class USB_Device_Category(object):
     XBEE = 1
     TTL = 2
     CC2531 = 3
+    CC2530 = 4
 
 class USB_Device_Baud_Rate(object):
     XBEE = 57600
     TTL = 9600
     CC2531 = 38400
+    CC2530 = 9600
 
 class USB_Device(object):
     def __init__(self):
@@ -41,7 +44,8 @@ class USB_Manager(object):
         self._devices = {
             USB_Device_Category.XBEE: [],
             USB_Device_Category.TTL: [],
-            USB_Device_Category.CC2531: []
+            USB_Device_Category.CC2531: [],
+            USB_Device_Category.CC2530: []
         }
 
     def index(self):
@@ -49,35 +53,62 @@ class USB_Manager(object):
         Index all connected USB devices with their path, baud rate and category.
         """
 
-        for device in self._obtain_devices():
+        for device in self._obtain_usb_devices():
             fingerprint = [device["ID_VENDOR_ID"], device["ID_MODEL_ID"]]
+            self._insert_device(device, fingerprint)
 
-            if fingerprint == USB_Device_Fingerprint.XBEE:
-                baud_rate = USB_Device_Baud_Rate.XBEE
-                category = USB_Device_Category.XBEE
-            elif fingerprint == USB_Device_Fingerprint.TTL:
-                baud_rate = USB_Device_Baud_Rate.TTL
-                category = USB_Device_Category.TTL
-            elif fingerprint == USB_Device_Fingerprint.CC2531:
-                baud_rate = USB_Device_Baud_Rate.CC2531
-                category = USB_Device_Category.CC2531
-            else:
-                continue
+        for device in self._obtain_amba_devices():
+            fingerprint = [device["MAJOR"], device["MINOR"]]
+            self._insert_device(device, fingerprint)
 
-            usb_device = USB_Device()
-            usb_device.path = device["DEVNAME"]
-            usb_device.baud_rate = baud_rate
-            usb_device.category = category
+    def _insert_device(self, device, fingerprint):
+        """
+        Identify a `device` using its `fingerprint` and insert it into the
+        index of available USB/AMBA devices.
+        """
 
-            self._devices[category].append(usb_device)
+        if fingerprint == USB_Device_Fingerprint.XBEE:
+            baud_rate = USB_Device_Baud_Rate.XBEE
+            category = USB_Device_Category.XBEE
+        elif fingerprint == USB_Device_Fingerprint.TTL:
+            baud_rate = USB_Device_Baud_Rate.TTL
+            category = USB_Device_Category.TTL
+        elif fingerprint == USB_Device_Fingerprint.CC2531:
+            baud_rate = USB_Device_Baud_Rate.CC2531
+            category = USB_Device_Category.CC2531
+        elif fingerprint == USB_Device_Fingerprint.CC2530:
+            baud_rate = USB_Device_Baud_Rate.CC2530
+            category = USB_Device_Category.CC2530
+        else:
+            return
 
-    def _obtain_devices(self):
+        usb_device = USB_Device()
+        usb_device.path = device["DEVNAME"]
+        usb_device.baud_rate = baud_rate
+        usb_device.category = category
+
+        self._devices[category].append(usb_device)
+
+    def _obtain_usb_devices(self):
         """
         Obtain a list of available USB devices.
         """
 
         context = pyudev.Context()
-        return context.list_devices(subsystem="tty", ID_BUS="usb")
+        return list(context.list_devices(subsystem="tty", ID_BUS="usb"))
+
+    def _obtain_amba_devices(self):
+        """
+        Obtain a list of available AMBA devices.
+        """
+
+        context = pyudev.Context()
+        parents = context.list_devices(subsystem="amba")
+        children = []
+        for parent in parents:
+            children = children + list(context.list_devices(subsystem="tty", parent=parent))
+
+        return children
 
     def get_xbee_device(self, path=None):
         """
@@ -98,10 +129,18 @@ class USB_Manager(object):
     def get_cc2531_device(self, path=None):
         """
         Get the first available CC2531 device. If `path` is provided, get the
-        TTL device with its path equal to `path`.
+        CC2531 device with its path equal to `path`.
         """
 
         return self._get_device(USB_Device_Category.CC2531, path)
+
+    def get_cc2530_device(self, path=None):
+        """
+        Get the first available CC2530 device. If `path` is provided, get the
+        CC2530 device with its path equal to `path`.
+        """
+
+        return self._get_device(USB_Device_Category.CC2530, path)
 
     def _get_device(self, category, path):
         """

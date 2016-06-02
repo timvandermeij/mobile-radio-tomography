@@ -22,7 +22,7 @@ class USBManagerTestCase(unittest.TestCase):
         # Initialize the USB manager.
         self.usb_manager = USB_Manager()
 
-        # Create virtual serial ports for the mocked USB devices.
+        # Create virtual serial ports for the mocked USB/AMBA devices.
         slave_xbee = os.openpty()[1]
         self._xbee_port = os.ttyname(slave_xbee)
 
@@ -33,11 +33,14 @@ class USBManagerTestCase(unittest.TestCase):
         slave_cc2531 = os.openpty()[1]
         self._cc2531_port = os.ttyname(slave_cc2531)
 
+        slave_cc2530 = os.openpty()[1]
+        self._cc2530_port = os.ttyname(slave_cc2530)
+
         slave_other = os.openpty()[1]
         self._other_port = os.ttyname(slave_other)
 
-        # Mock the method for obtaining devices.
-        mock_obtain_devices = MagicMock(return_value=[
+        # Mock the method for obtaining USB devices.
+        mock_obtain_usb_devices = MagicMock(return_value=[
             { # XBee device
                 "ID_VENDOR_ID": USB_Device_Fingerprint.XBEE[0],
                 "ID_MODEL_ID": USB_Device_Fingerprint.XBEE[1],
@@ -59,7 +62,17 @@ class USBManagerTestCase(unittest.TestCase):
                 "DEVNAME": self._other_port
             }
         ])
-        self.usb_manager._obtain_devices = mock_obtain_devices
+        self.usb_manager._obtain_usb_devices = mock_obtain_usb_devices
+
+        # Mock the method for obtaining AMBA devices.
+        mock_obtain_amba_devices = MagicMock(return_value=[
+            { # CC2530 device
+                "MAJOR": USB_Device_Fingerprint.CC2530[0],
+                "MINOR": USB_Device_Fingerprint.CC2530[1],
+                "DEVNAME": self._cc2530_port
+            }
+        ])
+        self.usb_manager._obtain_amba_devices = mock_obtain_amba_devices
 
         # Disable internal pySerial updates of the DTR state since they do not 
         # function correctly when the serial device is mocked as a virtual pty.
@@ -83,7 +96,8 @@ class TestCoreUSBManager(USBManagerTestCase):
         self.assertEqual(self.usb_manager._devices, {
             USB_Device_Category.XBEE: [],
             USB_Device_Category.TTL: [],
-            USB_Device_Category.CC2531: []
+            USB_Device_Category.CC2531: [],
+            USB_Device_Category.CC2530: []
         })
 
     def test_index(self):
@@ -92,7 +106,8 @@ class TestCoreUSBManager(USBManagerTestCase):
         expected_index = {
             USB_Device_Category.XBEE: (self._xbee_port, USB_Device_Baud_Rate.XBEE),
             USB_Device_Category.TTL: (self._ttl_port, USB_Device_Baud_Rate.TTL),
-            USB_Device_Category.CC2531: (self._cc2531_port, USB_Device_Baud_Rate.CC2531)
+            USB_Device_Category.CC2531: (self._cc2531_port, USB_Device_Baud_Rate.CC2531),
+            USB_Device_Category.CC2530: (self._cc2530_port, USB_Device_Baud_Rate.CC2530)
         }
 
         # Valid devices should be indexed.
@@ -137,6 +152,9 @@ class TestCoreUSBManager(USBManagerTestCase):
     def test_get_cc2531_device(self):
         self.check_get_device(self.usb_manager.get_cc2531_device, self._cc2531_port)
 
+    def test_get_cc2530_device(self):
+        self.check_get_device(self.usb_manager.get_cc2530_device, self._cc2530_port)
+
     def test_clear(self):
         self.usb_manager.index()
         devices = self.usb_manager._devices
@@ -146,7 +164,8 @@ class TestCoreUSBManager(USBManagerTestCase):
         self.assertEqual(self.usb_manager._devices, {
             USB_Device_Category.XBEE: [],
             USB_Device_Category.TTL: [],
-            USB_Device_Category.CC2531: []
+            USB_Device_Category.CC2531: [],
+            USB_Device_Category.CC2530: []
         })
 
         # All previous serial objects should be closed.
