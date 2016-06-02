@@ -25,7 +25,7 @@
 #include <cc2530.h>
 
 // Radio registers
-#define RSSI_OFFSET -76;
+#define RSSI_OFFSET -73
 #define CORR_THR 0x14
 #define CCA_THR 0xF8
 #define TXFILTCFG_RESET_VALUE 0x09
