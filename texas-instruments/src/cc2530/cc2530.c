@@ -3,6 +3,7 @@
 #include "leds.h"
 
 // Packet definitions
+#define PACKET_LENGTH 80
 #define CONFIGURATION_PACKET 1
 #define TX_PACKET 2
 
@@ -12,14 +13,20 @@ typedef struct {
 
 typedef struct {
     unsigned char destination;
+    unsigned char length;
+    unsigned char data[PACKET_LENGTH];
 } txPacket_t;
 
 typedef struct {
     unsigned char source;
+    unsigned char length;
+    unsigned char data[PACKET_LENGTH];
 } rxPacket_t;
 
 typedef struct {
     unsigned char source;
+    unsigned char length;
+    unsigned char data[PACKET_LENGTH];
     signed char rssi;
 } uartPacket_t;
 
