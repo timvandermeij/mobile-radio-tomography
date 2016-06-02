@@ -324,7 +324,6 @@ void usbsrGetDescriptor(void)
 
    // String descriptor
    case DESC_TYPE_STRING:
-      // TODO: Implement language ID
       usbSetupData.pBuffer = (uint8 __xdata*) usbdpGetStringDesc(LO_UINT16(usbSetupHeader.value));
       usbSetupData.bytesLeft = usbSetupData.pBuffer[DESC_LENGTH_IDX];
       break;

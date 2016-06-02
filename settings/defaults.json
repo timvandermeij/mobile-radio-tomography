@@ -1031,6 +1031,19 @@
             }
         }
     },
+    "xbee_cc2530_sensor_physical": {
+        "name": "XBee CC2530 sensor (physical)",
+        "parent": "xbee_sensor_physical",
+        "settings": {
+            "packet_length": {
+                "help": "Number of bytes in the serialized XBee packet",
+                "type": "int",
+                "min": 0,
+                "max": 255,
+                "default": 80
+            }
+        }
+    },
     "zigbee_tdma_scheduler": {
         "name": "ZigBee TDMA scheduler",
         "parent": "zigbee_base",

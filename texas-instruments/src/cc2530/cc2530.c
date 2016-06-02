@@ -8,7 +8,7 @@
 #define TX_PACKET 2
 
 typedef struct {
-    unsigned char source;
+    unsigned char sensorId;
 } configurationPacket_t;
 
 typedef struct {
@@ -18,13 +18,11 @@ typedef struct {
 } txPacket_t;
 
 typedef struct {
-    unsigned char source;
     unsigned char length;
     unsigned char data[PACKET_LENGTH];
 } rxPacket_t;
 
 typedef struct {
-    unsigned char source;
     unsigned char length;
     unsigned char data[PACKET_LENGTH];
     signed char rssi;
@@ -45,8 +43,8 @@ txPacket_t txPacket;
 rxPacket_t rxPacket;
 uartPacket_t uartPacket;
 signed char rssi = 0;
-unsigned char source = 0;
-unsigned char id = 0;
+unsigned char sensorId = 0;
+unsigned char packetId = 0;
 
 void initialize_uart() {
     CLKCONCMD = CLKCONSTA & 0xB8; // Clock control
@@ -116,23 +114,32 @@ void send(unsigned char* buffer, int length) {
     }
 }
 
+void copy(unsigned char* source, unsigned char* destination) {
+    // Copy a source data array to a destination data array.
+    int i;
+    for(i = 0; i < PACKET_LENGTH; i++) {
+        destination[i] = source[i];
+    }
+}
+
 void processUart() {
     // Process incoming configuration or TX packets from UART
     ledOn(RED_LED);
 
-    id = read();
+    packetId = read();
 
-    switch(id) {
+    switch(packetId) {
         case CONFIGURATION_PACKET:
             receive((unsigned char*)&configurationPacket, sizeof(configurationPacket));
-            source = configurationPacket.source;
-            rfConfig.addr = PAN + source;
+            sensorId = configurationPacket.sensorId;
+            rfConfig.addr = PAN + sensorId;
             radioInit(&rfConfig);
             break;
 
         case TX_PACKET:
             receive((unsigned char*)&txPacket, sizeof(txPacket));
-            rxPacket.source = source;
+            rxPacket.length = txPacket.length;
+            copy(txPacket.data, rxPacket.data);
             sendPacket((char*)&rxPacket, sizeof(rxPacket), rfConfig.pan,
                        PAN + txPacket.destination, rfConfig.addr);
             break;
@@ -148,8 +155,9 @@ void processRadio() {
             // Clear the RX buffer
             RFST = 0xED;
 
-            // Transfer the packet over USB
-            uartPacket.source = rxPacket.source;
+            // Transfer the packet over UART
+            uartPacket.length = rxPacket.length;
+            copy(rxPacket.data, uartPacket.data);
             uartPacket.rssi = rssi;
             send((unsigned char*)&uartPacket, sizeof(uartPacket));
         }
