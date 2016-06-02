@@ -1,5 +1,4 @@
 # TODO:
-# - Finish initialization (WiringPi)
 # - Implement synchronous NTP (abstraction into class to avoid duplication)
 # - Implement discovery (ping/pong packets)
 # - Implement `RF_Sensor` abstraction, remove `self._data` and rename to `CC2530_Sensor_Physical`
@@ -12,7 +11,23 @@ import struct
 import subprocess
 import time
 import thread
+import wiringpi
 from XBee_Sensor import XBee_Sensor, SensorClosedError
+
+class Raspberry_Pi_GPIO_Pin_Mode(object):
+    """
+    Alternative pin modes for the Raspberry Pi GPIO pins for use with WiringPi.
+
+    Refer to https://github.com/WiringPi/WiringPi/blob/master/wiringPi/wiringPi.c#L118
+    for the source of these mode selection bits.
+    """
+
+    ALT0 = 0b100
+    ALT1 = 0b101
+    ALT2 = 0b110
+    ALT3 = 0b111
+    ALT4 = 0b011
+    ALT5 = 0b010
 
 class CC2530_Packet(object):
     CONFIGURATION = 1
@@ -36,14 +51,52 @@ class XBee_CC2530_Sensor_Physical(XBee_Sensor):
         self._data = []
         self._serial_connection = None
         self._synchronized = False
+
         self._packet_length = self._settings.get("packet_length")
+        self._reset_delay = self._settings.get("reset_delay")
+
+        # UART connection pins for RX, TX, RTS, CTS and reset. We use board pin
+        # numbering. The pins must correspond to the GPIO pins that support RXD0/TXD0 on
+        # ALT0 and RTS0/CTS0 on ALT3. Refer to http://elinux.org/RPi_BCM2835_GPIOs for an
+        # extensive overview.
+        self._pins = {
+            "rx_pin": self._settings.get("rx_pin"),
+            "tx_pin": self._settings.get("tx_pin"),
+            "rts_pin": self._settings.get("rts_pin"),
+            "cts_pin": self._settings.get("cts_pin"),
+            "reset_pin": self._settings.get("reset_pin")
+        }
 
     def setup(self):
         """
         Setup the serial connection.
         """
 
+        # Open and close the serial connection so that the UART buffers are correctly 
+        # leared. This is required to not receive only zeroes from the CC2530 device.
         self._serial_connection = self._usb_manager.get_cc2530_device()
+        self._serial_connection.close()
+
+        # Set up alternative modes for the UART pins. The RX/TX pins are here for
+        # sanity, but might help in ensuring that these pins have the correct
+        # alternative modes for some Raspberry Pi devices.
+        wiringpi.wiringPiSetupPhys()
+        wiringpi.pinModeAlt(self._pins["rx_pin"], Raspberry_Pi.GPIO_Pin_Mode.ALT0)
+        wiringpi.pinModeAlt(self._pins["tx_pin"], Raspberry_Pi.GPIO_Pin_Mode.ALT0)
+        wiringpi.pinModeAlt(self._pins["rts_pin"], Raspberry_Pi.GPIO_Pin_Mode.ALT3)
+        wiringpi.pinModeAlt(self._pins["cts_pin"], Raspberry_Pi.GPIO_Pin_Mode.ALT3)
+
+        # Reopen the serial connection.
+        self._serial_connection = self._usb_manager.get_cc2530_device()
+
+        # Reset the CC2530 device.
+        wiringpi.pinMode(pins["reset_pin"], wiringpi.OUTPUT)
+        wiringpi.digitalWrite(pins["reset_pin"], 0)
+        time.sleep(self._reset_delay)
+        wiringpi.digitalWrite(pins["reset_pin"], 1)
+
+        # Configure the CC2530 device using a configuration packet.
+        self._serial_connection.reset_input_buffer()
         self._serial_connection.write(struct.pack("<BB", CC2530_Packet.CONFIGURATION, self._id))
 
     def activate(self):

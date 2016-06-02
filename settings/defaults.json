@@ -1041,6 +1041,47 @@
                 "min": 0,
                 "max": 255,
                 "default": 80
+            },
+            "reset_delay": {
+                "help": "Delay in seconds before changing the reset pulse",
+                "type": "float",
+                "min": 0.01,
+                "default": 0.02
+            },
+            "rx_pin": {
+                "help": "Raspberry Pi GPIO pin for UART RX",
+                "type": "int",
+                "min": 1,
+                "max": 40,
+                "default": 10
+            },
+            "tx_pin": {
+                "help": "Raspberry Pi GPIO pin for UART TX",
+                "type": "int",
+                "min": 1,
+                "max": 40,
+                "default": 8
+            },
+            "rts_pin": {
+                "help": "Raspberry Pi GPIO pin for UART RTS",
+                "type": "int",
+                "min": 1,
+                "max": 40,
+                "default": 11
+            },
+            "cts_pin": {
+                "help": "Raspberry Pi GPIO pin for UART CTS",
+                "type": "int",
+                "min": 1,
+                "max": 40,
+                "default": 36
+            },
+            "reset_pin": {
+                "help": "Raspberry Pi GPIO pin for resetting the sensor",
+                "type": "int",
+                "min": 1,
+                "max": 40,
+                "default": 40
             }
         }
     },
