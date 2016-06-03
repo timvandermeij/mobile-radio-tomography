@@ -30,7 +30,26 @@ class Mission_XBee(Mission_Auto):
 
         self._waypoints_complete = True
 
+    @property
+    def waypoints_complete(self):
+        """
+        Accessor for whether all the waypoints have been received.
+        """
+
+        return self._waypoints_complete
+
+    @property
+    def next_index(self):
+        """
+        Accessor for the next waypoint index that should be received from the
+        ground station.
+        """
+
+        return self._next_index
+
     def get_points(self):
+        # We do not have points for commands that are automatically added, 
+        # because we add them when they arrive.
         return []
 
     def add_commands(self):

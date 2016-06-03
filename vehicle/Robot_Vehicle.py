@@ -1,15 +1,16 @@
+import math
+import thread
+import time
+
 try:
     import RPi.GPIO as GPIO
     import wiringpi
 except (ImportError, RuntimeError):
     GPIO = None
 
-import math
-import thread
-import time
 from dronekit import LocationLocal, LocationGlobal, Attitude
 from Vehicle import Vehicle
-from ..location.Line_Follower import Line_Follower_Direction, Line_Follower_State
+from ..location.Line_Follower import Line_Follower, Line_Follower_Direction, Line_Follower_State
 
 class Robot_State(object):
     def __init__(self, name):
@@ -89,6 +90,8 @@ class Robot_Vehicle(Vehicle):
     def _setup_line_follower(self, thread_manager, usb_manager):
         if self._line_follower_class is None:
             raise NotImplementedError("Subclasses must provide a `_line_follower_class` property")
+        if not issubclass(self._line_follower_class, Line_Follower):
+            raise TypeError("`_line_follower_class` must be a `Line_Follower` class")
 
         # The delay of the sensor reading loop in the line follower thread.
         line_follower_delay = self.settings.get("line_follower_delay")
@@ -171,7 +174,7 @@ class Robot_Vehicle(Vehicle):
                 self.set_speeds(speed + speed_difference, speed - speed_difference)
                 self._last_diverged_time = time.time()
 
-    def set_speeds(left_speed, right_speed, left_forward=True, right_forward=True):
+    def set_speeds(self, left_speed, right_speed, left_forward=True, right_forward=True):
         raise NotImplementedError("Subclasses must implement `set_speeds` method")
 
     @property
@@ -382,7 +385,7 @@ class Robot_Vehicle(Vehicle):
             # If there is no new waypoint, do nothing and stand still if we 
             # happened to reach the current waypoint
             if self._is_waypoint(self._current_waypoint):
-                self.set_speeds(0,0)
+                self.set_speeds(0, 0)
 
             return
 
@@ -408,15 +411,16 @@ class Robot_Vehicle(Vehicle):
     def _next_direction(self, waypoint):
         up = waypoint[0] - self._location[0]
         right = waypoint[1] - self._location[1]
-        if (
-            (self._direction == Line_Follower_Direction.UP and up > 0) or
-            (self._direction == Line_Follower_Direction.RIGHT and right > 0) or
-            (self._direction == Line_Follower_Direction.DOWN and up < 0) or
-            (self._direction == Line_Follower_Direction.LEFT and right < 0)
-        ):
+
+        is_up = self._direction == Line_Follower_Direction.UP
+        is_right = self._direction == Line_Follower_Direction.RIGHT
+        is_down = self._direction == Line_Follower_Direction.DOWN
+        is_left = self._direction == Line_Follower_Direction.LEFT
+
+        if (is_up and up > 0) or (is_right and right > 0) or (is_down and up < 0) or (is_right and right < 0):
             return self._direction
 
-        if right == 0 or self._direction == Line_Follower_Direction.RIGHT or self._direction == Line_Follower_Direction.LEFT:
+        if right == 0 or is_right or is_left:
             if up > 0:
                 return Line_Follower_Direction.UP
             if up < 0:

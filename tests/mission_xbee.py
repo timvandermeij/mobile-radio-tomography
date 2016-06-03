@@ -31,10 +31,18 @@ class TestMissionXBee(EnvironmentTestCase):
         self.assertIn("waypoint_clear", packet_actions)
         self.assertIn("waypoint_add", packet_actions)
         self.assertIn("waypoint_done", packet_actions)
-        self.assertFalse(self.mission._waypoints_complete)
-        self.assertEqual(self.mission._next_index, 0)
+        self.assertFalse(self.mission.waypoints_complete)
+        self.assertEqual(self.mission.next_index, 0)
 
-    def _send_waypoint_add(self, index, latitude, longitude):
+        # An XBee mission has no predetermined AUTO points.
+        self.assertEqual(self.mission.get_points(), [])
+
+        # Starting arming checks will wait until waypoints are complete.
+        with patch('time.sleep', side_effect=RuntimeError('sleep')):
+            with self.assertRaises(RuntimeError):
+                self.mission.arm_and_takeoff()
+
+    def _send_waypoint_add(self, index, latitude, longitude, id_offset=0):
         packet = XBee_Packet()
         packet.set("specification", "waypoint_add")
         packet.set("index", index)
@@ -42,7 +50,7 @@ class TestMissionXBee(EnvironmentTestCase):
         packet.set("longitude", longitude)
         packet.set("altitude", 0.0)
         packet.set("wait_id", 0)
-        packet.set("to_id", self.xbee.id)
+        packet.set("to_id", self.xbee.id + id_offset)
 
         with patch('sys.stdout'):
             self.environment.receive_packet(packet)
@@ -53,6 +61,15 @@ class TestMissionXBee(EnvironmentTestCase):
             self.mission.setup()
 
         self._send_waypoint_add(0, 4.0, 2.0)
+
+        # Packets not meant for the current XBee are ignored.
+        packet = XBee_Packet()
+        packet.set("specification", "waypoint_clear")
+        packet.set("to_id", self.xbee.id + 42)
+
+        self.environment.receive_packet(packet)
+        self.assertEqual(self.mission.next_index, 1)
+
         enqueue_mock.reset_mock()
 
         packet = XBee_Packet()
@@ -73,6 +90,7 @@ class TestMissionXBee(EnvironmentTestCase):
         })
         self.assertEqual(kwargs, {"to": 0})
 
+        self.assertEqual(self.mission.next_index, 0)
         self.assertEqual(self.vehicle._waypoints, [])
 
     @patch.object(XBee_Sensor_Simulator, "enqueue")
@@ -80,6 +98,11 @@ class TestMissionXBee(EnvironmentTestCase):
         with patch('sys.stdout'):
             self.mission.setup()
 
+        # Packets not meant for the current XBee are ignored.
+        self._send_waypoint_add(0, 6.0, 5.0, id_offset=42)
+        self.assertEqual(self.mission.next_index, 0)
+
+        enqueue_mock.reset_mock()
         self._send_waypoint_add(0, 1.0, 4.0)
 
         self.assertEqual(enqueue_mock.call_count, 1)
@@ -93,6 +116,7 @@ class TestMissionXBee(EnvironmentTestCase):
         })
         self.assertEqual(kwargs, {"to": 0})
 
+        self.assertEqual(self.mission.next_index, 1)
         self.assertEqual(self.vehicle._waypoints, [(1, 4), None])
 
     @patch.object(XBee_Sensor_Simulator, "enqueue")
@@ -113,6 +137,7 @@ class TestMissionXBee(EnvironmentTestCase):
         })
         self.assertEqual(kwargs, {"to": 0})
 
+        self.assertEqual(self.mission.next_index, 0)
         self.assertEqual(self.vehicle._waypoints, [])
 
     @patch.object(XBee_Sensor_Simulator, "enqueue")
@@ -125,14 +150,27 @@ class TestMissionXBee(EnvironmentTestCase):
         self._send_waypoint_add(2, 3.0, 0.0)
         self._send_waypoint_add(3, 4.0, 0.0)
 
+        # Packets not meant for us are ignored.
+        packet = XBee_Packet()
+        packet.set("specification", "waypoint_done")
+        packet.set("to_id", self.xbee.id + 42)
+        self.environment.receive_packet(packet)
+
+        self.assertFalse(self.mission.waypoints_complete)
+
         packet = XBee_Packet()
         packet.set("specification", "waypoint_done")
         packet.set("to_id", self.xbee.id)
 
+        enqueue_mock.reset_mock()
         with patch('sys.stdout'):
             self.environment.receive_packet(packet)
 
-        self.assertTrue(self.mission._waypoints_complete)
+        # We do not send an acknowledgment (and request for next ID) when the 
+        # waypoints are done.
+        enqueue_mock.assert_not_called()
+
+        self.assertTrue(self.mission.waypoints_complete)
         self.assertEqual(self.vehicle._waypoints, [
             (1, 0), None, (2, 0), None, (3, 0), None, (4, 0), None
         ])

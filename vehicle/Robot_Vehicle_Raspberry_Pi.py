@@ -53,7 +53,7 @@ class Robot_Vehicle_Raspberry_Pi(Robot_Vehicle):
 
         self._speed_servos = [Servo(pin, self._speeds, self._speed_pwms) for pin in self._speed_pins]
 
-    def set_speeds(left_speed, right_speed, left_forward=True, right_forward=True):
+    def set_speeds(self, left_speed, right_speed, left_forward=True, right_forward=True):
         for i, speed in [(0, left_speed), (1, right_speed)]:
             pwm = self._speed_servos[i].get_pwm(speed)
             self.set_servo(self._speed_servos[i], pwm)

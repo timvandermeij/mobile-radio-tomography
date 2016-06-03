@@ -1,7 +1,7 @@
 import math
 import time
-from dronekit import Locations, LocationLocal, LocationGlobal, LocationGlobalRelative
 from collections import namedtuple
+from dronekit import Locations, LocationLocal, LocationGlobal, LocationGlobalRelative
 
 from ..geometry.Geometry import Geometry_Spherical
 from MAVLink_Vehicle import MAVLink_Vehicle
@@ -13,11 +13,11 @@ MAV_CMD_NAV_LOITER_UNLIM = 17
 MAV_CMD_NAV_TAKEOFF = 22
 
 # Read only classes
-VehicleMode = namedtuple('VehicleMode',['name'])
-GPSInfo = namedtuple('GPSInfo',['eph', 'epv', 'fix_type', 'sattelites_visible'])
+VehicleMode = namedtuple('VehicleMode', ['name'])
+GPSInfo = namedtuple('GPSInfo', ['eph', 'epv', 'fix_type', 'sattelites_visible'])
 
-GlobalMessage = namedtuple('Message',['lat', 'lon', 'relative_alt', 'alt'])
-LocalMessage = namedtuple('Message',['x', 'y', 'z'])
+GlobalMessage = namedtuple('Message', ['lat', 'lon', 'relative_alt', 'alt'])
+LocalMessage = namedtuple('Message', ['x', 'y', 'z'])
 
 class CommandSequence(object):
     def __init__(self, vehicle):
@@ -27,11 +27,11 @@ class CommandSequence(object):
 
     def takeoff(self, altitude):
         if self._vehicle.mode.name == "GUIDED" and self._vehicle.armed:
-            self._vehicle._set_target_location(alt=altitude, takeoff=True)
+            self._vehicle.set_target_location(alt=altitude, takeoff=True)
 
     def goto(self, location):
         self._vehicle.mode = VehicleMode("GUIDED")
-        self._vehicle._set_target_location(location=location)
+        self._vehicle.set_target_location(location=location)
 
     def add(self, command):
         self._commands.append(command)
@@ -46,9 +46,9 @@ class CommandSequence(object):
 
     @next.setter
     def next(self, value):
-        self._vehicle._update_location()
+        self._vehicle.update_location()
         self._next = value
-        self._vehicle._target_location = None
+        self._vehicle.clear_target_location()
 
     def clear(self):
         self._commands = []
@@ -74,7 +74,7 @@ class MockAttitude(object):
 
     def _update(self, pitch=None, yaw=None, roll=None):
         if self.vehicle:
-            self.vehicle._update_location()
+            self.vehicle.update_location()
             if pitch is None and yaw is None and roll is None:
                 return
 
@@ -157,7 +157,7 @@ class Mock_Vehicle(MAVLink_Vehicle):
         # Mock GPS info (has GPS, but no sattelites)
         self.gps_0 = GPSInfo(0.0, 0.0, 3, 0)
 
-        self.commands = CommandSequence(self)
+        self._commands = CommandSequence(self)
         self.parameters = {}
 
         self._home_location = LocationGlobal(0.0, 0.0, 0.0)
@@ -173,6 +173,10 @@ class Mock_Vehicle(MAVLink_Vehicle):
     def use_simulation(self):
         return True
 
+    @property
+    def commands(self):
+        return self._commands
+
     def _parse_command(self, cmd):
         # Only supported frame
         if cmd is None or cmd.frame != MAV_FRAME_GLOBAL_RELATIVE_ALT:
@@ -180,18 +184,30 @@ class Mock_Vehicle(MAVLink_Vehicle):
             return
 
         if cmd.command == MAV_CMD_NAV_WAYPOINT:
-            self._set_target_location(lat=cmd.x, lon=cmd.y, alt=cmd.z, cmd=True)
+            self.set_target_location(lat=cmd.x, lon=cmd.y, alt=cmd.z)
         elif cmd.command == MAV_CMD_NAV_LOITER_UNLIM:
             # Set target location to False so we can detect this case in 
-            # _update_location.
+            # update_location.
             self._target_location = False
         elif cmd.command == MAV_CMD_NAV_TAKEOFF:
             if self._takeoff:
                 self.commands._next = self.commands._next + 1
             else:
-                self._set_target_location(alt=cmd.z, takeoff=True, cmd=True)
+                self.set_target_location(alt=cmd.z, takeoff=True)
 
     def set_target_attitude(self, pitch=None, yaw=None, roll=None, yaw_direction=0):
+        """
+        Set the target attitude of the mock vehicle.
+
+        The mock vehicle will simulate turning to these angles over time.
+
+        The `pitch`, `yaw` and `roll` are in radians for the requested bearings
+        (i.e. increasing clockwise from north). The `yaw_direction` can be
+        given to rotate the yaw in a specific direction, namely `1` for
+        clockwise for and `-1` for counterclockwise. By default, the yaw
+        increases in the fastest direction possible.
+        """
+
         if pitch is None:
             pitch = self._attitude._pitch
         if yaw is None:
@@ -206,7 +222,18 @@ class Mock_Vehicle(MAVLink_Vehicle):
             yaw_direction = -1 * self._geometry.get_direction(self._attitude._yaw, yaw)
         self._yaw_direction = yaw_direction
 
-    def _set_target_location(self, location=None, lat=None, lon=None, alt=None, takeoff=False, cmd=False):
+    def set_target_location(self, location=None, lat=None, lon=None, alt=None, takeoff=False):
+        """
+        Set the target waypoint location of the mock vehicle.
+
+        The mock vehicle will simulate moving to this location over time.
+
+        This can be given as a `location` or as separate `lat`, `lon` and `alt`
+        keyword arguments. If any of them are left out, then those coordinate
+        components are inherited from the current location. If the target
+        location is a takeoff location, then enable `takeoff`.
+        """
+
         if takeoff:
             self._takeoff = True
             self._update_time = time.time()
@@ -235,8 +262,14 @@ class Mock_Vehicle(MAVLink_Vehicle):
             a = self._geometry.get_angle(self._locations, self._target_location)
             yaw = self._geometry.angle_to_bearing(a)
 
-        self._takeoff_command = cmd
         self.set_target_attitude(0.0, yaw, 0.0)
+
+    def clear_target_location(self):
+        """
+        Remove the target location from the vehicle.
+        """
+
+        self._target_location = None
 
     def _change_attitude(self, field, delta):
         """
@@ -255,9 +288,11 @@ class Mock_Vehicle(MAVLink_Vehicle):
 
     def _update_attitude(self, diff):
         """
-        Check temporal attitude changes. Update pitch, yaw and roll slowly based on their attitude speeds.
+        Check temporal attitude changes. Update pitch, yaw and roll slowly,
+        based on their attitude speeds.
 
-        Returns `True` if a location update is also possible in this timeframe, or `False` if we still have more attitude updates to be done.
+        Returns `True` if a location update is also possible in this timeframe,
+        or `False` if we still have more attitude updates to be done.
         """
         if self._target_attitude == self._attitude:
             return True
@@ -285,7 +320,53 @@ class Mock_Vehicle(MAVLink_Vehicle):
             vAlt = 0.0
         return (vNorth, vEast, vAlt)
 
-    def _update_location(self):
+    def _update_target_location(self, diff):
+        vNorth = 0.0
+        vEast = 0.0
+        vAlt = 0.0
+
+        if self._speed != 0.0:
+            # Move to location with given `speed`
+            dist = self._geometry.get_distance_meters(self._locations, self._target_location)
+            if isinstance(self._geometry, Geometry_Spherical):
+                dAlt = self._target_location.alt - self._location.alt
+            else:
+                dAlt = -self._target_location.down - self._location.alt
+                if dist != 0.0 and dist < diff * self._speed:
+                    self.set_location(self._target_location.north,
+                                      self._target_location.east,
+                                      -self._target_location.down)
+            if dist != 0.0:
+                if dist < diff * self._speed:
+                    self.location = self._target_location
+                else:
+                    return self._handle_speed(dist, dAlt)
+            elif dAlt != 0.0:
+                if dAlt / diff < self._speed:
+                    vAlt = dAlt / diff
+                else:
+                    vAlt = math.copysign(self._speed, dAlt)
+            else:
+                # Reached target location.
+                print("Reached target location")
+                if self._target_command:
+                    self.commands.next = self.commands.next + 1
+
+                self._target_location = None
+                self._target_command = False
+
+            return vNorth, vEast, vAlt
+
+    def update_location(self):
+        """
+        Update the current location of the mock vehicle based on time steps.
+
+        Usually this does need to be called externally, because this is
+        called when the location or other properties of the vehicle are
+        requested, but it may be necessary to call it to propagate changes
+        to speed or target locations immediately.
+        """
+
         if not self._takeoff or not self.armed:
             return
 
@@ -302,38 +383,7 @@ class Mock_Vehicle(MAVLink_Vehicle):
             return
 
         if self._target_location:
-            if self._speed != 0.0:
-                # Move to location with given `speed`
-                dist = self._geometry.get_distance_meters(self._locations, self._target_location)
-                if isinstance(self._geometry, Geometry_Spherical):
-                    dAlt = self._target_location.alt - self._location.alt
-                else:
-                    dAlt = -self._target_location.down - self._location.alt
-                    if dist != 0.0 and dist < diff * self._speed:
-                        self.set_location(self._target_location.north,
-                                          self._target_location.east,
-                                          -self._target_location.down)
-                        return
-
-                if dist != 0.0:
-                    if dist < diff * self._speed:
-                        self.location = self._target_location
-                        return
-                    else:
-                        vNorth, vEast, vAlt = self._handle_speed(dist, dAlt)
-                elif dAlt != 0.0:
-                    if dAlt / diff < self._speed:
-                        vAlt = dAlt / diff
-                    else:
-                        vAlt = math.copysign(self._speed, dAlt)
-                else:
-                    # Reached target location.
-                    print("Reached target location")
-                    if self._target_command:
-                        self.commands.next = self.commands.next + 1
-
-                    self._target_location = None
-                    self._target_command = False
+            vNorth, vEast, vAlt = self._update_target_location(diff)
         elif self._mode.name == "AUTO" and self._target_location != False:
             if self.commands.count > self.commands.next:
                 cmd = self.commands[self.commands.next]
@@ -351,8 +401,12 @@ class Mock_Vehicle(MAVLink_Vehicle):
 
     @property
     def location(self):
+        # If we are not already changing the location in the location setter, 
+        # for example when this getter is called from a message listener, then 
+        # update the current location before returning it.
         if not self._updating:
-            self._update_location()
+            self.update_location()
+
         return self._locations
 
     @location.setter
@@ -409,7 +463,7 @@ class Mock_Vehicle(MAVLink_Vehicle):
 
     @property
     def attitude(self):
-        self._update_location()
+        self.update_location()
         return self._attitude
 
     @attitude.setter
@@ -433,24 +487,24 @@ class Mock_Vehicle(MAVLink_Vehicle):
 
     @property
     def speed(self):
-        self._update_location()
+        self.update_location()
         return self._speed
 
     @speed.setter
     def speed(self, value):
-        self._update_location()
+        self.update_location()
         self._speed = value
-        self._velocity = [0.0,0.0,0.0]
+        self._velocity = [0.0, 0.0, 0.0]
 
     @property
     def velocity(self):
-        self._update_location()
+        self.update_location()
         return self._velocity
 
     @velocity.setter
     def velocity(self, value):
         # Update with old velocity before applying new one
-        self._update_location()
+        self.update_location()
         self._velocity = value
         self._speed = 0.0
 
@@ -461,7 +515,7 @@ class Mock_Vehicle(MAVLink_Vehicle):
     @mode.setter
     def mode(self, value):
         # Update with old velocity before applying new mode
-        self._update_location()
+        self.update_location()
         self._mode = value
         # Clear target location so new mode can give its own
         self._target_location = None
@@ -487,7 +541,10 @@ class Mock_Vehicle(MAVLink_Vehicle):
 
     @property
     def home_location(self):
-        return self._make_location(LocationGlobal, self._home_location.lat, self._home_location.lon, self._home_location.alt)
+        return self._make_location(LocationGlobal,
+                                   self._home_location.lat,
+                                   self._home_location.lon,
+                                   self._home_location.alt)
 
     @home_location.setter
     def home_location(self, value):
