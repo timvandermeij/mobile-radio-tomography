@@ -1,6 +1,7 @@
 # TODO:
 # - Implement `RF_Sensor` abstraction, remove `self._data` and rename to `CC2530_Sensor_Physical`
-# - Figure out ground station and blocking reads/writes
+# - Figure out how to deal with the ground station (CC2531)
+# - Figure out scheduling problems
 # - Write tests
 
 import struct
@@ -221,9 +222,13 @@ class XBee_CC2530_Sensor_Physical(XBee_Sensor):
         Receive and process a raw packet from another sensor in the network.
         """
 
-        # Read the UART packet from the serial connection and parse it.
+        # Read the UART packet from the serial connection (if available) and parse it.
         serialized_packet_format = "<B{}sb".format(self._packet_length)
-        uart_packet = self._serial_connection.read(size=struct.calcsize(serialized_packet_format))
+        serialized_packet_length = struct.calcsize(serialized_packet_format)
+        if self._serial_connection.in_waiting < serialized_packet_length:
+            return
+
+        uart_packet = self._serial_connection.read(size=serialized_packet_length)
         length, data, rssi = struct.unpack(serialized_packet_format, uart_packet)
         data = data[0:length]
 
