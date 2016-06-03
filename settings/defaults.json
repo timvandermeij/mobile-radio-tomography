@@ -563,7 +563,7 @@
                 "max": 40,
                 "default": [16, 18]
             },
-            "speed_pins": {
+            "motor_speed_pins": {
                 "help": "Motor speed GPIO pins",
                 "type": "tuple",
                 "length": 2,
@@ -572,7 +572,7 @@
                 "max": 40,
                 "default": [24, 26]
             },
-            "speed_pwms": {
+            "motor_speed_pwms": {
                 "help": "PWM range for both motors (minimum and maximum value)",
                 "type": "tuple",
                 "length": 2,
@@ -580,7 +580,7 @@
                 "min": 0,
                 "default": [0, 255]
             },
-            "speeds": {
+            "motor_speeds": {
                 "help": "Speed range for both motors in m/s",
                 "type": "tuple",
                 "length": 2,
@@ -593,14 +593,14 @@
     "vehicle_robot_arduino": {
         "name": "Robot vehicle connected through an Arduino with a serial connection",
         "settings": {
-            "speed_pwms": {
+            "motor_speed_pwms": {
                 "help": "PWM range for both motors (minimum and maximum values)",
                 "type": "tuple",
                 "length": 2,
                 "subtype": "int",
                 "default": [-400, 400]
             },
-            "speeds": {
+            "motor_speeds": {
                 "help": "Speed range for both motors in m/s",
                 "type": "tuple",
                 "length": 2,

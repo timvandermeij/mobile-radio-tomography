@@ -1,5 +1,5 @@
 import time
-from Robot_Vehicle import Robot_Vehicle, GPIO
+from Robot_Vehicle import Robot_Vehicle
 from ..location.Line_Follower_Arduino import Line_Follower_Arduino
 from ..trajectory.Servo import Servo
 
@@ -22,9 +22,9 @@ class Robot_Vehicle_Arduino(Robot_Vehicle):
         self.settings = arguments.get_settings("vehicle_robot_arduino")
 
         # PWM range for both motors (minimum and maximum values)
-        self._speed_pwms = self.settings.get("speed_pwms")
+        self._speed_pwms = self.settings.get("motor_speed_pwms")
         # Speed range for both motors in m/s
-        self._speeds = self.settings.get("speeds")
+        self._speeds = self.settings.get("motor_speeds")
 
         # Servo objects for tracking and converting speed PWM values. The pin 
         # numbers are dummy.
@@ -40,7 +40,7 @@ class Robot_Vehicle_Arduino(Robot_Vehicle):
 
     @property
     def use_simulation(self):
-        return GPIO is None
+        return not self._wiringpi.is_raspberry_pi
 
     def activate(self):
         super(Robot_Vehicle_Arduino, self).activate()

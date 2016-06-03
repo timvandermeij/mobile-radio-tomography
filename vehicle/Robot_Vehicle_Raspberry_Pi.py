@@ -18,12 +18,12 @@ class Robot_Vehicle_Raspberry_Pi(Robot_Vehicle):
         # Motor direction pins (LOW = forward, HIGH = backward)
         self._direction_pins = self.settings.get("direction_pins")
         # Motor speed pins (PWM values)
-        self._speed_pins = self.settings.get("speed_pins")
+        self._speed_pins = self.settings.get("motor_speed_pins")
 
         # PWM range for both motors (minimum and maximum values)
-        self._speed_pwms = self.settings.get("speed_pwms")
+        self._speed_pwms = self.settings.get("motor_speed_pwms")
         # Speed range for both motors in m/s
-        self._speeds = self.settings.get("speeds")
+        self._speeds = self.settings.get("motor_speeds")
 
         # Servo objects corresponding to the speed PWM pins of both motors.
         # First item is left motor, second item is right motor.

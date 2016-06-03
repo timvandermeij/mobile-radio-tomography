@@ -2,14 +2,9 @@ import math
 import thread
 import time
 
-try:
-    import RPi.GPIO as GPIO
-    import wiringpi
-except (ImportError, RuntimeError):
-    GPIO = None
-
 from dronekit import LocationLocal, LocationGlobal, Attitude
 from Vehicle import Vehicle
+from ..core.WiringPi import WiringPi
 from ..location.Line_Follower import Line_Follower, Line_Follower_Direction, Line_Follower_State
 
 class Robot_State(object):
@@ -84,8 +79,7 @@ class Robot_Vehicle(Vehicle):
     def setup(self):
         super(Robot_Vehicle, self).setup()
 
-        if GPIO is not None:
-            wiringpi.wiringPiSetupPhys()
+        self._wiringpi = WiringPi()
 
     def _setup_line_follower(self, thread_manager, usb_manager):
         if self._line_follower_class is None:
@@ -452,11 +446,11 @@ class Robot_Vehicle(Vehicle):
         return waypoint == self._location
 
     def set_servo(self, servo, pwm):
-        if GPIO is not None:
+        if self._wiringpi.is_raspberry_pi:
             if servo.pin not in self._servo_pins:
                 self._servo_pins.add(servo.pin)
-                wiringpi.softPwmCreate(servo.pin, pwm, servo.pwm.max)
+                self._wiringpi.module.softPwmCreate(servo.pin, pwm, servo.pwm.max)
 
-            wiringpi.softPwmWrite(servo.pin, pwm)
+            self._wiringpi.module.softPwmWrite(servo.pin, pwm)
 
         servo.set_current_pwm(pwm)
