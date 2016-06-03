@@ -1,6 +1,6 @@
-import serial
-import random
 import Queue
+import random
+import serial
 import time
 from core_thread_manager import ThreadableTestCase
 from xbee import ZigBee
@@ -251,7 +251,7 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
         }
         self.sensor._receive(raw_packet)
         frame_id = None
-        for key, value in self.sensor._data.iteritems():
+        for key in self.sensor._data.iterkeys():
             frame_id = key
 
         # Check if the received packet is valid.
@@ -350,19 +350,3 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
         }
         self.sensor._receive(raw_packet)
         self.assertEqual(self.sensor._joined, True)
-
-    @patch("subprocess.call")
-    def test_ntp(self, mock_subprocess_call):
-        # Prepare the NTP packet.
-        packet = XBee_Packet()
-        packet.set("specification", "ntp")
-        packet.set("sensor_id", 1)
-        packet.set("timestamp_1", 100)
-        packet.set("timestamp_2", 150)
-        packet.set("timestamp_3", 160)
-        packet.set("timestamp_4", 120)
-
-        # Perform the NTP algorithm.
-        clock_offset = self.sensor._ntp(packet)
-        self.assertEqual(clock_offset, 45)
-        self.assertEqual(mock_subprocess_call.call_count, 1)

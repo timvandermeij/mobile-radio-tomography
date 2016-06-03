@@ -1,10 +1,9 @@
-import os
 import random
-import subprocess
 import struct
 import thread
 import time
 from xbee import ZigBee
+from RF_Sensor_NTP import RF_Sensor_NTP
 from XBee_Packet import XBee_Packet
 from XBee_Sensor import XBee_Sensor, SensorClosedError
 
@@ -24,6 +23,8 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._node_identifier_set = False
         self._address_set = False
         self._synchronized = False
+        self._ntp = RF_Sensor_NTP(self)
+        self._ntp_delay = self._settings.get("ntp_delay")
 
         # Prepare the packet and sensor data.
         self._sensors = self._settings.get("sensors")
@@ -152,46 +153,9 @@ class XBee_Sensor_Physical(XBee_Sensor):
             # Synchronize the clock with the ground station's clock before
             # sending messages. This avoids clock skew caused by the fact that
             # the Raspberry Pi devices do not have an onboard real time clock.
-            ntp_delay = self._settings.get("ntp_delay")
-
-            packet = XBee_Packet()
-            packet.set("specification", "ntp")
-            packet.set("sensor_id", self._id)
-            packet.set("timestamp_2", 0)
-            packet.set("timestamp_3", 0)
-            packet.set("timestamp_4", 0)
-
             while not self._synchronized:
-                # Send the NTP packet to the ground station.
-                packet.set("timestamp_1", time.time())
-                self._send_tx_frame(packet, 0)
-                time.sleep(ntp_delay)
-
-    def _ntp(self, packet):
-        """
-        Perform the NTP (network time protocol) algorithm to synchronize
-        the sensor's clock with the ground sensor's clock.
-
-        Refer to the original paper "Internet time synchronization: the
-        network time protocol" by David L. Mills (IEEE, 1991) for more
-        information.
-        """
-
-        # Calculate the clock offset.
-        a = packet.get("timestamp_2") - packet.get("timestamp_1")
-        b = packet.get("timestamp_3") - packet.get("timestamp_4")
-        clock_offset = float(a + b) / 2
-
-        # Apply the offset to the current clock to synchronize.
-        synchronized = time.time() + clock_offset
-
-        # Update the system clock with the synchronized clock.
-        with open(os.devnull, 'w') as FNULL:
-            subprocess.call(["date", "-s", "@{}".format(synchronized)],
-                            stdout=FNULL, stderr=FNULL)
-
-        self._synchronized = True
-        return clock_offset
+                self._ntp.start()
+                time.sleep(self._ntp_delay)
 
     def _send(self):
         """
@@ -243,14 +207,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
                 return
 
             if packet.get("specification") == "ntp":
-                if packet.get("timestamp_2") == 0:
-                    packet.set("timestamp_2", time.time())
-                    packet.set("timestamp_3", time.time())
-                    self._send_tx_frame(packet, packet.get("sensor_id"))
-                else:
-                    packet.set("timestamp_4", time.time())
-                    self._ntp(packet)
-
+                self._ntp.process(packet)
                 return
 
             if self._id == 0:
