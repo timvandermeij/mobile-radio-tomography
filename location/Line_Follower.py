@@ -50,6 +50,11 @@ class Line_Follower(Threadable):
             while self._running:
                 self.enable()
                 sensor_values = self.read()
+                # Check whether the thread has stopped in between, since the 
+                # read method may take long.
+                if not self._running:
+                    return
+
                 self.update(sensor_values)
                 self.disable()
                 time.sleep(self._delay)
@@ -80,7 +85,7 @@ class Line_Follower(Threadable):
         sensor values from the line follower.
         """
 
-        if type(sensor_values) != list or len(sensor_values) != 4:
+        if not isinstance(sensor_values, list) or len(sensor_values) != 4:
             raise ValueError("Sensor values must be a list with four elements")
 
         # Represent the state as an integer to allow for bit manipulations.
@@ -135,7 +140,7 @@ class Line_Follower(Threadable):
         Set the state of the line follower.
         """
 
-        if type(state) != int or not 1 <= state <= 2:
+        if not isinstance(state, int) or not 1 <= state <= 2:
             raise ValueError("Direction must be one of the defined types")
 
         self._state = state
@@ -145,7 +150,7 @@ class Line_Follower(Threadable):
         Set the direction of the vehicle.
         """
 
-        if type(direction) != int or not 0 <= direction <= 3:
+        if not isinstance(direction, int) or not 0 <= direction <= 3:
             raise ValueError("Direction must be one of the defined types")
 
         self._direction = direction

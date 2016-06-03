@@ -1062,6 +1062,11 @@
                 "min": 0,
                 "default": 1
             },
+            "coverage": {
+                "help": "Provide a code coverage report",
+                "type": "bool",
+                "default": true
+            },
             "profile_sort": {
                 "help": "Sort method to use for the profile statistics",
                 "type": "string",

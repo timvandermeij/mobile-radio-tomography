@@ -37,7 +37,8 @@ operating system does not need to distinguish between Python 2 and Python 3.
 Python packages
 ---------------
 Use `pip install --user <package>` to install or upgrade each of the following 
-packages, sorted by purpose:
+packages, or `pip install -r requirements` to install all of them in one go. 
+The packages are sorted by purpose as follows:
 
 * General packages:
     * matplotlib
@@ -69,6 +70,8 @@ packages, sorted by purpose:
 * Testing:
     * mock
     * importchecker
+    * coverage
+    * pylint
 
 ArduPilot
 ---------
@@ -315,13 +318,31 @@ Running the tests
 
 The framework contains tests to ensure that all components behave the way
 we expect them to behave and therefore to reduce the risk of introducing
-regressions during development. The tests have to be executed from the
-root folder using the following command:
+regressions during development. The tests also include code coverage reports 
+and other options for profiling and benchmarking. The tests have to be executed 
+from the root folder using the following command:
 
     $ make test
 
 This command is executed automatically by Travis CI for each pull request
 or push to a branch.
+
+Code style
+----------
+
+Compatibility with the `pylint` code style checker is provided to allow testing 
+whether the code follows a certain coding standard and contains no other 
+errors. Note that it is not an objective to adhere to all checks that `pylint` 
+does, so some reports may be disabled in `.pylintrc`. For this reason and 
+because `pylint` is quite slow when it has to scan all files, it is not 
+integrated in the tests.
+
+During development, you can enable lint checks in your editor to receive code 
+style help for the currently edited file on the go. For Vim, you can enable 
+[Syntastic](https://github.com/scrooloose/syntastic) or use an older [pylint 
+compiler script](http://www.vim.org/scripts/script.php?script_id=891). See the 
+[pylint integration documentation](https://docs.pylint.org/ide-integration) for 
+other editors.
 
 License
 =======

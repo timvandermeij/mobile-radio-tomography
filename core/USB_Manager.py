@@ -116,13 +116,15 @@ class USB_Manager(object):
 
     def clear(self):
         """
-        Clear the list of USB devices and destroy any associated serial objects.
+        Clear the list of USB devices and destroy any associated serial objects,
+        canceling all operations and closing the connections.
         """
 
         for category in self._devices:
             for device in self._devices[category]:
-                if device.serial_object is not None and device.serial_object.isOpen():
-                    device.serial_object.close()
+                serial_object = device.serial_object
+                if serial_object is not None and serial_object.isOpen():
+                    serial_object.close()
 
         self._devices = {
             USB_Device_Category.XBEE: [],

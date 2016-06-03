@@ -1,10 +1,20 @@
+# Core imports
 import glob
 import os
 import sys
-import unittest
 from cProfile import Profile
 from pstats import Stats
 from subprocess import check_output
+from StringIO import StringIO
+
+# Unit test imports
+import unittest
+from mock import patch
+
+# Coverage imports
+import coverage
+
+# Package imports
 from __init__ import __package__
 from settings import Arguments
 
@@ -30,6 +40,7 @@ class BenchTestResult(unittest.runner.TextTestResult):
         self._sort = settings.get("profile_sort")
         self._limit = settings.get("profile_limit")
         self._benchmark = verbosity > 2
+        self._profiler = None
 
     def startTest(self, test):
         super(BenchTestResult, self).startTest(test)
@@ -50,6 +61,16 @@ class Test_Run(object):
         self._settings = arguments.get_settings("test_runner")
         self._failed = False
 
+        if self._settings.get("coverage"):
+            # Only consider our own module so that we exclude system and site 
+            # packages, and exclude the test runner and tests themselves from 
+            # code coverage.
+            path = os.path.dirname(os.path.abspath(__file__))
+            self._coverage = coverage.Coverage(include="{}/*".format(path),
+                                               omit=[__file__, "tests/*"])
+        else:
+            self._coverage = None
+
     def is_passed(self):
         """
         Check whether all the test run parts succeeded.
@@ -62,8 +83,25 @@ class Test_Run(object):
         Execute the unit tests.
         """
 
+        # Import pymavlink.mavutil with a patched output in order to suppress 
+        # the debugging print that occurs while importing it. This makes later 
+        # imports skip this debug print.
+        with patch('sys.stdout'):
+            from pymavlink import mavutil
+            sys.modules["pymavlink.mavutil"] = mavutil
+
+        # Discard the module cache for the package modules imported in the test 
+        # runner. This ensures that they are reimported in the tests, which 
+        # makes the coverage consider start-up calls again.
+        for module in ["settings", "settings.Settings", "settings.Arguments"]:
+            del sys.modules["{}.{}".format(__package__, module)]
+
         pattern = self._settings.get("pattern")
         verbosity = self._settings.get("verbosity")
+
+        if self._coverage is not None:
+            # Enable code coverage around the loading and running of tests.
+            self._coverage.start()
 
         loader = unittest.TestLoader()
         tests = loader.discover("tests", pattern=pattern, top_level_dir="..")
@@ -71,10 +109,32 @@ class Test_Run(object):
         factory = TestResultFactory(self._settings)
         runner = unittest.runner.TextTestRunner(verbosity=verbosity,
                                                 resultclass=factory)
+
         result = runner.run(tests)
+
+        if self._coverage is not None:
+            self._coverage.stop()
 
         if not result.wasSuccessful():
             self._failed = True
+
+    def execute_coverage_report(self):
+        """
+        Create a code coverage report if coverage is enabled and all tests
+        have succeeded.
+        """
+
+        if self._failed:
+            return None
+
+        if self._coverage is not None:
+            report = StringIO()
+            self._coverage.report(file=report,
+                                  show_missing=True, skip_covered=True)
+
+            return report.getvalue()
+
+        return None
 
     def execute_unused_imports_check(self):
         """
@@ -141,6 +201,11 @@ def main(argv):
 
     print("> Executing unit tests")
     test_run.execute_unit_tests()
+
+    coverage_report = test_run.execute_coverage_report()
+    if coverage_report is not None:
+        print("> Executing code coverage")
+        print(coverage_report)
 
     print("> Executing unused imports check")
     unused_imports = test_run.execute_unused_imports_check()

@@ -4,13 +4,15 @@ class Interval(object):
     """
 
     def __init__(self, minimum, maximum=None):
-        if isinstance(minimum, (list,tuple)):
+        if isinstance(minimum, (list, tuple)):
             if len(minimum) != 2:
                 raise ValueError("Must be given an interval specification")
             if maximum is not None:
                 raise ValueError("Cannot give both a sequence type and a maximum")
 
             minimum, maximum = minimum
+        elif maximum is None:
+            raise ValueError("Both minimum and maximum must be provided")
 
         self.min = minimum
         self.max = maximum
@@ -41,7 +43,7 @@ class Servo(object):
         self._values = Interval(values)
 
         if pwm is None:
-            self.pwm = Interval(1000,2000)
+            self.pwm = Interval(1000, 2000)
         else:
             self.pwm = Interval(pwm)
 

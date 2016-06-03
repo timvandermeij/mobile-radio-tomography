@@ -2,7 +2,8 @@
 
 if __name__ in ["__main__", "__builtin__", "__init__"]:
     if __package__ is None:
-        import sys, os
+        import sys
+        import os
         path = os.path.dirname(os.path.abspath(__file__))
         name = os.path.basename(path)
         sys.path.append(os.path.dirname(path))
