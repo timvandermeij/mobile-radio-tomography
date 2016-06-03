@@ -4,7 +4,7 @@ import itertools
 import numpy as np
 from dronekit import Locations, LocationLocal, LocationGlobal, LocationGlobalRelative
 
-__all__ = ["Geometry", "Geometry_Spherical"]
+__all__ = ["Geometry", "Geometry_Grid", "Geometry_Spherical"]
 
 class Geometry(object):
     """
@@ -565,6 +565,15 @@ class Geometry(object):
             dist = self.get_distance_meters(location1, loc_point)
             return (dist, loc_point)
 
+    def get_neighbor_offsets(self):
+        """
+        Retrieve coordinate indices for relative offsets of a location.
+        """
+
+        return np.array([(-1, -1), (-1, 0), (-1, 1),
+                          (0, -1),           (0, 1),
+                          (1, -1),  (1, 0),  (1, 1)])
+
 class Geometry_Grid(Geometry):
     """
     Geometry that operates in a grid-like environment where one can only move
@@ -575,6 +584,11 @@ class Geometry_Grid(Geometry):
         location1, location2 = self.equalize(location1, location2)
         diff = self._diff_location(location1, location2)
         return abs(diff.north) + abs(diff.east) + abs(diff.down)
+
+    def get_neighbor_offsets(self):
+        return np.array([          (-1, 0),
+                          (0, -1),           (0, 1),
+                                    (1, 0)          ])
 
 class Geometry_Spherical(Geometry):
     """

@@ -1,5 +1,6 @@
 import time
 import dronekit
+from dronekit import VehicleMode
 from pymavlink import mavutil
 from Vehicle import Vehicle
 from MAVLink_Vehicle import MAVLink_Vehicle
@@ -107,7 +108,7 @@ class Dronekit_Vehicle(dronekit.Vehicle, MAVLink_Vehicle):
 
         return super(Dronekit_Vehicle, self).add_takeoff(altitude)
 
-    def simple_takeoff(self, altitude):
+    def simple_takeoff(self, altitude=None):
         if self.is_rover:
             return False
 
@@ -144,7 +145,6 @@ class Dronekit_Vehicle(dronekit.Vehicle, MAVLink_Vehicle):
             0, # lat_int - X Position in WGS84 frame in 1e7 * meters
             0, # lon_int - Y Position in WGS84 frame in 1e7 * meters
             0, # alt - Altitude in meters in AMSL altitude(not WGS84 if absolute or relative)
-                         # altitude above terrain if GLOBAL_TERRAIN_ALT_INT
             velocity[0], # X velocity in NED frame in m/s
             velocity[1], # Y velocity in NED frame in m/s
             velocity[2], # Z velocity in NED frame in m/s

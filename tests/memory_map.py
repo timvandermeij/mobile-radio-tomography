@@ -17,12 +17,13 @@ class TestMemoryMap(EnvironmentTestCase):
     def test_init(self):
         size = 100
         resolution = 5
+        res = size * resolution
         altitude = 4.0
         memory_map = Memory_Map(self.environment, size, resolution, altitude)
-        self.assertEqual(memory_map.get_size(), size * resolution)
+        self.assertEqual(memory_map.get_size(), res)
         self.assertEqual(memory_map.resolution, resolution)
         self.assertIsInstance(memory_map.get_map(), np.ndarray)
-        self.assertEqual(memory_map.get_map().shape, (size * resolution, size * resolution))
+        self.assertTrue(np.array_equal(memory_map.get_map(), np.zeros((res, res))))
         self.assertEqual(memory_map.bl, self.environment.get_location(-size/2, -size/2, altitude))
         self.assertEqual(memory_map.tr, self.environment.get_location(size/2, size/2, altitude))
 
@@ -31,8 +32,10 @@ class TestMemoryMap(EnvironmentTestCase):
         resolution = 5
         altitude = 4.0
 
-        in_bounds = (size * resolution - 1, 0)
-        out_bounds = (size * resolution, -1)
+        res = size * resolution
+
+        in_bounds = (res - 1, 0)
+        out_bounds = (res, -1)
 
         memory_map = Memory_Map(self.environment, size, resolution, altitude)
         self.environment.get_vehicle().set_location(0.0, 0.0, altitude)
@@ -56,6 +59,7 @@ class TestMemoryMap(EnvironmentTestCase):
 
         self.assertEqual(len(memory_map.get_nonzero()), 1)
         self.assertIn(in_bounds, memory_map.get_nonzero())
+        self.assertTrue(np.array_equal(memory_map.get_nonzero_array(), [in_bounds]))
         loc = memory_map.get_location(250, 250)
         location = self.environment.get_location()
         self.assertEqual(loc, location)
@@ -64,6 +68,10 @@ class TestMemoryMap(EnvironmentTestCase):
 
         self.assertEqual(memory_map.get_location(0, 0), memory_map.bl)
         self.assertEqual(memory_map.get_location(250, 250), self.environment.get_location())
+
+        memory_map.clear()
+        self.assertEqual(memory_map.get(in_bounds), 0)
+        self.assertTrue(np.array_equal(memory_map.get_map(), np.zeros((res, res))))
 
     def test_handle_sensor(self):
         size = 100
@@ -79,7 +87,9 @@ class TestMemoryMap(EnvironmentTestCase):
         self.assertEqual(memory_map.get_index(location), idx)
         self.assertEqual(len(memory_map.get_nonzero()), 1)
         self.assertIn(idx, memory_map.get_nonzero())
+        self.assertTrue(np.array_equal(memory_map.get_nonzero_array(), [idx]))
         loc = memory_map.get_location(*idx)
+        self.assertEqual(memory_map.get_nonzero_locations()[0], loc)
         self.assertAlmostEqual(loc.north, location.north, delta=self.coord_delta)
         self.assertAlmostEqual(loc.east, location.east, delta=self.coord_delta)
         self.assertEqual(loc.down, location.down)

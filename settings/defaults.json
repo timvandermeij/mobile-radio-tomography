@@ -321,7 +321,7 @@
             "mission_class": {
                 "help": "Mission class to use for the mission",
                 "type": "class",
-                "module": "trajectory.Mission",
+                "module": "mission",
                 "default": "Mission_Cycle"
             },
             "measurement_delay": {

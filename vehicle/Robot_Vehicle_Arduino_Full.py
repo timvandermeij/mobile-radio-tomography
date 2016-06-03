@@ -1,8 +1,8 @@
+import thread
+import time
 from Robot_Vehicle import Robot_State
 from Robot_Vehicle_Arduino import Robot_Vehicle_Arduino
 from ..location.Line_Follower import Line_Follower_Direction
-import time
-import thread
 
 class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
     """
@@ -36,7 +36,10 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
     def _update_home_location(self):
         # Format a "home location" command
         # Only use this when starting.
-        self._serial_connection.write("HOME {} {} {}\n".format(int(self._home_location[0]), int(self._home_location[1]), self._get_zumo_direction(self._direction)))
+        home_north = int(self._home_location[0])
+        home_east = int(self._home_location[1])
+        home_direction = self._get_zumo_direction(self._direction)
+        self._serial_connection.write("HOME {} {} {}\n".format(home_north, home_east, home_direction))
 
     @property
     def home_location(self):
@@ -101,7 +104,8 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
 
     def _set_direction(self, target_direction, rotate_direction=0):
         # Format a "set direction" command
-        self._serial_connection.write("DIRS {} {}\n".format(self._get_zumo_direction(target_direction), rotate_direction))
+        zumo_direction = self._get_zumo_direction(self._direction)
+        self._serial_connection.write("DIRS {} {}\n".format(zumo_direction, rotate_direction))
 
     def _goto_waypoint(self, next_waypoint):
         if next_waypoint is None:
@@ -118,6 +122,7 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
     def _format_speeds(self, left_speed, right_speed, left_forward, right_forward):
         # Although we currently do not support changing speeds in the program, 
         # we can at least not completely break the command for now.
-        output = super(Robot_Vehicle_Arduino_Full, self)._format_speeds(left_speed, right_speed, left_forward, right_forward)
+        output = super(Robot_Vehicle_Arduino_Full, self)._format_speeds(left_speed, right_speed,
+                                                                        left_forward, right_forward)
         # Format as a command "set speeds".
         return "SPDS {}".format(output)
