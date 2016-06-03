@@ -1,17 +1,16 @@
 # TODO:
 # - Implement synchronous NTP (abstraction into class to avoid duplication)
-# - Implement discovery (ping/pong packets)
 # - Implement `RF_Sensor` abstraction, remove `self._data` and rename to `CC2530_Sensor_Physical`
 # - Figure out ground station and blocking reads/writes
 # - Write tests
 
 import os
-import serial
 import struct
 import subprocess
 import time
 import thread
 import wiringpi
+from XBee_Packet import XBee_Packet
 from XBee_Sensor import XBee_Sensor, SensorClosedError
 
 class Raspberry_Pi_GPIO_Pin_Mode(object):
@@ -73,7 +72,7 @@ class XBee_CC2530_Sensor_Physical(XBee_Sensor):
         """
 
         # Open and close the serial connection so that the UART buffers are correctly 
-        # leared. This is required to not receive only zeroes from the CC2530 device.
+        # cleared. This is required to not receive only zeroes from the CC2530 device.
         self._serial_connection = self._usb_manager.get_cc2530_device()
         self._serial_connection.close()
 
@@ -81,19 +80,19 @@ class XBee_CC2530_Sensor_Physical(XBee_Sensor):
         # sanity, but might help in ensuring that these pins have the correct
         # alternative modes for some Raspberry Pi devices.
         wiringpi.wiringPiSetupPhys()
-        wiringpi.pinModeAlt(self._pins["rx_pin"], Raspberry_Pi.GPIO_Pin_Mode.ALT0)
-        wiringpi.pinModeAlt(self._pins["tx_pin"], Raspberry_Pi.GPIO_Pin_Mode.ALT0)
-        wiringpi.pinModeAlt(self._pins["rts_pin"], Raspberry_Pi.GPIO_Pin_Mode.ALT3)
-        wiringpi.pinModeAlt(self._pins["cts_pin"], Raspberry_Pi.GPIO_Pin_Mode.ALT3)
+        wiringpi.pinModeAlt(self._pins["rx_pin"], Raspberry_Pi_GPIO_Pin_Mode.ALT0)
+        wiringpi.pinModeAlt(self._pins["tx_pin"], Raspberry_Pi_GPIO_Pin_Mode.ALT0)
+        wiringpi.pinModeAlt(self._pins["rts_pin"], Raspberry_Pi_GPIO_Pin_Mode.ALT3)
+        wiringpi.pinModeAlt(self._pins["cts_pin"], Raspberry_Pi_GPIO_Pin_Mode.ALT3)
 
         # Reopen the serial connection.
         self._serial_connection = self._usb_manager.get_cc2530_device()
 
         # Reset the CC2530 device.
-        wiringpi.pinMode(pins["reset_pin"], wiringpi.OUTPUT)
-        wiringpi.digitalWrite(pins["reset_pin"], 0)
+        wiringpi.pinMode(self._pins["reset_pin"], wiringpi.OUTPUT)
+        wiringpi.digitalWrite(self._pins["reset_pin"], 0)
         time.sleep(self._reset_delay)
-        wiringpi.digitalWrite(pins["reset_pin"], 1)
+        wiringpi.digitalWrite(self._pins["reset_pin"], 1)
 
         # Configure the CC2530 device using a configuration packet.
         self._serial_connection.reset_input_buffer()
@@ -162,7 +161,17 @@ class XBee_CC2530_Sensor_Physical(XBee_Sensor):
         to refresh the status of the other XBee devices.
         """
 
-        pass
+        # Register the discovery callback.
+        self._discovery_callback = callback
+
+        # Construct the CC2530 ping/pong packet.
+        packet = XBee_Packet()
+        packet.set("specification", "cc2530_ping_pong")
+
+        # Send a ping to all sensors in the network.
+        for index in xrange(1, self._number_of_sensors + 1):
+            packet.set("sensor_id", index)
+            self._send_tx_frame(packet, index)
 
     def _ntp(self, packet):
         """
@@ -240,7 +249,6 @@ class XBee_CC2530_Sensor_Physical(XBee_Sensor):
         # Convert the raw packet to an XBee packet according to specifications.
         packet = XBee_Packet()
         packet.unserialize(data)
-        packet.set("rssi", rssi)
 
         # Check whether the packet is not private and pass it along to the 
         # receive callback.
@@ -259,17 +267,24 @@ class XBee_CC2530_Sensor_Physical(XBee_Sensor):
 
             return
 
-        # Handle an RSSI ground station packet.
         if self._id == 0:
+            # Handle CC2530 ping/pong packets.
+            if packet.get("specification") == "cc2530_ping_pong":
+                self._discovery_callback({
+                    "id": packet.get("sensor_id"),
+                    "address": packet.get("sensor_id")
+                })
+
+            # Handle an RSSI ground station packet.
             if self._buffer is not None:
                 self._buffer.put(packet)
 
             return
 
         # Handle a received RSSI broadcast packet.
-        self._process_rssi_broadcast_packet(packet)
+        self._process_rssi_broadcast_packet(packet, rssi=rssi)
 
-    def _process_rssi_broadcast_packet(self, packet):
+    def _process_rssi_broadcast_packet(self, packet, rssi=None):
         """
         Process a received packet with RSSI measurements.
         """
@@ -278,6 +293,9 @@ class XBee_CC2530_Sensor_Physical(XBee_Sensor):
         self._next_timestamp = self._scheduler.synchronize(packet)
 
         # Create the packet for the ground station.
+        if rssi is None:
+            raise ValueError("Missing RSSI value for ground station packet")
+
         ground_station_packet = self._make_rssi_ground_station_packet(packet)
-        ground_station_packet.set("rssi", packet.get("rssi"))
+        ground_station_packet.set("rssi", rssi)
         self._data.append(ground_station_packet)
