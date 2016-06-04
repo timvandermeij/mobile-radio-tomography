@@ -48,6 +48,24 @@ class Mission_Auto(Mission):
             self.altitude = 0.0
             self._first_waypoint = 0
 
+    def _convert_waypoint(self, point):
+        """
+        Convert a waypoint location object `point` to adhere to the current
+        geometry's location and mission's operating altitude.
+        """
+
+        # Handle local locations, points without a specific altitude and 
+        # non-spherical geometries.
+        if isinstance(point, LocationLocal):
+            down = point.down if point.down != 0.0 else -self.altitude
+            return LocationLocal(point.north, point.east, down)
+
+        alt = point.alt if point.alt != 0.0 else self.altitude
+        if isinstance(self.geometry, Geometry_Spherical):
+            return LocationGlobalRelative(point.lat, point.lon, alt)
+
+        return LocationLocal(point.lat, point.lon, -alt)
+
     def add_waypoint(self, point, required_sensors=None):
         """
         Add a waypoint location object `point` to the vehicle's mission command
@@ -58,19 +76,7 @@ class Mission_Auto(Mission):
         for in the measurement validation.
         """
 
-        # Handle local locations, points without a specific altitude and 
-        # non-spherical geometries.
-        if isinstance(point, LocationLocal):
-            down = point.down if point.down != 0.0 else -self.altitude
-            point = LocationLocal(point.north, point.east, down)
-        else:
-            alt = point.alt if point.alt != 0.0 else self.altitude
-            if isinstance(self.geometry, Geometry_Spherical):
-                point = LocationGlobalRelative(point.lat, point.lon, alt)
-            else:
-                point = LocationLocal(point.lat, point.lon, -alt)
-
-        self.vehicle.add_waypoint(point)
+        self.vehicle.add_waypoint(self._convert_waypoint(point))
 
         if self._xbee_synchronization:
             self.vehicle.add_wait()
