@@ -26,7 +26,7 @@ class XBee_TDMA_Scheduler(object):
 
         if self.timestamp == 0:
             self.timestamp = time.time() + ((float(self.id) / self.number_of_sensors) *
-                             self.sweep_delay)
+                                            self.sweep_delay)
         else: 
             self.timestamp += self.sweep_delay
         
