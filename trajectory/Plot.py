@@ -1,12 +1,10 @@
 import math
 import sys
-
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon, Circle
 from matplotlib.collections import PatchCollection
-
 from ..environment.Environment_Simulator import Environment_Simulator
 
 class Plot(object):

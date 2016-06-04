@@ -1,11 +1,9 @@
-from collections import deque
 import math
 import numpy as np
-
 import pyglet
+from collections import deque
 from pyglet.window import key
 from pyglet.gl import *
-
 from ..environment.Environment_Simulator import Environment_Simulator
 from ..vehicle.Mock_Vehicle import Mock_Vehicle, MockAttitude
 
@@ -323,10 +321,7 @@ class Viewer_Interactive(Viewer):
             raise TypeError("`environment` must be an `Environment_Simulator`")
 
         self.vehicle = self.environment.get_vehicle()
-        if isinstance(self.vehicle, Mock_Vehicle):
-            self.is_mock = True
-        else:
-            self.is_mock = False
+        self.is_mock = isinstance(self.vehicle, Mock_Vehicle)
 
         self.sensors = self.environment.get_distance_sensors()
 

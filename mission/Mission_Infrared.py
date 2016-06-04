@@ -19,6 +19,7 @@ class Mission_Infrared(Mission_Guided):
 
     def start(self):
         super(Mission_Infrared, self).start()
+
         self.infrared_sensor.register("up", self._up, self._release)
         self.infrared_sensor.register("down", self._down, self._release)
         self.infrared_sensor.register("left", self._left, self._release)
@@ -38,4 +39,3 @@ class Mission_Infrared(Mission_Guided):
 
     def _right(self):
         self.vehicle.set_rotate(1)
-
