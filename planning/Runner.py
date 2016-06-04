@@ -24,17 +24,20 @@ class Planning_Runner(Threadable):
 
         self.reset()
 
+    def _get_problem(self):
+        if self.settings.get("discrete"):
+            return Reconstruction_Plan_Discrete(self.arguments)
+
+        return Reconstruction_Plan_Continuous(self.arguments)
+
     def reset(self):
         """
         Reset the algorithm and problem state.
         """
 
-        algo = self.settings.get("algorithm_class")
+        self.problem = self._get_problem()
 
-        if self.settings.get("discrete"):
-            self.problem = Reconstruction_Plan_Discrete(self.arguments)
-        else:
-            self.problem = Reconstruction_Plan_Continuous(self.arguments)
+        algo = self.settings.get("algorithm_class")
 
         if algo not in Algorithm.__dict__:
             raise ValueError("Algorithm class '{}' does not exist".format(algo))
@@ -56,6 +59,9 @@ class Planning_Runner(Threadable):
 
         # Objective values of individuals
         self.Objectives = np.empty(0)
+
+        # Nondominated layers of solution objectives
+        self.R = []
 
     def _handle_algorithm_data(self, algorithm, data):
         # Pass through to the actual algorithm iteration callback, and track 
@@ -225,17 +231,20 @@ class Planning_Runner(Threadable):
         obj = []
         for f, name in enumerate(self.problem.get_objective_names()):
             obj.append("f{} ({}): {}".format(f+1, name, self.Objectives[i][f]))
-        axes.set_title("Sensor positions for solution #{}/{} (index {})\n{}".format(plot_number, count, i, ", ".join(obj)))
+
+        title_format = "Sensor positions for solution #{}/{} (index {})\n{}"
+        objectives = ", ".join(obj)
+        axes.set_title(title_format.format(plot_number, count, i, objectives))
 
         # Create axes with limits that keep the network visible, make the plot 
         # square and display ticks and a grid at the network coordinates.
         axes.set_xlabel("x coordinate")
         axes.set_ylabel("y coordinate")
-        axes.set_xlim([-0.1, self.problem.network_size[0]+0.1])
-        axes.set_ylim([-0.1, self.problem.network_size[1]+0.1])
+        axes.set_xlim([-0.1, self.problem.network_size[0] + 0.1])
+        axes.set_ylim([-0.1, self.problem.network_size[1] + 0.1])
         axes.set_aspect('equal', adjustable='box')
-        axes.set_xticks(range(self.problem.network_size[0]+1))
-        axes.set_yticks(range(self.problem.network_size[1]+1))
+        axes.set_xticks(range(self.problem.network_size[0] + 1))
+        axes.set_yticks(range(self.problem.network_size[1] + 1))
         axes.grid(True)
 
         # Make network size with padding visible
@@ -248,10 +257,10 @@ class Planning_Runner(Threadable):
 
         # Plot the measurement lines between locations as well as the vehicle 
         # sensor locations themselves as circles.
-        lines = [[(p[0,0], p[1,0]), (p[0,1], p[1,1])] for p in positions]
+        lines = [[tuple(p[:, 0]), tuple(p[:, 1])] for p in positions]
 
         axes.plot(*itertools.chain(*lines))
-        axes.plot(positions[:,:,0].flatten(), positions[:,:,1].flatten(), 'ro')
+        axes.plot(positions[:, :, 0].flatten(), positions[:, :, 1].flatten(), 'ro')
 
         return positions, unsnappable
 
@@ -296,11 +305,11 @@ class Planning_Runner(Threadable):
         instead.
         """
         
-        positions, unsnappable = self.get_positions(i)
+        positions = self.get_positions(i)[0]
         if positions.size == 0:
             return {}
 
-        assignment, distance = self.problem.assigner.assign(positions)
+        assignment = self.problem.assigner.assign(positions)[0]
         return assignment
 
     def get_iteration_current(self):

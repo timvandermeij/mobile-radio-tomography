@@ -93,6 +93,69 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         for table in self._tables:
             table.insertRow(table.rowCount())
 
+    def _format_row_data(self, vehicle, table, row, previous, repeat=True, errors=True):
+        """
+        Format a single row from a waypoints table for exporting.
+
+        This method grabs the cells from the given `table` at row number `row`
+        for the given vehicle `vehicle`, given that the data from the previous
+        row is given in `previous`. If there is no previous row, then this is
+        equal to the column defaults.
+
+        Can raise a `ValueError` for missing or invalid cell data.
+        """
+
+        data = []
+        for col in range(len(self._column_labels)):
+            item = table.item(row, col)
+            # Handle unchanged columns (no item widget) or empty columns (text 
+            # contents equals to empty string)
+            if item is None or item.text() == "":
+                data.append(None)
+            else:
+                data.append(item.text())
+
+        if all(item is None for item in data) and previous == self._column_defaults:
+            # If the first table row is completely empty, then silently ignore 
+            # this row.
+            return []
+
+        if errors:
+            pair = zip(data, previous)
+            if any(val is None and prev is None for val, prev in pair):
+                # If a column has no data and no previous data either, then we 
+                # have missing information.
+                raise ValueError("Missing coordinates for vehicle {}, row #{} and no previous waypoint".format(vehicle, row + 1))
+
+        for i, col in enumerate(self._column_labels):
+            if data[i] is None:
+                # If a table cell is empty, use the previous waypoint's 
+                # coordinates for the current waypoint.
+                data[i] = previous[i] if repeat else self._column_defaults[i]
+            else:
+                try:
+                    data[i] = self._cast_cell(i, data[i])
+                except ValueError:
+                    if errors:
+                        raise ValueError("Invalid value for vehicle {}, row #{}, column '{}': '{}'".format(vehicle, row + 1, col, data[i]))
+
+        return data
+
+    def _cast_cell(self, col, text):
+        """
+        Change the text from a cell in column `col` to correct type.
+
+        Returns the casted value. Raises a `ValueError` if the text cannot be
+        casted to the appropriate value.
+        """
+
+        if self._column_defaults[col] is not None:
+            type_cast = type(self._column_defaults[col])
+        else:
+            type_cast = float
+
+        return type_cast(text)
+
     def _export_waypoints(self, repeat=True, errors=True):
         """
         Create a dictonary containing lists of waypoints (tuples) per vehicle
@@ -118,44 +181,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             vehicle = index + 1
             previous = self._column_defaults
             for row in range(table.rowCount()):
-                data = []
-                for col in range(len(self._column_labels)):
-                    item = table.item(row, col)
-                    # Handle unchanged columns (no item widget) or empty 
-                    # columns (text contents equals to empty string)
-                    if item is None or item.text() == "":
-                        data.append(None)
-                    else:
-                        data.append(item.text())
-
-                if all(item is None for item in data) and not previous:
-                    # If the first table row is completely empty, then silently 
-                    # ignore this row.
-                    continue
-
-                if errors:
-                    pair = zip(data, previous)
-                    if any(val is None and prev is None for val, prev in pair):
-                        # If a column has no data and no previous data either, 
-                        # then we have missing information.
-                        raise ValueError("Missing coordinates for vehicle {}, row #{} and no previous waypoint".format(vehicle, row + 1))
-
-                for i, col in enumerate(self._column_labels):
-                    if data[i] is None:
-                        # If a table cell is empty, use the previous waypoint's 
-                        # coordinates for the current waypoint.
-                        data[i] = previous[i] if repeat else self._column_defaults[i]
-                    else:
-                        try:
-                            if self._column_defaults[i] is not None:
-                                type_cast = type(self._column_defaults[i])
-                            else:
-                                type_cast = float
-
-                            data[i] = type_cast(data[i])
-                        except ValueError:
-                            if errors:
-                                raise ValueError("Invalid value for vehicle {}, row #{}, column '{}': '{}'".format(vehicle, row + 1, col, data[i]))
+                data = self._format_row_data(vehicle, table, row, previous, repeat, errors)
 
                 if vehicle not in waypoints:
                     waypoints[vehicle] = [tuple(data)]
@@ -250,7 +276,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             return
 
         try:
-            self._import_waypoints(waypoints)
+            self._import_waypoints(waypoints, from_json=True)
         except ValueError as e:
             QtGui.QMessageBox.critical(self._controller.central_widget,
                                        "Waypoint incorrect", e.message)

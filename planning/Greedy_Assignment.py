@@ -44,6 +44,21 @@ class Greedy_Assignment(object):
         indices = np.unravel_index(np.argmin(totals), totals.shape)
         return indices, totals[indices]
 
+    def _assign_pair(self, assignment, current_positions, positions, vehicle_pair, closest_pair):
+        # Determine the synchronization (waits) between the two vehicles in the 
+        # chosen vehicle pair. There are always two permutations here.
+        syncs = itertools.permutations(self._vehicle_pairs[vehicle_pair])
+        for i, sync_pair in enumerate(syncs):
+            vehicle, other_vehicle = sync_pair
+
+            # The coordinates of the next position for the given vehicle.
+            new_position = list(positions[closest_pair, i, :])
+
+            # Create an assignment containing the full position and the other 
+            # vehicle's wait ID.
+            assignment[vehicle].append(new_position + [0, other_vehicle])
+            current_positions[vehicle-1] = new_position
+
     def assign(self, positions_pairs):
         """
         Assign the vehicles with current positions `home_positions` an ordering
@@ -69,21 +84,12 @@ class Greedy_Assignment(object):
         while len(positions) > 0:
             # The index of the distances matrix and the distance value itself.
             idx, distance = self._get_closest_pair(current_positions, positions)
+
             # The chosen vehicle pair and the chosen measurement positions pair
             vehicle_pair, closest_pair = idx
 
-            # Determine the synchronization (waits) between the two vehicles in 
-            # the chosen vehicle pair. There are always two permutations here.
-            syncs = itertools.permutations(self._vehicle_pairs[vehicle_pair])
-            for i, sync_pair in enumerate(syncs):
-                vehicle, other_vehicle = sync_pair
-
-                new_position = list(positions[closest_pair, i, :])
-
-                # Create an assignment containing the full position and the 
-                # other vehicle's wait ID.
-                assignment[vehicle].append(new_position + [0, other_vehicle])
-                current_positions[vehicle-1] = new_position
+            self._assign_pair(assignment, current_positions, positions,
+                              vehicle_pair, closest_pair)
 
             total_distance += distance
 
