@@ -188,7 +188,7 @@ max-nested-blocks=5
 max-line-length=120
 
 # Regexp for a line that is allowed to be longer than the limit.
-ignore-long-lines=^\s*(# )?<?https?://\S+>?$|raise[( ]+\w+\("[^"]*"[^"]*\)[) ]+$
+ignore-long-lines=^\s*(# )?<?https?://\S+>?$|raise[( ]+\w+\("[^"]*".*\)[) ]+$
 
 # Allow the body of an if to be on the same line as the test if there is no
 # else.
@@ -319,14 +319,14 @@ exclude-protected=_asdict,_fields,_replace,_source,_make
 [DESIGN]
 
 # Maximum number of arguments for function / method
-max-args=7
+max-args=8
 
 # Argument names that match this expression will be ignored. Default to name
 # with leading underscore
 ignored-argument-names=_.*
 
 # Maximum number of locals for function / method body
-max-locals=15
+max-locals=20
 
 # Maximum number of return / yield for function / method body
 max-returns=6

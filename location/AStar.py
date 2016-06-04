@@ -16,6 +16,25 @@ class AStar(object):
         self._resolution = float(self._memory_map.get_resolution())
         self._size = self._memory_map.get_size()
 
+    def _get_close_map(self, closeness):
+        # Calculate the regions of influence of the objects in the memory map.
+        # We consider these regions to be too close and thus unsafe.
+        nonzero = self._memory_map.get_nonzero_array()
+        # The closeness radius in memory map coordinate units
+        radius = (closeness * self._resolution)**2
+        close = np.zeros((self._size, self._size))
+        for idx in nonzero:
+            # Center of the mask
+            a, b = idx
+            # Open meshlike grid
+            y, x = np.ogrid[-a:self._size-a, -b:self._size-b]
+            # The circular mask of the region of influence of the object. This 
+            # region is too close to that object.
+            mask = x*x + y*y < radius
+            close[mask] = 1
+
+        return close
+
     def assign(self, start, goal, closeness):
         """
         Perform the A* search algorithm to create a list of waypoints that bring
@@ -32,21 +51,7 @@ class AStar(object):
         start_idx = self._memory_map.get_index(start)
         goal_idx = self._memory_map.get_index(goal)
 
-        # Calculate the regions of influence of the objects in the memory map.
-        # We consider these regions to be too close and thus unsafe.
-        nonzero = self._memory_map.get_nonzero_array()
-        # The closeness radius in memory map coordinate units
-        radius = (closeness * self._resolution)**2
-        close = np.zeros((self._size, self._size))
-        for idx in nonzero:
-            # Center of the mask
-            a, b = idx
-            # Open meshlike grid
-            y, x = np.ogrid[-a:self._size-a, -b:self._size-b]
-            # The circular mask of the region of influence of the object. This 
-            # region is too close to that object.
-            mask = x*x + y*y < radius
-            close[mask] = 1
+        close = self._get_close_map(closeness)
 
         evaluated = set()
         open_nodes = set([start_idx])
@@ -119,23 +124,24 @@ class AStar(object):
         # containing waypoints that should be followed to get to the goal point
         total_path = []
         previous = current
+        first = True
 
         # The current trend of the differences between the points
-        trend = None
+        trend = (0, 0)
         while current in came_from:
             current = came_from.pop(current)
 
             # Track the current trend of the point differences. If it is the 
             # same kind of difference, then we may be able to skip this point 
             # in our list of waypoints.
-            d = tuple(np.sign(current[i] - previous[i]) for i in [0,1])
-            if trend is None or (trend[0] != 0 and d[0] != trend[0]) or (trend[1] != 0 and d[1] != trend[1]):
-                trend = d
+            d = tuple(np.sign(current[i] - previous[i]) for i in [0, 1])
+            same_trend = (trend[i] != 0 and d[i] != trend[i] for i in [0, 1])
+            if first or any(same_trend):
                 total_path.append(self._memory_map.get_location(*previous))
-            else:
-                trend = d
 
+            trend = d
             previous = current
+            first = False
 
         return list(reversed(total_path))
 

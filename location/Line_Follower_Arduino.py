@@ -8,7 +8,8 @@ class Line_Follower_Arduino(Line_Follower):
         Initialize the line follower object for the Arduino.
         """
 
-        super(Line_Follower_Arduino, self).__init__(location, direction, callback, thread_manager, delay)
+        super(Line_Follower_Arduino, self).__init__(location, direction, callback,
+                                                    thread_manager, delay)
 
         if isinstance(settings, Arguments):
             settings = settings.get_settings("line_follower_arduino")
