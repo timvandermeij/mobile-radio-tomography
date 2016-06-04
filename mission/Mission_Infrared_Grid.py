@@ -31,4 +31,3 @@ class Mission_Infrared_Grid(Mission_Infrared):
 
     def _right(self):
         self._diff[1] = 1
-

@@ -1,3 +1,4 @@
+from ..vehicle.Robot_Vehicle import Robot_Vehicle
 from Mission_Guided import Mission_Guided
 
 class Mission_Infrared(Mission_Guided):

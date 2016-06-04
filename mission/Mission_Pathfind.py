@@ -104,7 +104,7 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
     def check_scan(self):
         if self.sensor_dist < 2 * self.padding + self.closeness:
             print("Start scanning due to closeness.")
-            self.send_global_velocity(0,0,0)
+            self.send_global_velocity(0, 0, 0)
             self.browsing = True
             self.start_yaw = self.yaw = self.vehicle.attitude.yaw
             return True
@@ -115,5 +115,4 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
         closeness = min(self.sensor_dist - self.padding,
                         self.padding + self.closeness)
 
-        path, distance = self._astar.assign(start, goal, closeness)
-        return path
+        return self._astar.assign(start, goal, closeness)[0]
