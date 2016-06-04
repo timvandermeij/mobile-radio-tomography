@@ -102,9 +102,10 @@ class Memory_Map(object):
         If the index is not within the bounds of the map, this method raises
         a `KeyError`. Otherwise, the numeric value in the map is returned.
         """
-        i,j = idx
-        if self.index_in_bounds(i,j):
-            return self.map[i,j]
+
+        i, j = idx
+        if self.index_in_bounds(i, j):
+            return self.map[i, j]
 
         raise KeyError("i={} and/or j={} out of bounds ({}).".format(i, j, self.size))
 
@@ -117,9 +118,9 @@ class Memory_Map(object):
         a `KeyError`. Otherwise, the value is set within the map.
         """
 
-        i,j = idx
-        if self.index_in_bounds(i,j):
-            self.map[i,j] = value
+        i, j = idx
+        if self.index_in_bounds(i, j):
+            self.map[i, j] = value
         else:
             raise KeyError("i={} and/or j={} out of bounds ({}).".format(i, j, self.size))
 
