@@ -238,7 +238,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
         try:
             with open(fn, 'r') as import_file:
-                waypoints = self._convert_import(json.load(import_file))
+                waypoints = self._convert_waypoints(json.load(import_file))
         except IOError as e:
             message = "Could not open file '{}': {}".format(fn, e.strerror)
             QtGui.QMessageBox.critical(self._controller.central_widget,
