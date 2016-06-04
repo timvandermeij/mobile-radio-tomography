@@ -27,9 +27,14 @@ class Distance_Sensor_Simulator(Distance_Sensor):
 
     def get_face_distance(self, face, location, yaw_angle, pitch_angle):
         """
-        Get the direction distance to a plane `face` given as a polygon in a list of points from the `location` with yaw and pitch angles given by `yaw_angle` and `[itch_angle`.
-        Returns the distance as well as the edge that was closest to the location, if there is any.
+        Get the direction distance to a plane `face` given as a polygon in a
+        list of points from the `location` with yaw and pitch angles given by
+        `yaw_angle` and `[itch_angle`.
+
+        Returns the distance as well as the edge that was closest to the
+        location, if there is any.
         """
+
         # Check if angle is within at least one quadrant of the angles to the 
         # object bounds, and also within the object bounds themselves. Both 
         # requirements have to be met, otherwise angles that are around the 
@@ -55,7 +60,8 @@ class Distance_Sensor_Simulator(Distance_Sensor):
             dists = []
             edges = self.geometry.get_point_edges(face)
             for edge in edges:
-                dists.append(self.geometry.get_edge_distance(edge, location, yaw_angle, pitch_angle, altitude_margin=self.altitude_margin))
+                dists.append(self.geometry.get_edge_distance(edge, location, yaw_angle,
+                                                             pitch_angle, altitude_margin=self.altitude_margin))
 
             d_min = min(dists)
             e_min = dists.index(d_min)
@@ -90,7 +96,8 @@ class Distance_Sensor_Simulator(Distance_Sensor):
             edges = []
             j = 0
             for face in obj:
-                dist, edge = self.get_plane_distance(face, location, yaw_angle, pitch_angle, verbose and j == self.current_face)
+                dist, edge = self.get_plane_distance(face, location, yaw_angle, pitch_angle,
+                                                     verbose and j == self.current_face)
                 dists.append(dist)
                 edges.append(edge)
                 j = j + 1
@@ -149,9 +156,12 @@ class Distance_Sensor_Simulator(Distance_Sensor):
 
     def draw_current_edge(self, plt, memory_map, color="red"):
         """
-        Draw the edge that was detected during the previous distance sensor measurement, if any.
-        The edge is drawn to the matplotlib plot object `plt` using the index offsets from the Memory_Map `map`. Additionally the `color` of the edge can be given.
+        Draw the edge that was detected during the previous distance sensor
+        measurement, if any. The edge is drawn to the matplotlib plot object
+        `plt` using the index offsets from the Memory_Map `map`. Additionally
+        the `color` of the edge can be given.
         """
+
         if self.current_edge is not None:
             options = {
                 "arrowstyle": "-",
