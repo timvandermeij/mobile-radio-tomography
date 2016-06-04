@@ -303,7 +303,7 @@ callbacks=_callback
 [CLASSES]
 
 # List of method names used to declare (i.e. assign) instance attributes.
-defining-attr-methods=__init__,__new__,setUp,setup,load,reset
+defining-attr-methods=__init__,__new__,setUp,setup,_setup,load,reset,_reset_camera,_reset_movement
 
 # List of valid names for the first argument in a class method.
 valid-classmethod-first-arg=cls

@@ -2,7 +2,8 @@ import numpy as np
 
 class Memory_Map(object):
     """
-    A memory map of the environment that the vehicle keeps track of using measurements from the distance sensor.
+    A memory map of the environment that the vehicle keeps track of regions
+    of influence of known objects using measurements from the distance sensor.
     """
 
     def __init__(self, environment, memory_size, resolution=1, altitude=0.0):
@@ -29,7 +30,7 @@ class Memory_Map(object):
         self.bl = self.environment.get_location(-offset, -offset, self.altitude)
         self.tr = self.environment.get_location(offset, offset, self.altitude)
 
-        dlat, dlon, dalt = self.geometry.diff_location_meters(self.bl, self.tr)
+        dlat, dlon = self.geometry.diff_location_meters(self.bl, self.tr)[:2]
         self.dlat = dlat
         self.dlon = dlon
 
@@ -59,7 +60,7 @@ class Memory_Map(object):
         Convert a location `loc` to indices for a two-dimensional matrix.
         """
 
-        dlat, dlon, dalt = self.geometry.diff_location_meters(self.bl, loc)
+        dlat, dlon = self.geometry.diff_location_meters(self.bl, loc)[:2]
         y = (dlat / self.dlat) * self.size
         x = (dlon / self.dlon) * self.size
         return (int(y), int(x))

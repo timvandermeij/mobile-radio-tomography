@@ -1,7 +1,7 @@
+from collections import deque
 import math
 import numpy as np
 import pyglet
-from collections import deque
 from pyglet.window import key
 from pyglet.gl import *
 from ..environment.Environment_Simulator import Environment_Simulator
@@ -67,6 +67,7 @@ class Viewer(object):
 
         self.geometry = self.environment.get_geometry()
         self.initial_location = self.environment.get_location()
+        self.win = None
 
     def start(self):
         """
@@ -98,11 +99,14 @@ class Viewer(object):
         Initialize the simulated objects from the environment for drawing.
         We convert the objects to GL standards and give each object a color.
         """
+
         max_points = self.settings.get("max_points")
         self.points = deque(maxlen=max_points)
         self.quadrics = deque(maxlen=max_points)
+
         self.colors = []
         self.objects = []
+
         for obj in self.environment.get_objects():
             self.colors.append(np.random.rand(3))
             if isinstance(obj, list):
@@ -189,11 +193,18 @@ class Viewer(object):
         """
         Update the current location and rotation of the camera.
 
-        This can be called using pyglet's scheduling system by adding it as a callback there, or directly in order to force a change.
-        The given `dt` indicates the time in seconds that has passed since the last call to `update`. It can also be `0.0` to skip movement and rotation changes, or `1.0` to do exactly one step of them.
+        This can be called using pyglet's scheduling system by adding it as
+        a callback there, or directly in order to force a change.
+        The given `dt` indicates the delta time in seconds that has passed since
+        the last call to `update`. It can also be `0.0` to skip updates of the
+        camera movement and rotation changes, or `1.0` to do exactly one step
+        of those updates.
         """
 
-        self.pos.z, self.pos.x, self.pos.y = self.geometry.diff_location_meters(self.initial_location, self.environment.get_location())
+        current_location = self.environment.get_location()
+        pos = self.geometry.diff_location_meters(self.initial_location,
+                                                 current_location)
+        self.pos.z, self.pos.x, self.pos.y = pos
 
         # Now perform any rotation changes
         self.rotation.x = (self.rotation.x + dt * self.orient.x) % 360
@@ -360,7 +371,7 @@ class Viewer_Interactive(Viewer):
             yaw = math.atan2(self.look.x, self.look.z)
             self.vehicle.attitude = MockAttitude(pitch, yaw, 0.0)
 
-        self.points = []
+        self.points.clear()
         i = 0
         for sensor in self.sensors:
             yaw = sensor.get_angle()
@@ -372,6 +383,14 @@ class Viewer_Interactive(Viewer):
             i = i + 1
 
     def on_key_press(self, symbol, modifiers):
+        """
+        Handle keyboard input in the viewer window.
+
+        This allows interaction with the camera and the simulated environment
+        that is displayed in the viewer.
+        """
+
+        # pylint: disable=too-many-branches
         if symbol == key.LEFT or symbol == key.A: # strafe left
             self.strafe.x = -self.camera_speed
         elif symbol == key.RIGHT or symbol == key.D: # strafe right
