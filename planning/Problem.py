@@ -394,7 +394,7 @@ class Reconstruction_Plan(Problem):
         # Set up variables used by the constraint and objective functions.
         if positions.size > 0:
             # Generate distances between all the pairs of sensor positions.
-            pair_diffs = positions[:,0,:] - positions[:,1,:]
+            pair_diffs = positions[:, 0, :] - positions[:, 1, :]
             self.sensor_distances = np.linalg.norm(pair_diffs, axis=1)
         else:
             self.sensor_distances = np.array([])
@@ -549,7 +549,7 @@ class Reconstruction_Plan_Discrete(Reconstruction_Plan):
             # a measurement snap toward the other side of the grid. This causes 
             # the points to spread out more and make it more likely that the 
             # measurement intersects with the network more.
-            axis = np.random.choice([-1,0,1])
+            axis = np.random.choice([-1, 0, 1])
             if axis == -1:
                 continue
 
@@ -562,7 +562,7 @@ class Reconstruction_Plan_Discrete(Reconstruction_Plan):
             other_axis_point = point[i+other_axis*self.N]
             if (
                 0 <= other_axis_point < self.padding[other_axis] or
-               self.padding[other_axis] + self.size[other_axis] < other_axis_point < self.network_size[other_axis]
+                self.padding[other_axis] + self.size[other_axis] < other_axis_point < self.network_size[other_axis]
             ):
                 s = self.size[other_axis]/2 * s
 

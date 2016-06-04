@@ -1,8 +1,7 @@
 import numpy as np
-from collections import OrderedDict
 import itertools
 import time
-
+from collections import OrderedDict
 from ..settings import Arguments
 
 __all__ = ["NSGA", "SMS_EMOA"]

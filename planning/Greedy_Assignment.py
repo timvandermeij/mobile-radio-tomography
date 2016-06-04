@@ -34,7 +34,7 @@ class Greedy_Assignment(object):
                 # Given that both vehicles operate at the same time and 
                 # synchronize at the next waypoint, the time needed depends on 
                 # the longest distance that either vehicle needs to move
-                abs(current_positions[vehicle-1] - positions[:,i,:]).max(axis=1)
+                abs(current_positions[vehicle-1] - positions[:, i, :]).max(axis=1)
                 for i, vehicle in enumerate(vehicle_pair)
             ]
             for vehicle_pair in self._vehicle_pairs
