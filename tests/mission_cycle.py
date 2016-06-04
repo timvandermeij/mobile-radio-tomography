@@ -22,14 +22,14 @@ class TestMissionCycle(EnvironmentTestCase):
         self.mission = Mission_Cycle(self.environment, settings)
         self.xbee = self.environment.get_xbee_sensor()
         self.first_waypoints = [
-            (1,0), (2,0),
-            (1,0), (0,0), (0,1), (0,2),
-            (0,1), (0,0),
-            (0,1), (0,2), (1,2), (2,2),
-            (1,2), (0,2),
-            (1,2), (2,2), (2,1), (2,0),
-            (2,1), (2,2),
-            (2,1), (2,0), (1,0), (0,0)
+            (1, 0), (2, 0),
+            (1, 0), (0, 0), (0, 1), (0, 2),
+            (0, 1), (0, 0),
+            (0, 1), (0, 2), (1, 2), (2, 2),
+            (1, 2), (0, 2),
+            (1, 2), (2, 2), (2, 1), (2, 0),
+            (2, 1), (2, 2),
+            (2, 1), (2, 0), (1, 0), (0, 0)
         ]
 
     def test_setup(self):
@@ -45,20 +45,20 @@ class TestMissionCycle(EnvironmentTestCase):
         self.assertEqual(waypoints, self.first_waypoints)
 
         # Check second vehicle's state.
-        self.vehicle._location = (0,2)
+        self.vehicle._location = (0, 2)
         with patch('sys.stdout'):
             self.mission.setup()
 
         waypoints = list(self.mission.waypoints)
         self.assertEqual(waypoints, [
-            (1,2), (2,2),
-            (2,2), (2,2), (2,2), (2,2),
-            (2,1), (2,0),
-            (2,0), (2,0), (2,0), (2,0),
-            (1,0), (0,0),
-            (0,0), (0,0), (0,0), (0,0),
-            (0,1), (0,2),
-            (0,2), (0,2), (0,2), (0,2)
+            (1, 2), (2, 2),
+            (2, 2), (2, 2), (2, 2), (2, 2),
+            (2, 1), (2, 0),
+            (2, 0), (2, 0), (2, 0), (2, 0),
+            (1, 0), (0, 0),
+            (0, 0), (0, 0), (0, 0), (0, 0),
+            (0, 1), (0, 2),
+            (0, 2), (0, 2), (0, 2), (0, 2)
         ])
 
     @patch.object(Robot_Vehicle, "_state_loop")
@@ -71,7 +71,8 @@ class TestMissionCycle(EnvironmentTestCase):
         self.assertEqual(self.vehicle.mode.name, "AUTO")
         self.assertTrue(self.vehicle.armed)
         state_loop_mock.assert_called_once_with()
-        self.assertEqual(self.vehicle._waypoints, list(itertools.chain(*[[waypoint, None] for waypoint in self.first_waypoints])))
+        self.assertEqual(self.vehicle._waypoints,
+                         list(itertools.chain(*[[waypoint, None] for waypoint in self.first_waypoints])))
         self.assertEqual(self.vehicle.get_waypoint(), None)
 
         with patch('sys.stdout'):
@@ -80,10 +81,10 @@ class TestMissionCycle(EnvironmentTestCase):
         self.vehicle._check_state()
         self.assertEqual(self.vehicle._state.name, "move")
         self.assertEqual(self.vehicle._current_waypoint, 0)
-        self.assertEqual(self.vehicle.get_waypoint(), LocationLocal(1,0,0))
+        self.assertEqual(self.vehicle.get_waypoint(), LocationLocal(1, 0, 0))
         self.assertNotEqual(self._ttl_device.readline(), "")
 
-        self.vehicle._location = (1,0)
+        self.vehicle._location = (1, 0)
         self.vehicle._state = Robot_State("intersection")
         with patch('sys.stdout'):
             self.mission.check_waypoint()
@@ -99,4 +100,4 @@ class TestMissionCycle(EnvironmentTestCase):
 
         self.vehicle._check_state()
         self.assertEqual(self.vehicle._current_waypoint, 2)
-        self.assertEqual(self.vehicle.get_waypoint(), LocationLocal(2,0,0))
+        self.assertEqual(self.vehicle.get_waypoint(), LocationLocal(2, 0, 0))

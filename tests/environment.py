@@ -125,7 +125,7 @@ class TestEnvironment(EnvironmentTestCase):
 
         # Callback is not called for another specification.
         mock_callback.reset_mock()
-        other_packet = XBee_Packet()
+        packet = XBee_Packet()
         packet.set("specification", "waypoint_clear")
         packet.set("to_id", 1)
 

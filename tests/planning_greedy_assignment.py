@@ -22,7 +22,7 @@ class TestPlanningGreedyAssignment(SettingsTestCase):
                               [[0, 0], [1, 6]],
                               [[4, 8], [9, 1]]])
 
-        assignment, distance = self.assigner.assign(positions)
+        assignment = self.assigner.assign(positions)[0]
 
         # Input is left untouched.
         self.assertEqual(positions.shape, (4, 2, 2))

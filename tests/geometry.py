@@ -1,7 +1,7 @@
-import unittest
 import math
 import numpy as np
 import sys
+import unittest
 from dronekit import LocationGlobal, LocationGlobalRelative, LocationLocal
 from ..geometry.Geometry import Geometry, Geometry_Grid, Geometry_Spherical
 
@@ -122,7 +122,7 @@ class TestGeometry(LocationTestCase):
 
     def test_get_point_edges(self):
         self.assertEqual(self.geometry.get_point_edges([]), [])
-        locations = [self._make_relative_location(*p) for p in [(1,2,3), (20.0, 4.3, 2.5), (3.14, 4.443, 1.2)]]
+        locations = [self._make_relative_location(*p) for p in [(1, 2, 3), (20.0, 4.3, 2.5), (3.14, 4.443, 1.2)]]
         edges = self.geometry.get_point_edges(locations)
         self.assertEqual(edges[0], (locations[0], locations[1]))
         self.assertEqual(edges[1], (locations[1], locations[2]))
@@ -130,7 +130,7 @@ class TestGeometry(LocationTestCase):
 
     def test_get_neighbor_offsets(self):
         offsets = self.geometry.get_neighbor_offsets()
-        self.assertEqual(offsets.shape, (8,2))
+        self.assertEqual(offsets.shape, (8, 2))
         self.assertTrue(np.array_equal(offsets, [(-1, -1), (-1, 0), (-1, 1),
                                                   (0, -1),           (0, 1),
                                                   (1, -1),  (1, 0),  (1, 1)]))
@@ -147,7 +147,7 @@ class TestGeometry_Grid(TestGeometry):
 
     def test_get_neighbor_offsets(self):
         offsets = self.geometry.get_neighbor_offsets()
-        self.assertEqual(offsets.shape, (4,2))
+        self.assertEqual(offsets.shape, (4, 2))
         self.assertTrue(np.array_equal(offsets, [          (-1, 0),
                                                   (0, -1),           (0, 1),
                                                             (1, 0)         ]))

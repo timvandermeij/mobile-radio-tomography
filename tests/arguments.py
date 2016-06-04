@@ -35,7 +35,7 @@ class TestArguments(SettingsTestCase):
     def test_check_help(self):
         arguments = Arguments("tests/settings/settings.json", ['--help'],
                               defaults_file="tests/settings/defaults.json")
-        settings = arguments.get_settings("foo")
+        arguments.get_settings("foo")
 
         # Buffer help output so it doesn't mess up the test output and we can 
         # actually test whether it prints help.

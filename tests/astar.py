@@ -26,8 +26,8 @@ class TestAStar(EnvironmentTestCase):
         self.assertEqual(self.astar._size, self.size * self.resolution)
 
     def test_assign(self):
-        self.memory_map.set((0,20), 1)
-        self.memory_map.set((20,0), 1)
+        self.memory_map.set((0, 20), 1)
+        self.memory_map.set((20, 0), 1)
         path, dist = self.astar.assign(LocationLocal(0, 0, self.altitude),
                                        LocationLocal(4, 4, self.altitude),
                                        1.0)
@@ -36,8 +36,8 @@ class TestAStar(EnvironmentTestCase):
 
     def test_assign_impossible(self):
         for i in xrange(0, 21):
-            self.memory_map.set((i,20), 1)
-            self.memory_map.set((20,i), 1)
+            self.memory_map.set((i, 20), 1)
+            self.memory_map.set((20, i), 1)
 
         path, dist = self.astar.assign(LocationLocal(0, 0, self.altitude),
                                        LocationLocal(5, 5, self.altitude),
@@ -67,7 +67,7 @@ class TestAStarGrid(EnvironmentTestCase):
         m = n/2
         for i in xrange(1, n-1):
             for j in xrange(1, n-1):
-                self.memory_map.set((i,j), 1)
+                self.memory_map.set((i, j), 1)
 
         path, dist = self.astar.assign(LocationLocal(-m, -m, self.altitude),
                                        LocationLocal(m-1, m-1, self.altitude),

@@ -56,7 +56,7 @@ class TestControlInfraredSensor(ThreadableTestCase):
         from ..control.Infrared_Sensor import Infrared_Sensor
         Infrared_Sensor._configure = self.old_configure
         with self.assertRaises(OSError) as cm:
-            infrared_sensor = Infrared_Sensor(self.settings, thread_manager)
+            Infrared_Sensor(self.settings, thread_manager)
 
         self.assertIn("not installed", cm.exception.message)
         patcher.stop()
@@ -69,7 +69,7 @@ class TestControlInfraredSensor(ThreadableTestCase):
         patcher = patch('os.path', **methods)
         patcher.start()
         with self.assertRaises(OSError) as cm:
-            infrared_sensor = Infrared_Sensor(self.settings, thread_manager)
+            Infrared_Sensor(self.settings, thread_manager)
 
         self.assertIn("does not exist", cm.exception.message)
         patcher.stop()

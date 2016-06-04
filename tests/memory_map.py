@@ -47,7 +47,7 @@ class TestMemoryMap(EnvironmentTestCase):
         self.assertFalse(memory_map.index_in_bounds(*out_bounds))
 
         self.assertTrue(memory_map.location_in_bounds(self.environment.get_location()))
-        self.assertFalse(memory_map.location_in_bounds(self.environment.get_location(size,size)))
+        self.assertFalse(memory_map.location_in_bounds(self.environment.get_location(size, size)))
 
         with self.assertRaises(KeyError):
             memory_map.set(out_bounds, 1)

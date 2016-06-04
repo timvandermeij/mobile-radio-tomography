@@ -135,10 +135,7 @@ class TestCoreUSBManager(USBManagerTestCase):
 
     def test_clear(self):
         self.usb_manager.index()
-
         devices = self.usb_manager._devices
-        xbee = self.usb_manager.get_xbee_device()
-
         self.usb_manager.clear()
 
         # The USB device storage must contain empty categories.

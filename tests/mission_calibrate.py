@@ -38,17 +38,16 @@ class TestMissionCalibrate(EnvironmentTestCase):
         self.assertIsInstance(self.mission.chain, deque)
         self.assertEqual(self.mission.round_number, 16) # 4 ** 2
         self.assertEqual(self.mission.chain, deque(
-            [(0,0)] + self.first_waypoints + [(0,1)]
+            [(0, 0)] + self.first_waypoints + [(0, 1)]
         ))
         self.assertIsInstance(self.mission.waypoints, list)
         self.assertEqual(len(self.mission.waypoints), 16 * 14) # (4**2)*(4*4-2)
 
         wplen = len(self.first_waypoints)
         self.assertEqual(self.mission.waypoints[0:wplen], self.first_waypoints)
-        self.assertEqual(self.mission.waypoints[wplen:wplen*2], [(0,2)]*wplen)
+        self.assertEqual(self.mission.waypoints[wplen:wplen*2], [(0, 2)]*wplen)
         self.assertEqual(self.mission.waypoints[wplen*2:wplen*3],
-            [(0,1), (0,0)] + self.first_waypoints[:-2]
-        )
+                         [(0, 1), (0, 0)] + self.first_waypoints[:-2])
 
         # Check second vehicle's state.
         self.vehicle._location = (0, 1)
@@ -60,8 +59,7 @@ class TestMissionCalibrate(EnvironmentTestCase):
 
         self.assertEqual(len(self.mission.waypoints), 16 * 14) # (4**2)*(4*4-2)
 
-        self.assertEqual(self.mission.waypoints[0:wplen], [(0,1)]*wplen)
+        self.assertEqual(self.mission.waypoints[0:wplen], [(0, 1)]*wplen)
         self.assertEqual(self.mission.waypoints[wplen:wplen*2],
-            [(0,0)] + self.first_waypoints[:-1]
-        )
-        self.assertEqual(self.mission.waypoints[wplen*2:wplen*3], [(0,3)]*wplen)
+                         [(0, 0)] + self.first_waypoints[:-1])
+        self.assertEqual(self.mission.waypoints[wplen*2:wplen*3], [(0, 3)]*wplen)
