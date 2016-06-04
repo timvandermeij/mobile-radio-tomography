@@ -94,9 +94,9 @@ class Dataset_Buffer(Buffer):
         """
         Put a packet into the buffer. The difference with the base class method
         is that a packet is not an XBee packet object, but instead a list that
-        contains the source sensor ID, the destination sensor ID and the RSSI
-        value. XBee packet objects will be generated from this information on
-        demand in the `get` method. This optimization is required because the
+        contains the source sensor location, the destination sensor location and
+        the RSSI value. XBee packet objects will be generated from this information
+        on demand in the `get` method. This optimization is required because the
         datasets typically contain many rows and columns, making creating all
         XBee packet objects at once very time-consuming.
         """

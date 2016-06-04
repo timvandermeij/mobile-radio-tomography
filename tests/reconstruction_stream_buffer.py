@@ -58,10 +58,14 @@ class TestReconstructionStreamBuffer(SettingsTestCase):
         self.mock_sensor.set_buffer.assert_called_once_with(stream_buffer)
 
     def test_get(self):
-        # If calibration mode is enabled, the original packet and RSSI value 
-        # must be fetched.
         stream_buffer = Stream_Buffer(self.settings)
         stream_buffer.register_xbee(self.mock_sensor)
+
+        # When the queue is empty, None should be returned.
+        self.assertEqual(stream_buffer.get(), None)
+
+        # If calibration mode is enabled, the original packet and RSSI value 
+        # must be fetched.
         stream_buffer.put(self.packet)
 
         buffer_packet, buffer_calibrated_rssi = stream_buffer.get()

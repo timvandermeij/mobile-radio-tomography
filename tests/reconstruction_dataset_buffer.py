@@ -1,6 +1,5 @@
-from mock import patch
 from ..reconstruction.Dataset_Buffer import Dataset_Buffer
-from ..settings import Arguments, Settings
+from ..settings import Arguments
 from settings import SettingsTestCase
 
 class TestReconstructionDatasetBuffer(SettingsTestCase):
@@ -25,8 +24,6 @@ class TestReconstructionDatasetBuffer(SettingsTestCase):
             (21, 0), (18, 0), (15, 0), (12, 0), (9, 0), (6, 0), (2, 0)
         ]
 
-    @patch.object(Settings, "check_format", wraps=lambda key, data, value: value)
-    def test_initialization(self, format_mock):
         # Dataset buffers are regular buffers with the exception that they
         # populate the queue with XBee packets read from a CSV data file.
         # Verify that these are set correctly upon initialization.
@@ -37,20 +34,21 @@ class TestReconstructionDatasetBuffer(SettingsTestCase):
             "--dataset-file", "tests/reconstruction/dataset.csv"
         ])
         settings = arguments.get_settings("reconstruction_dataset")
-        dataset_buffer = Dataset_Buffer(settings)
+        self.dataset_buffer = Dataset_Buffer(settings)
 
-        self.assertEqual(dataset_buffer.number_of_sensors, len(self.positions))
-        self.assertEqual(dataset_buffer.origin, (0, 0))
-        self.assertEqual(dataset_buffer.size, self.size)
+    def test_initialization(self):
+        self.assertEqual(self.dataset_buffer.number_of_sensors, len(self.positions))
+        self.assertEqual(self.dataset_buffer.origin, (0, 0))
+        self.assertEqual(self.dataset_buffer.size, self.size)
 
         # One data point is ignored because a sensor cannot send to itself.
-        self.assertEqual(dataset_buffer.count(), len(self.positions) - 1)
+        self.assertEqual(self.dataset_buffer.count(), len(self.positions) - 1)
 
         for index in range(len(self.positions)):
             if index == self.sensor_id:
                 continue
 
-            packet, calibrated_rssi = dataset_buffer.get()
+            packet, calibrated_rssi = self.dataset_buffer.get()
             self.assertEqual(packet.get_all(), {
                 "specification": "rssi_ground_station",
                 "sensor_id": self.sensor_id + 1,
@@ -64,5 +62,14 @@ class TestReconstructionDatasetBuffer(SettingsTestCase):
             })
             self.assertEqual(calibrated_rssi, self.rssi[index] - self.calibration[index])
 
-        self.assertEqual(dataset_buffer.get(), None)
-        self.assertEqual(dataset_buffer.count(), 0)
+        self.assertEqual(self.dataset_buffer.get(), None)
+        self.assertEqual(self.dataset_buffer.count(), 0)
+
+    def test_put(self):
+        # Verify that only lists can be put in the buffer.
+        with self.assertRaises(ValueError):
+            self.dataset_buffer.put(42)
+
+        # Verify that only lists of valid length can be put in the buffer.
+        with self.assertRaises(ValueError):
+            self.dataset_buffer.put([1, 2])

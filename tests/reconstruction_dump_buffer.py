@@ -1,11 +1,9 @@
-from mock import patch
 from ..reconstruction.Dump_Buffer import Dump_Buffer
-from ..settings import Arguments, Settings
+from ..settings import Arguments
 from settings import SettingsTestCase
 
 class TestReconstructionDumpBuffer(SettingsTestCase):
-    @patch.object(Settings, "check_format", wraps=lambda key, data, value: value)
-    def test_initialization(self, format_mock):
+    def setUp(self):
         # Dump buffers are regular buffers with the exception that they
         # populate the queue with XBee packets read from a JSON data file.
         # Verify that these are set correctly upon initialization.
@@ -16,17 +14,18 @@ class TestReconstructionDumpBuffer(SettingsTestCase):
             "--dump-file", "tests/reconstruction/dump.json"
         ])
         settings = arguments.get_settings("reconstruction_dump")
-        dump_buffer = Dump_Buffer(settings)
+        self.dump_buffer = Dump_Buffer(settings)
 
-        self.assertEqual(dump_buffer.number_of_sensors, 2)
-        self.assertEqual(dump_buffer.origin, (0, 0))
-        self.assertEqual(dump_buffer.size, (10, 10))
+    def test_initialization(self):
+        self.assertEqual(self.dump_buffer.number_of_sensors, 2)
+        self.assertEqual(self.dump_buffer.origin, (0, 0))
+        self.assertEqual(self.dump_buffer.size, (10, 10))
 
-        self.assertEqual(dump_buffer.count(), 2)
+        self.assertEqual(self.dump_buffer.count(), 2)
 
         # The calibration RSSI value for the link must be subtracted
         # from the originally measured RSSI value.
-        first_packet, first_calibrated_rssi = dump_buffer.get()
+        first_packet, first_calibrated_rssi = self.dump_buffer.get()
         self.assertEqual(first_packet.get_all(), {
             "specification": "rssi_ground_station",
             "sensor_id": 1,
@@ -40,7 +39,7 @@ class TestReconstructionDumpBuffer(SettingsTestCase):
         })
         self.assertEqual(first_calibrated_rssi, -38 - -36)
 
-        second_packet, second_calibrated_rssi = dump_buffer.get()
+        second_packet, second_calibrated_rssi = self.dump_buffer.get()
         self.assertEqual(second_packet.get_all(), {
             "specification": "rssi_ground_station",
             "sensor_id": 2,
@@ -54,5 +53,14 @@ class TestReconstructionDumpBuffer(SettingsTestCase):
         })
         self.assertEqual(second_calibrated_rssi, -41 - -38)
 
-        self.assertEqual(dump_buffer.get(), None)
-        self.assertEqual(dump_buffer.count(), 0)
+        self.assertEqual(self.dump_buffer.get(), None)
+        self.assertEqual(self.dump_buffer.count(), 0)
+
+    def test_put(self):
+        # Verify that only lists can be put in the buffer.
+        with self.assertRaises(ValueError):
+            self.dump_buffer.put(42)
+
+        # Verify that only lists of valid length can be put in the buffer.
+        with self.assertRaises(ValueError):
+            self.dump_buffer.put([1, 2])
