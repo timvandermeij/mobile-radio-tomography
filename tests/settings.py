@@ -17,16 +17,16 @@ class SettingsTestCase(unittest.TestCase):
 class TestSettings(SettingsTestCase):
     def test_missing_file(self):
         with self.assertRaises(IOError):
-            settings = Settings("tests/settings/invalid.json", "foo")
+            Settings("tests/settings/invalid.json", "foo")
 
         with self.assertRaises(IOError):
-            settings = Settings("tests/settings/settings.json", "foo",
-                                defaults_file="tests/settings/invalid.json")
+            Settings("tests/settings/settings.json", "foo",
+                     defaults_file="tests/settings/invalid.json")
 
     def test_missing_component(self):
         with self.assertRaises(KeyError):
-            settings = Settings("tests/settings/settings.json", "invalid",
-                                defaults_file="tests/settings/defaults.json")
+            Settings("tests/settings/settings.json", "invalid",
+                     defaults_file="tests/settings/defaults.json")
 
     def test_name(self):
         settings = Settings("tests/settings/settings.json", "foo",
@@ -58,7 +58,7 @@ class TestSettings(SettingsTestCase):
             "bar": 2,
             "baz": True,
             "long_name": "new_text",
-            "items": [1,2,3]
+            "items": [1, 2, 3]
         }
         for key, value in settings.get_all():
             self.assertEqual(value, expected[key])

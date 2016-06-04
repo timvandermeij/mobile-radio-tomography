@@ -60,7 +60,7 @@ class TestXBeeConfigurator(USBManagerTestCase, SettingsTestCase):
         self.assertIsNone(response)
 
     @patch("xbee.ZigBee.wait_read_frame")
-    def test_get(self, mock_wait_read_frame):
+    def test_set(self, mock_wait_read_frame):
         # We cannot test with an actual sensor, so the response should
         # always be False. The most important functionality, namely the
         # parameter preparation, is already tested in the encode value
@@ -69,7 +69,7 @@ class TestXBeeConfigurator(USBManagerTestCase, SettingsTestCase):
         self.assertFalse(response)
 
     @patch("xbee.ZigBee.wait_read_frame")
-    def test_get(self, mock_wait_read_frame):
+    def test_write(self, mock_wait_read_frame):
         # We cannot test with an actual sensor, so the response should
         # always be False.
         response = self.configurator.write()

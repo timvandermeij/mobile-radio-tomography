@@ -29,7 +29,7 @@ class TestXBeeTDMAScheduler(SettingsTestCase):
         # large time slot in the sweep.
         calculated = self.scheduler.get_next_timestamp()
         correct = time.time() + ((float(self.id) / self.number_of_sensors) *
-                  self.sweep_delay)
+                                 self.sweep_delay)
         self.assertAlmostEqual(calculated, correct, delta=0.1)
 
         # Any subsequent calls to the get_next_timestamp() method should just

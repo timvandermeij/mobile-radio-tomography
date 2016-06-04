@@ -12,7 +12,7 @@ class TestVRMLLoader(EnvironmentTestCase):
     def test_load(self):
         filename = "tests/vrml/castle.wrl"
         with self.assertRaises(ValueError):
-            loader = VRMLLoader(self.environment, filename, translation=[1,2])
+            loader = VRMLLoader(self.environment, filename, translation=[1, 2])
 
         loader = VRMLLoader(self.environment, filename, translation=[40.0, 3.14, 5.67])
         self.assertEqual(loader.filename, filename)

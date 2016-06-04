@@ -134,18 +134,23 @@ class TestSettingsDefaults(unittest.TestCase):
                                     setting["subtype"], subinfo=True)
 
     def test_settings_defaults(self):
-        # Test whether all the settings in each components have appropriate 
-        # information registration in their defaults.
+        """
+        Test whether all the settings in each components have appropriate 
+        information registration in their defaults.
+        """
 
         with open("settings/defaults.json") as defaults_file:
             components = json.load(defaults_file)
 
         for component in components:
-            self.assertIn("name", components[component], "Component '{}' must have a 'name' key".format(component))
-            self.assertIn("settings", components[component], "Component '{}' must have a 'settings' key".format(component))
+            self.assertIn("name", components[component],
+                          "Component '{}' must have a 'name' key".format(component))
+            self.assertIn("settings", components[component],
+                          "Component '{}' must have a 'settings' key".format(component))
             if "parent" in components[component]:
                 parent = components[component]["parent"]
-                self.assertIn(parent, components, "Component '{}' has a parent '{}' that must exist".format(component, parent))
+                self.assertIn(parent, components,
+                              "Component '{}' has a parent '{}' that must exist".format(component, parent))
 
             settings = components[component]["settings"]
             for key in settings:

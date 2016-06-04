@@ -30,7 +30,5 @@ class TestReconstructionWeightMatrix(SettingsTestCase):
             self.weight_matrix.update((i, 0), (i, 4))
 
         self.assertTrue(self.weight_matrix.check())
-
         self.weight_matrix.reset()
-
         self.assertFalse(self.weight_matrix.check())

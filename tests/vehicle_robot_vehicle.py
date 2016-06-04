@@ -37,7 +37,7 @@ class TestVehicleRobotVehicle(LocationTestCase, SettingsTestCase, ThreadableTest
     
     def test_init(self):
         self.assertEqual(self.vehicle.arguments, self.arguments)
-        self.assertEqual(self.vehicle._home_location, (0,0))
+        self.assertEqual(self.vehicle._home_location, (0, 0))
         self.assertEqual(self.vehicle._direction, Line_Follower_Direction.UP)
         self.assertIsInstance(self.vehicle._state, Robot_State)
         self.assertEqual(self.vehicle._state.name, "intersection")
@@ -80,7 +80,7 @@ class TestVehicleRobotVehicle(LocationTestCase, SettingsTestCase, ThreadableTest
 
         # Reached the waypoint intersection
         set_speeds_mock.reset_mock()
-        self.vehicle.line_follower_callback("intersection", (0,1))
+        self.vehicle.line_follower_callback("intersection", (0, 1))
         self.assertTrue(self.vehicle._at_current_waypoint())
         self.assertEqual(self.vehicle._state.name, "intersection")
         self.assertEqual(self.vehicle.location, waypoint)
@@ -135,6 +135,6 @@ class TestVehicleRobotVehicle(LocationTestCase, SettingsTestCase, ThreadableTest
         self.assertEqual(self.vehicle.mode.name, "GUIDED")
         self.vehicle.mode = VehicleMode("RTL")
         self.assertEqual(self.vehicle.mode.name, "RTL")
-        self.assertEqual(self.vehicle._waypoints, [(0,0)])
+        self.assertEqual(self.vehicle._waypoints, [(0, 0)])
         self.vehicle.mode = VehicleMode("HALT")
         self.assertFalse(self.vehicle.armed)
