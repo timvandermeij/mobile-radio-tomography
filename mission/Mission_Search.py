@@ -28,6 +28,7 @@ class Mission_Search(Mission_Browse):
 
         if self.move_distance == 0:
             super(Mission_Search, self).step()
+
             if all(self.dists_done):
                 current_location = self.environment.get_location()
 
@@ -39,7 +40,6 @@ class Mission_Search(Mission_Browse):
                 right = 0
                 cycle_safe = 0
                 safeness = np.zeros(self.dists_size)
-                bounds = np.zeros(self.dists_size)
                 for d in self.dists:
                     if d == 0:
                         right = right + 1

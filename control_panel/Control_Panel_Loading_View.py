@@ -36,7 +36,7 @@ class Control_Panel_Loading_View(Control_Panel_View):
 
         # Wait for insertion of the ground station XBee.
         self._xbee_insertion_delay = self._settings.get("loading_xbee_insertion_delay") * 1000
-        QtCore.QTimer.singleShot(self._xbee_insertion_delay, lambda: self._insertion_loop())
+        QtCore.QTimer.singleShot(self._xbee_insertion_delay, self._insertion_loop)
 
     def _insertion_loop(self):
         """
@@ -73,7 +73,7 @@ class Control_Panel_Loading_View(Control_Panel_View):
             self._controller.xbee.activate()
             self._controller.show_view(Control_Panel_View_Name.DEVICES)
         except KeyError:
-            QtCore.QTimer.singleShot(self._xbee_insertion_delay, lambda: self._insertion_loop())
+            QtCore.QTimer.singleShot(self._xbee_insertion_delay, self._insertion_loop)
 
     def _switch(self):
         """

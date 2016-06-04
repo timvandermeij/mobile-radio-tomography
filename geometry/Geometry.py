@@ -232,7 +232,7 @@ class Geometry(object):
         end = self.get_location_local(end)
         if start.north > end.north:
             # Swap start and end of segment
-            start,end = end,start
+            start, end = end, start
         if P.north == start.north or P.north == end.north:
             # Move point off of the line
             P = LocationLocal(P.north + self.EPSILON, P.east, P.down)
@@ -367,7 +367,7 @@ class Geometry(object):
         loc_point = LocationLocal(y, x, -z)
 
         edge_dist = self.get_distance_meters(edge[0], edge[1])
-        dists = [self.get_distance_meters(edge[i], loc_point) for i in (0,1)]
+        dists = [self.get_distance_meters(edge[i], loc_point) for i in (0, 1)]
         if max(dists) > edge_dist:
             # Point is not actually on the edge, but on the line extending from 
             # it. This edge case is possible even after skipping object 

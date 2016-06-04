@@ -92,7 +92,6 @@ def main(argv):
     # If we have fewer nondominated solutions than the total number of 
     # individuals, then only show the nondominated ones. Otherwise, just show 
     # all feasible solutions.
-    layer = 0 if len(indices) < size else None
     c = 0
     for i in indices:
         c += 1

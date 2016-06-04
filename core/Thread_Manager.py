@@ -10,6 +10,7 @@ class Thread_Manager(object):
         """
 
         self._threads = {}
+        self._logger = None
 
     def register(self, name, threadable):
         """
@@ -41,7 +42,7 @@ class Thread_Manager(object):
         if sys.exc_info() != (None, None, None):
             self.log("main thread")
 
-        for name, threadable in self._threads.items():
+        for threadable in self._threads.values():
             threadable.deactivate()
 
     def interrupt(self, name):
@@ -65,7 +66,7 @@ class Thread_Manager(object):
         a custom spawned thread) in the log file.
         """
 
-        if not hasattr(self, "_logger"):
+        if self._logger is None:
             # Lazily initialize the logger.
             formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 

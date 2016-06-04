@@ -13,10 +13,12 @@ class Plot(object):
     """
     Plotter that can display an environment memory map.
     """
+
     def __init__(self, environment, memory_map, interactive=True):
         self.environment = environment
         self.memory_map = memory_map
         self.interactive = interactive
+        self.plt = None
         self._setup()
 
     def _create_patch(self, obj):
@@ -29,7 +31,7 @@ class Plot(object):
         return None
 
     def _setup(self):
-        # "Cheat" to see 2d map of collision data
+        # "Cheat" to see 2D map of collision data
         patches = []
         if isinstance(self.environment, Environment_Simulator):
             for obj in self.environment.get_objects():
@@ -94,7 +96,8 @@ class Plot(object):
         elif angle == 1.5*math.pi:
             angle_idx = (vehicle_idx[0], vehicle_idx[1] - arrow_length)
         else:
-            angle_idx = (vehicle_idx[0] + math.cos(angle) * arrow_length, vehicle_idx[1] + math.sin(angle) * arrow_length)
+            angle_idx = (vehicle_idx[0] + math.cos(angle) * arrow_length,
+                         vehicle_idx[1] + math.sin(angle) * arrow_length)
 
         self.arrow_options["color"] = "red"
         self.plt.annotate("", angle_idx, vehicle_idx, arrowprops=self.arrow_options)

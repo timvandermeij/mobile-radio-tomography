@@ -132,7 +132,6 @@ class Line_Follower(Threadable):
                 return
 
             is_line_left = (intersection == Line_Follower_Bit_Mask.LINE_LEFT)
-            is_line_right = (intersection == Line_Follower_Bit_Mask.LINE_RIGHT)
             self._callback("diverged", "left" if is_line_left else "right")
 
     def set_state(self, state):

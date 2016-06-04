@@ -3,8 +3,8 @@ from vrml.vrml97 import basenodes, nodetypes, parser, parseprocessor
 
 class VRMLLoader(object):
     """
-    VRML parser.
-    The VRML language is described in its specification at http://www.web3d.org/documents/specifications/14772/V2.0/index.html
+    Parser for VRML files. The VRML language is described in its specification at
+    http://www.web3d.org/documents/specifications/14772/V2.0/index.html
     """
 
     def __init__(self, environment, filename, translation=None):
@@ -49,7 +49,7 @@ class VRMLLoader(object):
                             new_transform = forward
                     else:
                         new_transform = transform
-                except NotImplemented:
+                except NotImplementedError:
                     new_transform = transform
 
                 self._parse_children(child, new_transform)
@@ -65,7 +65,6 @@ class VRMLLoader(object):
             if i == -1:
                 faces.append(face)
                 face = []
-                pass
             else:
                 point = geometry.coord.point[i]
                 if transform is not None:

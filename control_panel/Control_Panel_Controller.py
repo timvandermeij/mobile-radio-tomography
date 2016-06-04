@@ -203,7 +203,7 @@ class Control_Panel_Controller(object):
             self._current_view_name = name
             view.load(self._view_data[name])
             view.show()
-        except Exception as e:
+        except:
             QtGui.QMessageBox.critical(self.central_widget, "Internal error",
                                        traceback.format_exc() + "\nThe application will now exit.")
             self.window.close()

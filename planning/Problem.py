@@ -304,6 +304,9 @@ class Reconstruction_Plan(Problem):
         self.assigner = Greedy_Assignment(self.arguments, self.geometry)
         self.delta_rate = self.settings.get("delta_rate")
 
+        self.travel_distance = 0.0
+        self.sensor_distances = np.empty(0)
+
     def get_domain(self):
         """
         Determine the domain of each variable and the number of variables that
@@ -325,7 +328,8 @@ class Reconstruction_Plan(Problem):
         # there are variables for a single measurement so that they apply to 
         # each variable of each measurement.
         if len(steps) == self.dim/self.N:
-            return np.array(list(itertools.chain(*[[s] * self.N for s in steps]))).flatten()
+            repeated_steps = itertools.chain(*[[s] * self.N for s in steps])
+            return np.array(list(repeated_steps))
 
         return super(Reconstruction_Plan, self).format_steps(steps)
 
@@ -394,10 +398,10 @@ class Reconstruction_Plan(Problem):
         # Set up variables used by the constraint and objective functions.
         if positions.size > 0:
             # Generate distances between all the pairs of sensor positions.
-            pair_diffs = positions[:,0,:] - positions[:,1,:]
+            pair_diffs = positions[:, 0, :] - positions[:, 1, :]
             self.sensor_distances = np.linalg.norm(pair_diffs, axis=1)
         else:
-            self.sensor_distances = np.array([])
+            self.sensor_distances = np.empty(0)
 
         self.unsnappable = unsnappable
 
@@ -413,8 +417,8 @@ class Reconstruction_Plan(Problem):
             # If the sensor distances to waypoint distances ratio is 1, then 
             # there is no need to calculate the waypoint distance.
             if self.delta_rate < 1.0:
-                assignments, distance = self.assigner.assign(positions)
-                self.travel_distance = distance
+                distance = self.assigner.assign(positions)[1]
+                self.travel_distance = float(distance)
             else:
                 self.travel_distance = 0.0
 
@@ -549,25 +553,27 @@ class Reconstruction_Plan_Discrete(Reconstruction_Plan):
             # a measurement snap toward the other side of the grid. This causes 
             # the points to spread out more and make it more likely that the 
             # measurement intersects with the network more.
-            axis = np.random.choice([-1,0,1])
+            axis = np.random.choice([-1, 0, 1])
             if axis == -1:
                 continue
 
-            other_axis = (axis+1)%2
+            other_axis = (axis+1) % 2
             diff = self.size[axis]
-            if point[i+axis*self.N] + diff > self.network_size[axis]:
+            if point[i + axis*self.N] + diff > self.network_size[axis]:
                 diff = -diff
 
             s = steps[i+other_axis*self.N] * np.random.randn()
-            other_axis_point = point[i+other_axis*self.N]
-            if (
-                0 <= other_axis_point < self.padding[other_axis] or
-               self.padding[other_axis] + self.size[other_axis] < other_axis_point < self.network_size[other_axis]
-            ):
+
+            # The variable for the other axis
+            other_point = point[i + other_axis*self.N]
+            other_padding = self.padding[other_axis]
+            other_start = other_padding + self.size[other_axis]
+            other_end = self.network_size[other_axis]
+            if 0 <= other_point < other_padding or other_start < other_point < other_end:
                 s = self.size[other_axis]/2 * s
 
-            point[i+(axis+2)*self.N] = point[i+axis*self.N] + diff
-            point[i+(other_axis+2)*self.N] += s
+            point[i + (axis+2)*self.N] = point[i + axis*self.N] + diff
+            point[i + (other_axis+2)*self.N] += s
 
         return super(Reconstruction_Plan_Discrete, self).mutate(point, steps)
 

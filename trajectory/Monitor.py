@@ -46,7 +46,8 @@ class Monitor(object):
         """
         Perform one step of a monitoring loop.
 
-        `add_point` can be a callback function that accepts a Location object for a detected point from the distance sensors.
+        `add_point` can be a callback function that accepts a Location object
+        for a detected point from the distance sensors.
 
         Returns `Fase` if the loop should be halted.
         """
@@ -60,8 +61,6 @@ class Monitor(object):
             print('Warning: Outside of memory map')
 
         self.mission.step()
-
-        xbee_sensor = self.environment.get_xbee_sensor()
 
         i = 0
         for sensor in self.sensors:
@@ -97,7 +96,7 @@ class Monitor(object):
         # since there is no object here.
         try:
             self.memory_map.set(vehicle_idx, 0)
-        except:
+        except KeyError:
             pass
 
         return True

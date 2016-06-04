@@ -1,8 +1,8 @@
 import numpy as np
-from collections import OrderedDict
 import itertools
 import time
-
+from collections import OrderedDict
+from functools import partial
 from ..settings import Arguments
 
 __all__ = ["NSGA", "SMS_EMOA"]
@@ -76,56 +76,58 @@ class Algorithm(object):
             if self.t_current >= self.t_max:
                 break
 
-            # Select random index s of the mu points
-            s = np.random.randint(self.mu)
-            # Create a mutated point x_new from x(s) by altering each component 
-            # with a normal distributed random number generator. This is done 
-            # on each component using numpy broadcasting.
-            x_new = self.problem.mutate(P[s], self.steps)
-
-            # Evaluate objectives and constraints for x_new
-            NewFeasible, NewObjectives = self.problem.evaluate([x_new])
-            P.append(x_new)
-            Feasible.append(NewFeasible[0])
-            Objectives.append(NewObjectives[0])
-
-            # Track which points are dominated or infeasible. We track the 
-            # indices from the points list.
-            Delete = np.nonzero(np.array(Feasible) == False)[0]
-
-            # First delete the infeasible solutions, then we will care about 
-            # the nondominated solutions. This differs from the original 
-            # implementation, hopefully this is a good decision.
-            if len(Delete) > 0:
-                Deletions["infeasible"] += 1
-            else:
-                R = self.sort_nondominated(Objectives, all_layers=False)
-                Delete = list(itertools.chain(*[Rk.keys() for Rk in R[1:]]))
-                if len(Delete) > 0:
-                    Deletions["dominated"] += 1
-
-            if len(Delete) > 0:
-                # Randomly delete one of the solutions. If it is the new point, 
-                # then we do not need to do anything (we just forget it in next 
-                # iteration), otherwise we replace the deleted point with the 
-                # new point.
-                # We use numpy.random.randint to select key instead of 
-                # numpy.random.choice because of compatibility with older 
-                # Numpy.
-                idx = Delete[np.random.randint(len(Delete))]
-            else:
-                # Delete the individual with the smallest crowding distance 
-                # (NSGA) or hypervolume contribution (SMS-EMOA)
-                C = self.sort_contribution(R[0])
-
-                idx = np.argmin(C)
-                Deletions["contribution"] += 1
-
-            del P[idx]
-            del Feasible[idx]
-            del Objectives[idx]
+            self._mutate_and_select(P, Feasible, Objectives, Deletions)
 
         return P, Objectives, Feasible
+
+    def _mutate_and_select(self, P, Feasible, Objectives, Deletions):
+        # Select random index s of the mu points
+        s = np.random.randint(self.mu)
+        # Create a mutated point x_new from x(s) by altering each component 
+        # with a normal distributed random number generator. This is done on 
+        # each component using numpy broadcasting.
+        x_new = self.problem.mutate(P[s], self.steps)
+
+        # Evaluate objectives and constraints for x_new
+        NewFeasible, NewObjectives = self.problem.evaluate([x_new])
+        P.append(x_new)
+        Feasible.append(NewFeasible[0])
+        Objectives.append(NewObjectives[0])
+
+        # Track which points are dominated or infeasible. We track the indices 
+        # from the points list.
+        Delete = np.nonzero(np.logical_not(np.array(Feasible)))[0]
+
+        # First delete the infeasible solutions, then we will care about the 
+        # nondominated solutions. This differs from the original 
+        # implementation, hopefully this is a good decision.
+        if len(Delete) > 0:
+            Deletions["infeasible"] += 1
+        else:
+            R = self.sort_nondominated(Objectives, all_layers=False)
+            Delete = list(itertools.chain(*[Rk.keys() for Rk in R[1:]]))
+            if len(Delete) > 0:
+                Deletions["dominated"] += 1
+
+        if len(Delete) > 0:
+            # Randomly delete one of the solutions. If it is the new point, 
+            # then we do not need to do anything (we just forget it in next 
+            # iteration), otherwise we replace the deleted point with the new 
+            # point.
+            # We use numpy.random.randint to select key instead of 
+            # numpy.random.choice because of compatibility with older Numpy.
+            idx = Delete[np.random.randint(len(Delete))]
+        else:
+            # Delete the individual with the smallest crowding distance (NSGA) 
+            # or hypervolume contribution (SMS-EMOA)
+            C = self.sort_contribution(R[0])
+
+            idx = np.argmin(C)
+            Deletions["contribution"] += 1
+
+        del P[idx]
+        del Feasible[idx]
+        del Objectives[idx]
 
     def KLP(self, P, Objectives):
         """
@@ -203,7 +205,7 @@ class Algorithm(object):
         raise NotImplementedError("Subclasses must implement `get_name`")
 
 class NSGA(Algorithm):
-    def crowding_distance(self,Rk):
+    def crowding_distance(self, Rk):
         """
         Calculate the crowding distances of individuals for the NSGA-II
         algorithm. The individuals are nondominated and have their objective
@@ -216,14 +218,22 @@ class NSGA(Algorithm):
 
         C = np.zeros(len(Rk))
         i = 0
+
+        if len(Rk) == 0:
+            return C
+
+        keys = []
+        for obj in xrange(len(Rk.values()[0])):
+            # Sort the keys of the points according to the objective j (obj)
+            keys.append(sorted(Rk.keys(), key=partial(lambda j, i: Rk[i][j], obj)))
+
         for idx in Rk.keys():
             for j in xrange(len(Rk[idx])):
-                # Sort the keys of the points according to the objective j
-                keys = sorted(Rk.keys(), key=lambda i: Rk[i][j])
                 # Location of the index idx in the sorted keys
-                v = keys.index(idx)
-                l = Rk[keys[v-1]][j] if v > 0 else np.NINF
-                u = Rk[keys[v+1]][j] if v < len(Rk)-1 else np.inf
+                k = keys[j]
+                v = k.index(idx)
+                l = Rk[k[v-1]][j] if v > 0 else np.NINF
+                u = Rk[k[v+1]][j] if v < len(Rk)-1 else np.inf
                 C[i] += 2 * (u - l)
 
             i += 1

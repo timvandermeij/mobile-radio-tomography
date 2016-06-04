@@ -239,7 +239,7 @@ class XBee_Sensor(Threadable):
         from_id = rssi_packet.get("sensor_id")
         from_waypoint_index = rssi_packet.get("waypoint_index")
 
-        location, waypoint_index = self._location_callback()
+        location = self._location_callback()[0]
         location_valid = self._valid_callback(other_valid=from_valid,
                                               other_id=from_id,
                                               other_index=from_waypoint_index)

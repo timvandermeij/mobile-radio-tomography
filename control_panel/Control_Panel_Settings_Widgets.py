@@ -90,7 +90,8 @@ class SettingsWidget(QtGui.QWidget):
 
     def _add_parent_button(self):
         if self._settings.parent is not None:
-            parentButton = QtGui.QCommandLinkButton(self._settings.parent.name, "Go to parent ({})".format(self._settings.parent.component_name))
+            parentButton = QtGui.QCommandLinkButton(self._settings.parent.name,
+                                                    "Go to parent ({})".format(self._settings.parent.component_name))
             policy = parentButton.sizePolicy()
             policy.setVerticalPolicy(QtGui.QSizePolicy.Fixed)
             parentButton.setSizePolicy(policy)
@@ -514,7 +515,7 @@ class TextFormWidget(QLineEditValidated, FormWidget):
         text = self.text()
         validator = self.validator()
         if validator is not None:
-            state, pos = validator.validate(text, 0)
+            state = validator.validate(text, 0)[0]
             if state != QtGui.QValidator.Acceptable:
                 return self.info["value"]
 
@@ -550,7 +551,7 @@ class FileFormatValidator(QtGui.QRegExpValidator):
         try:
             self.settings.check_format(self.key, self.info, input)
             return QtGui.QValidator.Acceptable, pos
-        except ValueError as e:
+        except ValueError:
             return QtGui.QValidator.Intermediate, pos
 
 class FileFormWidget(TextFormWidget):
@@ -586,7 +587,7 @@ class FileFormWidget(TextFormWidget):
         # name to the actual file name, if necessary.
         try:
             return self.settings.check_format(self.key, self.info, text)
-        except ValueError as e:
+        except ValueError:
             return self.info["value"]
 
     def _open_file(self):
@@ -793,7 +794,7 @@ class ListFormWidget(FormWidget):
 
         self.setLayout(self._layout)
 
-        for i in range(len(self._values)):
+        for _ in range(len(self._values)):
             self._add_to_list()
 
     def _format_list(self, value):
@@ -830,7 +831,8 @@ class ListFormWidget(FormWidget):
 
         sub_info["value"] = sub_value
         sub_info["default"] = sub_default
-        sub_widget = self.form.make_value_widget(self.settings, "{}-{}".format(self.key, position), sub_info, horizontal=True)
+        sub_widget = self.form.make_value_widget(self.settings, "{}-{}".format(self.key, position),
+                                                 sub_info, horizontal=True)
 
         self._sub_widgets.append(sub_widget)
 
@@ -906,7 +908,7 @@ class ListFormWidget(FormWidget):
             self._sub_widgets[position].set_value(sub_value)
 
         # Remove item widgets not having a value anymore.
-        for index in xrange(len(value), len(self._sub_widgets)):
+        for _ in xrange(len(value), len(self._sub_widgets)):
             item = self._layout.itemAt(len(value))
             if item.layout():
                 self._remove_item(item, item.itemAt(0).widget(), item.itemAt(1).widget())
@@ -932,7 +934,8 @@ class DictFormWidget(FormWidget):
             key_text = "{} ({}):".format(key, self.form.format_type(sub_info))
             keyLabel = QtGui.QLabel(key_text)
 
-            subWidget = self.form.make_value_widget(self.settings, "{}-{}".format(self.key, key), sub_info, horizontal=True)
+            subWidget = self.form.make_value_widget(self.settings, "{}-{}".format(self.key, key),
+                                                    sub_info, horizontal=True)
             formLayout.addRow(keyLabel, subWidget)
 
             self._sub_widgets[key] = subWidget

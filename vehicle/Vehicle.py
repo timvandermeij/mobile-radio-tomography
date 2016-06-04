@@ -25,7 +25,12 @@ class Vehicle(Threadable):
         return module.__dict__[vehicle_class](arguments, geometry, thread_manager, usb_manager)
 
     def __init__(self, arguments, geometry, thread_manager, usb_manager):
+        """
+        Initialize the vehicle.
+        """
+
         super(Vehicle, self).__init__("vehicle", thread_manager)
+
         self._geometry = geometry
         self._home_location = None
         self._mode = VehicleMode("PLACEHOLDER")

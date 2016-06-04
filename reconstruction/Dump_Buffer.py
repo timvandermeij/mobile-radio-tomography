@@ -23,7 +23,7 @@ class Dump_Buffer(Buffer):
 
                 if packet[3] and packet[6]:
                     key = (source, destination)
-                    if not key in self._calibration:
+                    if key not in self._calibration:
                         self._calibration[key] = packet[7]
 
         # Read the provided dump file. The JSON file has the following structure:

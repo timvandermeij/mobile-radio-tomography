@@ -1,5 +1,5 @@
-from xbee import ZigBee
 import time
+from xbee import ZigBee
 from ..settings import Arguments, Settings
 
 class XBee_Configurator(object):
@@ -28,11 +28,11 @@ class XBee_Configurator(object):
         integer to a hexadecimal representation.
         """
 
-        if type(value) == int:
+        if isinstance(value, int):
             # Convert to a string, zero-fill and create the hexadecimal representation.
             value = str(value)
             value = value.zfill(len(value) + len(value) % 2).decode("hex")
-        elif type(value) != str:
+        elif not isinstance(value, str):
             raise TypeError("Unsupported type for conversion to hexadecimal.")
 
         return value

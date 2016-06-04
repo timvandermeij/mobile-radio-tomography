@@ -19,6 +19,8 @@ class Weight_Matrix(object):
         self._width, self._height = size
         self._snapper = Snap_To_Boundary(self._origin, self._width,
                                          self._height, snap_inside=snap_inside)
+        self._distances = None
+        self._matrix = None
 
         # Create a grid for the space covered by the network. This represents a pixel
         # grid that we use to determine which pixels are intersected by a link. The

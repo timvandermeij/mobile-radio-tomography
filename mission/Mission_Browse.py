@@ -12,7 +12,7 @@ class Mission_Browse(Mission_Guided):
 
     def step(self):
         # We stand still and change the angle to look around.
-        self.send_global_velocity(0,0,0)
+        self.send_global_velocity(0, 0, 0)
         self.set_sensor_yaw(self.yaw, relative=False, direction=1)
 
         # When we're standing still, we rotate the vehicle to measure distances 
