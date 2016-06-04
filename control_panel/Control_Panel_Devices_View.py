@@ -49,7 +49,7 @@ class Control_Panel_Devices_View(Control_Panel_View):
         # Create the header for the tree view.
         header = QtGui.QTreeWidgetItem(["Device", "Property value"])
         self._tree_view.setHeaderItem(header)
-        self._tree_view.header().setResizeMode(0, QtGui.QHeaderView.Stretch);
+        self._tree_view.header().setResizeMode(0, QtGui.QHeaderView.Stretch)
 
         # Refresh immediately to fill the tree view with the devices and to 
         # discover any vehicles that are already connected.

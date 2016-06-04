@@ -333,7 +333,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
         # 0 in the algorithm population and plot object lists.
         item_index = item_index - self._overview_items
 
-        sort, indices = self._get_sort_indices()
+        indices = self._get_sort_indices()[1]
         if item_index >= len(indices):
             # Solution is not feasible or there are no results yet.
             return
@@ -369,7 +369,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
         ydata = event.artist.get_ydata()
         indices = event.ind
 
-        sort, sort_indices = self._get_sort_indices()
+        sort_indices = self._get_sort_indices()[1]
         for picked_point in zip(xdata[indices], ydata[indices]):
             points = self._runner.find_objectives(picked_point)
             for i in points:
@@ -548,6 +548,6 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
         t = data["iteration"]
         speed = t / float(data["cur_time"])
-        self._add_graph_data("it/second",  speed, t)
+        self._add_graph_data("it/second", speed, t)
         for key, value in data["deletions"].iteritems():
             self._add_graph_data(key, value, t)

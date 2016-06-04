@@ -39,13 +39,12 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             try:
                 waypoints = self._convert_waypoints(data["waypoints"])
                 self._import_waypoints(waypoints, from_json=False)
-            except:
+            except ValueError:
                 return
 
     def save(self):
-        waypoints, total = self._export_waypoints(repeat=False, errors=False)
         return {
-            "waypoints": waypoints
+            "waypoints": self._export_waypoints(repeat=False, errors=False)[0]
         }
 
     def show(self):
@@ -262,7 +261,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         """
 
         try:
-            waypoints, total = self._export_waypoints()
+            waypoints = self._export_waypoints()[0]
         except ValueError as e:
             QtGui.QMessageBox.critical(self._controller.central_widget,
                                        "Waypoint incorrect", e.message)
