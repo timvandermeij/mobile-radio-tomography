@@ -1,9 +1,9 @@
-from collections import OrderedDict
-from functools import partial
 import re
 import sys
 import traceback
 import markdown
+from collections import OrderedDict
+from functools import partial
 from mdx_partial_gfm import PartialGithubFlavoredMarkdownExtension
 from PyQt4 import QtCore, QtGui
 from Control_Panel_View import Control_Panel_View_Name

@@ -35,7 +35,7 @@ class Control_Panel_XBee_Sender(object):
         self._progress.setWindowModality(QtCore.Qt.WindowModal)
         self._progress.setMinimumDuration(0)
         self._progress.setCancelButtonText("Cancel")
-        self._progress.canceled.connect(lambda: self._cancel())
+        self._progress.canceled.connect(self._cancel)
         self._progress.setWindowTitle("Sending {}s".format(self._name))
         self._progress.setLabelText("Initializing...")
 

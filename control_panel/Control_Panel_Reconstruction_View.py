@@ -377,7 +377,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         # Create the settings widget if the reconstructor class has a component 
         # of the format "reconstruction_*" without the _Reconstructor trail.
         try:
-            settings = self._controller.arguments.get_settings(component)
+            self._controller.arguments.get_settings(component)
         except KeyError:
             form = QtGui.QWidget()
         else:
