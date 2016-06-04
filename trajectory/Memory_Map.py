@@ -2,8 +2,8 @@ import numpy as np
 
 class Memory_Map(object):
     """
-    A memory map of the environment that the vehicle keeps track of regions
-    of influence of known objects using measurements from the distance sensor.
+    Memory map of the environment that a vehicle uses to keep track of regions
+    of influence of known objects using measurements from a distance sensor.
     """
 
     def __init__(self, environment, memory_size, resolution=1, altitude=0.0):

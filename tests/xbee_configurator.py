@@ -15,9 +15,15 @@ class TestXBeeConfigurator(USBManagerTestCase, SettingsTestCase):
         self.settings = self.arguments.get_settings("xbee_configurator")
 
         self.usb_manager.index()
-        self.configurator = XBee_Configurator(self.arguments, self.usb_manager)
+        self.configurator = XBee_Configurator(self.settings, self.usb_manager)
 
     def test_initialization(self):
+        # Verify that only `Settings` and `Arguments` objects can be used to initialize.
+        XBee_Configurator(self.arguments, self.usb_manager)
+        XBee_Configurator(self.settings, self.usb_manager)
+        with self.assertRaises(ValueError):
+            XBee_Configurator(None, self.usb_manager)
+
         self.assertIsInstance(self.configurator._serial_connection, serial.Serial)
         self.assertEqual(self.configurator._serial_connection.port, self._xbee_port)
         self.assertEqual(self.configurator._serial_connection.baudrate,
@@ -26,30 +32,25 @@ class TestXBeeConfigurator(USBManagerTestCase, SettingsTestCase):
 
     def test_encode_value(self):
         # Integers should be encoded as hexadecimal.
-        integer = 1234
-        calculated = self.configurator._encode_value(integer)
-        self.assertEqual(calculated, "\x124")
+        calculated_integer = self.configurator._encode_value(1234)
+        self.assertEqual(calculated_integer, "\x124")
 
         # Strings should not be altered.
-        string = "2"
-        calculated = self.configurator._encode_value(string)
-        self.assertEqual(calculated, string)
+        calculated_string = self.configurator._encode_value("2")
+        self.assertEqual(calculated_string, "2")
 
         # Other types are not accepted.
-        boolean = False
         with self.assertRaises(TypeError):
-            self.configurator._encode_value(boolean)
+            self.configurator._encode_value([])
 
     def test_decode_value(self):
         # Escape characters should be decoded.
-        value = "\x01"
-        calculated = self.configurator._decode_value(value)
+        calculated = self.configurator._decode_value("\x01")
         self.assertEqual(calculated, 1)
 
         # Other characters should remain the same.
-        value = "2"
-        calculated = self.configurator._decode_value(value)
-        self.assertEqual(calculated, int(value))
+        calculated = self.configurator._decode_value("2")
+        self.assertEqual(calculated, 2)
 
     @patch("xbee.ZigBee.wait_read_frame")
     def test_get(self, mock_wait_read_frame):

@@ -2,9 +2,10 @@ import time
 from xbee import ZigBee
 from ..settings import Arguments, Settings
 
-class XBee_Configurator(object):
-    STATUS_OK = "\x00"
+class XBee_Response_Status(object):
+    OK = "\x00"
 
+class XBee_Configurator(object):
     def __init__(self, settings, usb_manager):
         """
         Initialize the XBee configurator.
@@ -57,7 +58,7 @@ class XBee_Configurator(object):
 
         self._sensor.send("at", command=command)
         response = self._sensor.wait_read_frame()
-        if "status" in response and response["status"] == self.STATUS_OK:
+        if "status" in response and response["status"] == XBee_Response_Status.OK:
             return self._decode_value(response["parameter"])
 
         return None
@@ -69,7 +70,7 @@ class XBee_Configurator(object):
 
         self._sensor.send("at", command=command, parameter=self._encode_value(value))
         response = self._sensor.wait_read_frame()
-        return ("status" in response and response["status"] == self.STATUS_OK)
+        return ("status" in response and response["status"] == XBee_Response_Status.OK)
 
     def write(self):
         """
@@ -78,4 +79,4 @@ class XBee_Configurator(object):
 
         self._sensor.send("at", command="WR")
         response = self._sensor.wait_read_frame()
-        return ("status" in response and response["status"] == self.STATUS_OK)
+        return ("status" in response and response["status"] == XBee_Response_Status.OK)
