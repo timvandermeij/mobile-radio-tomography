@@ -38,18 +38,15 @@ class VRMLLoader(object):
             if isinstance(child, basenodes.Inline):
                 loader = VRMLLoader(self.environment, child.url, self.translation)
                 self.objects.extend(loader.get_objects())
-            elif isinstance(child, nodetypes.Transforming):
+            elif isinstance(child, basenodes.Transform):
                 # Jumble up transformation matrices
-                try:
-                    forward = child.localMatrices().data[0]
-                    if forward is not None:
-                        if transform is not None:
-                            new_transform = np.dot(transform, forward)
-                        else:
-                            new_transform = forward
+                forward = child.localMatrices().data[0]
+                if forward is not None:
+                    if transform is not None:
+                        new_transform = np.dot(transform, forward)
                     else:
-                        new_transform = transform
-                except NotImplementedError:
+                        new_transform = forward
+                else:
                     new_transform = transform
 
                 self._parse_children(child, new_transform)
