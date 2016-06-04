@@ -40,9 +40,6 @@ class Infrared_Sensor(Threadable):
         Configure LIRC to work with the remote specified in the settings file.
         """
 
-        module = self.__class__.__module__
-        base_path = os.path.dirname(sys.modules[module].__file__)
-
         # Check if LIRC is installed.
         if not os.path.isdir("/etc/lirc"):
             raise OSError("LIRC is not installed")
