@@ -1,9 +1,3 @@
-try:
-    import RPi.GPIO as GPIO
-    import wiringpi
-except (ImportError, RuntimeError):
-    GPIO = None
-
 class WiringPi(object):
     """
     Wrapper singleton for the wiringpi module.
@@ -17,15 +11,21 @@ class WiringPi(object):
 
     def __new__(cls):
         if cls.singleton is None:
+            try:
+                import RPi.GPIO as GPIO
+                import wiringpi
+            except (ImportError, RuntimeError):
+                GPIO = None
+                wiringpi = None
+
             if GPIO is not None:
                 wiringpi.wiringPiSetupPhys()
 
             cls.singleton = super(WiringPi, cls).__new__(cls)
+            cls.singleton._is_raspberry_pi = GPIO is not None
+            cls.singleton._module = wiringpi
 
         return cls.singleton
-
-    def __init__(self):
-        self._is_raspberry_pi = GPIO is not None
 
     @property
     def is_raspberry_pi(self):
@@ -33,7 +33,4 @@ class WiringPi(object):
 
     @property
     def module(self):
-        if self._is_raspberry_pi:
-            return wiringpi
-
-        return None
+        return self._module

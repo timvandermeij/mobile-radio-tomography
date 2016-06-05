@@ -48,12 +48,10 @@ class WiringPiTestCase(unittest.TestCase):
 
         if self._rpi_patcher is not None:
             self._rpi_patcher.stop()
-
-        # Unload the module from the sys.modules cache so that later imports 
-        # have to check whether RPi.GPIO exists (as a mock) or not.
-        package = __package__.split('.')[0] + ".core.WiringPi"
-        if package in sys.modules:
-            del sys.modules[package]
+        else:
+            for module in ("RPi", "RPi.GPIO", "wiringpi"):
+                if module in sys.modules:
+                    del sys.modules[module]
 
 class TestCoreWiringPi(WiringPiTestCase):
     def setUp(self):
@@ -62,9 +60,7 @@ class TestCoreWiringPi(WiringPiTestCase):
         super(TestCoreWiringPi, self).setUp()
 
     def test_raspberry_pi(self):
-        from ..core.WiringPi import WiringPi, GPIO
-        # Mock import means we have an RPi GPIO variable
-        self.assertEqual(GPIO, self.rpi_gpio_mock.GPIO)
+        from ..core.WiringPi import WiringPi
 
         # Singleton creation ensures we always get the same object.
         self.assertIsNone(WiringPi.singleton)
@@ -83,10 +79,7 @@ class TestCoreWiringPi(WiringPiTestCase):
     def test_not_raspberry_pi(self):
         # Mark as nonexistent module
         sys.modules["RPi.GPIO"] = None
-        from ..core.WiringPi import WiringPi, GPIO
-
-        # Import error means the RPi GPIO variable is None. 
-        self.assertIsNone(GPIO)
+        from ..core.WiringPi import WiringPi
 
         # Singleton creation ensures we always get the same object.
         self.assertIsNone(WiringPi.singleton)
