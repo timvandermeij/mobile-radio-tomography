@@ -1,7 +1,9 @@
 import sys
+from PyQt4 import QtGui
+
+# Package imports
 from __init__ import __package__
 from control_panel.Control_Panel_Window import Control_Panel_Window
-from PyQt4 import QtGui
 
 def main(argv):
     app = QtGui.QApplication(argv)

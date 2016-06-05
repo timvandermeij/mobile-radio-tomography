@@ -10,7 +10,7 @@ def is_raising(linter, body):
     for node in body:
         if isinstance(node, astroid.Expr) and isinstance(node.value, astroid.Call):
             func = utils.safe_infer(node.value.func)
-            if func.name in ("destroy", "interrupt"):
+            if func.name in ("destroy", "interrupt", "print_exc"):
                 return True
 
     return linter._old_is_raising(body)

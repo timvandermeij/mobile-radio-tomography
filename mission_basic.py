@@ -98,6 +98,7 @@ class Setup(object):
             self.environment.thread_manager.destroy()
             self.environment.usb_manager.clear()
         except:
+            traceback.print_exc()
             sys.exit(1)
 
     def _infrared_disable(self):

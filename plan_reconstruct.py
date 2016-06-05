@@ -1,15 +1,16 @@
+# Core imports
 import os
 import sys
 import time
 import json
 
+# matplotlib imports
 import matplotlib
-# Make it possible to run matplotlib in SSH
-displayless = 'DISPLAY' not in os.environ or os.environ['DISPLAY'] == ''
-if displayless:
-    matplotlib.use('Agg')
+# Make it possible to run matplotlib in displayless (console-only) mode
+matplotlib.use('Agg' if 'DISPLAY' not in os.environ or os.environ['DISPLAY'] == '' else matplotlib.get_backend())
 import matplotlib.pyplot as plt
 
+# Package imports
 from __init__ import __package__
 from core.Thread_Manager import Thread_Manager
 from planning.Runner import Planning_Runner
@@ -20,7 +21,7 @@ def do_plot(name):
     Finish plotting by saving or showing the plot.
     """
 
-    if displayless or 'SAVE_PATH' in os.environ:
+    if matplotlib.get_backend() == 'Agg' or 'SAVE_PATH' in os.environ:
         path = os.environ['SAVE_PATH'] if 'SAVE_PATH' in os.environ else '.'
         filename = "{}/{}".format(path, name)
         plt.savefig(filename)
@@ -29,7 +30,7 @@ def do_plot(name):
         print("Close the plot window to continue.")
         try:
             plt.show()
-        except:
+        except StandardError:
             # Somethimes things go wrong in the plot display (such as when 
             # clicking close button too fast), so ignore those errors.
             pass
@@ -41,7 +42,7 @@ def do_data(name, data):
     print the data to the standard output.
     """
 
-    if displayless or 'SAVE_PATH' in os.environ:
+    if matplotlib.get_backend() == 'Agg' or 'SAVE_PATH' in os.environ:
         path = os.environ['SAVE_PATH'] if 'SAVE_PATH' in os.environ else '.'
         filename = "{}/{}.json".format(path, name)
         with open(filename, 'wb') as f:
