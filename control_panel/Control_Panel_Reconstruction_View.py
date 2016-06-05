@@ -235,7 +235,6 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         super(Control_Panel_Reconstruction_View, self).__init__(controller, settings)
 
         self._running = False
-        self._stream_recorder = None
 
         self._axes = None
         self._canvas = None

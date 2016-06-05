@@ -21,7 +21,7 @@ class EnvironmentTestCase(LocationTestCase, SettingsTestCase,
     Test case class for tests that make use of the `Environment` class,
     including mission and distance sensor tests.
 
-    This class handles initalizing the settings in a generic manner and
+    This class handles initializing the settings in a generic manner and
     providing various means of simulating sensors and other modules.
     """
 
