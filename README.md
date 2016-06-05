@@ -1,16 +1,18 @@
 [![Build status](https://travis-ci.org/timvandermeij/mobile-radio-tomography.svg)](https://travis-ci.org/timvandermeij/mobile-radio-tomography)
 
 The mobile radio tomography framework provides tools for performing mobile radio
-tomographic imaging using XBee chips mounted on unmanned vehicles such as rover cars
-or drones. This framework is the result of research projects and master theses by
-Tim van der Meij (@timvandermeij) and Leon Helwerda (@lhelwerd) in collaboration with
-Leiden University and CWI Amsterdam, both located in the Netherlands.
+tomographic imaging using XBee chips mounted on unmanned vehicles such as rover 
+cars or drones. This framework is the result of research projects and master 
+theses by Tim van der Meij ([@timvandermeij](https://github.com/timvandermeij)) 
+and Leon Helwerda ([@lhelwerd](https://github.com/lhelwerd)). The research is 
+performed in collaboration with Leiden University and CWI Amsterdam, both 
+located in the Netherlands.
 
 Prerequisites
 =============
 
-In order to use the framework you must have the following software installed on 
-your system. The framework has been developed for Linux, but can be made to 
+In order to use the framework, you must have the following software installed 
+on your system. The framework has been developed for Linux, but can be made to 
 work on Windows or any other operating system since all prerequisites are also 
 available for those systems, perhaps with slightly different installation 
 procedures.
@@ -23,22 +25,23 @@ procedures.
 * Python 2.7. Note that Python 3 cannot be used at this moment.
 * PyQt4
 * `pip` for Python 2.7. `pip` is often not available on extremely old and bare
-  systems. If it is also not delivered by a package manager, one can also
+  systems. If it is not delivered by a package manager, one can also
   [install it with get-pip.py](https://pip.pypa.io/en/latest/installing.html).
-  Ensure that you have the correct version of `pip` with `pip --version` or use
-  `pip2` instead. See the [Python packages](#python-packages) section below for 
-  installing the required packages using `pip`.
+  Ensure that you have the correct version of `pip` with `pip2 --version`. See 
+  the [Python packages](#python-packages) section below for installing the 
+  required packages using `pip`.
 * ArduPilot for vehicle simulation. See the [ArduPilot](#ardupilot) section 
   below for more details.
 
-For all commands in this file, replace `python2` with `python` if your
-operating system does not need to distinguish between Python 2 and Python 3.
+For all commands in this file, replace `python2` with `python`, and `pip2` with 
+`pip` if your operating system does not need to distinguish between Python 
+2 and Python 3.
 
 Python packages
 ---------------
-Use `pip install --user <package>` to install or upgrade each of the following 
-packages, or `pip install -r requirements` to install all of them in one go. 
-The packages are sorted by purpose as follows:
+Use `pip2 install --user <package>` to install or upgrade each of the following 
+packages, or `pip2 install -r requirements.txt` to install all of them in one 
+go. The packages are sorted by purpose as follows:
 
 * General packages:
     * matplotlib
@@ -64,7 +67,7 @@ The packages are sorted by purpose as follows:
 * Environment simulation:
     * PyOpenGL
     * simpleparse
-    * PyVRML97 (you may need to use `pip install --user "PyVRML97==2.3.0b1"`)
+    * PyVRML97 (you may need to use `pip2 install --user "PyVRML97==2.3.0b1"`)
     * PyDispatcher
     * pyglet
 * Testing:
@@ -187,11 +190,11 @@ To create the setup, first plug the ground station XBee chip into a USB
 port of the ground station computer. Start the physical XBee sensor code
 as mentioned above and observe that nothing is happening yet. Then, for
 each other XBee chip in the network, power up the accompanying Raspberry
-Pi, connect it to the ground station computer via an ethernet cable as 
+Pi, connect it to the ground station computer via an Ethernet cable as 
 described in the Raspberry Pi document, plug in the XBee USB dongle
 and start the physical XBee sensor code as mentioned above. You should now
 see packets arriving in the ground station's terminal. Note that once the
-process is running, you can detach the screen and disconnect the ethernet
+process is running, you can detach the screen and disconnect the Ethernet
 cable to have unconnected nodes that you can move around (assuming that
 they are powered by a battery pack).
 
@@ -332,10 +335,8 @@ Code style
 
 Compatibility with the `pylint` code style checker is provided to allow testing 
 whether the code follows a certain coding standard and contains no other 
-errors. Note that it is not an objective to adhere to all checks that `pylint` 
-does, so some reports may be disabled in `.pylintrc`. For this reason and 
-because `pylint` is quite slow when it has to scan all files, it is not 
-integrated in the tests.
+errors. Some reports may be disabled in `.pylintrc` or through plugins. You can 
+use `pylint mobile-radio-tomography` to scan all files, which is quite slow.
 
 During development, you can enable lint checks in your editor to receive code 
 style help for the currently edited file on the go. For Vim, you can enable 
