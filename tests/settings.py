@@ -43,7 +43,15 @@ class TestSettings(SettingsTestCase):
     def test_missing_key(self):
         settings = Settings("tests/settings/empty.json", "foo",
                             defaults_file="tests/settings/defaults.json")
-        with self.assertRaises(KeyError):
+        # The exception mentions the missing setting and the component.
+        with self.assertRaisesRegexp(KeyError, "'qux'.*'foo'"):
+            settings.get("qux")
+
+    def test_missing_parent_key(self):
+        settings = Settings("tests/settings/empty.json", "child",
+                            defaults_file="tests/settings/defaults.json")
+        # The exception mentions the current component rather than the parent.
+        with self.assertRaisesRegexp(KeyError, "'qux'.*'child'"):
             settings.get("qux")
 
     def test_get_override(self):
@@ -134,7 +142,15 @@ class TestSettings(SettingsTestCase):
     def test_nonexistent_set(self):
         settings = Settings("tests/settings/settings.json", "foo",
                             defaults_file="tests/settings/defaults.json")
-        with self.assertRaises(KeyError):
+        # The exception mentions the missing setting and the component.
+        with self.assertRaisesRegexp(KeyError, "'new'.*'foo'"):
+            settings.set("new", "added")
+
+    def test_nonexistent_parent_set(self):
+        settings = Settings("tests/settings/settings.json", "child",
+                            defaults_file="tests/settings/defaults.json")
+        # The exception mentions the current component rather than the parent.
+        with self.assertRaisesRegexp(KeyError, "'new'.*'child'"):
             settings.set("new", "added")
 
     def test_empty_set(self):

@@ -8,6 +8,10 @@ from mock import patch, MagicMock
 from ..settings import Arguments, Settings
 from settings import SettingsTestCase
 
+class MockModule(object):
+    def __dir__(self):
+        return ['g', 'h', 'i', 'j']
+
 class TestArguments(SettingsTestCase):
     def test_default_settings(self):
         arguments = Arguments("tests/settings/invalid.json", [
@@ -94,6 +98,23 @@ class TestArguments(SettingsTestCase):
 
         self.assertRegexpMatches(output.getvalue(), "expected one argument")
 
+    def test_required_error(self):
+        arguments = Arguments("tests/settings/settings.json", ['--long-name='],
+                              defaults_file="tests/settings/defaults.json")
+
+        # Buffer help output so it doesn't mess up the test output and we can 
+        # actually test whether it prints help.
+        output = StringIO()
+        with patch('sys.stdout', output):
+            with patch('sys.stderr', output):
+                # Test whether the argument parser calls sys.exit on help.
+                # This can be caught as an exception.
+                with self.assertRaises(SystemExit):
+                    arguments.get_settings("foo")
+                    arguments.check_help()
+
+        self.assertRegexpMatches(output.getvalue(), "must be nonempty")
+
     def test_nonexistent_settings(self):
         arguments = Arguments("tests/settings/settings.json", ['--qux', '42'],
                               defaults_file="tests/settings/defaults.json")
@@ -132,8 +153,13 @@ class TestArguments(SettingsTestCase):
         info = {"options": ["foo", "bar", "baz"]}
         self.assertEqual(arguments.get_choices(info), info["options"])
 
+        # Retrieving choices from a nonexistent module results in None.
+        info = {"module": "nonexistent_module"}
+        self.assertIsNone(arguments.get_choices(info))
+
+        # Retrieving choices from keys of a dictionary variable works.
         data = {'a': 'b', 'c': 'd'}
-        expected = ['a', 'b']
+        expected = data.keys()
         mock_module = MagicMock()
         mock_module.mock_member.mock_add_spec(data)
         mock_module.mock_member.keys.return_value = expected
@@ -145,8 +171,19 @@ class TestArguments(SettingsTestCase):
             self.assertEqual(arguments.get_choices(info), expected)
             mock_module.mock_member.keys.assert_called_once_with()
 
-        expected = ['c', 'd']
+        # Retrieving choices from __all__ works as expected.
+        expected = ['e', 'f']
         mock_module = MagicMock(__all__=expected)
+        modules = {
+            __package__.split('.')[0] + ".mock_module": mock_module
+        }
+        with patch.dict('sys.modules', modules):
+            info = {"module": "mock_module"}
+            self.assertEqual(arguments.get_choices(info), expected)
+
+        # Retrieving choices from dir() works as expected
+        mock_module = MockModule()
+        expected = dir(mock_module)
         modules = {
             __package__.split('.')[0] + ".mock_module": mock_module
         }
