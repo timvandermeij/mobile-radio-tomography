@@ -1,6 +1,5 @@
 import sys
 import math
-import itertools
 import numpy as np
 from dronekit import Locations, LocationLocal, LocationGlobal, LocationGlobalRelative
 
@@ -166,7 +165,7 @@ class Geometry(object):
         used for locations at different altitudes.
         """
 
-        dnorth, deast, ddown = self.diff_location_meters(location1, location2)
+        dnorth, deast = self.diff_location_meters(location1, location2)[:2]
         angle = math.atan2(dnorth, deast)
 
         return (angle + 2*math.pi) % (2*math.pi)
@@ -214,6 +213,24 @@ class Geometry(object):
         diff = self.diff_angle(a1, a2)
         return int(math.copysign(1, diff))
 
+    def _get_edge_angles(self, P, start, end):
+        """
+        Retrieve the angles between a location point `P` and two endpoint location
+        objects `start` and `end`, defining an edge.
+        """
+
+        if abs(start.east - end.east) > self.EPSILON:
+            ang_out = (end.north - start.north) / (end.east - start.east)
+        else:
+            ang_out = sys.float_info.max
+
+        if abs(start.east - P.east) > self.EPSILON:
+            ang_in = (P.north - start.north) / (P.east - start.east)
+        else:
+            ang_in = sys.float_info.max
+
+        return ang_out, ang_in
+
     def ray_intersects_segment(self, P, start, end, verbose=False):
         """
         Given a location point `P` and an edge of two endpoint location objects
@@ -248,16 +265,7 @@ class Geometry(object):
         if P.east < min(start.east, end.east):
             return True
 
-        if abs(start.east - end.east) > self.EPSILON:
-            ang_out = (end.north - start.north) / (end.east - start.east)
-        else:
-            ang_out = sys.float_info.max
-
-        if abs(start.east - P.east) > self.EPSILON:
-            ang_in = (P.north - start.north) / (P.east - start.east)
-        else:
-            ang_in = sys.float_info.max
-
+        ang_out, ang_in = self._get_edge_angles(P, start, end)
         if ang_in < ang_out:
             if verbose:
                 print("Angles: {}/{}".format(ang_in, ang_out))
@@ -291,7 +299,7 @@ class Geometry(object):
 
         # Ensure all points are local, which the base Geometry rather likes and 
         # speeds up the ray intersection conversions.
-        points = map(self.get_location_local, points)
+        points = [self.get_location_local(point) for point in points]
         location = self.get_location_local(location)
 
         # Simplification: if the point is above the mean altitude of all the 
@@ -313,28 +321,20 @@ class Geometry(object):
 
         return inside
 
-    def get_edge_distance(self, edge, location, yaw_angle, pitch_angle, altitude_margin=0.0):
+    def _get_edge_ray(self, start, end, location, yaw_angle):
         """
-        Calculate the distance to a point on an `edge` that a ray from a given
-        `location` with yaw and pitch radian angles given by `yaw_angle` and
-        `pitch_angle` would intersect at.
+        Get the equation values of a line from a given `location` at a `yaw_angle`
+        to the edge defined by endpoint locations `start` and `end`.
 
-        The `edge` is a tuple of location points defining a (sloped) edge.
-
-        Returns the distance in meters to the intersection point. If no such
-        location is found, then the maximum float number is returned.
+        The given line might not actually intersect with the edge, but with lines
+        extending from the edge.
         """
-
-        start = self.get_location_local(edge[0])
-        end = self.get_location_local(edge[1])
-        location = self.get_location_local(location)
 
         # Based on ray casting calculations from 
         # http://archive.gamedev.net/archive/reference/articles/article872.html 
         # except that the coordinate system there is assumed to revolve around 
         # the vehicle, which is strange. Instead, use a fixed origin and thus 
         # the edge's b1 is fixed, and calculate b2 instead.
-
         m2 = math.tan(yaw_angle)
         b2 = location.north - m2 * location.east
 
@@ -358,12 +358,34 @@ class Geometry(object):
                 x = float('inf')
             else:
                 x = (b1 - b2) / (m2 - m1)
+
             y = m1 * x + b1
+
+        return y, x
+
+    def get_edge_distance(self, edge, location, yaw_angle, pitch_angle, altitude_margin=0.0):
+        """
+        Calculate the distance to a point on an `edge` that a ray from a given
+        `location` with yaw and pitch radian angles given by `yaw_angle` and
+        `pitch_angle` would intersect at.
+
+        The `edge` is a tuple of location points defining a (sloped) edge.
+
+        Returns the distance in meters to the intersection point. If no such
+        location is found, then the maximum float number is returned.
+        """
+
+        start = self.get_location_local(edge[0])
+        end = self.get_location_local(edge[1])
+        location = self.get_location_local(location)
+
+        y, x = self._get_edge_ray(start, end, location, yaw_angle)
 
         # Distance on same altitude
         d = math.sqrt(abs(y - location.north)**2 + abs(x - location.east)**2)
         z = math.tan(pitch_angle) * d - location.down
 
+        # Determine intersection point
         loc_point = LocationLocal(y, x, -z)
 
         edge_dist = self.get_distance_meters(edge[0], edge[1])
@@ -381,10 +403,7 @@ class Geometry(object):
         if loc_point.down > 0 or loc_point.down < down - altitude_margin:
             return sys.float_info.max
 
-        d = self.get_distance_meters(location, loc_point)
-
-        return d
-
+        return self.get_distance_meters(location, loc_point)
 
     def get_plane_vector(self, points, verbose=False):
         """
@@ -477,8 +496,7 @@ class Geometry(object):
         # the plane.
         ignore_index = np.argmax(np.absolute(cp))
 
-        ignores = itertools.repeat(ignore_index, len(face))
-        projected_face = map(self.get_projected_location, face, ignores)
+        projected_face = [self.get_projected_location(p, ignore_index) for p in face]
 
         projected_loc = self.get_projected_location(location, ignore_index)
         if verbose:
@@ -505,7 +523,7 @@ class Geometry(object):
             # Face incomplete
             return (None, None)
 
-        cp, d = self.get_plane_vector(face, verbose=verbose)
+        cp = self.get_plane_vector(face, verbose=verbose)[0]
 
         # 3D intersection point
         # Based on http://stackoverflow.com/a/18543221
@@ -523,8 +541,7 @@ class Geometry(object):
             return (None, None)
 
         # Calculate the intersection point
-        factor, loc_point = self.get_intersection(face, cp, location1, u,
-                                                  nu_dot)
+        factor, loc_point = self.get_intersection(face, cp, location1, u, nu_dot)
 
         if not self.point_inside_plane(face, cp, loc_point, verbose=verbose):
             # The intersection point is not actually inside the polygon, but on 
@@ -570,6 +587,7 @@ class Geometry(object):
         Retrieve coordinate indices for relative offsets of a location.
         """
 
+        # pylint: disable=bad-continuation,bad-whitespace
         return np.array([(-1, -1), (-1, 0), (-1, 1),
                           (0, -1),           (0, 1),
                           (1, -1),  (1, 0),  (1, 1)])
@@ -586,6 +604,7 @@ class Geometry_Grid(Geometry):
         return abs(diff.north) + abs(diff.east) + abs(diff.down)
 
     def get_neighbor_offsets(self):
+        # pylint: disable=bad-continuation,bad-whitespace
         return np.array([          (-1, 0),
                           (0, -1),           (0, 1),
                                     (1, 0)          ])
@@ -601,6 +620,7 @@ class Geometry_Spherical(Geometry):
     COORD_TO_METERS = 1.113195e5
 
     def __init__(self):
+        super(Geometry_Spherical, self).__init__()
         self.home_location = LocationGlobal(0.0, 0.0, 0.0)
 
     def set_home_location(self, home_location):
@@ -630,27 +650,26 @@ class Geometry_Spherical(Geometry):
         if isinstance(location2, Locations):
             location2 = self.get_locations_frame(location2, location1)
 
-        if type(location1) == type(location2):
+        if type(location1) is type(location2):
             return location1, location2
 
         if isinstance(location1, LocationLocal):
-            location1 = self.get_location_meters(self.home_location,
-                location1.north, location1.east, -location1.down)
+            location1 = self.get_location_meters(self.home_location, location1.north,
+                                                 location1.east, -location1.down)
         elif isinstance(location2, LocationLocal):
-            location2 = self.get_location_meters(self.home_location,
-                location2.north, location2.east, -location2.down)
+            location2 = self.get_location_meters(self.home_location, location2.north,
+                                                 location2.east, -location2.down)
 
-        if type(location1) == type(location2):
+        if type(location1) is type(location2):
             return location1, location2
 
+        alt = self.home_location.alt
         if isinstance(location2, LocationGlobal):
-            location2 = LocationGlobalRelative(
-                location2.lat, location2.lon,
-                location2.alt - self.home_location.alt)
+            location2 = LocationGlobalRelative(location2.lat, location2.lon,
+                                               location2.alt - alt)
         elif isinstance(location2, LocationGlobalRelative):
-            location2 = LocationGlobal(
-                location2.lat, location2.lon,
-                location2.alt + self.home_location.alt)
+            location2 = LocationGlobal(location2.lat, location2.lon,
+                                       location2.alt + alt)
 
         return location1, location2
 
