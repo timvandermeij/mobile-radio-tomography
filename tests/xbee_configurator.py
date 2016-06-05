@@ -1,8 +1,7 @@
 import serial
-from mock import patch
-from xbee import ZigBee
+from mock import MagicMock
 from ..core.USB_Manager import USB_Device_Baud_Rate
-from ..zigbee.XBee_Configurator import XBee_Configurator
+from ..zigbee.XBee_Configurator import XBee_Configurator, XBee_Response_Status
 from ..settings import Arguments
 from core_usb_manager import USBManagerTestCase
 from settings import SettingsTestCase
@@ -17,6 +16,9 @@ class TestXBeeConfigurator(USBManagerTestCase, SettingsTestCase):
         self.usb_manager.index()
         self.configurator = XBee_Configurator(self.settings, self.usb_manager)
 
+        # Mock the sensor as we cannot test with the actual hardware.
+        self.configurator._sensor = MagicMock()
+
     def test_initialization(self):
         # Verify that only `Settings` and `Arguments` objects can be used to initialize.
         XBee_Configurator(self.arguments, self.usb_manager)
@@ -28,7 +30,6 @@ class TestXBeeConfigurator(USBManagerTestCase, SettingsTestCase):
         self.assertEqual(self.configurator._serial_connection.port, self._xbee_port)
         self.assertEqual(self.configurator._serial_connection.baudrate,
                          USB_Device_Baud_Rate.XBEE)
-        self.assertIsInstance(self.configurator._sensor, ZigBee)
 
     def test_encode_value(self):
         # Integers should be encoded as hexadecimal.
@@ -52,26 +53,51 @@ class TestXBeeConfigurator(USBManagerTestCase, SettingsTestCase):
         calculated = self.configurator._decode_value("2")
         self.assertEqual(calculated, 2)
 
-    @patch("xbee.ZigBee.wait_read_frame")
-    def test_get(self, mock_wait_read_frame):
-        # We cannot test with an actual sensor, so the response should
-        # always be None. The case of a response that is not None is
-        # covered by the decode value unit test above.
+    def test_get(self):
+        # Verify that unsuccessful requests are handled.
+        self.configurator._sensor.wait_read_frame.return_value = {}
         response = self.configurator.get("ID")
+        self.configurator._sensor.send.assert_called_once_with("at", command="ID")
         self.assertIsNone(response)
+        self.configurator._sensor.send.reset_mock()
 
-    @patch("xbee.ZigBee.wait_read_frame")
-    def test_set(self, mock_wait_read_frame):
-        # We cannot test with an actual sensor, so the response should
-        # always be False. The most important functionality, namely the
-        # parameter preparation, is already tested in the encode value
-        # unit test above.
-        response = self.configurator.set("ID", 1234)
+        # Verify that successful requests are handled.
+        self.configurator._sensor.wait_read_frame.return_value = {
+            "status": XBee_Response_Status.OK,
+            "parameter": "\x02"
+        }
+        response = self.configurator.get("ID")
+        self.configurator._sensor.send.assert_called_once_with("at", command="ID")
+        self.assertEqual(response, 2)
+
+    def test_set(self):
+        # Verify that unsuccessful requests are handled.
+        self.configurator._sensor.wait_read_frame.return_value = {}
+        response = self.configurator.set("ID", 2)
+        self.configurator._sensor.send.assert_called_once_with("at", command="ID", parameter="\x02")
         self.assertFalse(response)
+        self.configurator._sensor.send.reset_mock()
 
-    @patch("xbee.ZigBee.wait_read_frame")
-    def test_write(self, mock_wait_read_frame):
-        # We cannot test with an actual sensor, so the response should
-        # always be False.
+        # Verify that successful requests are handled.
+        self.configurator._sensor.wait_read_frame.return_value = {
+            "status": XBee_Response_Status.OK
+        }
+        response = self.configurator.set("ID", 2)
+        self.configurator._sensor.send.assert_called_once_with("at", command="ID", parameter="\x02")
+        self.assertTrue(response)
+
+    def test_write(self):
+        # Verify that unsuccessful requests are handled.
+        self.configurator._sensor.wait_read_frame.return_value = {}
         response = self.configurator.write()
+        self.configurator._sensor.send.assert_called_once_with("at", command="WR")
         self.assertFalse(response)
+        self.configurator._sensor.send.reset_mock()
+
+        # Verify that successful requests are handled.
+        self.configurator._sensor.wait_read_frame.return_value = {
+            "status": XBee_Response_Status.OK
+        }
+        response = self.configurator.write()
+        self.configurator._sensor.send.assert_called_once_with("at", command="WR")
+        self.assertTrue(response)
