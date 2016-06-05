@@ -29,6 +29,16 @@ class TestXBeeSettingsReceiver(EnvironmentTestCase):
 
     @patch.object(XBee_Sensor_Simulator, "enqueue")
     def test_clear(self, enqueue_mock):
+        # Packets not meant for the current XBee are ignored.
+        packet = XBee_Packet()
+        packet.set("specification", "setting_clear")
+        packet.set("to_id", self.xbee.id + 42)
+
+        self.environment.receive_packet(packet)
+        self.assertNotEqual(Settings.settings_files, {})
+        self.assertNotEqual(self.arguments.groups, {})
+        enqueue_mock.assert_not_called()
+
         packet = XBee_Packet()
         packet.set("specification", "setting_clear")
         packet.set("to_id", self.xbee.id)
@@ -56,6 +66,14 @@ class TestXBeeSettingsReceiver(EnvironmentTestCase):
         packet.set("index", 0)
         packet.set("key", "home_location")
         packet.set("value", (1, 2))
+
+        # Packets not meant for the current XBee are ignored.
+        packet.set("to_id", self.xbee.id + 42)
+
+        self.environment.receive_packet(packet)
+        self.assertNotIn("home_location", self.settings_receiver._new_settings)
+        enqueue_mock.assert_not_called()
+
         packet.set("to_id", self.xbee.id)
 
         self.environment.receive_packet(packet)
@@ -71,7 +89,9 @@ class TestXBeeSettingsReceiver(EnvironmentTestCase):
         })
         self.assertEqual(kwargs, {"to": 0})
 
-        self.assertEqual(self.settings_receiver._new_settings, {"home_location": (1, 2)})
+        self.assertEqual(self.settings_receiver._new_settings, {
+            "home_location": (1, 2)
+        })
 
     @patch.object(Thread_Manager, "interrupt")
     def test_done(self, interrupt_mock):
@@ -82,6 +102,14 @@ class TestXBeeSettingsReceiver(EnvironmentTestCase):
         }
         pretty_json = json.dumps(new_settings, indent=4, sort_keys=True)
         self.settings_receiver._new_settings = new_settings
+
+        # Packets not meant for the current XBee are ignored.
+        packet = XBee_Packet()
+        packet.set("specification", "setting_done")
+        packet.set("to_id", self.xbee.id + 42)
+        self.environment.receive_packet(packet)
+        self.assertNotEqual(Settings.settings_files, {})
+        self.assertNotEqual(self.arguments.groups, {})
 
         packet = XBee_Packet()
         packet.set("specification", "setting_done")
