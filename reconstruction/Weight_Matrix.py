@@ -35,7 +35,7 @@ class Weight_Matrix(object):
     def is_valid_point(self, point):
         """
         Check whether a given `point` is a valid sensor position, i.e., it is
-        not inside of the network.
+        outside the network.
         """
 
         return self._snapper.is_outside(Point(point[0], point[1]))
