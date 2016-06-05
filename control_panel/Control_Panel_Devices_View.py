@@ -14,6 +14,14 @@ class XBee_Device(object):
         self.joined = False
 
 class Control_Panel_Devices_View(Control_Panel_View):
+    def __init__(self, controller, settings):
+        super(Control_Panel_Devices_View, self).__init__(controller, settings)
+
+        self._updated = False
+        self._timer = None
+        self._discover_interval = self._settings.get("devices_discover_delay")
+        self._tree_view = None
+
     def load(self, data):
         if "devices" in data:
             self._devices = data["devices"]
@@ -39,10 +47,6 @@ class Control_Panel_Devices_View(Control_Panel_View):
 
         self._add_menu_bar()
 
-        self._updated = False
-        self._timer = None
-        self._discover_interval = self._settings.get("devices_discover_delay")
-
         # Create the tree view.
         self._tree_view = QtGui.QTreeWidget()
 
@@ -57,7 +61,7 @@ class Control_Panel_Devices_View(Control_Panel_View):
 
         # Create the refresh button.
         refresh_button = QtGui.QPushButton("Refresh")
-        refresh_button.clicked.connect(lambda: self._refresh())
+        refresh_button.clicked.connect(self._refresh)
 
         # Create the layout and add the widgets.
         hbox = QtGui.QHBoxLayout()
@@ -86,10 +90,10 @@ class Control_Panel_Devices_View(Control_Panel_View):
         # Add an entry in the tree view for each device.
         for device in self._devices:
             item = QtGui.QTreeWidgetItem(self._tree_view, [device.name])
-            item_id = QtGui.QTreeWidgetItem(item, ["ID", str(device.id)])
-            item_category = QtGui.QTreeWidgetItem(item, ["Category", categories[device.category]])
-            item_address = QtGui.QTreeWidgetItem(item, ["Address", device.address])
-            item_joined = QtGui.QTreeWidgetItem(item, ["Joined", "Yes" if device.joined else "No"])
+            item.addChild(QtGui.QTreeWidgetItem(["ID", str(device.id)]))
+            item.addChild(QtGui.QTreeWidgetItem(["Category", categories[device.category]]))
+            item.addChild(QtGui.QTreeWidgetItem(["Address", device.address]))
+            item.addChild(QtGui.QTreeWidgetItem(["Joined", "Yes" if device.joined else "No"]))
 
         # Expand all items in the tree view.
         self._tree_view.expandToDepth(0)

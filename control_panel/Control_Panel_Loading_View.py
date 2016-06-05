@@ -4,6 +4,13 @@ from Control_Panel_View import Control_Panel_View, Control_Panel_View_Name
 from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
 
 class Control_Panel_Loading_View(Control_Panel_View):
+    def __init__(self, controller, settings):
+        super(Control_Panel_Loading_View, self).__init__(controller, settings)
+
+        self._progressBar = None
+        self._label = None
+        self._xbee_insertion_delay = self._settings.get("loading_xbee_insertion_delay") * 1000
+
     def show(self):
         """
         Show the loading view.
@@ -35,7 +42,6 @@ class Control_Panel_Loading_View(Control_Panel_View):
             vbox.addLayout(hbox)
 
         # Wait for insertion of the ground station XBee.
-        self._xbee_insertion_delay = self._settings.get("loading_xbee_insertion_delay") * 1000
         QtCore.QTimer.singleShot(self._xbee_insertion_delay, self._insertion_loop)
 
     def _insertion_loop(self):

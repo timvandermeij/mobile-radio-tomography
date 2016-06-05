@@ -116,7 +116,12 @@ class Control_Panel_XBee_Sender(object):
             else:
                 self._send_one(vehicle)
         else:
-            self._cancel("Vehicle {}: Maximum retry attempts for {} reached".format(vehicle, "clearing {}s".format(self._name) if self._indexes[vehicle] == -1 else "{} #{}".format(self._name, self._indexes[vehicle])))
+            # Maximum retry attempts reached, cancel the send action
+            if self._indexes[vehicle] == -1:
+                send = "clearing {}s".format(self._name)
+            else:
+                send = "{} #{}".format(self._name, self._indexes[vehicle])
+            self._cancel("Vehicle {}: Maximum retry attempts for {} reached".format(vehicle, send))
 
     def _set_label(self, vehicle, text):
         self._labels[vehicle] = text

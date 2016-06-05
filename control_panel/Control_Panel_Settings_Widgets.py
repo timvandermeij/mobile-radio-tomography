@@ -1,8 +1,7 @@
 import os
-import re
 import string
 from PyQt4 import QtCore, QtGui
-from Control_Panel_Widgets import QLineEditToolButton
+from Control_Panel_Widgets import QLineEditValidated, QLineEditToolButton
 
 class SettingsWidget(QtGui.QWidget):
     parentClicked = QtCore.pyqtSignal(str, name='parentClicked')
@@ -61,14 +60,27 @@ class SettingsWidget(QtGui.QWidget):
 
         return False
 
-    def _create_layout(self):
-        if not self._horizontal_mode:
-            self._layout = QtGui.QVBoxLayout()
+    def _get_box_layout(self):
+        """
+        Create a `QLayout` object that is appropriate to the current layout
+        mode (horizontal or vertical).
+        """
 
+        if self._horizontal_mode:
+            return QtGui.QHBoxLayout()
+
+        return QtGui.QVBoxLayout()
+
+    def _create_layout(self):
+        """
+        Set up the main layout that is appropriate to the current layout mode
+        (horizontal or vertical).
+        """
+
+        self._layout = self._get_box_layout()
+        if not self._horizontal_mode:
             self._add_title_label()
             self._add_parent_button()
-        else:
-            self._layout = QtGui.QHBoxLayout()
 
         self.setLayout(self._layout)
 
@@ -245,6 +257,18 @@ class SettingsWidget(QtGui.QWidget):
 
         return values, disallowed
 
+    def check_disallowed(self, disallowed):
+        """
+        Check whether all values from `get_all_values` are allowed.
+
+        Raises a `ValueError` with a corresponding message if any disallowed
+        values are found.
+        """
+
+        if disallowed:
+            keys = ", ".join("'{}'".format(key) for key in disallowed)
+            raise ValueError("The following settings from component '{}' have incorrect values: {}".format(self.get_title(), keys))
+
     def _trigger_parent_clicked(self):
         self.parentClicked.emit(self._settings.parent.component_name)
 
@@ -413,10 +437,13 @@ class FormWidget(QtGui.QWidget):
 class BooleanFormWidget(FormWidget):
     def setup_form(self):
         if self.horizontal:
-            self._enabledButton = QtGui.QCheckBox("Enabled")
+            self._button_type = QtGui.QCheckBox
         else:
-            self._enabledButton = QtGui.QRadioButton("Enabled")
-            self._disabledButton = QtGui.QRadioButton("Disabled")
+            self._button_type = QtGui.QRadioButton
+
+        self._enabledButton = self._button_type("Enabled")
+        if not self.horizontal:
+            self._disabledButton = self._button_type("Disabled")
 
             buttonGroup = QtGui.QButtonGroup()
             buttonGroup.addButton(self._enabledButton)
@@ -438,51 +465,6 @@ class BooleanFormWidget(FormWidget):
         self._enabledButton.setChecked(value)
         if not self.horizontal:
             self._disabledButton.setChecked(not value)
-
-class QLineEditValidated(QtGui.QLineEdit):
-    def __init__(self, *a, **kw):
-        QtGui.QLineEdit.__init__(self, *a, **kw)
-        self._background_color = ""
-
-    def setValidator(self, v):
-        super(QLineEditValidated, self).setValidator(v)
-        validator = self.validator()
-        if validator is not None:
-            self.textChanged.connect(self._validate)
-        else:
-            self.textChanged.disconnect(self._validate)
-
-    def set_background_color(self, color):
-        self._background_color = color
-
-        decl = "background-color: "
-        styleSheet = str(self.styleSheet())
-        if color == "":
-            replace = ""
-        else:
-            replace = r"\1{}\3".format(color)
-
-        newSheet, count = re.subn("({})(.*)(;)".format(decl), replace, styleSheet)
-        if count == 0 and color != "":
-            newSheet = styleSheet + decl + color + ";"
-
-        self.setStyleSheet(newSheet)
-
-    def get_background_color(self):
-        return self._background_color
-
-    def _validate(self, text):
-        pos = self.cursorPosition()
-        state, newpos = self.validator().validate(text, pos)
-        if state != QtGui.QValidator.Acceptable:
-            color = "#FA6969"
-        else:
-            color = "#8BD672"
-
-        self.set_background_color(color)
-
-        if newpos != pos:
-            self.setCursorPosition(pos)
 
 class TextFormWidget(QLineEditValidated, FormWidget):
     def __init__(self, form, key, info, settings, horizontal=False, *a, **kw):
@@ -767,12 +749,14 @@ class FloatFormWidget(NumericSliderFormWidget):
         return value
 
 class ListFormWidget(FormWidget):
-    def setup_form(self):
+    def _get_layout(self):
         if "length" in self.info or self.horizontal:
-            self._layout = QtGui.QHBoxLayout()
-        else:
-            self._layout = QtGui.QVBoxLayout()
+            return QtGui.QHBoxLayout()
 
+        return QtGui.QVBoxLayout()
+
+    def setup_form(self):
+        self._layout = self._get_layout()
         self._layout.setContentsMargins(0, 0, 0, 0)
 
         self._sub_widgets = []
@@ -863,7 +847,7 @@ class ListFormWidget(FormWidget):
 
         # Fix tab order in list widgets that can change length
         prev_button = None
-        for sub_widget, button, i in zip(self._sub_widgets, self._removeButtons, range(len(self._sub_widgets))):
+        for sub_widget, button in zip(self._sub_widgets, self._removeButtons):
             # Contrary to documentation, Qt does not propagate tab order to the 
             # focus proxy of any widget during manual tab ordering.
             if sub_widget.focusProxy():

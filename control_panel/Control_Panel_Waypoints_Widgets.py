@@ -23,7 +23,7 @@ class WaypointsTableWidget(QtGui.QTableWidget):
         # Create the context menu for the rows in the table.
         verticalHeader = self.verticalHeader()
         verticalHeader.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        verticalHeader.customContextMenuRequested.connect(partial(self._make_menu))
+        verticalHeader.customContextMenuRequested.connect(self._make_menu)
 
     def removeRows(self):
         """

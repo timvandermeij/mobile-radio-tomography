@@ -303,7 +303,7 @@ callbacks=_callback
 [CLASSES]
 
 # List of method names used to declare (i.e. assign) instance attributes.
-defining-attr-methods=__init__,__new__,setUp,setup,_setup,load,reset,_reset_camera,_reset_movement
+defining-attr-methods=__init__,__new__,setUp,setup,_setup,setup_form,_init,reset,_reset_camera,_reset_movement
 
 # List of valid names for the first argument in a class method.
 valid-classmethod-first-arg=cls
@@ -338,7 +338,7 @@ max-branches=12
 max-statements=50
 
 # Maximum number of parents for a class (see R0901).
-max-parents=7
+max-parents=8
 
 # Maximum number of attributes for a class (see R0902).
 max-attributes=20

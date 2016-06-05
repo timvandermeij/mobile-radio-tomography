@@ -1,3 +1,4 @@
+# matplotlib imports
 import matplotlib
 matplotlib.use("Qt4Agg")
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
@@ -5,9 +6,11 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 
+# Qt imports
+from PyQt4 import QtCore, QtGui
 import pyqtgraph as pg
 
-from PyQt4 import QtCore, QtGui
+# Package imports
 from Control_Panel_View import Control_Panel_View, Control_Panel_View_Name
 from Control_Panel_Settings_Widgets import SettingsTableWidget
 from ..planning.Runner import Planning_Runner
@@ -17,8 +20,8 @@ class Planning_Sort_Order(object):
     FEASIBLE = -1
 
 class Control_Panel_Planning_View(Control_Panel_View):
-    def show(self):
-        self._add_menu_bar()
+    def __init__(self, controller, settings):
+        super(Control_Panel_Planning_View, self).__init__(controller, settings)
 
         # Set up the planning runner and related state and update variables.
         self._running = False
@@ -32,6 +35,34 @@ class Control_Panel_Planning_View(Control_Panel_View):
         # The fixed plot dimensions upon which we base our layout sizes as well 
         # as the plot canvases themselves. This avoids laggy resize events.
         self._plot_width, self._plot_height = self._settings.get("planning_plot_dimensions")
+
+        # The size of miniature plot images in the list widget.
+        self._item_width = self._plot_width / 3
+        self._item_height = self._plot_height / 3
+
+        # The number of items at the start of the list widget that are not 
+        # individual solution plots; namely, the Pareto front and statistics 
+        # graph. This is used for index conversion between the list widget and 
+        # the planning population.
+        self._overview_items = 2
+
+        self._progress = None
+        self._selectButton = None
+        self._listWidget = None
+        self._stackedLayout = None
+        self._sortSelector = None
+        self._toggle_button = None
+        self._tabWidget = None
+
+        self._forms = {}
+
+        self._timer = None
+        self._graph_label = None
+
+        self._init()
+
+    def show(self):
+        self._add_menu_bar()
 
         # Create the progress bar.
         self._progress = QtGui.QProgressBar()
@@ -50,21 +81,11 @@ class Control_Panel_Planning_View(Control_Panel_View):
         # of objective functions and/or miniature plot images.
         self._listWidget = QtGui.QListWidget()
 
-        # The size of miniature plot images in the list widget.
-        self._item_width = self._plot_width / 3
-        self._item_height = self._plot_height / 3
-
-        # The number of items at the start of the list widget that are not 
-        # individual solution plots; namely, the Pareto front and statistics 
-        # graph. This is used for index conversion between the list widget and 
-        # the planning population.
-        self._overview_items = 2
-
         # Create a stacked layout for switching between the plot widgets, and 
         # connect it to the list widget and instant redrawing of the plot.
         self._stackedLayout = QtGui.QStackedLayout()
         self._listWidget.currentRowChanged.connect(self._stackedLayout.setCurrentIndex)
-        self._stackedLayout.currentChanged.connect(lambda i: self._redraw(i))
+        self._stackedLayout.currentChanged.connect(self._redraw)
 
         # Create the settings table toolboxes.
         self._forms = {}
@@ -83,7 +104,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
         
         # Create the sort selector.
         self._sortSelector = QtGui.QComboBox()
-        self._sortSelector.currentIndexChanged.connect(lambda i: self._resort(i))
+        self._sortSelector.currentIndexChanged.connect(self._resort)
 
         # Create the toggle button (using the stopped state as default).
         self._toggle_button = QtGui.QPushButton(QtGui.QIcon("assets/start.png"), "Start")
@@ -100,7 +121,6 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._tabWidget.addTab(self._listWidget, "Runner state")
 
         # Initialize more state variables and setup plots for initial display.
-        self._init()
         self._setup()
 
         # Create the layout and add all the widgets and other layouts into it.
@@ -413,14 +433,15 @@ class Control_Panel_Planning_View(Control_Panel_View):
         # Update the settings from the toolbox forms.
         for component, form in self._forms.iteritems():
             settings = self._controller.arguments.get_settings(component)
-            values, disallowed = form.get_all_values()
-            if disallowed:
-                keys = ", ".join("'{}'".format(key) for key in disallowed)
+            try:
+                values, disallowed = form.get_all_values()
+                form.check_disallowed(disallowed)
+            except ValueError as e:
                 QtGui.QMessageBox.critical(self._controller.central_widget,
-                                           "Invalid value",
-                                           "The following settings from component '{}' have incorrect values: {}".format(form.get_title(), keys))
+                                           "Invalid value", e.message)
                 self._update_running(False)
                 return
+
             for key, value in values.iteritems():
                 try:
                     settings.set(key, value)

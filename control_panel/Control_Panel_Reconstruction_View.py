@@ -3,17 +3,24 @@
 # - Average measurements of the same link
 # - Tweak calibration/ellipse width/singular values/model (based on grid experiments)
 
+# Core imports
 import importlib
 import json
+import thread
+import os
+
+# matplotlib imports
 import matplotlib
 matplotlib.use("Qt4Agg")
 import matplotlib.pyplot as plt
-import numpy as np
-import os
-import pyqtgraph as pg
-import thread
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+
+# Other library imports
 from PyQt4 import QtGui, QtCore
+import numpy as np
+import pyqtgraph as pg
+
+# Package imports
 from Control_Panel_Settings_Widgets import SettingsTableWidget
 from Control_Panel_View import Control_Panel_View
 from ..reconstruction.Coordinator import Coordinator
@@ -224,13 +231,60 @@ class Stream_Recorder(object):
             QtGui.QMessageBox.critical(self._controller.central_widget, "File error", message)
 
 class Control_Panel_Reconstruction_View(Control_Panel_View):
+    def __init__(self, controller, settings):
+        super(Control_Panel_Reconstruction_View, self).__init__(controller, settings)
+
+        self._running = False
+        self._stream_recorder = None
+
+        self._axes = None
+        self._canvas = None
+        self._graph = None
+        self._table = None
+
+        self._sources = [
+            {
+                "title": "Dataset",
+                "component": "reconstruction_dataset",
+                "buffer": Dataset_Buffer
+            },
+            {
+                "title": "Dump",
+                "component": "reconstruction_dump",
+                "buffer": Dump_Buffer
+            },
+            {
+                "title": "Stream",
+                "component": "reconstruction_stream",
+                "buffer": Stream_Buffer
+            }
+        ]
+
+        self._panels = None
+        self._stackedWidget = None
+        self._toggle_button = None
+
+        self._source_forms = []
+        self._reconstructor_forms = {}
+
+        self._pause_time = self._settings.get("reconstruction_pause_time") * 1000
+        self._percentiles = None
+        self._interpolation = None
+        self._chunk_size = None
+        self._cmap = None
+
+        self._coordinator = None
+        self._buffer = None
+        self._stream_recorder = None
+        self._reconstructor = None
+
+        self._previous_pixels = None
+        self._chunk_count = 0
+
     def show(self):
         """
         Show the reconstruction view.
         """
-
-        self._running = False
-        self._stream_recorder = None
 
         self._add_menu_bar()
 
@@ -252,24 +306,6 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         # Create the panels. These are tabs containing the forms for each input 
         # source (dataset, dump and stream). Additionally, there is a stacked 
         # widget for the reconstructor-specific settings.
-        self._sources = [
-            {
-                "title": "Dataset",
-                "component": "reconstruction_dataset",
-                "buffer": Dataset_Buffer
-            },
-            {
-                "title": "Dump",
-                "component": "reconstruction_dump",
-                "buffer": Dump_Buffer
-            },
-            {
-                "title": "Stream",
-                "component": "reconstruction_stream",
-                "buffer": Stream_Buffer
-            }
-        ]
-
         self._panels = QtGui.QTabWidget()
         self._panels.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Expanding)
 
@@ -374,20 +410,30 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             self._update_reconstructor_policy(QtGui.QSizePolicy.Expanding)
             return
 
-        # Create the settings widget if the reconstructor class has a component 
-        # of the format "reconstruction_*" without the _Reconstructor trail.
-        try:
-            self._controller.arguments.get_settings(component)
-        except KeyError:
-            form = QtGui.QWidget()
-        else:
-            form = SettingsTableWidget(self._controller.arguments, component)
+        # Retrieve a widget for the reconstructor form.
+        form = self._get_reconstructor_form(component)
 
         # Register the new reconstructor form and show it in correct size.
         self._reconstructor_forms[component] = form
         index = self._stackedWidget.addWidget(form)
         self._stackedWidget.setCurrentIndex(index)
         self._update_reconstructor_policy(QtGui.QSizePolicy.Expanding)
+
+    def _get_reconstructor_form(self, component):
+        """
+        Create a settings widget for a reconstructor.
+        If the reconstructor class has a settings name `component` with
+        the format "reconstruction_*" without the _Reconstructor trail,
+        then a `SettingsTableWidget` is returned. Otherwise, an empty
+        `QWidget` is returned.
+        """
+
+        try:
+            self._controller.arguments.get_settings(component)
+        except KeyError:
+            return QtGui.QWidget()
+        else:
+            return SettingsTableWidget(self._controller.arguments, component)
 
     def _set_form_settings(self, form):
         """
@@ -398,12 +444,12 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         """
 
         settings = form.get_settings()
-        values, disallowed = form.get_all_values()
-        if disallowed:
-            keys = ", ".join("'{}'".format(key) for key in disallowed)
+        try:
+            values, disallowed = form.get_all_values()
+            form.check_disallowed(disallowed)
+        except ValueError as e:
             QtGui.QMessageBox.critical(self._controller.central_widget,
-                                       "Invalid value",
-                                       "The following settings have incorrect values: {}".format(keys))
+                                       "Invalid value", e.message)
             return None
 
         for key, value in values.iteritems():
@@ -440,7 +486,6 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
                 return
 
         # Fetch the settings for the reconstruction.
-        self._pause_time = self._settings.get("reconstruction_pause_time") * 1000
         self._percentiles = settings.get("percentiles")
         self._interpolation = settings.get("interpolation")
         self._chunk_size = settings.get("chunk_size")
@@ -459,7 +504,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
                                        "Could not open file '{}': {}".format(e.filename, e.strerror))
             self._toggle()
             return
-        except Exception as e:
+        except StandardError as e:
             QtGui.QMessageBox.critical(self._controller.central_widget,
                                        "Initialization error", e.message)
             self._toggle()
@@ -582,6 +627,6 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
             # Delete the image from memory now that it is drawn.
             self._axes.cla()
-        except:
+        except StandardError:
             # There is not enough data yet for the reconstruction algorithm.
             pass

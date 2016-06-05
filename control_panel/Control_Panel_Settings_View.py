@@ -14,16 +14,26 @@ class Setting_Filter_Match(object):
     VALUE = 3
 
 class Control_Panel_Settings_View(Control_Panel_View):
+    def __init__(self, controller, settings):
+        super(Control_Panel_Settings_View, self).__init__(controller, settings)
+
+        self._components = []
+        self._widgets = []
+        self._containers = []
+        self._best_matches = {}
+        self._new_settings = {}
+
+        self._listWidget = None
+        self._stackedLayout = None
+
     def show(self):
         self._add_menu_bar()
 
         defaults = Settings.get_settings(Settings.DEFAULTS_FILE)
-        self._components = [keys for keys, values in sorted(defaults.iteritems(),
-                                                            key=lambda (k, v): v["name"])]
+        self._components = sorted(defaults.iterkeys(),
+                                  key=lambda k: defaults[k]["name"])
 
-        self._containers = []
         self._widgets = [None for c in self._components]
-        self._best_matches = {}
 
         self._listWidget = QtGui.QListWidget()
         self._listWidget.addItems([defaults[c]["name"] for c in self._components])
@@ -32,6 +42,7 @@ class Control_Panel_Settings_View(Control_Panel_View):
 
         self._stackedLayout = QtGui.QStackedLayout()
 
+        self._containers = []
         for c in self._components:
             container = QtGui.QScrollArea()
             container.setWidgetResizable(True)
@@ -39,7 +50,7 @@ class Control_Panel_Settings_View(Control_Panel_View):
             self._containers.append(container)
 
         self._listWidget.currentRowChanged.connect(self._stackedLayout.setCurrentIndex)
-        self._stackedLayout.currentChanged.connect(lambda i: self._current_changed(i))
+        self._stackedLayout.currentChanged.connect(self._current_changed)
         self._current_changed(self._stackedLayout.currentIndex())
 
         # Create the layout and add the widgets.
@@ -49,7 +60,7 @@ class Control_Panel_Settings_View(Control_Panel_View):
 
         filterInput = QLineEditClear()
         filterInput.setPlaceholderText("Search...")
-        filterInput.textChanged.connect(lambda text: self._filter(text))
+        filterInput.textChanged.connect(self._filter)
         filterInput.setFixedWidth(self._listWidget.sizeHint().width())
         filterInput.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Maximum)
 
@@ -79,35 +90,23 @@ class Control_Panel_Settings_View(Control_Panel_View):
         i = self._components.index(parent)
         self._listWidget.setCurrentRow(i)
 
-    def _save(self):
-        flat_settings = {}
-        disallowed = []
-        for i, widget in enumerate(self._widgets):
-            if widget is not None:
-                values, allowed = widget.get_values()
-                flat_settings.update(values)
-                disallowed.extend([(i, key) for key, value in allowed.iteritems() if not value])
-
-        pretty_json = json.dumps(flat_settings, indent=4, sort_keys=True)
-
-        dialog = QtGui.QDialog(self._controller.central_widget)
-        dialog.setWindowTitle("Confirm save")
-
-        textEdit = QtGui.QTextEdit()
-        textEdit.setPlainText(pretty_json)
-        textEdit.setReadOnly(True)
+    def _format_disallowed(self, disallowed):
+        """
+        Format a list of tuples `disallowed`, containing components and keys of
+        widgets that have invalid values, as a layout of label widgets.
+        """
 
         warnLayout = QtGui.QVBoxLayout()
         for i, key in disallowed:
             message = "Setting '{}' from component '{}' has an incorrect value."
             warnLayout.addWidget(QtGui.QLabel(message.format(key, self._components[i])))
 
-        groupWarnings = QtGui.QGroupBox("Warnings")
-        groupWarnings.setLayout(warnLayout)
+        return warnLayout
 
-        scrollWarnings = QtGui.QScrollArea()
-        scrollWarnings.setWidgetResizable(True)
-        scrollWarnings.setWidget(groupWarnings)
+    def _get_save_check_boxes(self):
+        """
+        Create check boxes for save locations that are shown in the save dialog.
+        """
 
         groundCheckBox = QtGui.QCheckBox("Ground station")
         groundCheckBox.setChecked(True)
@@ -129,6 +128,32 @@ class Control_Panel_Settings_View(Control_Panel_View):
 
             vehicleCheckBoxes[vehicle] = vehicleCheckBox
 
+        return groundCheckBox, vehicleCheckBoxes
+
+    def _create_save_dialog(self, flat_settings, disallowed):
+        pretty_json = json.dumps(flat_settings, indent=4, sort_keys=True)
+
+        dialog = QtGui.QDialog(self._controller.central_widget)
+        dialog.setWindowTitle("Confirm save")
+
+        # Add the preview of the JSON that will be saved.
+        textEdit = QtGui.QTextEdit()
+        textEdit.setPlainText(pretty_json)
+        textEdit.setReadOnly(True)
+
+        # Create a layout with warnings for disallowed values.
+        warnLayout = self._format_disallowed(disallowed)
+
+        groupWarnings = QtGui.QGroupBox("Warnings")
+        groupWarnings.setLayout(warnLayout)
+
+        scrollWarnings = QtGui.QScrollArea()
+        scrollWarnings.setWidgetResizable(True)
+        scrollWarnings.setWidget(groupWarnings)
+
+        # Create check boxes for selecting target save locations.
+        groundCheckBox, vehicleCheckBoxes = self._get_save_check_boxes()
+
         boxLayout = QtGui.QVBoxLayout()
         boxLayout.addWidget(groundCheckBox)
         for vehicle in xrange(1, self._controller.xbee.number_of_sensors + 1):
@@ -141,6 +166,7 @@ class Control_Panel_Settings_View(Control_Panel_View):
         scrollBox.setWidgetResizable(True)
         scrollBox.setWidget(groupBox)
 
+        # Create the dialog buttons and the final layout.
         dialogButtons = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel)
         dialogButtons.accepted.connect(dialog.accept)
         dialogButtons.rejected.connect(dialog.reject)
@@ -154,10 +180,30 @@ class Control_Panel_Settings_View(Control_Panel_View):
 
         dialog.setLayout(dialogLayout)
 
+        return dialog, groundCheckBox, vehicleCheckBoxes
+
+    def _save(self):
+        """
+        Create the save dialog and handle saving/sending the settings.
+        """
+
+        flat_settings = {}
+        disallowed = []
+        for i, widget in enumerate(self._widgets):
+            if widget is not None:
+                values, allowed = widget.get_values()
+                flat_settings.update(values)
+                disallowed.extend([(i, key) for key, value in allowed.iteritems() if not value])
+
+        # Create the save dialog.
+        dialog, groundCheckBox, vehicleCheckBoxes = self._create_save_dialog(flat_settings, disallowed)
+
+        # Show the dialog and handle the input.
         result = dialog.exec_()
         if result != QtGui.QDialog.Accepted:
             return
 
+        # Set up the saving or settings sender.
         self._new_settings = flat_settings
 
         vehicle_settings = {}
@@ -253,11 +299,11 @@ class Control_Panel_Settings_View(Control_Panel_View):
             self._best_matches[index] = True
             return True
 
-        bestMatch = None
+        bestMatch = (None, None)
         for key, info in settings.get_info():
             matchType = self._match_setting(key, info, str(text))
             if matchType != Setting_Filter_Match.NONE:
-                if bestMatch is None or matchType < bestMatch[0]:
+                if bestMatch[0] is None or matchType < bestMatch[0]:
                     bestMatch = (matchType, key)
 
         if bestMatch:

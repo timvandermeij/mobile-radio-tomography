@@ -1,11 +1,16 @@
+# Core imports
 import re
 import sys
 import traceback
-import markdown
 from collections import OrderedDict
 from functools import partial
-from mdx_partial_gfm import PartialGithubFlavoredMarkdownExtension
 from PyQt4 import QtCore, QtGui
+
+# Markdown imports
+import markdown
+from mdx_partial_gfm import PartialGithubFlavoredMarkdownExtension
+
+# Package imports
 from Control_Panel_View import Control_Panel_View_Name
 from Control_Panel_Devices_View import Control_Panel_Devices_View
 from Control_Panel_Loading_View import Control_Panel_Loading_View
@@ -204,6 +209,9 @@ class Control_Panel_Controller(object):
             view.load(self._view_data[name])
             view.show()
         except:
+            self.thread_manager.destroy()
+            self.usb_manager.clear()
+
             QtGui.QMessageBox.critical(self.central_widget, "Internal error",
                                        traceback.format_exc() + "\nThe application will now exit.")
             self.window.close()

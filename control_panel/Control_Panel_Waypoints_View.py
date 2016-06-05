@@ -13,10 +13,6 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         self._max_retries = self._settings.get("waypoints_max_retries")
         self._retry_interval = self._settings.get("waypoints_retry_interval")
 
-    def load(self, data):
-        self._listWidget = QtGui.QListWidget()
-        self._stackedLayout = QtGui.QStackedLayout()
-
         self._vehicle_labels = []
         self._tables = []
         self._column_labels = ["north", "east", "altitude", "wait for vehicle"]
@@ -24,6 +20,13 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         # We initially require data for the north/east column, but the altitude 
         # and wait ID can be left out.
         self._column_defaults = (None, None, 0.0, 0)
+
+        self._listWidget = None
+        self._stackedLayout = None
+
+    def load(self, data):
+        self._listWidget = QtGui.QListWidget()
+        self._stackedLayout = QtGui.QStackedLayout()
 
         for vehicle in xrange(1, self._controller.xbee.number_of_sensors + 1):
             # Create the list item for the vehicle.
@@ -181,7 +184,11 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             vehicle = index + 1
             previous = self._column_defaults
             for row in range(table.rowCount()):
-                data = self._format_row_data(vehicle, table, row, previous, repeat, errors)
+                data = self._format_row_data(vehicle, table, row, previous,
+                                             repeat=repeat, errors=errors)
+
+                if not data:
+                    continue
 
                 if vehicle not in waypoints:
                     waypoints[vehicle] = [tuple(data)]

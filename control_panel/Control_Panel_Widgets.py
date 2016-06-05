@@ -1,3 +1,4 @@
+import re
 from PyQt4 import QtCore, QtGui
 
 class QToolBarFocus(QtGui.QToolBar):
@@ -71,6 +72,51 @@ class QLineEditClear(QtGui.QLineEdit):
 
     def updateCloseButton(self, text):
         self.clearButton.setVisible(not text.isEmpty())
+
+class QLineEditValidated(QtGui.QLineEdit):
+    def __init__(self, *a, **kw):
+        QtGui.QLineEdit.__init__(self, *a, **kw)
+        self._background_color = ""
+
+    def setValidator(self, v):
+        super(QLineEditValidated, self).setValidator(v)
+        validator = self.validator()
+        if validator is not None:
+            self.textChanged.connect(self._validate)
+        else:
+            self.textChanged.disconnect(self._validate)
+
+    def set_background_color(self, color):
+        self._background_color = color
+
+        decl = "background-color: "
+        styleSheet = str(self.styleSheet())
+        if color == "":
+            replace = ""
+        else:
+            replace = r"\1{}\3".format(color)
+
+        newSheet, count = re.subn("({})(.*)(;)".format(decl), replace, styleSheet)
+        if count == 0 and color != "":
+            newSheet = styleSheet + decl + color + ";"
+
+        self.setStyleSheet(newSheet)
+
+    def get_background_color(self):
+        return self._background_color
+
+    def _validate(self, text):
+        pos = self.cursorPosition()
+        state, newpos = self.validator().validate(text, pos)
+        if state != QtGui.QValidator.Acceptable:
+            color = "#FA6969"
+        else:
+            color = "#8BD672"
+
+        self.set_background_color(color)
+
+        if newpos != pos:
+            self.setCursorPosition(pos)
 
 class QLineEditToolButton(QtGui.QToolButton):
     def __init__(self, parent, *a, **kw):
