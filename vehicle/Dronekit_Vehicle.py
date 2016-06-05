@@ -38,6 +38,7 @@ class Dronekit_Vehicle(dronekit.Vehicle, MAVLink_Vehicle):
             self.add_message_listener('*', self.get_packet)
 
             # Create home location listener
+            # pylint: disable=unused-variable
             @self.on_message(['WAYPOINT', 'MISSION_ITEM'])
             def listener(self, name, msg):
                 if not self._wp_loaded and msg.seq == 0:

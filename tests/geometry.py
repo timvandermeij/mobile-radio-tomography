@@ -100,7 +100,9 @@ class TestGeometry(LocationTestCase):
         self.assertAlmostEqual(cl.north, loc2.north, delta=self.coord_delta)
         self.assertAlmostEqual(cl.east, loc2.east, delta=self.coord_delta)
         self.assertAlmostEqual(cl.down, loc2.down, delta=self.coord_delta)
-        self.assertAlmostEqual(self.geometry.get_angle(loc, self.geometry.get_location_angle(loc, 10.0, math.pi/4)), math.pi/4, delta=self.angle_delta)
+
+        angle = self.geometry.get_angle(loc, self.geometry.get_location_angle(loc, 10.0, math.pi/4))
+        self.assertAlmostEqual(angle, math.pi/4, delta=self.angle_delta)
 
     def test_get_angle(self):
         loc = LocationLocal(5.4, 3.2, -1.0)
@@ -131,6 +133,8 @@ class TestGeometry(LocationTestCase):
     def test_get_neighbor_offsets(self):
         offsets = self.geometry.get_neighbor_offsets()
         self.assertEqual(offsets.shape, (8, 2))
+
+        # pylint: disable=bad-continuation,bad-whitespace
         self.assertTrue(np.array_equal(offsets, [(-1, -1), (-1, 0), (-1, 1),
                                                   (0, -1),           (0, 1),
                                                   (1, -1),  (1, 0),  (1, 1)]))
@@ -148,6 +152,8 @@ class TestGeometry_Grid(TestGeometry):
     def test_get_neighbor_offsets(self):
         offsets = self.geometry.get_neighbor_offsets()
         self.assertEqual(offsets.shape, (4, 2))
+
+        # pylint: disable=bad-continuation,bad-whitespace
         self.assertTrue(np.array_equal(offsets, [          (-1, 0),
                                                   (0, -1),           (0, 1),
                                                             (1, 0)         ]))

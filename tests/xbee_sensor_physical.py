@@ -124,12 +124,11 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
             self.sensor._send()
 
     def test_enqueue(self):
-        # Packets that are not XBee_Packet objects should be refused.
+        # Packets that are not `XBee_Packet` objects should be refused.
         with self.assertRaises(TypeError):
-            packet = {
+            self.sensor.enqueue({
                 "foo": "bar"
-            }
-            self.sensor.enqueue(packet)
+            })
 
         # Private packets should be refused.
         with self.assertRaises(ValueError):

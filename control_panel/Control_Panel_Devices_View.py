@@ -21,6 +21,7 @@ class Control_Panel_Devices_View(Control_Panel_View):
         self._timer = None
         self._discover_interval = self._settings.get("devices_discover_delay")
         self._tree_view = None
+        self._devices = []
 
     def load(self, data):
         if "devices" in data:
