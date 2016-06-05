@@ -344,14 +344,30 @@ class Robot_Vehicle(Vehicle):
 
         self._set_direction(target_direction, direction)
 
+    def _get_rotate_direction(self, target_direction):
+        """
+        Determine the direction in which the vehicle rotates to the given
+        `target_direction`, a `Line_Follower_Direction`, the quickest.
+
+        The returned value is `1` is clockwise rotation is the quickest, and
+        `-1` if counterclockwise rotation is the quickest.
+        """
+
+        steps = (target_direction - self._direction + 2) % 4 - 2
+        return int(math.copysign(1, steps))
+
     def _set_direction(self, target_direction, rotate_direction=0):
         if target_direction == self._direction:
             return
 
         if rotate_direction == 0:
-            rotate_direction = int(math.copysign(1, target_direction-self._direction))
+            # Determine direction in which we rotate to the target direction 
+            # the quickest.
+            rotate_direction = self._get_rotate_direction(target_direction)
 
-        self._state = Robot_State_Rotate(rotate_direction, target_direction, self._direction)
+        self._state = Robot_State_Rotate(rotate_direction, target_direction,
+                                         self._direction)
+
         # Keep line follower in intersection state.
         self._line_follower.set_state(Line_Follower_State.AT_INTERSECTION)
 
@@ -361,7 +377,9 @@ class Robot_Vehicle(Vehicle):
         self.set_rotate(rotate_direction)
 
     def set_rotate(self, rotate_direction):
-        self.set_speeds(self._rotate_speed, self._rotate_speed, rotate_direction == 1, rotate_direction == -1)
+        self.set_speeds(self._rotate_speed, self._rotate_speed,
+                        left_forward=rotate_direction == 1,
+                        right_forward=rotate_direction == -1)
 
     def _is_waypoint(self, waypoint):
         return 0 <= waypoint < len(self._waypoints)
@@ -411,7 +429,7 @@ class Robot_Vehicle(Vehicle):
         is_down = self._direction == Line_Follower_Direction.DOWN
         is_left = self._direction == Line_Follower_Direction.LEFT
 
-        if (is_up and up > 0) or (is_right and right > 0) or (is_down and up < 0) or (is_right and right < 0):
+        if (is_up and up > 0) or (is_right and right > 0) or (is_down and up < 0) or (is_left and right < 0):
             return self._direction
 
         if right == 0 or is_right or is_left:

@@ -144,7 +144,7 @@ class Vehicle(Threadable):
         The `location` is a Location object.
         """
 
-        pass
+        raise NotImplementedError("Subclasses must implement `add_waypoint(location)`")
 
     def add_wait(self):
         """
@@ -154,21 +154,21 @@ class Vehicle(Threadable):
         the waypoint is manually adjusted using `set_next_waypoint`.
         """
 
-        pass
+        raise NotImplementedError("Subclasses must implement `add_wait()`")
 
     def clear_waypoints(self):
         """
         Clear any waypoints and other mission commands to the vehicle.
         """
 
-        pass
+        raise NotImplementedError("Subclasses must implement `clear_waypoints()`")
 
     def is_wait(self):
         """
         Check if the current waypoint is a wait command added via `add_wait`.
         """
         
-        return False
+        raise NotImplementedError("Subclasses must implement `is_wait()`")
 
     def get_waypoint(self, waypoint=-1):
         """
@@ -183,14 +183,14 @@ class Vehicle(Threadable):
         method can return `None`.
         """
 
-        return None
+        raise NotImplementedError("Subclasses must implement `get_waypoint(waypoint)`")
 
     def get_next_waypoint(self):
         """
         Get the current waypoint number.
         """
 
-        return 0
+        raise NotImplementedError("Subclasses must implement `get_next_waypoint()`")
 
     def set_next_waypoint(self, waypoint=-1):
         """
@@ -201,14 +201,14 @@ class Vehicle(Threadable):
         after the current waypoint.
         """
 
-        pass
+        raise NotImplementedError("Subclasses must implement `set_next_waypoint(waypoint)`")
 
     def count_waypoints(self):
         """
         Return the number of waypoints in the mission.
         """
 
-        return 0
+        raise NotImplementedError("Subclasses must implement `count_waypoints()`")
 
     def check_arming(self):
         """

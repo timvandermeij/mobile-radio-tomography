@@ -71,7 +71,9 @@ class Robot_Vehicle_Arduino(Robot_Vehicle):
 
     def _format_speeds(self, left_speed, right_speed, left_forward, right_forward):
         output = ""
-        for i, speed, forward in [(0, left_speed, left_forward), (1, right_speed, right_forward)]:
+
+        parts = [(0, left_speed, left_forward), (1, right_speed, right_forward)]
+        for i, speed, forward in parts:
             if not forward:
                 speed = -speed
 
