@@ -150,7 +150,6 @@ class XBee_Packet(object):
             except struct.error as e:
                 raise ValueError("Unable to serialize XBee packet with specification '{}': struct error for field '{}': {}".format(specification_name, field["name"], e.message))
 
-
         return packed_message
 
     def _pack_field(self, format, value):

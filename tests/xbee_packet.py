@@ -124,6 +124,12 @@ class TestXBeePacket(unittest.TestCase):
         with self.assertRaises(KeyError):
             self.packet.serialize()
 
+        # All fields from the specification must be serializable.
+        self.packet.set("specification", "setting_done")
+        self.packet.set("to_id", "2") # String instead of integer
+        with self.assertRaises(ValueError):
+            self.packet.serialize()
+
         # When all fields are provided, the specification field must be
         # unset and the packed message must be valid.
         self.packet.set("specification", "waypoint_add")
@@ -166,6 +172,13 @@ class TestXBeePacket(unittest.TestCase):
         # Invalid specifications must be refused.
         with self.assertRaises(KeyError):
             self.packet.unserialize("\xFF\x01")
+
+        # All fields from the specification must be unserializable.
+        with self.assertRaises(ValueError):
+            self.packet.unserialize("\n\x00\x00\x00\x00\x03bar") # Final part of packet missing
+
+        # Reset the XBee packet as the previous test changed some fields in the packet.
+        self.packet = XBee_Packet()
 
         # Valid messages must be unpacked.
         message = "\x06H\xe1zT4o\x9dA\xf6(\\E\xa5q\x9dA\xcd\xcc\xcc\xcc\xcc\xcc\x10@\x03\x16\x00\x00\x00\x02"
