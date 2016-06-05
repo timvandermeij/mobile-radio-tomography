@@ -9,10 +9,13 @@ from ..vehicle.Robot_Vehicle import Robot_State, Robot_Vehicle
 from ..vehicle.Vehicle import Vehicle
 from core_thread_manager import ThreadableTestCase
 from core_usb_manager import USBManagerTestCase
+from core_wiringpi import WiringPiTestCase
 from geometry import LocationTestCase
 from settings import SettingsTestCase
 
-class TestVehicleRobotVehicle(LocationTestCase, SettingsTestCase, ThreadableTestCase, USBManagerTestCase):
+class TestVehicleRobotVehicle(LocationTestCase, SettingsTestCase,
+                              ThreadableTestCase, USBManagerTestCase,
+                              WiringPiTestCase):
     def setUp(self):
         super(TestVehicleRobotVehicle, self).setUp()
         self.arguments = Arguments("settings.json", [

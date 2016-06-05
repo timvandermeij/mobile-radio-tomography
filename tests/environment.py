@@ -12,13 +12,36 @@ from geometry import LocationTestCase
 from settings import SettingsTestCase
 from core_thread_manager import ThreadableTestCase
 from core_usb_manager import USBManagerTestCase
+from core_wiringpi import WiringPiTestCase
 
-class EnvironmentTestCase(LocationTestCase, SettingsTestCase, ThreadableTestCase, USBManagerTestCase):
-    def register_arguments(self, argv, simulated=True, distance_sensors=[], use_infrared_sensor=True):
+class EnvironmentTestCase(LocationTestCase, SettingsTestCase,
+                          ThreadableTestCase, USBManagerTestCase,
+                          WiringPiTestCase):
+    """
+    Test case class for tests that make use of the `Environment` class,
+    including mission and distance sensor tests.
+
+    This class handles initalizing the settings in a generic manner and
+    providing various means of simulating sensors and other modules.
+    """
+
+    def __init__(self, *a, **kw):
+        super(EnvironmentTestCase, self).__init__(*a, **kw)
+
+        self._argv = []
+        self._modules = {}
+        self._simulated = True
+
+    def register_arguments(self, argv, simulated=True, distance_sensors=None,
+                           use_infrared_sensor=True):
         self._argv = argv
         self._argv.extend(["--xbee-type", "simulator", "--xbee-id", "1"])
 
         self._simulated = simulated
+        # WiringPiTestCase provides a patcher for RPi.GPIO, which is necessary 
+        # when not in simulation mode to be able to run those tests on PC. 
+        # Additionally, it always handles the WiringPi setup singleton.
+        self.set_rpi_patch(rpi_patch=not simulated)
 
         self._modules = {}
 
@@ -33,14 +56,7 @@ class EnvironmentTestCase(LocationTestCase, SettingsTestCase, ThreadableTestCase
         else:
             self._argv.append("--no-infrared-sensor")
 
-        if distance_sensors:
-            if not self._simulated:
-                # We need to mock the RPi.GPIO module as it is only available 
-                # on Raspberry Pi devices and these tests run on a PC.
-                rpi_gpio_mock = MagicMock()
-                self._modules['RPi'] = rpi_gpio_mock
-                self._modules['RPi.GPIO'] = rpi_gpio_mock.GPIO
-
+        if distance_sensors is not None:
             self._argv.append("--distance-sensors")
             self._argv.extend([str(sensor) for sensor in distance_sensors])
 
@@ -91,10 +107,10 @@ class TestEnvironment(EnvironmentTestCase):
         distance_sensors = self.environment.get_distance_sensors()
         expected_angles = [0, 90]
         self.assertEqual(len(distance_sensors), len(expected_angles))
-        for i in range(len(expected_angles)):
+        for i, expected_angle in enumerate(expected_angles):
             self.assertIsInstance(distance_sensors[i], Distance_Sensor_Simulator)
             self.assertEqual(distance_sensors[i].id, i)
-            self.assertEqual(distance_sensors[i].angle, expected_angles[i])
+            self.assertEqual(distance_sensors[i].angle, expected_angle)
 
         for servo in self.environment.get_servos():
             self.assertIsInstance(servo, Servo)
