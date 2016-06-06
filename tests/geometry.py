@@ -1,8 +1,13 @@
+# Core imports
 import math
-import numpy as np
 import sys
 import unittest
+
+# Library imports
+import numpy as np
 from dronekit import LocationGlobal, LocationGlobalRelative, LocationLocal
+
+# Package imports
 from ..geometry.Geometry import Geometry
 from ..geometry.Geometry_Grid import Geometry_Grid
 from ..geometry.Geometry_Spherical import Geometry_Spherical

@@ -1,6 +1,11 @@
+# Core imports
 import math
-import numpy as np
 import sys
+
+# Library imports
+import numpy as np
+
+# Package imports
 from ..trajectory.Memory_Map import Memory_Map
 from environment import EnvironmentTestCase
 

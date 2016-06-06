@@ -1,14 +1,13 @@
+# Qt imports
+from PyQt4 import QtCore, QtGui
+import pyqtgraph as pg
+
 # matplotlib imports
 import matplotlib
 matplotlib.use("Qt4Agg")
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-
 from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
-
-# Qt imports
-from PyQt4 import QtCore, QtGui
-import pyqtgraph as pg
 
 # Package imports
 from Control_Panel_View import Control_Panel_View, Control_Panel_View_Name
