@@ -32,7 +32,7 @@ class Distance_Sensor_Physical(Distance_Sensor):
         self.gpio.output(self.settings.get("trigger_pin"), False)
         time.sleep(self.settings.get("interval_delay"))
 
-    def get_distance(self):
+    def get_distance(self, **kwargs):
         """
         Perform a single distance measurement.
         """

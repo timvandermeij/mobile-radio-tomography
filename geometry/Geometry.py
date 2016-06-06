@@ -738,13 +738,17 @@ class Geometry_Spherical(Geometry):
         return math.sqrt((d*d) + (dalt*dalt))
 
     def _diff_location(self, location1, location2):
+        # Only call this method with equalized location types.
         if isinstance(location1, LocationLocal):
             return super(Geometry_Spherical, self)._diff_location(location1, location2)
 
         dlat = location2.lat - location1.lat
         dlon = location2.lon - location1.lon
         dalt = location2.alt - location1.alt
-        return location1.__class__(dlat, dlon, dalt)
+        if isinstance(location1, LocationGlobal):
+            return LocationGlobal(dlat, dlon, dalt)
+
+        return LocationGlobalRelative(dlat, dlon, dalt)
 
     def diff_location_meters(self, location1, location2):
         location1, location2 = self.equalize(location1, location2)

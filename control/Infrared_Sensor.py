@@ -1,9 +1,14 @@
+# Core imports
 import os
-import pylirc
 import shutil
 import sys
 import thread
 import time
+
+# Library imports
+import pylirc
+
+# Package imports
 from ..core.Threadable import Threadable
 from ..settings import Arguments, Settings
 

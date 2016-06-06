@@ -7,7 +7,7 @@ class Distance_Sensor(object):
         self.id = id
         self.angle = angle
 
-    def get_distance(self):
+    def get_distance(self, **kwargs):
         raise NotImplementedError("Subclasses must override get_distance()")
 
     def get_angle(self, bearing=None):

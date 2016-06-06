@@ -119,9 +119,10 @@ class Distance_Sensor_Simulator(Distance_Sensor):
 
         return (self.maximum_distance, None)
 
-    def get_distance(self, location=None, yaw=None, pitch=None):
+    def get_distance(self, location=None, yaw=None, pitch=None, **kwargs):
         """
-        Get the distance in meters to the collision object from the current `location`.
+        Get the distance in meters to an object that we would collide with at
+        the given `yaw` and `pitch` from the current `location`.
         """
 
         self.current_edge = None
