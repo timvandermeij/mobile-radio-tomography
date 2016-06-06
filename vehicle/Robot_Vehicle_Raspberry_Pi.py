@@ -1,6 +1,5 @@
 import RPi.GPIO
 from Robot_Vehicle import Robot_Vehicle
-from ..location.Line_Follower_Raspberry_Pi import Line_Follower_Raspberry_Pi
 from ..trajectory.Servo import Servo
 
 class Robot_Vehicle_Raspberry_Pi(Robot_Vehicle):
@@ -8,10 +7,12 @@ class Robot_Vehicle_Raspberry_Pi(Robot_Vehicle):
     Robot vehicle that is directly connected to a Raspberry Pi.
     """
 
-    _line_follower_class = Line_Follower_Raspberry_Pi
+    _line_follower_class = "Line_Follower_Raspberry_Pi"
 
-    def __init__(self, arguments, geometry, thread_manager, usb_manager):
-        super(Robot_Vehicle_Raspberry_Pi, self).__init__(arguments, geometry, thread_manager, usb_manager)
+    def __init__(self, arguments, geometry, import_manager, thread_manager, usb_manager):
+        super(Robot_Vehicle_Raspberry_Pi, self).__init__(arguments, geometry,
+                                                         import_manager, thread_manager,
+                                                         usb_manager)
 
         self.settings = arguments.get_settings("vehicle_robot_raspberry_pi")
 

@@ -1,4 +1,5 @@
 import math
+import numpy as np
 import thread
 import time
 
@@ -33,8 +34,10 @@ class Robot_Vehicle(Vehicle):
 
     _line_follower_class = None
 
-    def __init__(self, arguments, geometry, thread_manager, usb_manager):
-        super(Robot_Vehicle, self).__init__(arguments, geometry, thread_manager, usb_manager)
+    def __init__(self, arguments, geometry, import_manager, thread_manager, usb_manager):
+        super(Robot_Vehicle, self).__init__(arguments, geometry,
+                                            import_manager, thread_manager,
+                                            usb_manager)
 
         self.arguments = arguments
         self.settings = self.arguments.get_settings("vehicle_robot")
@@ -60,7 +63,7 @@ class Robot_Vehicle(Vehicle):
         self._direction = self.settings.get("home_direction")
 
         self._line_follower = None
-        self._setup_line_follower(thread_manager, usb_manager)
+        self._setup_line_follower(import_manager, thread_manager, usb_manager)
 
         # The delay of the robot vehicle state loop.
         self._loop_delay = self.settings.get("vehicle_delay")
@@ -81,15 +84,19 @@ class Robot_Vehicle(Vehicle):
 
         self._wiringpi = WiringPi()
 
-    def _setup_line_follower(self, thread_manager, usb_manager):
+    def _setup_line_follower(self, import_manager, thread_manager, usb_manager):
         if self._line_follower_class is None:
             raise NotImplementedError("Subclasses must provide a `_line_follower_class` property")
-        if not issubclass(self._line_follower_class, Line_Follower):
+
+        line_follower_class = import_manager.load_class(self._line_follower_class,
+                                                        relative_module="location")
+
+        if not issubclass(line_follower_class, Line_Follower):
             raise TypeError("`_line_follower_class` must be a `Line_Follower` class")
 
         # The delay of the sensor reading loop in the line follower thread.
         line_follower_delay = self.settings.get("line_follower_delay")
-        self._line_follower = self._line_follower_class(
+        self._line_follower = line_follower_class(
             self._home_location, self._direction,
             self.line_follower_callback, self.arguments,
             thread_manager, usb_manager, line_follower_delay
@@ -158,7 +165,10 @@ class Robot_Vehicle(Vehicle):
                     # do so when we see the line from the side that we are 
                     # moving to, not when we rotate away from it again.
                     direction = (self._state.current_direction + direction) % 4
-                    self._state.current_direction = direction
+                    new_state = Robot_State_Rotate(self._state.rotate_direction,
+                                                   self._state.target_direction,
+                                                   direction)
+                    self._state = new_state
             elif self._is_waypoint(self._current_waypoint):
                 # We went off the line while moving (semi)automatically to 
                 # a next waypoint. Steer the motors such that the robot gets 
@@ -302,15 +312,52 @@ class Robot_Vehicle(Vehicle):
 
     @speed.setter
     def speed(self, value):
+        forward = True
+        if value < 0:
+            forward = False
+            value = -value
+
         self._move_speed = value
         if self._is_moving() and self._last_diverged_time is None:
-            self.set_speeds(value, value)
+            self.set_speeds(value, value,
+                            left_forward=forward, right_forward=forward)
+
+    @property
+    def velocity(self):
+        direction = self._get_current_direction()
+        speeds = [0.0, 0.0, 0.0]
+
+        if direction == Line_Follower_Direction.UP:
+            speeds[0] = self._move_speed
+        elif direction == Line_Follower_Direction.RIGHT:
+            speeds[1] = self._move_speed
+        elif direction == Line_Follower_Direction.DOWN:
+            speeds[0] = -self._move_speed
+        elif direction == Line_Follower_Direction.LEFT:
+            speeds[1] = -self._move_speed
+        else:
+            raise ValueError("Invalid direction '{}'".format(direction))
+
+        return speeds
+
+    @velocity.setter
+    def velocity(self, value):
+        nonzero = np.nonzero(value[:2])[0]
+        if nonzero.size == 0:
+            self.speed = 0.0
+        elif nonzero.size == 1:
+            self.speed = value[nonzero[0]]
+        else:
+            raise ValueError("At most one speed component can be nonzero for robot vehicle")
+
+    def _get_current_direction(self):
+        if isinstance(self._state, Robot_State_Rotate):
+            return self._state.current_direction
+
+        return self._direction
 
     def _get_yaw(self):
-        if isinstance(self._state, Robot_State_Rotate):
-            direction = self._state.current_direction
-        else:
-            direction = self._direction
+        direction = self._get_current_direction()
 
         if direction == Line_Follower_Direction.UP:
             yaw = 0.0

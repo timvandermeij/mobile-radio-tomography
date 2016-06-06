@@ -21,17 +21,19 @@ class Dronekit_Vehicle(dronekit.Vehicle, MAVLink_Vehicle):
         else:
             return super(Dronekit_Vehicle, cls).__new__(cls, arguments, *a)
 
-    def __init__(self, handler, geometry=None, thread_manager=None, usb_manager=None):
+    def __init__(self, handler, geometry=None, import_manager=None,
+                 thread_manager=None, usb_manager=None):
         if isinstance(handler, Arguments):
             # Call the constructor of Threadable, which is the superclass of 
             # the Vehicle base class, to make ourselves managed by the thread 
             # manager.
+            # pylint: disable=bad-super-call
             super(Vehicle, self).__init__("dronekit_vehicle", thread_manager)
             self.settings = handler.get_settings("vehicle_dronekit")
             self._geometry = geometry
             # Because the dronekit Vehicle starts a MAVLink connection thread 
             # immediately, register ourselves in the thread manager now.
-            super(Vehicle, self).activate()
+            super(Dronekit_Vehicle, self).activate()
         else:
             super(Dronekit_Vehicle, self).__init__(handler)
 
@@ -136,7 +138,9 @@ class Dronekit_Vehicle(dronekit.Vehicle, MAVLink_Vehicle):
         self.send_mavlink(msg)
         self._speed = speed
 
-    @dronekit.Vehicle.velocity.setter
+    velocity = dronekit.Vehicle.velocity
+
+    @velocity.setter
     def velocity(self, velocity):
         msg = self.message_factory.set_position_target_global_int_encode(
             0,       # time_boot_ms (not used)
@@ -202,7 +206,9 @@ class Dronekit_Vehicle(dronekit.Vehicle, MAVLink_Vehicle):
     def use_simulation(self):
         return self.settings.get("vehicle_simulation")
 
-    @dronekit.Vehicle.home_location.setter
+    home_location = dronekit.Vehicle.home_location
+
+    @home_location.setter
     def home_location(self, pos):
         home_location = self._make_global_location(pos)
         dronekit.Vehicle.home_location.__set__(self, home_location)

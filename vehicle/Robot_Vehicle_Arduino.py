@@ -1,6 +1,5 @@
 import time
 from Robot_Vehicle import Robot_Vehicle
-from ..location.Line_Follower_Arduino import Line_Follower_Arduino
 from ..trajectory.Servo import Servo
 
 class Robot_Vehicle_Arduino(Robot_Vehicle):
@@ -14,10 +13,11 @@ class Robot_Vehicle_Arduino(Robot_Vehicle):
     motor speeds to the Arduino that are passed through to the motor control.
     """
 
-    _line_follower_class = Line_Follower_Arduino
+    _line_follower_class = "Line_Follower_Arduino"
 
-    def __init__(self, arguments, geometry, thread_manager, usb_manager):
-        super(Robot_Vehicle_Arduino, self).__init__(arguments, geometry, thread_manager, usb_manager)
+    def __init__(self, arguments, geometry, import_manager, thread_manager, usb_manager):
+        super(Robot_Vehicle_Arduino, self).__init__(arguments, geometry, import_manager,
+                                                    thread_manager, usb_manager)
 
         self.settings = arguments.get_settings("vehicle_robot_arduino")
 

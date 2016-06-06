@@ -16,12 +16,9 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
     grid position.
     """
 
-    def _setup_line_follower(self, thread_manager, usb_manager):
+    def _setup_line_follower(self, import_manager, thread_manager, usb_manager):
         # This class does not use the line follower.
         pass
-
-    def __init__(self, arguments, geometry, thread_manager, usb_manager):
-        super(Robot_Vehicle_Arduino_Full, self).__init__(arguments, geometry, thread_manager, usb_manager)
 
     def activate(self):
         super(Robot_Vehicle_Arduino_Full, self).activate()

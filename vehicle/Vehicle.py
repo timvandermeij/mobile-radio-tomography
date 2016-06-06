@@ -30,9 +30,10 @@ class Vehicle(Threadable):
 
         vehicle_class = import_manager.load_class(vehicle_class_name,
                                                   relative_module="vehicle")
-        return vehicle_class(arguments, geometry, thread_manager, usb_manager)
+        return vehicle_class(arguments, geometry, import_manager,
+                             thread_manager, usb_manager)
 
-    def __init__(self, arguments, geometry, thread_manager, usb_manager):
+    def __init__(self, arguments, geometry, import_manager, thread_manager, usb_manager):
         """
         Initialize the vehicle.
         """

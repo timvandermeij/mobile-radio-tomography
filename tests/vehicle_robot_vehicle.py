@@ -37,7 +37,9 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
         self.assertEqual(self.vehicle._direction, Line_Follower_Direction.UP)
         self.assertIsInstance(self.vehicle._state, Robot_State)
         self.assertEqual(self.vehicle._state.name, "intersection")
-        self._setup_line_follower_mock.assert_called_once_with(self.thread_manager, self.usb_manager)
+        self._setup_line_follower_mock.assert_called_once_with(self.import_manager,
+                                                               self.thread_manager,
+                                                               self.usb_manager)
 
         self.assertFalse(self.vehicle.use_simulation)
         with self.assertRaises(NotImplementedError):
@@ -64,16 +66,19 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
         self._line_follower_patcher.stop()
 
         with self.assertRaises(NotImplementedError):
-            self.vehicle._setup_line_follower(self.thread_manager,
+            self.vehicle._setup_line_follower(self.import_manager,
+                                              self.thread_manager,
                                               self.usb_manager)
 
-        self.vehicle._line_follower_class = object
+        self.vehicle._line_follower_class = "AStar"
         with self.assertRaises(TypeError):
-            self.vehicle._setup_line_follower(self.thread_manager,
+            self.vehicle._setup_line_follower(self.import_manager,
+                                              self.thread_manager,
                                               self.usb_manager)
 
-        self.vehicle._line_follower_class = Line_Follower_Arduino
-        self.vehicle._setup_line_follower(self.thread_manager,
+        self.vehicle._line_follower_class = "Line_Follower_Arduino"
+        self.vehicle._setup_line_follower(self.import_manager,
+                                          self.thread_manager,
                                           self.usb_manager)
         self.assertIsInstance(self.vehicle._line_follower,
                               Line_Follower_Arduino)
@@ -152,7 +157,9 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
         # Change speed
         set_speeds_mock.reset_mock()
         self.vehicle.speed = 0.4
-        set_speeds_mock.assert_called_once_with(0.4, 0.4)
+        set_speeds_mock.assert_called_once_with(0.4, 0.4,
+                                                left_forward=True,
+                                                right_forward=True)
 
         # Reached the waypoint intersection
         set_speeds_mock.reset_mock()
@@ -228,6 +235,39 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
         self.assertEqual(self.vehicle._waypoints, [(0, 0)])
         self.vehicle.mode = VehicleMode("HALT")
         self.assertFalse(self.vehicle.armed)
+
+    def test_speed(self):
+        self.vehicle.speed = 0.2
+        self.assertEqual(self.vehicle.speed, 0.2)
+
+        # Negative speeds are converted.
+        self.vehicle.speed = -0.4
+        self.assertEqual(self.vehicle.speed, 0.4)
+
+    def test_velocity(self):
+        self.vehicle.speed = 0.3
+        expected_velocities = {
+            Line_Follower_Direction.UP: [0.3, 0, 0],
+            Line_Follower_Direction.RIGHT: [0, 0.3, 0],
+            Line_Follower_Direction.DOWN: [-0.3, 0, 0],
+            Line_Follower_Direction.LEFT: [0, -0.3, 0]
+        }
+        for direction, velocity in expected_velocities.iteritems():
+            self.vehicle._direction = direction
+            self.assertEqual(self.vehicle.velocity, velocity)
+
+        with self.assertRaises(ValueError):
+            self.vehicle._direction = -1
+            dummy = self.vehicle.velocity
+
+        with self.assertRaises(ValueError):
+            self.vehicle.velocity = [0.2, 0.25, 0]
+
+        self.vehicle.velocity = [0, 0, 0]
+        self.assertEqual(self.vehicle.speed, 0.0)
+
+        self.vehicle.velocity = [0, 0.5, 0]
+        self.assertEqual(self.vehicle.speed, 0.5)
 
     @patch.object(Robot_Vehicle, '_set_direction')
     def test_yaw(self, direction_mock):
