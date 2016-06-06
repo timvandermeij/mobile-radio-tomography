@@ -1,29 +1,33 @@
 #include <cc2530.h>
 #include "hal_board.h"
-#include "hal_led.h"
 #include "hal_uart.h"
 #include "rf.h"
 #include "leds.h"
 
 // Packet definitions
+#define PACKET_LENGTH 80
 #define CONFIGURATION_PACKET 1
 #define TX_PACKET 2
 
 typedef struct {
-    unsigned int source;
+    unsigned char sensorId;
 } configurationPacket_t;
 
 typedef struct {
-    unsigned int destination;
+    unsigned char destination;
+    unsigned char length;
+    unsigned char data[PACKET_LENGTH];
 } txPacket_t;
 
 typedef struct {
-    unsigned int source;
+    unsigned char length;
+    unsigned char data[PACKET_LENGTH];
 } rxPacket_t;
 
 typedef struct {
-    unsigned int source;
-    signed int rssi;
+    unsigned char length;
+    unsigned char data[PACKET_LENGTH];
+    signed char rssi;
 } usbPacket_t;
 
 // Network settings
@@ -41,8 +45,8 @@ txPacket_t txPacket;
 rxPacket_t rxPacket;
 usbPacket_t usbPacket;
 signed char rssi = 0;
-unsigned int source = 0;
-unsigned int id = 0;
+unsigned char sensorId = 0;
+unsigned char packetId = 0;
 
 // USB handler
 void usbirqHandler();
@@ -67,23 +71,32 @@ void initialize() {
     EA = 1;
 }
 
+void copy(unsigned char* source, unsigned char* destination) {
+    // Copy a source data array to a destination data array.
+    int i;
+    for(i = 0; i < PACKET_LENGTH; i++) {
+        destination[i] = source[i];
+    }
+}
+
 void processUsb() {
-    // Process incoming configuration or TX packets from the USB connection
+    // Process incoming configuration or TX packets from USB
     ledOn(RED_LED);
 
-    halUartRead((uint8*)&id, sizeof(id));
+    halUartRead((uint8*)&packetId, sizeof(packetId));
 
-    switch(id) {
+    switch(packetId) {
         case CONFIGURATION_PACKET:
             halUartRead((uint8*)&configurationPacket, sizeof(configurationPacket));
-            source = configurationPacket.source;
-            rfConfig.addr = PAN + source;
+            sensorId = configurationPacket.sensorId;
+            rfConfig.addr = PAN + sensorId;
             radioInit(&rfConfig);
             break;
 
         case TX_PACKET:
-            halUartRead((uint8*)&txPacket, sizeof(txPacket));
-            rxPacket.source = source;
+            halUartRead((unsigned char*)&txPacket, sizeof(txPacket));
+            rxPacket.length = txPacket.length;
+            copy(txPacket.data, rxPacket.data);
             sendPacket((char*)&rxPacket, sizeof(rxPacket), rfConfig.pan,
                        PAN + txPacket.destination, rfConfig.addr);
             break;
@@ -102,9 +115,10 @@ void processRadio() {
             RFST = 0xED;
 
             // Transfer the packet over USB
-            usbPacket.source = rxPacket.source;
+            usbPacket.length = rxPacket.length;
+            copy(rxPacket.data, usbPacket.data);
             usbPacket.rssi = rssi;
-            halUartWrite((uint8*)&usbPacket, sizeof(usbPacket));
+            halUartWrite((unsigned char*)&usbPacket, sizeof(usbPacket));
 
             ledOff(RED_LED);
         }

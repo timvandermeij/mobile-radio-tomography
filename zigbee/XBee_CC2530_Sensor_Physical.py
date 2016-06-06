@@ -73,28 +73,32 @@ class XBee_CC2530_Sensor_Physical(XBee_Sensor):
         Setup the serial connection.
         """
 
-        # Set up alternative modes for the UART pins. The RX/TX pins are here for
-        # sanity, but might help in ensuring that these pins have the correct
-        # alternative modes for some Raspberry Pi devices.
-        wiringpi = WiringPi()
-        if not wiringpi.is_raspberry_pi:
-            raise RuntimeError("Must be run on a Raspberry Pi")
+        if self._id > 0:
+            # Set up alternative modes for the UART pins. The RX/TX pins are here for
+            # sanity, but might help in ensuring that these pins have the correct
+            # alternative modes for some Raspberry Pi devices.
+            wiringpi = WiringPi()
+            if not wiringpi.is_raspberry_pi:
+                raise RuntimeError("Must be run on a Raspberry Pi")
 
-        wiringpi.module.pinModeAlt(self._pins["rx_pin"], Raspberry_Pi_GPIO_Pin_Mode.ALT0)
-        wiringpi.module.pinModeAlt(self._pins["tx_pin"], Raspberry_Pi_GPIO_Pin_Mode.ALT0)
-        wiringpi.module.pinModeAlt(self._pins["rts_pin"], Raspberry_Pi_GPIO_Pin_Mode.ALT3)
-        wiringpi.module.pinModeAlt(self._pins["cts_pin"], Raspberry_Pi_GPIO_Pin_Mode.ALT3)
+            wiringpi.module.pinModeAlt(self._pins["rx_pin"], Raspberry_Pi_GPIO_Pin_Mode.ALT0)
+            wiringpi.module.pinModeAlt(self._pins["tx_pin"], Raspberry_Pi_GPIO_Pin_Mode.ALT0)
+            wiringpi.module.pinModeAlt(self._pins["rts_pin"], Raspberry_Pi_GPIO_Pin_Mode.ALT3)
+            wiringpi.module.pinModeAlt(self._pins["cts_pin"], Raspberry_Pi_GPIO_Pin_Mode.ALT3)
 
-        # Reopen the serial connection.
-        self._serial_connection = self._usb_manager.get_cc2530_device()
+            # Reopen the serial connection.
+            self._serial_connection = self._usb_manager.get_cc2530_device()
 
-        # Reset the CC2530 device.
-        wiringpi.module.pinMode(self._pins["reset_pin"], wiringpi.module.OUTPUT)
-        wiringpi.module.digitalWrite(self._pins["reset_pin"], 0)
-        time.sleep(self._reset_delay)
-        wiringpi.module.digitalWrite(self._pins["reset_pin"], 1)
+            # Reset the CC2530 device.
+            wiringpi.module.pinMode(self._pins["reset_pin"], wiringpi.module.OUTPUT)
+            wiringpi.module.digitalWrite(self._pins["reset_pin"], 0)
+            time.sleep(self._reset_delay)
+            wiringpi.module.digitalWrite(self._pins["reset_pin"], 1)
+        else:
+            # The ground station is a CC2531 device, which simply uses USB.
+            self._serial_connection = self._usb_manager.get_cc2531_device()
 
-        # Configure the CC2530 device using a configuration packet.
+        # Configure the device using a configuration packet.
         self._serial_connection.reset_input_buffer()
         self._serial_connection.write(struct.pack("<BB", CC2530_Packet.CONFIGURATION, self._id))
 
