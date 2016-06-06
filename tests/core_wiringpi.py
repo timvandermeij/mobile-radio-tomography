@@ -1,6 +1,7 @@
 import sys
 import unittest
 from mock import patch, MagicMock
+from ..core.Import_Manager import Import_Manager
 
 class WiringPiTestCase(unittest.TestCase):
     """
@@ -49,9 +50,11 @@ class WiringPiTestCase(unittest.TestCase):
         if self._rpi_patcher is not None:
             self._rpi_patcher.stop()
         else:
+            # Unload the modules to ensure they are reloaded when the WiringPi 
+            # instance is recreated.
+            import_manager = Import_Manager()
             for module in ("RPi", "RPi.GPIO", "wiringpi"):
-                if module in sys.modules:
-                    del sys.modules[module]
+                import_manager.unload(module, relative=False)
 
 class TestCoreWiringPi(WiringPiTestCase):
     def setUp(self):

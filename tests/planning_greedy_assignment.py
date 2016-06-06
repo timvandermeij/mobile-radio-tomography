@@ -1,5 +1,5 @@
 import numpy as np
-from ..geometry.Geometry import Geometry_Grid
+from ..geometry.Geometry_Grid import Geometry_Grid
 from ..planning.Greedy_Assignment import Greedy_Assignment
 from ..settings import Arguments
 from settings import SettingsTestCase

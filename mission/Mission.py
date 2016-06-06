@@ -1,10 +1,9 @@
-import importlib
 import math
 import sys
 import time
 from dronekit import LocationGlobal, VehicleMode
 from ..trajectory.Memory_Map import Memory_Map
-from ..geometry.Geometry import Geometry_Spherical
+from ..geometry.Geometry_Spherical import Geometry_Spherical
 
 class Mission(object):
     """
@@ -35,9 +34,13 @@ class Mission(object):
         """
 
         settings = arguments.get_settings("mission")
-        mission_class = settings.get("mission_class")
-        module = importlib.import_module("..{}".format(mission_class), cls.__module__)
-        return module.__dict__[mission_class](environment, settings)
+        mission_class_name = settings.get("mission_class")
+
+        import_manager = environment.get_import_manager()
+        mission_class = import_manager.load_class(mission_class_name,
+                                                  relative_module="mission")
+
+        return mission_class(environment, settings)
 
     def distance_to_current_waypoint(self):
         """

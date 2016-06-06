@@ -16,6 +16,7 @@ import coverage
 
 # Package imports
 from __init__ import __package__
+from core.Import_Manager import Import_Manager
 from settings import Arguments
 
 class TestResultFactory(object):
@@ -61,6 +62,12 @@ class Test_Run(object):
         self._settings = arguments.get_settings("test_runner")
         self._failed = False
 
+        self._import_manager = Import_Manager()
+        self._preimported_modules = [
+            "core.Import_Manager", "settings", "settings.Settings",
+            "settings.Arguments"
+        ]
+
         if self._settings.get("coverage"):
             # Only consider our own module so that we exclude system and site 
             # packages, and exclude the test runner and tests themselves from 
@@ -87,14 +94,13 @@ class Test_Run(object):
         # the debugging print that occurs while importing it. This makes later 
         # imports skip this debug print.
         with patch('sys.stdout'):
-            from pymavlink import mavutil
-            sys.modules["pymavlink.mavutil"] = mavutil
+            self._import_manager.load("pymavlink.mavutil", relative=False)
 
         # Discard the module cache for the package modules imported in the test 
         # runner. This ensures that they are reimported in the tests, which 
         # makes the coverage consider start-up calls again.
-        for module in ["settings", "settings.Settings", "settings.Arguments"]:
-            del sys.modules["{}.{}".format(__package__, module)]
+        for module in self._preimported_modules:
+            self._import_manager.unload(module, relative=True)
 
         pattern = self._settings.get("pattern")
         verbosity = self._settings.get("verbosity")

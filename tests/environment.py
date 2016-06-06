@@ -1,8 +1,9 @@
 from mock import patch, MagicMock
+from ..core.Import_Manager import Import_Manager
 from ..core.Thread_Manager import Thread_Manager
 from ..distance.Distance_Sensor_Simulator import Distance_Sensor_Simulator
 from ..environment.Environment import Environment
-from ..geometry.Geometry import Geometry_Spherical
+from ..geometry.Geometry_Spherical import Geometry_Spherical
 from ..settings import Arguments
 from ..trajectory.Servo import Servo
 from ..vehicle.Mock_Vehicle import Mock_Vehicle
@@ -95,6 +96,7 @@ class TestEnvironment(EnvironmentTestCase):
         self.assertIsInstance(self.environment, Environment)
         self.assertIsInstance(self.environment.vehicle, Mock_Vehicle)
         self.assertIsInstance(self.environment.geometry, Geometry_Spherical)
+        self.assertIsInstance(self.environment.import_manager, Import_Manager)
         self.assertIsInstance(self.environment.thread_manager, Thread_Manager)
         self.assertEqual(self.environment.usb_manager, self.usb_manager)
         self.assertEqual(self.environment.arguments, self.arguments)
@@ -103,6 +105,10 @@ class TestEnvironment(EnvironmentTestCase):
         self.assertEqual(self.environment.get_vehicle(), self.environment.vehicle)
         self.assertEqual(self.environment.get_geometry(), self.environment.geometry)
         self.assertEqual(self.environment.get_arguments(), self.environment.arguments)
+
+        self.assertEqual(self.environment.get_import_manager(), self.environment.import_manager)
+        self.assertEqual(self.environment.get_thread_manager(), self.environment.thread_manager)
+        self.assertEqual(self.environment.get_usb_manager(), self.environment.usb_manager)
 
         distance_sensors = self.environment.get_distance_sensors()
         expected_angles = [0, 90]

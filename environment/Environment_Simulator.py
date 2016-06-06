@@ -1,6 +1,5 @@
 from Environment import Environment
 from VRMLLoader import VRMLLoader
-from ..distance.Distance_Sensor_Simulator import Distance_Sensor_Simulator
 
 class Environment_Simulator(Environment):
     """
@@ -8,11 +7,14 @@ class Environment_Simulator(Environment):
     This allows us to simulate a mission without many dependencies on ArduPilot.
     """
 
-    _sensor_class = Distance_Sensor_Simulator
+    _sensor_class = "Distance_Sensor_Simulator"
 
-    def __init__(self, vehicle, geometry, arguments, thread_manager, usb_manager):
-        super(Environment_Simulator, self).__init__(vehicle, geometry, arguments,
+    def __init__(self, vehicle, geometry, arguments,
+                 import_manager, thread_manager, usb_manager):
+        super(Environment_Simulator, self).__init__(vehicle, geometry,
+                                                    arguments, import_manager,
                                                     thread_manager, usb_manager)
+
         self.has_location_check = False
         self.old_location = None
 
@@ -60,11 +62,13 @@ class Environment_Simulator(Environment):
         return self.objects
 
     def set_location_check(self):
-        self.vehicle.add_attribute_listener('location.local_frame', self.check_location)
+        self.vehicle.add_attribute_listener('location.local_frame',
+                                            self.check_location)
         self.has_location_check = True
 
     def remove_location_check(self):
-        self.vehicle.remove_attribute_listener('location.local_frame', self.check_location)
+        self.vehicle.remove_attribute_listener('location.local_frame',
+                                               self.check_location)
         self.has_location_check = False
         self.old_location = None
 

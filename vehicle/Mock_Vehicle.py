@@ -3,7 +3,7 @@ import time
 from collections import namedtuple
 from dronekit import Locations, LocationLocal, LocationGlobal, LocationGlobalRelative
 
-from ..geometry.Geometry import Geometry_Spherical
+from ..geometry.Geometry_Spherical import Geometry_Spherical
 from MAVLink_Vehicle import MAVLink_Vehicle
 
 # Constants used in commands according to mavutil

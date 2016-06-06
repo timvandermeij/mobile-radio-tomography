@@ -1,7 +1,7 @@
-import importlib
 import string
 from argparse import ArgumentParser
 from functools import partial
+from ..core.Import_Manager import Import_Manager
 from Settings import Settings
 
 class Arguments(object):
@@ -27,6 +27,8 @@ class Arguments(object):
         # Arguments.check_help.
         self.parser = ArgumentParser(add_help=False, **kwargs)
         self.groups = {}
+
+        self._import_manager = Import_Manager()
 
         self._done_help = False
 
@@ -63,13 +65,24 @@ class Arguments(object):
             self._add_arguments(group, settings)
             self._fill_settings(settings)
 
-    def _get_keys(self, location):
+    def _get_keys(self, location, relative=True):
         """
         Retrieve a list of option choices from a module or a (nested) attribute.
+
+        The `location` is a list with at least one element, where the first
+        element is a module. The module is relative to the base package if
+        `relative` is `True`, otherwise it is a global module. The remainder of
+        that list, if provided, are variable names that, in order, exist in that
+        module, the variable previously in the list, and so on. The final
+        variable must be a dictionary, or if it was only a module, then it must
+        have an `__all__` variable or enumerable with `dir`.
+
+        Returns the keys from the variable dictionary or the enumerated values
+        from the module's exportable contents.
         """
 
         try:
-            data = importlib.import_module(location[0])
+            data = self._import_manager.load(location[0], relative=relative)
         except ImportError:
             # Module is not installed. Instead of dieing, simply allow every 
             # value. If the module is of importance outside of the setting, 
@@ -98,10 +111,9 @@ class Arguments(object):
         if "options" in info:
             return info["options"]
         if "keys" in info:
-            return self._get_keys(info["keys"])
+            return self._get_keys(info["keys"], relative=False)
         if "module" in info:
-            package = __package__.split('.')[0]
-            return self._get_keys(["{}.{}".format(package, info["module"])])
+            return self._get_keys([info["module"]], relative=True)
 
         return None
 

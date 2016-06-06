@@ -1,7 +1,7 @@
 import time
 from dronekit import LocationLocal, LocationGlobalRelative, VehicleMode
 from Mission import Mission
-from ..geometry.Geometry import Geometry_Spherical
+from ..geometry.Geometry_Spherical import Geometry_Spherical
 
 class Mission_Auto(Mission):
     """

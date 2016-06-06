@@ -1,5 +1,6 @@
 from mock import MagicMock
 from dronekit import LocationLocal, LocationGlobal, LocationGlobalRelative, VehicleMode
+from ..core.Import_Manager import Import_Manager
 from ..core.Thread_Manager import Thread_Manager
 from ..geometry.Geometry import Geometry
 from ..settings import Arguments
@@ -37,10 +38,12 @@ class VehicleTestCase(LocationTestCase, SettingsTestCase,
         self.settings = self.arguments.get_settings("vehicle")
         self.settings.set("vehicle_class", self._vehicle_class)
         self.geometry = Geometry()
+        self.import_manager = Import_Manager()
         self.thread_manager = Thread_Manager()
         self.usb_manager.index()
         self.vehicle = Vehicle.create(self.arguments, self.geometry,
-                                      self.thread_manager, self.usb_manager)
+                                      self.import_manager, self.thread_manager,
+                                      self.usb_manager)
 
 class TestVehicle(VehicleTestCase):
     def setUp(self):

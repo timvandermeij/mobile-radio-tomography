@@ -1,7 +1,7 @@
 from dronekit import LocationLocal, LocationGlobalRelative, Command
 from pymavlink import mavutil
 from Vehicle import Vehicle
-from ..geometry.Geometry import Geometry_Spherical
+from ..geometry.Geometry_Spherical import Geometry_Spherical
 
 class MAVLink_Vehicle(Vehicle):
     """

@@ -1,7 +1,7 @@
 import math
+from ..core.Import_Manager import Import_Manager
 from ..core.Thread_Manager import Thread_Manager
 from ..core.USB_Manager import USB_Manager
-from ..geometry import Geometry
 from ..trajectory.Servo import Servo
 from ..vehicle.Vehicle import Vehicle
 from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
@@ -15,6 +15,8 @@ class Environment(object):
     Environment class for interfacing the vehicle with various sensors and positioning information.
     """
 
+    # The distance sensor class name, i.e., "Distance_Sensor_Physical" or 
+    # "Distance_Sensor_Simulator", depending on Environment type.
     _sensor_class = None
 
     @classmethod
@@ -23,26 +25,32 @@ class Environment(object):
         """
         Create an Environment object or simulated environment.
 
-        The returned object is an Enviromnent object or a subclass,
+        The returned object is an `Enviromnent` object or a subclass,
         loaded with the given `arguments` object.
         Optionally, one can specify which `geometry_class` to use and what
-        `vehicle` object to use. By default this depends on the settings for
-        `geometry_class` and `vehicle_class` in the `environment` and `vehicle`
-        components, respectively. If a `vehicle` is passed, then its
-        `thread_manager` must be passed as well.
+        `vehicle` object to use. By default, this depends on the settings for
+        `"geometry_class"` and `"vehicle_class"` in the `environment` and
+        `vehicle` components, respectively. If a `vehicle` is passed, then its
+        `thread_manager` must be passed as well, otherwise a `ValueError` is
+        raised. Note that passing a `vehicle` means that the `geometry_class`
+        may differ from the vehicle's geometry.
+
         Finally, to use an environment with physical distance sensors,
         set `simulated` to `False`. This is required if the vehicle does not
-        support simulation, which might depend on vehicle-specific settings.
-        For more control over simulated environment setup,
-        use the normal constructors instead, although those do not ensure that
-        the vehicle has the same geometry.
+        support simulation, which might depend on vehicle-specific settings and
+        external configuration. For more control over simulated environment
+        setup, use the normal constructors instead, with fewer guarantees.
         """
 
         if geometry_class is None:
             settings = arguments.get_settings("environment")
             geometry_class = settings.get("geometry_class")
 
-        geometry = Geometry.__dict__[geometry_class]()
+        import_manager = Import_Manager()
+
+        geometry_type = import_manager.load_class(geometry_class,
+                                                  relative_module="geometry")
+        geometry = geometry_type()
 
         if usb_manager is None:
             usb_manager = USB_Manager()
@@ -50,7 +58,8 @@ class Environment(object):
         usb_manager.index()
         if vehicle is None:
             thread_manager = Thread_Manager()
-            vehicle = Vehicle.create(arguments, geometry, thread_manager, usb_manager)
+            vehicle = Vehicle.create(arguments, geometry, import_manager,
+                                     thread_manager, usb_manager)
         elif thread_manager is None:
             raise ValueError("If a `vehicle` is provided then its `thread_manager` must be provided as well")
 
@@ -63,22 +72,29 @@ class Environment(object):
             if not vehicle.use_simulation:
                 raise ValueError("Vehicle '{}' does not support environment simulation, check vehicle type and settings".format(vehicle.__class__.__name__))
 
-            from Environment_Simulator import Environment_Simulator
-            return Environment_Simulator(vehicle, geometry, arguments, thread_manager, usb_manager)
+            environment_class_name = "Environment_Simulator"
+        else:
+            environment_class_name = "Environment_Physical"
 
-        from Environment_Physical import Environment_Physical
-        return Environment_Physical(vehicle, geometry, arguments, thread_manager, usb_manager)
+        environment = import_manager.load_class(environment_class_name,
+                                                relative_module="environment")
 
-    def __init__(self, vehicle, geometry, arguments, thread_manager, usb_manager):
+        return environment(vehicle, geometry, arguments,
+                           import_manager, thread_manager, usb_manager)
+
+    def __init__(self, vehicle, geometry, arguments,
+                 import_manager, thread_manager, usb_manager):
         self.vehicle = vehicle
         self.geometry = geometry
-        self.thread_manager = thread_manager
-
-        self.usb_manager = usb_manager
 
         self.arguments = arguments
         self.settings = self.arguments.get_settings("environment")
 
+        self.import_manager = import_manager
+        self.thread_manager = thread_manager
+        self.usb_manager = usb_manager
+
+        # A lazy-loaded list of distance sensors
         self._distance_sensors = None
 
         # Servo pins of the flight controller for distance sensor rotation
@@ -137,6 +153,15 @@ class Environment(object):
     def get_arguments(self):
         return self.arguments
 
+    def get_import_manager(self):
+        return self.import_manager
+
+    def get_thread_manager(self):
+        return self.thread_manager
+
+    def get_usb_manager(self):
+        return self.usb_manager
+
     def get_distance_sensors(self):
         """
         Retrieve the list of `Distance_Sensor` objects.
@@ -148,9 +173,11 @@ class Environment(object):
             if self._sensor_class is None:
                 self._distance_sensors = []
             else:
+                sensor = self.import_manager.load_class(self._sensor_class,
+                                                        relative_module="distance")
                 angles = list(self.settings.get("distance_sensors"))
                 self._distance_sensors = [
-                    self._sensor_class(self, i, angles[i]) for i in range(len(angles))
+                    sensor(self, i, angles[i]) for i in range(len(angles))
                 ]
 
         return self._distance_sensors

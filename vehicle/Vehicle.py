@@ -1,7 +1,6 @@
 import copy
-import importlib
 from ..core.Threadable import Threadable
-from ..geometry.Geometry import Geometry_Spherical
+from ..geometry.Geometry_Spherical import Geometry_Spherical
 from dronekit import VehicleMode, LocationLocal, LocationGlobal, LocationGlobalRelative
 
 class Vehicle(Threadable):
@@ -10,19 +9,28 @@ class Vehicle(Threadable):
     """
 
     @classmethod
-    def create(cls, arguments, geometry, thread_manager, usb_manager):
+    def create(cls, arguments, geometry, import_manager, thread_manager, usb_manager):
         """
-        Create a Vehicle object from one of the subclass types.
+        Create a `Vehicle` object from one of the subclass types.
 
-        `arguments` is an Arguments object that Vehicle subclasses can use to
-        deduce settings from.
+        `arguments` is an `Arguments` object that Vehicle subclasses can use to
+        deduce settings from. `geometry` is a Geometry object of the space that
+        the vehicle operates in. `import_manager` is an `Import_Manager` for
+        deducing the location of the vehicle module. The `thread_manager` allows
+        any worker threads to be registered in the `Thread_Manager`. Finally,
+        the `usb_manager` argument is an instance of `USB_Manager` where certain
+        peripherals can be loaded, e.g. for communicating with an external motor
+        controller attached via a TTL device.
+
+        Returns an initialized object that is a subclass of `Vehicle`.
         """
 
         settings = arguments.get_settings("vehicle")
-        vehicle_class = settings.get("vehicle_class")
+        vehicle_class_name = settings.get("vehicle_class")
 
-        module = importlib.import_module("..{}".format(vehicle_class), cls.__module__)
-        return module.__dict__[vehicle_class](arguments, geometry, thread_manager, usb_manager)
+        vehicle_class = import_manager.load_class(vehicle_class_name,
+                                                  relative_module="vehicle")
+        return vehicle_class(arguments, geometry, thread_manager, usb_manager)
 
     def __init__(self, arguments, geometry, thread_manager, usb_manager):
         """

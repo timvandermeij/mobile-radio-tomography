@@ -3,7 +3,9 @@ import numpy as np
 import sys
 import unittest
 from dronekit import LocationGlobal, LocationGlobalRelative, LocationLocal
-from ..geometry.Geometry import Geometry, Geometry_Grid, Geometry_Spherical
+from ..geometry.Geometry import Geometry
+from ..geometry.Geometry_Grid import Geometry_Grid
+from ..geometry.Geometry_Spherical import Geometry_Spherical
 
 class LocationTestCase(unittest.TestCase):
     def setUp(self):

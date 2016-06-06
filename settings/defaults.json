@@ -364,7 +364,7 @@
             "geometry_class": {
                 "help": "Geometry to use for location calculations",
                 "type": "class",
-                "module": "geometry.Geometry",
+                "module": "geometry",
                 "default": "Geometry_Spherical"
             },
             "distance_sensors": {

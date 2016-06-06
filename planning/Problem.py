@@ -3,7 +3,7 @@ import math
 import numpy as np
 
 from Greedy_Assignment import Greedy_Assignment
-from ..geometry.Geometry import Geometry_Grid
+from ..geometry.Geometry_Grid import Geometry_Grid
 from ..reconstruction.Weight_Matrix import Weight_Matrix
 from ..settings import Arguments
 

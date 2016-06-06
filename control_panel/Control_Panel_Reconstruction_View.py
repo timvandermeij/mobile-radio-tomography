@@ -4,7 +4,6 @@
 # - Tweak calibration/ellipse width/singular values/model (based on grid experiments)
 
 # Core imports
-import importlib
 import json
 import thread
 import os
@@ -23,6 +22,7 @@ import pyqtgraph as pg
 # Package imports
 from Control_Panel_Settings_Widgets import SettingsTableWidget
 from Control_Panel_View import Control_Panel_View
+from ..core.Import_Manager import Import_Manager
 from ..reconstruction.Coordinator import Coordinator
 from ..reconstruction.Dataset_Buffer import Dataset_Buffer
 from ..reconstruction.Dump_Buffer import Dump_Buffer
@@ -279,6 +279,8 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
         self._previous_pixels = None
         self._chunk_count = 0
+
+        self._import_manager = Import_Manager()
 
     def show(self):
         """
@@ -549,11 +551,9 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         Create the reconstructor for the reconstruction process.
         """
 
-        package = __package__.split('.')[0]
-
         reconstructor = settings.get("reconstructor")
-        reconstructor_module = importlib.import_module("{}.reconstruction.{}".format(package, reconstructor))
-        reconstructor_class = reconstructor_module.__dict__[reconstructor]
+        reconstructor_class = self._import_manager.load_class(reconstructor,
+                                                              relative_module="reconstruction")
 
         self._reconstructor = reconstructor_class(self._controller.arguments)
 
