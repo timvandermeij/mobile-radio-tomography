@@ -1,15 +1,20 @@
+# Core imports
 import Queue
 import random
-import serial
 import time
-from core_thread_manager import ThreadableTestCase
+
+# Library imports
+import serial
 from xbee import ZigBee
 from mock import patch
+
+# Package imports
 from ..core.Thread_Manager import Thread_Manager
 from ..zigbee.XBee_Packet import XBee_Packet
 from ..zigbee.XBee_Sensor import SensorClosedError
 from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
 from ..settings import Arguments
+from core_thread_manager import ThreadableTestCase
 from core_usb_manager import USBManagerTestCase
 from settings import SettingsTestCase
 
@@ -272,6 +277,7 @@ class TestXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTes
         self.sensor._receive(raw_packet)
         self.assertEqual(self.sensor._data[frame_id].get("rssi"), -ord("\x4E"))
 
+    def test_receive_at_network_packets(self):
         # AT response SH packets should be processed.
         self.sensor._address_set = False
         raw_packet = {

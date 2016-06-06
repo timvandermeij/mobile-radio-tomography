@@ -1,5 +1,10 @@
-from mock import patch, MagicMock
+# Core imports
 from StringIO import StringIO
+
+# Library imports
+from mock import patch, MagicMock
+
+# Package imports
 from ..settings import Arguments, Settings
 from settings import SettingsTestCase
 

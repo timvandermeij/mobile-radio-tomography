@@ -1,7 +1,7 @@
-from core_thread_manager import ThreadableTestCase
 from mock import call, MagicMock
 from ..core.Thread_Manager import Thread_Manager
 from ..location.Line_Follower import Line_Follower, Line_Follower_State, Line_Follower_Direction
+from core_thread_manager import ThreadableTestCase
 
 class TestLocationLineFollower(ThreadableTestCase):
     def setUp(self):

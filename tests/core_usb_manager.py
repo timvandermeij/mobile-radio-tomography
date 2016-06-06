@@ -1,7 +1,12 @@
+# Core imports
 import os
-import serial
 import unittest
+
+# Library imports
+import serial
 from mock import patch, MagicMock
+
+# Package imports
 from ..core.USB_Manager import USB_Manager, USB_Device_Category, USB_Device_Baud_Rate, USB_Device_Fingerprint
 
 class USBManagerTestCase(unittest.TestCase):

@@ -8,12 +8,16 @@ from ..core.Thread_Manager import Thread_Manager
 
 class ThreadableTestCase(unittest.TestCase):
     """
-    A test case that makes use of Threadable. We make sure that
-    all spawned threads are destroyed after the test.
+    A base class for test cases that make use of a `Threadable` object.
+    We make sure that all spawned threads are destroyed after the test.
     """
 
     def setUp(self):
         self._startup_threads = threading.active_count()
+        self._info = []
+        # Thread manager object must be provided by the extending test case 
+        # classes.
+        self.thread_manager = None
 
         super(ThreadableTestCase, self).setUp()
 
