@@ -3,10 +3,15 @@
 # - Norm versus square?
 # - Experiment with different parameters/difference matrix kernels/OpenBLAS
 
+# Core imports
+from functools import partial
+
+# Library imports
 import numpy as np
 import scipy.sparse
 import scipy.optimize
-from functools import partial
+
+# Package imports
 from Reconstructor import Reconstructor
 from ..settings import Arguments, Settings
 

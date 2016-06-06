@@ -1,9 +1,13 @@
+# Core imports
 import itertools
+import thread
+
+# Library imports
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
-import thread
 
+# Package imports
 import Algorithm
 from Problem import Reconstruction_Plan_Continuous, Reconstruction_Plan_Discrete
 from ..core.Threadable import Threadable

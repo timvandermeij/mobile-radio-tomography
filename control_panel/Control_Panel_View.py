@@ -1,7 +1,10 @@
+# Qt imports
+from PyQt4 import QtCore, QtGui
+
+# matplotlib imports
 import matplotlib
 matplotlib.use("Qt4Agg")
 import matplotlib.pyplot as plt
-from PyQt4 import QtCore, QtGui
 
 class Control_Panel_View_Name(object):
     LOADING = 0

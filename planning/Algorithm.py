@@ -1,8 +1,13 @@
-import numpy as np
+# Core imports
 import itertools
 import time
 from collections import OrderedDict
 from functools import partial
+
+# Library imports
+import numpy as np
+
+# Package imports
 from ..settings import Arguments
 
 __all__ = ["NSGA", "SMS_EMOA"]
