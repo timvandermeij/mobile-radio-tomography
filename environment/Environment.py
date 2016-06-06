@@ -94,7 +94,7 @@ class Environment(object):
         self.thread_manager = thread_manager
         self.usb_manager = usb_manager
 
-        # A lazy-loaded list of distance sensors
+        # A lazily loaded list of distance sensors
         self._distance_sensors = None
 
         # Servo pins of the flight controller for distance sensor rotation

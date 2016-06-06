@@ -75,7 +75,7 @@ class Arguments(object):
         that list, if provided, are variable names that, in order, exist in that
         module, the variable previously in the list, and so on. The final
         variable must be a dictionary, or if it was only a module, then it must
-        have an `__all__` variable or enumerable with `dir`.
+        have an `__all__` variable or be enumerable with `dir`.
 
         Returns the keys from the variable dictionary or the enumerated values
         from the module's exportable contents.

@@ -52,7 +52,7 @@ class Import_Manager(object):
         submodule, which in turn is relative to the package. Otherwise,
         the module is the class name relative to the package.
 
-        If the module and class can be imported, then the clas object is
+        If the module and class can be imported, then the class object is
         returned. Otherwise, an `ImportError` is raised. Providing both
         `module` and `relative_module` raises a `ValueError`.
         """
