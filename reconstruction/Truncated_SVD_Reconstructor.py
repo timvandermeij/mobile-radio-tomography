@@ -1,5 +1,4 @@
 import numpy as np
-import scipy as sp
 import scipy.sparse.linalg
 from Reconstructor import Reconstructor
 from ..settings import Arguments, Settings
@@ -31,6 +30,6 @@ class Truncated_SVD_Reconstructor(Reconstructor):
 
         A = weight_matrix
         b = rssi
-        U, S, Vt = sp.sparse.linalg.svds(A, self._singular_values)
+        U, S, Vt = scipy.sparse.linalg.svds(A, self._singular_values)
         A_inv = np.dot(np.dot(Vt.T, np.diag(np.reciprocal(S))), U.T)
         return np.dot(A_inv, b)
