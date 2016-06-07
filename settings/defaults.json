@@ -918,8 +918,8 @@
             }
         }
     },
-    "xbee_base": {
-        "name": "XBee base",
+    "zigbee_base": {
+        "name": "ZigBee base",
         "settings": {
             "number_of_sensors": {
                 "help": "Number of vehicle sensors in the network, not counting the ground station",
@@ -955,7 +955,7 @@
     },
     "xbee_configurator": {
         "name": "XBee configurator",
-        "parent": "xbee_base",
+        "parent": "zigbee_base",
         "settings": {
             "pan_id": {
                 "help": "Personal area network identifier",
@@ -968,7 +968,7 @@
     },
     "xbee_sensor_simulator": {
         "name": "XBee sensor (simulator)",
-        "parent": "xbee_base",
+        "parent": "zigbee_base",
         "settings": {
             "ip": {
                 "help": "IP address to connect the socket to",
@@ -993,7 +993,7 @@
     },
     "xbee_sensor_physical": {
         "name": "XBee sensor (physical)",
-        "parent": "xbee_base",
+        "parent": "zigbee_base",
         "settings": {
             "port": {
                 "help": "Device name or port of the XBee to use. This overrides the USB manager detection.",
@@ -1032,7 +1032,7 @@
     },
     "xbee_tdma_scheduler": {
         "name": "XBee TDMA scheduler",
-        "parent": "xbee_base",
+        "parent": "zigbee_base",
         "settings": {
             "sweep_delay": {
                 "help": "Delay in seconds for each sweep",

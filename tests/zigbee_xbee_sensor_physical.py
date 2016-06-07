@@ -18,7 +18,7 @@ from core_thread_manager import ThreadableTestCase
 from core_usb_manager import USBManagerTestCase
 from settings import SettingsTestCase
 
-class TestZigbeeXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTestCase):
+class TestZigBeeXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTestCase):
     def location_callback(self):
         """
         Get the current GPS location (latitude and longitude pair) and the
@@ -34,7 +34,7 @@ class TestZigbeeXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, Setti
         return True
 
     def setUp(self):
-        super(TestZigbeeXBeeSensorPhysical, self).setUp()
+        super(TestZigBeeXBeeSensorPhysical, self).setUp()
 
         self.sensor_id = 1
 
@@ -60,7 +60,7 @@ class TestZigbeeXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, Setti
         # do not deactivate it themselves.
         self.sensor.deactivate()
 
-        super(TestZigbeeXBeeSensorPhysical, self).tearDown()
+        super(TestZigBeeXBeeSensorPhysical, self).tearDown()
 
     def mock_setup(self):
         """

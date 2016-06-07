@@ -6,9 +6,9 @@ from ..settings import Arguments
 from core_usb_manager import USBManagerTestCase
 from settings import SettingsTestCase
 
-class TestZigbeeXBeeConfigurator(USBManagerTestCase, SettingsTestCase):
+class TestZigBeeXBeeConfigurator(USBManagerTestCase, SettingsTestCase):
     def setUp(self):
-        super(TestZigbeeXBeeConfigurator, self).setUp()
+        super(TestZigBeeXBeeConfigurator, self).setUp()
 
         self.arguments = Arguments("settings.json", ["--port", self._xbee_port])
         self.settings = self.arguments.get_settings("xbee_configurator")

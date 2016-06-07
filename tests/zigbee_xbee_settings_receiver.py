@@ -8,11 +8,11 @@ from ..zigbee.XBee_Packet import XBee_Packet
 from ..zigbee.XBee_Settings_Receiver import XBee_Settings_Receiver
 from environment import EnvironmentTestCase
 
-class TestZigbeeXBeeSettingsReceiver(EnvironmentTestCase):
+class TestZigBeeXBeeSettingsReceiver(EnvironmentTestCase):
     def setUp(self):
         self.register_arguments([], use_infrared_sensor=False)
 
-        super(TestZigbeeXBeeSettingsReceiver, self).setUp()
+        super(TestZigBeeXBeeSettingsReceiver, self).setUp()
 
         self.xbee = self.environment.get_xbee_sensor()
         self.settings_receiver = self.environment._settings_receiver
