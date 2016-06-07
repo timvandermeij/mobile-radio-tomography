@@ -8,7 +8,7 @@ import struct
 import time
 import thread
 from ..core.WiringPi import WiringPi
-from RF_Sensor_NTP import RF_Sensor_NTP
+from NTP import NTP
 from XBee_Packet import XBee_Packet
 from XBee_Sensor import XBee_Sensor, SensorClosedError
 
@@ -49,8 +49,9 @@ class XBee_CC2530_Sensor_Physical(XBee_Sensor):
         self._data = []
         self._serial_connection = None
         self._synchronized = False
+        self._discovery_callback = None
 
-        self._ntp = RF_Sensor_NTP(self)
+        self._ntp = NTP(self)
         self._ntp_delay = self._settings.get("ntp_delay")
 
         self._packet_length = self._settings.get("packet_length")
