@@ -1,3 +1,4 @@
+# pylint: disable=undefined-all-variable
 __all__ = [
     "SVD_Reconstructor", "Total_Variation_Reconstructor", "Truncated_SVD_Reconstructor"
 ]
