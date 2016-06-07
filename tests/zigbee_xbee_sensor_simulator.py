@@ -11,7 +11,7 @@ from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 from ..settings import Arguments
 from settings import SettingsTestCase
 
-class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
+class TestZigbeeXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
     def location_callback(self):
         """
         Get the current GPS location (latitude and longitude pair) and the
@@ -27,7 +27,7 @@ class TestXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
         return True
 
     def setUp(self):
-        super(TestXBeeSensorSimulator, self).setUp()
+        super(TestZigbeeXBeeSensorSimulator, self).setUp()
 
         self.sensor_id = 1
         self.arguments = Arguments("settings.json", ["--xbee-id", "1"])

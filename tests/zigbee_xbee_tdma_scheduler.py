@@ -4,7 +4,7 @@ from ..zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from ..settings import Arguments
 from settings import SettingsTestCase
 
-class TestXBeeTDMAScheduler(SettingsTestCase):
+class TestZigbeeXBeeTDMAScheduler(SettingsTestCase):
     def setUp(self):
         self.id = 2
 

@@ -2,7 +2,7 @@ import struct
 import unittest
 from ..zigbee.XBee_Packet import XBee_Packet
 
-class TestXBeePacket(unittest.TestCase):
+class TestZigbeeXBeePacket(unittest.TestCase):
     def setUp(self):
         self.packet = XBee_Packet()
 

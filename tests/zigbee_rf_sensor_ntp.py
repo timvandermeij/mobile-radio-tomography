@@ -4,7 +4,7 @@ from mock import MagicMock, patch
 from ..zigbee.RF_Sensor_NTP import RF_Sensor_NTP
 from ..zigbee.XBee_Packet import XBee_Packet
 
-class TestRFSensorNTP(unittest.TestCase):
+class TestZigbeeRFSensorNTP(unittest.TestCase):
     def setUp(self):
         # Mock the sensor.
         self._sensor = MagicMock()
