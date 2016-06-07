@@ -58,14 +58,13 @@ void initialize() {
     // Initialize the board, LEDs and USB
     ledInit();
     halBoardInit();
-    halUartInit(HAL_UART_BAUDRATE_38400);
+    halUartInit(HAL_UART_BAUDRATE_57600);
 
-    // Initialize the radio module
+    // Prepare the radio module initialization
     rfConfig.addr = PAN;
     rfConfig.pan = PAN;
     rfConfig.channel = CHANNEL;
     rfConfig.txPower = TX_POWER;
-    radioInit(&rfConfig);
 
     // Enable interrupts 
     EA = 1;
@@ -134,7 +133,6 @@ void main() {
         if(halUartGetNumRxBytes() > 0) {
             processUsb();
         }
-
         processRadio();
     }
 }

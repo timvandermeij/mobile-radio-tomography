@@ -1,7 +1,7 @@
 # TODO:
 # - Implement `RF_Sensor` abstraction, remove `self._data` and rename to `CC2530_Sensor_Physical`
-# - Figure out how to deal with the ground station (CC2531)
-# - Figure out scheduling problems
+# - Make more use of broadcasting of CC2530
+# - Test with control panel/missions/ping-pong packets
 # - Write tests
 
 import struct
@@ -220,6 +220,7 @@ class XBee_CC2530_Sensor_Physical(XBee_Sensor):
         payload = struct.pack(serialized_packet_format, CC2530_Packet.TX, to,
                               serialized_packet_length, serialized_packet)
         self._serial_connection.write(payload)
+        self._serial_connection.flush()
 
     def _receive(self, raw_packet):
         """

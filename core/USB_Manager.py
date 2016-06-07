@@ -4,20 +4,20 @@ import serial
 class USB_Device_Fingerprint(object):
     XBEE = ["0403", "6015"]
     TTL = ["1a86", "7523"]
-    CC2531 = ["0451", "16a8"]
     CC2530 = ["204", "64"]
+    CC2531 = ["0451", "16a8"]
 
 class USB_Device_Category(object):
     XBEE = 1
     TTL = 2
-    CC2531 = 3
-    CC2530 = 4
+    CC2530 = 3
+    CC2531 = 4
 
 class USB_Device_Baud_Rate(object):
     XBEE = 57600
     TTL = 9600
-    CC2531 = 38400
-    CC2530 = 9600
+    CC2530 = 57600
+    CC2531 = 57600
 
 class USB_Device(object):
     def __init__(self):

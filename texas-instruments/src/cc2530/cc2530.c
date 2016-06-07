@@ -53,8 +53,8 @@ void initialize_uart() {
 
     PERCFG &= ~0x01; // Alternative 1 selected for UART0 peripheral
     P0SEL |= 0x3C; // P0.2 and P0.3 peripheral mode enabled with RTS/CTS
-    U0GCR |= 0x08; // Baud rate exponent
-    U0BAUD = 0x3B; // Baud rate mantissa (set to 9600)
+    U0GCR |= 0x0A; // Baud rate exponent
+    U0BAUD = 0xD8; // Baud rate mantissa (sets baud rate to 57600)
     P0DIR |= 0x28; // RTS, TX out
     P0DIR &= ~0x14; // CTS, RX in
     U0CSR = 0x80; // UART mode selected for USART0
@@ -72,12 +72,11 @@ void initialize() {
     ledInit();
     initialize_uart();
 
-    // Initialize the radio module
+    // Prepare the radio module initialization
     rfConfig.addr = PAN;
     rfConfig.pan = PAN;
     rfConfig.channel = CHANNEL;
     rfConfig.txPower = TX_POWER;
-    radioInit(&rfConfig);
 
     // Enable interrupts 
     EA = 1;
