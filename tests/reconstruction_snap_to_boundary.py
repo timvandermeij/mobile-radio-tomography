@@ -36,6 +36,9 @@ class TestReconstructionSnapToBoundary(unittest.TestCase):
         # Lines that intersect at least one boundary are fine.
         self.assertIsNotNone(self.snapper.execute([2, 1], [5, 3]))
 
+        # Lines that touch a boundary are fine.
+        self.assertIsNotNone(self.snapper.execute([3, 1], [5, 3]))
+
         # Horizontal and vertical lines do not cause a division by zero error.
         self.assertIsNone(self.snapper.execute([-1, 7], [5, 7]))
         self.assertIsNone(self.snapper.execute([5, 1], [5, 7]))
@@ -116,7 +119,8 @@ class TestReconstructionSnapToBoundary(unittest.TestCase):
         expected = [Point(2, 2), Point(2, 6)]
         self.assertEqual(self.snapper.execute([2, 3], [2, 5]), expected)
 
-        # One line inside and one line on boundary makes inside line snap away.
+        # One point inside and one point on boundary makes inside point snap 
+        # away from the other point's boundary.
         # Left (on boundary) and top (inside) boundary.
         expected = [Point(0, 4), Point(2, 6)]
         self.assertEqual(self.snapper.execute([0, 4], [1, 5]), expected)
@@ -134,3 +138,11 @@ class TestReconstructionSnapToBoundary(unittest.TestCase):
         # point first, but the result is ordered like the input arguments.
         expected = [Point(0, 6), Point(4, 4)]
         self.assertEqual(self.snapper.execute([2, 5], [6, 3]), expected)
+
+        # Horizontal line with one point inside and one point outside.
+        expected = [Point(0, 4), Point(4, 4)]
+        self.assertEqual(self.snapper.execute([1, 4], [5, 4]), expected)
+
+        # Vertical line with one point inside and one point outside.
+        expected = [Point(2, 2), Point(2, 6)]
+        self.assertEqual(self.snapper.execute([2, 1], [2, 5]), expected)
