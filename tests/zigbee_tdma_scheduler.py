@@ -1,27 +1,27 @@
 import time
+from ..zigbee.TDMA_Scheduler import TDMA_Scheduler
 from ..zigbee.XBee_Packet import XBee_Packet
-from ..zigbee.XBee_TDMA_Scheduler import XBee_TDMA_Scheduler
 from ..settings import Arguments
 from settings import SettingsTestCase
 
-class TestZigBeeXBeeTDMAScheduler(SettingsTestCase):
+class TestZigBeeTDMAScheduler(SettingsTestCase):
     def setUp(self):
         self.id = 2
 
         self.arguments = Arguments("settings.json", ["--number-of-sensors", "8"])
-        self.settings = self.arguments.get_settings("xbee_tdma_scheduler")
+        self.settings = self.arguments.get_settings("zigbee_tdma_scheduler")
 
-        self.scheduler = XBee_TDMA_Scheduler(self.id, self.settings)
+        self.scheduler = TDMA_Scheduler(self.id, self.settings)
 
         self.number_of_sensors = self.settings.get("number_of_sensors")
         self.sweep_delay = self.settings.get("sweep_delay")
 
     def test_initialization(self):
         # Verify that only `Settings` and `Arguments` objects can be used to initialize.
-        XBee_TDMA_Scheduler(self.id, self.arguments)
-        XBee_TDMA_Scheduler(self.id, self.settings)
+        TDMA_Scheduler(self.id, self.arguments)
+        TDMA_Scheduler(self.id, self.settings)
         with self.assertRaises(ValueError):
-            XBee_TDMA_Scheduler(self.id, None)
+            TDMA_Scheduler(self.id, None)
 
         # The ID of the sensor must be set.
         self.assertEqual(self.scheduler.id, self.id)

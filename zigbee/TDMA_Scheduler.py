@@ -1,14 +1,14 @@
 import time
 from ..settings import Arguments, Settings
 
-class XBee_TDMA_Scheduler(object):
+class TDMA_Scheduler(object):
     def __init__(self, sensor_id, settings):
         """
         Initialize the TDMA scheduler with the sensor ID.
         """
 
         if isinstance(settings, Arguments):
-            self.settings = settings.get_settings("xbee_tdma_scheduler")
+            self.settings = settings.get_settings("zigbee_tdma_scheduler")
         elif isinstance(settings, Settings):
             self.settings = settings
         else:
