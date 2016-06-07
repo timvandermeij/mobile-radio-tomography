@@ -3,11 +3,11 @@ import subprocess
 import time
 from XBee_Packet import XBee_Packet
 
-class RF_Sensor_NTP(object):
+class NTP(object):
     def __init__(self, sensor):
         """
-        Initialize the RF sensor NTP object. This object takes care
-        of performing the NTP (network time protocol) algorithm.
+        Initialize the NTP object. This object takes care of performing
+        the NTP (network time protocol) algorithm.
         """
 
         self._sensor = sensor

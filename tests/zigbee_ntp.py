@@ -1,16 +1,16 @@
 import time
 import unittest
 from mock import MagicMock, patch
-from ..zigbee.RF_Sensor_NTP import RF_Sensor_NTP
+from ..zigbee.NTP import NTP
 from ..zigbee.XBee_Packet import XBee_Packet
 
-class TestZigBeeRFSensorNTP(unittest.TestCase):
+class TestZigBeeNTP(unittest.TestCase):
     def setUp(self):
         # Mock the sensor.
         self._sensor = MagicMock()
         self._sensor.id = 1
 
-        self._ntp = RF_Sensor_NTP(self._sensor)
+        self._ntp = NTP(self._sensor)
 
     def test_start(self):
         # Verify that the ground station packet is sent.
@@ -30,7 +30,7 @@ class TestZigBeeRFSensorNTP(unittest.TestCase):
         self.assertEqual(packet.get("timestamp_4"), 0)
         self.assertEqual(to, 0)
 
-    @patch.object(RF_Sensor_NTP, "finish")
+    @patch.object(NTP, "finish")
     def test_process(self, mock_finish):
         # Construct the NTP packet for the second and third timestamp.
         packet = XBee_Packet()
