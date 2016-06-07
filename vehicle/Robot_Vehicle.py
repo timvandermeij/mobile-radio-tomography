@@ -237,9 +237,10 @@ class Robot_Vehicle(Vehicle):
     def deactivate(self):
         super(Robot_Vehicle, self).deactivate()
 
-        self._armed = False
-        if self._line_follower is not None:
-            self._line_follower.deactivate()
+        if self._armed:
+            self._armed = False
+            if self._line_follower is not None:
+                self._line_follower.deactivate()
 
     def add_waypoint(self, location):
         if isinstance(location, LocationLocal):

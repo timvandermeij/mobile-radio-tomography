@@ -106,7 +106,7 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
                 state_mock.configure_mock(side_effect=self.vehicle.deactivate)
 
                 self.vehicle._state_loop()
-                state_mock.assert_called_once_with()
+                self.assertTrue(state_mock.call_count > 0)
                 interrupt_mock.assert_not_called()
 
                 self.assertFalse(self.vehicle.armed)
