@@ -1,4 +1,5 @@
 #include <cc2530.h>
+#include "hal_board.h"
 #include "rf.h"
 #include "leds.h"
 
@@ -52,12 +53,17 @@ void initialize_uart() {
 
     PERCFG &= ~0x01; // Alternative 1 selected for UART0 peripheral
     P0SEL |= 0x3C; // P0.2 and P0.3 peripheral mode enabled with RTS/CTS
-    U0CSR |= 0x80; // UART mode selected for USART0
-    U0UCR |= 0x42; // Flow control (RTS/CTS) enabled
     U0GCR |= 0x08; // Baud rate exponent
     U0BAUD = 0x3B; // Baud rate mantissa (set to 9600)
-    P0DIR |= 0x18; // RTS, TX out
-    P0DIR &= ~0x24; // CTS, RX in
+    P0DIR |= 0x28; // RTS, TX out
+    P0DIR &= ~0x14; // CTS, RX in
+    U0CSR = 0x80; // UART mode selected for USART0
+    U0UCR = 0x42; // Flow control (RTS/CTS) enabled
+    U0UCR |= 0x80; // Flush
+
+    HAL_RTS_DIR_OUT(); // Set RTS pin to output
+    HAL_RTS_CLR();
+
     U0CSR |= 0x40; // Enable receiver
 }
 
@@ -140,8 +146,10 @@ void processUart() {
             receive((unsigned char*)&txPacket, sizeof(txPacket));
             rxPacket.length = txPacket.length;
             copy(txPacket.data, rxPacket.data);
+            HAL_RTS_SET();
             sendPacket((char*)&rxPacket, sizeof(rxPacket), rfConfig.pan,
                        PAN + txPacket.destination, rfConfig.addr);
+            HAL_RTS_CLR();
             break;
     }
 
@@ -159,7 +167,9 @@ void processRadio() {
             uartPacket.length = rxPacket.length;
             copy(rxPacket.data, uartPacket.data);
             uartPacket.rssi = rssi;
+            HAL_RTS_SET();
             send((unsigned char*)&uartPacket, sizeof(uartPacket));
+            HAL_RTS_CLR();
         }
     }
 }

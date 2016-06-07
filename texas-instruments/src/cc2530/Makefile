@@ -5,9 +5,21 @@ PACKIHX = packihx
 
 # Include paths, object definitions and compilation flags
 ROOT = $(realpath .)
+CC_USB_ROOT = $(ROOT)/../../lib/cc-usb-firmware
 MULTI_SPIN_ROOT = $(ROOT)/../../lib/multi-spin-3.0
-INCLUDES =	-I$(MULTI_SPIN_ROOT)
+INCLUDES =	-I$(MULTI_SPIN_ROOT) \
+			-I$(CC_USB_ROOT)/common \
+			-I$(CC_USB_ROOT)/common/cc8051 \
+			-I$(CC_USB_ROOT)/radios/cc2530 \
+			-I$(CC_USB_ROOT)/targets/interface \
+			-I$(CC_USB_ROOT)/targets/srf05_soc
 OBJS =	$(ROOT)/cc2530.rel \
+		$(CC_USB_ROOT)/common/hal_int.rel \
+		$(CC_USB_ROOT)/radios/cc2530/clock.rel \
+		$(CC_USB_ROOT)/radios/cc2530/hal_mcu.rel \
+		$(CC_USB_ROOT)/targets/srf05_soc/hal_assert.rel \
+		$(CC_USB_ROOT)/targets/srf05_soc/hal_board.rel \
+		$(CC_USB_ROOT)/targets/srf05_soc/hal_led.rel \
 		$(MULTI_SPIN_ROOT)/leds.rel \
 		$(MULTI_SPIN_ROOT)/rf.rel
 WARNINGS = --Werror
