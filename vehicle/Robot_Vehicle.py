@@ -1,9 +1,13 @@
+# Core imports
 import math
-import numpy as np
 import thread
 import time
 
+# Library imports
 from dronekit import LocationLocal, LocationGlobal, Attitude
+import numpy as np
+
+# Package imports
 from Vehicle import Vehicle
 from ..core.WiringPi import WiringPi
 from ..location.Line_Follower import Line_Follower, Line_Follower_Direction, Line_Follower_State

@@ -131,7 +131,7 @@ class Snap_To_Boundary(object):
 
     def _snap_point(self, point, slope, previous_boundary=None):
         """
-        Snap a single `point` of a link betweem two sensor points.
+        Snap a single `point` of a link between two sensor points.
 
         The `point` is a tuple, and the `slope` is a floating point describing
         the slope of the line between the two points. `previous_boundary` is
