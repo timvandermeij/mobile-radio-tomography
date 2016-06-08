@@ -2,10 +2,13 @@
     "control_panel": {
         "name": "Control panel",
         "settings": {
-            "controller_xbee_simulation": {
-                "help": "Whether to use a simulated XBee sensor for the ground station, effectively skipping the loading view",
-                "type": "bool",
-                "default": false
+            "controller_xbee_type": {
+                "help": "Controller XBee sensor class type",
+                "type": "class",
+                "module": "zigbee.XBee_Sensor",
+                "required": true,
+                "replace": [" ", "_"],
+                "default": "XBee_CC2530_Sensor_Physical"
             }
         }
     },
