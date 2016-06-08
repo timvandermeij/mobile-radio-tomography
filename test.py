@@ -11,8 +11,9 @@ from StringIO import StringIO
 import unittest
 from mock import patch
 
-# Coverage imports
+# Additional test report imports
 import coverage
+import pylint.lint
 
 # Package imports
 from __init__ import __package__
@@ -167,6 +168,41 @@ class Test_Run(object):
 
         return unused_imports
 
+    def get_changed_files(self):
+        """
+        Retrieve the files that were changed in a commit range.
+
+        The Git commit range is retrieved from the environment variable
+        `TRAVIS_COMMIT_RANGE`, which is set by Travis CI when the tests are run.
+
+        Only files that were changed and not deleted in those commits are
+        included in the returned list.
+        """
+
+        if "TRAVIS_COMMIT_RANGE" not in os.environ:
+            return []
+
+        commit_range = os.environ["TRAVIS_COMMIT_RANGE"]
+        output = check_output([
+            "git", "diff-tree", "--no-commit-id", "--name-only",
+            "--diff-filter=ACMRTUXB", "-r", commit_range
+        ])
+
+        return output.splitlines()
+
+    def execute_pylint(self, files):
+        """
+        Execute pylint on a given list of files.
+
+        Only Python files are included in the lint check.
+        """
+
+        files = [filename for filename in files if filename.endswith('.py')]
+        try:
+            pylint.lint.Run(["--disable=duplicate-code", "--reports=n"] + files)
+        except SystemExit:
+            self._failed = True
+
     def read_logs_directory(self):
         """
         Read all logs in the logs directory.
@@ -217,6 +253,11 @@ def main(argv):
     unused_imports = test_run.execute_unused_imports_check()
     for unused_import in unused_imports:
         print("Unused import found: {}".format(unused_import))
+
+    files = test_run.get_changed_files()
+    if files:
+        print("> Executing pylint on changed files")
+        test_run.execute_pylint(files)
 
     print("> Cleaning up the logs directory")
     log_contents = test_run.read_logs_directory()
