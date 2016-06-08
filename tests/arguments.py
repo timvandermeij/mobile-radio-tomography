@@ -93,7 +93,7 @@ class TestArguments(SettingsTestCase):
                 # Test whether the argument parser calls sys.exit on help.
                 # This can be caught as an exception.
                 with self.assertRaises(SystemExit):
-                    settings = arguments.get_settings("foo")
+                    arguments.get_settings("foo")
                     arguments.check_help()
 
         self.assertRegexpMatches(output.getvalue(), "expected one argument")

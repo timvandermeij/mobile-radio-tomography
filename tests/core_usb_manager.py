@@ -30,11 +30,11 @@ class USBManagerTestCase(unittest.TestCase):
         self._ttl_device = os.fdopen(master_ttl)
         self._ttl_port = os.ttyname(slave_ttl)
 
-        slave_cc2531 = os.openpty()[1]
-        self._cc2531_port = os.ttyname(slave_cc2531)
-
         slave_cc2530 = os.openpty()[1]
         self._cc2530_port = os.ttyname(slave_cc2530)
+
+        slave_cc2531 = os.openpty()[1]
+        self._cc2531_port = os.ttyname(slave_cc2531)
 
         slave_other = os.openpty()[1]
         self._other_port = os.ttyname(slave_other)
@@ -96,8 +96,8 @@ class TestCoreUSBManager(USBManagerTestCase):
         self.assertEqual(self.usb_manager._devices, {
             USB_Device_Category.XBEE: [],
             USB_Device_Category.TTL: [],
-            USB_Device_Category.CC2531: [],
-            USB_Device_Category.CC2530: []
+            USB_Device_Category.CC2530: [],
+            USB_Device_Category.CC2531: []
         })
 
     def test_index(self):
@@ -106,8 +106,8 @@ class TestCoreUSBManager(USBManagerTestCase):
         expected_index = {
             USB_Device_Category.XBEE: (self._xbee_port, USB_Device_Baud_Rate.XBEE),
             USB_Device_Category.TTL: (self._ttl_port, USB_Device_Baud_Rate.TTL),
-            USB_Device_Category.CC2531: (self._cc2531_port, USB_Device_Baud_Rate.CC2531),
-            USB_Device_Category.CC2530: (self._cc2530_port, USB_Device_Baud_Rate.CC2530)
+            USB_Device_Category.CC2530: (self._cc2530_port, USB_Device_Baud_Rate.CC2530),
+            USB_Device_Category.CC2531: (self._cc2531_port, USB_Device_Baud_Rate.CC2531)
         }
 
         # Valid devices should be indexed.
@@ -122,7 +122,8 @@ class TestCoreUSBManager(USBManagerTestCase):
 
     def check_get_device(self, method, path):
         """
-        Test whether the method for obtaining a device works as expected.
+        Helper function to test whether the method for obtaining a device
+        works as expected.
         """
 
         # Getting a device should fail when there are none.
@@ -149,11 +150,11 @@ class TestCoreUSBManager(USBManagerTestCase):
     def test_get_ttl_device(self):
         self.check_get_device(self.usb_manager.get_ttl_device, self._ttl_port)
 
-    def test_get_cc2531_device(self):
-        self.check_get_device(self.usb_manager.get_cc2531_device, self._cc2531_port)
-
     def test_get_cc2530_device(self):
         self.check_get_device(self.usb_manager.get_cc2530_device, self._cc2530_port)
+
+    def test_get_cc2531_device(self):
+        self.check_get_device(self.usb_manager.get_cc2531_device, self._cc2531_port)
 
     def test_clear(self):
         self.usb_manager.index()
@@ -164,8 +165,8 @@ class TestCoreUSBManager(USBManagerTestCase):
         self.assertEqual(self.usb_manager._devices, {
             USB_Device_Category.XBEE: [],
             USB_Device_Category.TTL: [],
-            USB_Device_Category.CC2531: [],
-            USB_Device_Category.CC2530: []
+            USB_Device_Category.CC2530: [],
+            USB_Device_Category.CC2531: []
         })
 
         # All previous serial objects should be closed.

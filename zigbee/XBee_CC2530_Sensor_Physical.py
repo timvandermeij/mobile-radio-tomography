@@ -1,7 +1,6 @@
 # TODO:
 # - Implement `RF_Sensor` abstraction, remove `self._data` and rename to `CC2530_Sensor_Physical`
 # - Make more use of broadcasting of CC2530
-# - Test with control panel/missions/ping-pong packets
 # - Write tests
 
 import struct

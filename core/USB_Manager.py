@@ -44,8 +44,8 @@ class USB_Manager(object):
         self._devices = {
             USB_Device_Category.XBEE: [],
             USB_Device_Category.TTL: [],
-            USB_Device_Category.CC2531: [],
-            USB_Device_Category.CC2530: []
+            USB_Device_Category.CC2530: [],
+            USB_Device_Category.CC2531: []
         }
 
     def index(self):
@@ -73,12 +73,12 @@ class USB_Manager(object):
         elif fingerprint == USB_Device_Fingerprint.TTL:
             baud_rate = USB_Device_Baud_Rate.TTL
             category = USB_Device_Category.TTL
-        elif fingerprint == USB_Device_Fingerprint.CC2531:
-            baud_rate = USB_Device_Baud_Rate.CC2531
-            category = USB_Device_Category.CC2531
         elif fingerprint == USB_Device_Fingerprint.CC2530:
             baud_rate = USB_Device_Baud_Rate.CC2530
             category = USB_Device_Category.CC2530
+        elif fingerprint == USB_Device_Fingerprint.CC2531:
+            baud_rate = USB_Device_Baud_Rate.CC2531
+            category = USB_Device_Category.CC2531
         else:
             return
 
@@ -126,14 +126,6 @@ class USB_Manager(object):
 
         return self._get_device(USB_Device_Category.TTL, path)
 
-    def get_cc2531_device(self, path=None):
-        """
-        Get the first available CC2531 device. If `path` is provided, get the
-        CC2531 device with its path equal to `path`.
-        """
-
-        return self._get_device(USB_Device_Category.CC2531, path)
-
     def get_cc2530_device(self, path=None):
         """
         Get the first available CC2530 device. If `path` is provided, get the
@@ -141,6 +133,14 @@ class USB_Manager(object):
         """
 
         return self._get_device(USB_Device_Category.CC2530, path)
+
+    def get_cc2531_device(self, path=None):
+        """
+        Get the first available CC2531 device. If `path` is provided, get the
+        CC2531 device with its path equal to `path`.
+        """
+
+        return self._get_device(USB_Device_Category.CC2531, path)
 
     def _get_device(self, category, path):
         """
