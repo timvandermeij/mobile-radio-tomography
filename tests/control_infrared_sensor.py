@@ -14,12 +14,13 @@ class TestControlInfraredSensor(ThreadableTestCase):
             'pylirc': self.pylirc_mock
         }
 
-        self.patcher = patch.dict('sys.modules', modules)
-        self.patcher.start()
+        self._pylirc_patcher = patch.dict('sys.modules', modules)
+        self._pylirc_patcher.start()
 
-        from ..control.Infrared_Sensor import Infrared_Sensor
         # Skip configuration checks since we emulate the behavior of LIRC. We 
-        # test the configuration checks in test_initialize.
+        # test the configuration checks in test_initialize. This also requires 
+        # us to import the module within the tests instead of globally.
+        from ..control.Infrared_Sensor import Infrared_Sensor
         self.old_configure = Infrared_Sensor._configure
         Infrared_Sensor._configure = MagicMock()
 
@@ -38,9 +39,8 @@ class TestControlInfraredSensor(ThreadableTestCase):
         from ..control.Infrared_Sensor import Infrared_Sensor
         Infrared_Sensor._configure = self.old_configure
 
-        # Stop all active patchers. Useful for when a test fails midway so that 
-        # it does not affect other tests.
-        patch.stopall()
+        # Stop the pylirc module patcher
+        self._pylirc_patcher.stop()
 
     def test_initialize(self):
         # Test initialization of infrared sensor with a local variable rather 
@@ -51,28 +51,24 @@ class TestControlInfraredSensor(ThreadableTestCase):
         methods = {
             'isdir.return_value': False
         }
-        patcher = patch('os.path', **methods)
-        patcher.start()
-        from ..control.Infrared_Sensor import Infrared_Sensor
-        Infrared_Sensor._configure = self.old_configure
-        with self.assertRaises(OSError) as cm:
-            Infrared_Sensor(self.settings, thread_manager)
+        with patch('os.path', **methods):
+            from ..control.Infrared_Sensor import Infrared_Sensor
+            Infrared_Sensor._configure = self.old_configure
+            with self.assertRaises(OSError) as cm:
+                Infrared_Sensor(self.settings, thread_manager)
 
-        self.assertIn("not installed", cm.exception.message)
-        patcher.stop()
+            self.assertIn("not installed", cm.exception.message)
 
         # Test whether we check that the remote exists
         methods = {
             'isdir.return_value': True,
             'isfile.return_value': False
         }
-        patcher = patch('os.path', **methods)
-        patcher.start()
-        with self.assertRaises(OSError) as cm:
-            Infrared_Sensor(self.settings, thread_manager)
+        with patch('os.path', **methods):
+            with self.assertRaises(OSError) as cm:
+                Infrared_Sensor(self.settings, thread_manager)
 
-        self.assertIn("does not exist", cm.exception.message)
-        patcher.stop()
+            self.assertIn("does not exist", cm.exception.message)
 
     def test_register(self):
         # We must have an existing button.

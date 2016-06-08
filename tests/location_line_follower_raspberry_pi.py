@@ -16,8 +16,8 @@ class TestLocationLineFollowerRaspberryPi(ThreadableTestCase, SettingsTestCase):
             'RPi.GPIO': self.rpi_gpio_mock.GPIO
         }
 
-        self.patcher = patch.dict('sys.modules', modules)
-        self.patcher.start()
+        self._rpi_patcher = patch.dict('sys.modules', modules)
+        self._rpi_patcher.start()
         from ..location.Line_Follower import Line_Follower_Direction
 
         self.location = (0, 0)
@@ -37,7 +37,7 @@ class TestLocationLineFollowerRaspberryPi(ThreadableTestCase, SettingsTestCase):
 
     def tearDown(self):
         super(TestLocationLineFollowerRaspberryPi, self).tearDown()
-        self.patcher.stop()
+        self._rpi_patcher.stop()
 
     def test_initialization(self):
         # Verify that the correct sensors are set.

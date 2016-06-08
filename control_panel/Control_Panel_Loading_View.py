@@ -1,7 +1,7 @@
 import sys
 from PyQt4 import QtCore, QtGui
 from Control_Panel_View import Control_Panel_View, Control_Panel_View_Name
-from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
+from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 
 class Control_Panel_Loading_View(Control_Panel_View):
     def __init__(self, controller, settings):
@@ -30,8 +30,8 @@ class Control_Panel_Loading_View(Control_Panel_View):
         vbox.addWidget(self._label)
         vbox.addStretch(1)
 
-        if isinstance(self._controller.xbee, XBee_Sensor_Physical):
-            button = QtGui.QPushButton("Switch to simulated XBee")
+        if not isinstance(self._controller.xbee, XBee_Sensor_Simulator):
+            button = QtGui.QPushButton("Switch to simulation mode")
             button.clicked.connect(self._switch)
 
             hbox = QtGui.QHBoxLayout()
@@ -50,9 +50,21 @@ class Control_Panel_Loading_View(Control_Panel_View):
         """
 
         try:
-            if isinstance(self._controller.xbee, XBee_Sensor_Physical):
+            if not isinstance(self._controller.xbee, XBee_Sensor_Simulator):
                 self._controller.usb_manager.index()
-                self._controller.usb_manager.get_xbee_device()
+                try:
+                    # Assume the ground station is an XBee device.
+                    self._controller.usb_manager.get_xbee_device()
+                    xbee_class = "XBee_Sensor_Physical"
+                except KeyError:
+                    # Not an XBee device, so it must be a CC2531 device.
+                    self._controller.usb_manager.get_cc2531_device()
+                    xbee_class = "XBee_CC2530_Sensor_Physical"
+
+            # Reload the sensor class.
+            settings = self._controller.arguments.get_settings("control_panel")
+            settings.set("controller_xbee_type", xbee_class)
+            self._controller.setup_xbee()
 
             # An XBee has been inserted, but we need to check that it actually 
             # belongs to a ground station XBee.
@@ -87,5 +99,5 @@ class Control_Panel_Loading_View(Control_Panel_View):
         """
 
         settings = self._controller.arguments.get_settings("control_panel")
-        settings.set("controller_xbee_simulation", True)
+        settings.set("controller_xbee_type", "XBee_Sensor_Simulator")
         self._controller.setup_xbee()

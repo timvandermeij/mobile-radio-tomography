@@ -130,10 +130,18 @@ class Arguments(object):
             kw = {
                 "dest": key,
                 "default": info["value"],
-                "help": self.get_help(key, info),
+                "help": self.get_help(key, info)
             }
+
+            required = True
+            if "required" in info and not info["required"]:
+                kw["required"] = required = info["required"]
+
             choices = self.get_choices(info)
             if choices is not None:
+                if not required:
+                    choices.append('')
+
                 kw["choices"] = choices
 
             opt = key.replace('_', '-')

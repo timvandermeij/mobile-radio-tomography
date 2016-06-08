@@ -2,7 +2,7 @@ import logging
 import thread
 import threading
 import unittest
-from mock import patch, call, Mock, MagicMock
+from mock import patch, call, MagicMock
 from ..core.Threadable import Threadable
 from ..core.Thread_Manager import Thread_Manager
 
@@ -151,17 +151,14 @@ class TestCoreThreadManager(ThreadableTestCase):
     def test_log(self):
         # Test lazy initialization of logger.
         logger_mock = MagicMock()
-        patcher = patch.object(logging, 'getLogger', Mock(return_value=logger_mock))
-        patcher.start()
-        self.assertEqual(self.thread_manager._logger, None)
-        self.thread_manager.log("'foo' source")
-        self.assertEqual(self.thread_manager._logger, logger_mock)
-        logger_mock.setLevel.assert_called_once_with(logging.DEBUG)
-        self.assertEqual(logger_mock.addHandler.call_count, 1)
+        with patch.object(logging, 'getLogger', return_value=logger_mock):
+            self.assertEqual(self.thread_manager._logger, None)
+            self.thread_manager.log("'foo' source")
+            self.assertEqual(self.thread_manager._logger, logger_mock)
+            logger_mock.setLevel.assert_called_once_with(logging.DEBUG)
+            self.assertEqual(logger_mock.addHandler.call_count, 1)
 
-        # Test that all calls are logged.
-        self.thread_manager.log("'bar' source")
-        self.assertEqual(logger_mock.exception.call_count, 2)
-        logger_mock.exception.assert_has_calls([call("'foo' source"), call("'bar' source")])
-
-        patcher.stop()
+            # Test that all calls are logged.
+            self.thread_manager.log("'bar' source")
+            self.assertEqual(logger_mock.exception.call_count, 2)
+            logger_mock.exception.assert_has_calls([call("'foo' source"), call("'bar' source")])

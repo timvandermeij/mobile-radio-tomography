@@ -234,5 +234,17 @@
             "name": "to_id",
             "format": "B"
         }
+    ],
+    "cc2530_ping_pong": [
+        {
+            "name": "id",
+            "format": "B",
+            "value": 13,
+            "private": true
+        },
+        {
+            "name": "sensor_id",
+            "format": "B"
+        }
     ]
 }

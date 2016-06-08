@@ -20,11 +20,6 @@ from settings import SettingsTestCase
 
 class TestZigBeeXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, SettingsTestCase):
     def location_callback(self):
-        """
-        Get the current GPS location (latitude and longitude pair) and the
-        current waypoint index.
-        """
-
         return (random.uniform(1.0, 50.0), random.uniform(1.0, 50.0)), random.randint(0, 5)
 
     def receive_callback(self, packet):
@@ -38,21 +33,14 @@ class TestZigBeeXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, Setti
 
         self.sensor_id = 1
 
-        self.arguments = Arguments("settings.json", [
-            "--port", self._xbee_port,
-            "--sensors", "sensor_0", "sensor_1", "sensor_2", "sensor_3",
-            "sensor_4", "sensor_5", "sensor_6", "sensor_7", "sensor_8"
-        ])
+        self.arguments = Arguments("settings.json", ["--port", self._xbee_port])
         self.settings = self.arguments.get_settings("xbee_sensor_physical")
         self.thread_manager = Thread_Manager()
 
         self.usb_manager.index()
-        self.sensor = XBee_Sensor_Physical(self.arguments,
-                                           self.thread_manager,
-                                           self.usb_manager,
-                                           self.location_callback,
-                                           self.receive_callback,
-                                           self.valid_callback)
+        self.sensor = XBee_Sensor_Physical(self.arguments, self.thread_manager,
+                                           self.usb_manager, self.location_callback,
+                                           self.receive_callback, self.valid_callback)
         self.sensor._id = self.sensor_id
 
     def tearDown(self):
@@ -355,3 +343,36 @@ class TestZigBeeXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, Setti
         }
         self.sensor._receive(raw_packet)
         self.assertEqual(self.sensor._joined, True)
+
+    @patch.object(XBee_Sensor_Physical, "_receive", side_effect=ValueError)
+    @patch.object(XBee_Sensor_Physical, "_error")
+    def test_receive_error(self, error_mock, receive_mock):
+        packet = XBee_Packet()
+        packet.set("specification", "rssi_broadcast")
+        packet.set("latitude", 123456789.12)
+        packet.set("longitude", 123459678.34)
+        packet.set("valid", True)
+        packet.set("waypoint_index", 1)
+        packet.set("sensor_id", 2)
+        packet.set("timestamp", time.time())
+        raw_packet = {
+            "id": "rx",
+            "rf_data": packet.serialize()
+        }
+
+        # Patch the frame reading method of xbee.ZigBee to return our raw 
+        # packet so that we can check that the receive mock gets this packet.
+        # Patch the start method of xbee.ZigBee so that it does not acutally 
+        # start the thread, so we get a deterministic number of calls in the 
+        # run method of xbee.ZigBee.
+        with patch.object(ZigBee, "wait_read_frame", return_value=raw_packet):
+            with patch.object(ZigBee, "start"):
+                self.mock_setup()
+                self.sensor._sensor.run()
+
+                receive_mock.assert_called_once_with(raw_packet)
+
+                # Ensure that the error mock receives the exception from the 
+                # receive mock.
+                self.assertEqual(error_mock.call_count, 1)
+                self.assertIsInstance(error_mock.call_args[0][0], ValueError)

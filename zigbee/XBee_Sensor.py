@@ -9,7 +9,7 @@ from XBee_Packet import XBee_Packet
 
 # pylint: disable=undefined-all-variable
 __all__ = [
-    "XBee_Sensor_Physical", "XBee_Sensor_Simulator"
+    "XBee_CC2530_Sensor_Physical", "XBee_Sensor_Physical", "XBee_Sensor_Simulator"
 ]
 
 class SensorClosedError(Exception):

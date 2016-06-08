@@ -22,17 +22,25 @@ class USBManagerTestCase(unittest.TestCase):
         # Initialize the USB manager.
         self.usb_manager = USB_Manager()
 
-        # Create a virtual serial port.
+        # Create virtual serial ports for the mocked USB/AMBA devices.
         slave_xbee = os.openpty()[1]
         self._xbee_port = os.ttyname(slave_xbee)
+
         master_ttl, slave_ttl = os.openpty()
         self._ttl_device = os.fdopen(master_ttl)
         self._ttl_port = os.ttyname(slave_ttl)
+
+        slave_cc2530 = os.openpty()[1]
+        self._cc2530_port = os.ttyname(slave_cc2530)
+
+        slave_cc2531 = os.openpty()[1]
+        self._cc2531_port = os.ttyname(slave_cc2531)
+
         slave_other = os.openpty()[1]
         self._other_port = os.ttyname(slave_other)
 
-        # Mock the method for obtaining devices.
-        mock_obtain_devices = MagicMock(return_value=[
+        # Mock the method for obtaining USB devices.
+        mock_obtain_usb_devices = MagicMock(return_value=[
             { # XBee device
                 "ID_VENDOR_ID": USB_Device_Fingerprint.XBEE[0],
                 "ID_MODEL_ID": USB_Device_Fingerprint.XBEE[1],
@@ -43,13 +51,28 @@ class USBManagerTestCase(unittest.TestCase):
                 "ID_MODEL_ID": USB_Device_Fingerprint.TTL[1],
                 "DEVNAME": self._ttl_port
             },
+            { # CC2531 device
+                "ID_VENDOR_ID": USB_Device_Fingerprint.CC2531[0],
+                "ID_MODEL_ID": USB_Device_Fingerprint.CC2531[1],
+                "DEVNAME": self._cc2531_port
+            },
             { # Other device
                 "ID_VENDOR_ID": "0402",
                 "ID_MODEL_ID": "6012",
                 "DEVNAME": self._other_port
             }
         ])
-        self.usb_manager._obtain_devices = mock_obtain_devices
+        self.usb_manager._obtain_usb_devices = mock_obtain_usb_devices
+
+        # Mock the method for obtaining AMBA devices.
+        mock_obtain_amba_devices = MagicMock(return_value=[
+            { # CC2530 device
+                "MAJOR": USB_Device_Fingerprint.CC2530[0],
+                "MINOR": USB_Device_Fingerprint.CC2530[1],
+                "DEVNAME": self._cc2530_port
+            }
+        ])
+        self.usb_manager._obtain_amba_devices = mock_obtain_amba_devices
 
         # Disable internal pySerial updates of the DTR state since they do not 
         # function correctly when the serial device is mocked as a virtual pty.
@@ -72,71 +95,66 @@ class TestCoreUSBManager(USBManagerTestCase):
         # Initially the USB device storage must contain empty categories.
         self.assertEqual(self.usb_manager._devices, {
             USB_Device_Category.XBEE: [],
-            USB_Device_Category.TTL: []
+            USB_Device_Category.TTL: [],
+            USB_Device_Category.CC2530: [],
+            USB_Device_Category.CC2531: []
         })
 
     def test_index(self):
         self.usb_manager.index()
 
-        # Valid XBee devices should be indexed.
-        self.assertEqual(len(self.usb_manager._devices[USB_Device_Category.XBEE]), 1)
-        self.assertEqual(self.usb_manager._devices[USB_Device_Category.XBEE][0].path,
-                         self._xbee_port)
-        self.assertEqual(self.usb_manager._devices[USB_Device_Category.XBEE][0].baud_rate,
-                         USB_Device_Baud_Rate.XBEE)
-        self.assertEqual(self.usb_manager._devices[USB_Device_Category.XBEE][0].category,
-                         USB_Device_Category.XBEE)
-        self.assertEqual(self.usb_manager._devices[USB_Device_Category.XBEE][0].serial_object,
-                         None)
+        expected_index = {
+            USB_Device_Category.XBEE: (self._xbee_port, USB_Device_Baud_Rate.XBEE),
+            USB_Device_Category.TTL: (self._ttl_port, USB_Device_Baud_Rate.TTL),
+            USB_Device_Category.CC2530: (self._cc2530_port, USB_Device_Baud_Rate.CC2530),
+            USB_Device_Category.CC2531: (self._cc2531_port, USB_Device_Baud_Rate.CC2531)
+        }
 
-        # Valid TTL devices should be indexed.
-        self.assertEqual(len(self.usb_manager._devices[USB_Device_Category.TTL]), 1)
-        self.assertEqual(self.usb_manager._devices[USB_Device_Category.TTL][0].path,
-                         self._ttl_port)
-        self.assertEqual(self.usb_manager._devices[USB_Device_Category.TTL][0].baud_rate,
-                         USB_Device_Baud_Rate.TTL)
-        self.assertEqual(self.usb_manager._devices[USB_Device_Category.TTL][0].category,
-                         USB_Device_Category.TTL)
-        self.assertEqual(self.usb_manager._devices[USB_Device_Category.TTL][0].serial_object,
-                         None)
+        # Valid devices should be indexed.
+        for category, index in expected_index.iteritems():
+            path, baud_rate = index
+            devices = self.usb_manager._devices[category]
+            self.assertEqual(len(devices), 1)
+            self.assertEqual(devices[0].path, path)
+            self.assertEqual(devices[0].baud_rate, baud_rate)
+            self.assertEqual(devices[0].category, category)
+            self.assertIsNone(devices[0].serial_object)
+
+    def check_get_device(self, method, path):
+        """
+        Helper function to test whether the method for obtaining a device
+        works as expected.
+        """
+
+        # Getting a device should fail when there are none.
+        with self.assertRaises(KeyError):
+            device = method()
+
+        self.usb_manager.index()
+
+        # Now that there are devices, we should get a valid serial object.
+        device = method()
+        self.assertIsInstance(device, serial.Serial)
+
+        # Overriding the path with a valid one gives us a valid serial object.
+        device = method(path)
+        self.assertIsInstance(device, serial.Serial)
+
+        # Overriding the path with an invalid one should result in an exception.
+        with self.assertRaises(KeyError):
+            device = method("/dev/tyUSB0")
 
     def test_get_xbee_device(self):
-        # Getting an XBee device should fail when there are none.
-        with self.assertRaises(KeyError):
-            xbee = self.usb_manager.get_xbee_device()
-
-        self.usb_manager.index()
-
-        # Now that there are XBee devices, we should be able to get a valid serial object.
-        xbee = self.usb_manager.get_xbee_device()
-        self.assertIsInstance(xbee, serial.Serial)
-
-        # Overriding the path with a valid one should result in a valid serial object.
-        xbee = self.usb_manager.get_xbee_device(self._xbee_port)
-        self.assertIsInstance(xbee, serial.Serial)
-
-        # Overriding the path with an invalid one should result in an exception.
-        with self.assertRaises(KeyError):
-            xbee = self.usb_manager.get_xbee_device("/dev/tyUSB0")
+        self.check_get_device(self.usb_manager.get_xbee_device, self._xbee_port)
 
     def test_get_ttl_device(self):
-        # Getting a TTL device should fail when there are none.
-        with self.assertRaises(KeyError):
-            ttl = self.usb_manager.get_ttl_device()
+        self.check_get_device(self.usb_manager.get_ttl_device, self._ttl_port)
 
-        self.usb_manager.index()
+    def test_get_cc2530_device(self):
+        self.check_get_device(self.usb_manager.get_cc2530_device, self._cc2530_port)
 
-        # Now that there are TTL devices, we should be able to get a valid serial object.
-        ttl = self.usb_manager.get_ttl_device()
-        self.assertIsInstance(ttl, serial.Serial)
-
-        # Overriding the path with a valid one should result in a valid serial object.
-        ttl = self.usb_manager.get_ttl_device(self._ttl_port)
-        self.assertIsInstance(ttl, serial.Serial)
-
-        # Overriding the path with an invalid one should result in an exception.
-        with self.assertRaises(KeyError):
-            ttl = self.usb_manager.get_ttl_device("/dev/ttyUSB0")
+    def test_get_cc2531_device(self):
+        self.check_get_device(self.usb_manager.get_cc2531_device, self._cc2531_port)
 
     def test_clear(self):
         self.usb_manager.index()
@@ -146,7 +164,9 @@ class TestCoreUSBManager(USBManagerTestCase):
         # The USB device storage must contain empty categories.
         self.assertEqual(self.usb_manager._devices, {
             USB_Device_Category.XBEE: [],
-            USB_Device_Category.TTL: []
+            USB_Device_Category.TTL: [],
+            USB_Device_Category.CC2530: [],
+            USB_Device_Category.CC2531: []
         })
 
         # All previous serial objects should be closed.

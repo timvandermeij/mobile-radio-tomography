@@ -2,10 +2,13 @@
     "control_panel": {
         "name": "Control panel",
         "settings": {
-            "controller_xbee_simulation": {
-                "help": "Whether to use a simulated XBee sensor for the ground station, effectively skipping the loading view",
-                "type": "bool",
-                "default": false
+            "controller_xbee_type": {
+                "help": "Controller XBee sensor class type",
+                "type": "class",
+                "module": "zigbee.XBee_Sensor",
+                "required": true,
+                "replace": [" ", "_"],
+                "default": "XBee_CC2530_Sensor_Physical"
             }
         }
     },
@@ -1028,6 +1031,60 @@
                 "help": "Whether to synchronize the clock using the NTP algorithm, which is required for TDMA scheduling to work correctly. The program must run as root to do so.",
                 "type": "bool",
                 "default": false
+            }
+        }
+    },
+    "xbee_cc2530_sensor_physical": {
+        "name": "XBee CC2530 sensor (physical)",
+        "parent": "xbee_sensor_physical",
+        "settings": {
+            "packet_length": {
+                "help": "Number of bytes in the serialized XBee packet",
+                "type": "int",
+                "min": 0,
+                "max": 255,
+                "default": 80
+            },
+            "reset_delay": {
+                "help": "Delay in seconds before changing the reset pulse",
+                "type": "float",
+                "min": 0.01,
+                "default": 0.02
+            },
+            "rx_pin": {
+                "help": "Raspberry Pi GPIO pin for UART RX",
+                "type": "int",
+                "min": 1,
+                "max": 40,
+                "default": 10
+            },
+            "tx_pin": {
+                "help": "Raspberry Pi GPIO pin for UART TX",
+                "type": "int",
+                "min": 1,
+                "max": 40,
+                "default": 8
+            },
+            "rts_pin": {
+                "help": "Raspberry Pi GPIO pin for UART RTS",
+                "type": "int",
+                "min": 1,
+                "max": 40,
+                "default": 11
+            },
+            "cts_pin": {
+                "help": "Raspberry Pi GPIO pin for UART CTS",
+                "type": "int",
+                "min": 1,
+                "max": 40,
+                "default": 36
+            },
+            "reset_pin": {
+                "help": "Raspberry Pi GPIO pin for resetting the sensor",
+                "type": "int",
+                "min": 1,
+                "max": 40,
+                "default": 40
             }
         }
     },

@@ -1,0 +1,134 @@
+\documentclass{article}
+
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\parindent=0pt
+\frenchspacing
+
+\usepackage[none]{hyphenat}
+\usepackage{parskip}
+\usepackage[hyphens]{url}
+\usepackage{hyperref}
+\usepackage{booktabs}
+
+\hypersetup{colorlinks, citecolor=red, filecolor=red, linkcolor=black, urlcolor=blue}
+
+\begin{document}
+
+\title{Connecting the Raspberry Pi to a CC2530}
+\author{Leon Helwerda}
+\date{\today}
+
+\maketitle
+
+\section{Introduction}
+The CC2530 Evaluation Module (EM) is a Texas Instruments device that support 
+radiographic RF communication and measurements. An antenna mount allows the use 
+of any compatible large antenna. The CC2530 has a processor that can be 
+programmed to execute such measurement and packet sending operations. It is 
+a system-of-chip (SoC) device containing the necessary equipment on a small 
+chip. There are also similar devices, such as the CC2531 USB dongle with 
+a small internal antenna.
+
+In contrast to the CC2531, where we can use a USB hardware abstraction layer 
+(HAL) library to interface with the USB host, the CC2530 needs to communicate 
+via its I/O pins. Often, the CC2530 is mounted on a SoC battery board, which 
+provides an LED, button, AA batteries and normal-sized male pin headers for 
+I/O, debug flash as well as jumpers.
+
+To flash a program onto the CC2530, we use a SmartRF05 Evaluation Board (EB). 
+Either the battery module's flash header can be used with a female-to-female 
+connector, or you can mount the disconnected CC2530 onto the EB.
+
+The CC2530 supports UART and SPI for I/O communication. More details about all 
+the connection possibilities and the actual setup are given in 
+Section~\ref{sec:setup}.
+
+In this document, we describe how we use the CC2530 and the battery board to 
+connect it with the Raspberry Pi. This makes it possible to easily reproduce 
+this installation.
+
+\section{Prerequisities}
+
+These steps only need to be done once on the Raspberry Pi to make it possible 
+to use all the UART pins of the GPIO board. By default, the UART pins are used 
+for a serial login interface, and the pins for hardware flow control are 
+disabled by default. Because the CC2530 has a limited buffer size for receiving 
+and transmitting over UART, we need to use the RTS/CTS pins for flow control.
+
+\begin{enumerate}
+  \item Ensure that the WiringPi Python library is installed for the root user, 
+        so that the Python scripts can use it to set the UART pins to the 
+        correct alternative modes: {\tt sudo pip2 install --user wiringpi}.
+  \item Edit with {\tt sudo vim /boot/cmdline.txt} such that there are no 
+        references to {\tt /dev/ttyAMA0} in that file, removing the keywords as 
+        well. Basically, remove the parts {\tt console=ttyAMA0,115200} and {\tt 
+        kgdboc=ttyAMA0,115200}. This disables the serial login interface of the 
+        Raspberry Pi on the UART RX/TX pins, which is not necessary if the 
+        network connection which we set up in the Raspberry Pi configuration 
+        works.
+
+        Warning: If the edit is done incorrectly and {\tt /boot/cmdline.txt} 
+        becomes malformed, then the Raspberry Pi may be unable to boot. Make 
+        a backup of this file beforehand and keep a microSD reader handy in 
+        case that you are not confident to do this.
+\end{enumerate}
+
+\section{Setup}\label{sec:setup}
+
+Perform the following steps to connect the CC2530 to the Raspberry Pi.
+
+\begin{enumerate}
+  \item Power off all the devices.
+  \item Remove any batteries in the CC2530's battery module because we will 
+        power it from the Raspberry Pi for the time being. The on/off switch 
+        does not function when powering in this way, because the 3.3v pins are 
+        directly connected to the CC2530 VDD.
+  \item Compile the latest RF code using `make` in the corresponding directory. 
+        Use the SmartRF05 EB to flash the program to the CC2530. One can detach 
+        the evaluation module from the battery module and place it on the 
+        SmartRF evaluation board, or use the debug cable to flash the program.
+  \item Connect wires between the pins mentioned in Table~\ref{tab:uart} on the 
+        Raspberry Pi and the CC2530. The RPi pin numbering is by physical 
+        order, the CC2530 naming is by port number and label on the device. 
+        Note: P0 = P10 and P1 = P11 on the battery module.
+
+        \begin{table}[h!]
+          \centering
+          \begin{tabular}{rlrl}
+            \toprule
+            RPi physical pin & RPi name & CC2530 port & CC2530 label \\
+            \midrule
+            08 & TXD0 & P0.2 & RX \\
+            10 & RXD0 & P0.3 & TX \\
+            11 & RTS0 & P0.4 & CT \\
+            17 & 3.3v DC & P0 3.3V & VDD \\
+            36 & CTS0 & P0.5 & RT \\
+            39 & GND & P0 GND & GND \\
+            40 & reset & P1 RSn & RESET\_N \\
+            \bottomrule
+          \end{tabular}
+          \caption{UART connection setup for the Raspberry Pi and CC2530.}
+          \label{tab:uart}
+        \end{table}
+
+        Warning: When you connect output pins to each other, such as TXD0 to TX 
+        or RTS to RTS, then the pins may short-circuit and malfunction when 
+        power is applied to those pins. Such defects are irreversible. Ensure 
+        that the pins are connected as mentioned in Table~\ref{tab:uart} to 
+        prevent permanent damage.
+\end{enumerate}
+
+\section*{References}
+
+\begin{itemize}
+  \item CC2530ZDK User's Guide (Rev. B). 
+    \url{http://www.ti.com/lit/pdf/swru209}
+  \item CC253x/CC254x User's Guide. \url{http://www.ti.com/lit/pdf/swru191}
+  \item CC SoC Battery Board User's Guide. 
+    \url{http://www.ti.com/lit/pdf/swru241}
+  \item CC2530 Datasheet (Rev. B). \url{http://www.ti.com/lit/pdf/swrs081}
+  \item SmartRF05 Evaluation Board User's Guide. 
+    \url{http://www.ti.com/lit/pdf/swru210}
+\end{itemize}
+
+\end{document}
