@@ -47,6 +47,7 @@ class XBee_CC2530_Sensor_Physical(XBee_Sensor):
                                                           receive_callback, valid_callback)
 
         self._address = str(self._id)
+        self._joined = True
         self._data = []
         self._serial_connection = None
         self._synchronized = False
@@ -96,12 +97,13 @@ class XBee_CC2530_Sensor_Physical(XBee_Sensor):
             wiringpi.module.digitalWrite(self._pins["reset_pin"], 0)
             time.sleep(self._reset_delay)
             wiringpi.module.digitalWrite(self._pins["reset_pin"], 1)
+
+            self._serial_connection.reset_input_buffer()
         else:
             # The ground station is a CC2531 device, which simply uses USB.
             self._serial_connection = self._usb_manager.get_cc2531_device()
 
         # Configure the device using a configuration packet.
-        self._serial_connection.reset_input_buffer()
         self._serial_connection.write(struct.pack("<BB", CC2530_Packet.CONFIGURATION, self._id))
 
     def activate(self):
@@ -258,13 +260,19 @@ class XBee_CC2530_Sensor_Physical(XBee_Sensor):
             if packet.get("specification") == "cc2530_ping_pong":
                 self._discovery_callback({
                     "id": packet.get("sensor_id"),
-                    "address": packet.get("sensor_id")
+                    "address": str(packet.get("sensor_id"))
                 })
+                return
 
             # Handle an RSSI ground station packet.
             if self._buffer is not None:
                 self._buffer.put(packet)
 
+            return
+
+        # Respond to CC2530 ping/pong requests.
+        if packet.get("specification") == "cc2530_ping_pong":
+            self._send_tx_frame(packet, 0)
             return
 
         # Handle a received RSSI broadcast packet.
