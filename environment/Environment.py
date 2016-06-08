@@ -4,10 +4,7 @@ from ..core.Thread_Manager import Thread_Manager
 from ..core.USB_Manager import USB_Manager
 from ..trajectory.Servo import Servo
 from ..vehicle.Vehicle import Vehicle
-from ..zigbee.XBee_Sensor_Physical import XBee_Sensor_Physical
-from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 from ..zigbee.XBee_Settings_Receiver import XBee_Settings_Receiver
-
 from dronekit import LocationLocal
 
 class Environment(object):
@@ -129,20 +126,15 @@ class Environment(object):
         self.geometry.set_home_location(home_location)
 
     def _setup_xbee_sensor(self):
-        xbee_type = self.settings.get("xbee_type")
-        if xbee_type == "simulator":
-            xbee_class = XBee_Sensor_Simulator
-        elif xbee_type == "physical":
-            xbee_class = XBee_Sensor_Physical
-        else:
+        xbee_class = self.settings.get("xbee_type")
+        if xbee_class == "":
             return
 
-        self._xbee_sensor = xbee_class(self.arguments,
-                                       self.thread_manager,
-                                       self.usb_manager,
-                                       self.get_raw_location,
-                                       self.receive_packet,
-                                       self.location_valid)
+        xbee_type = self.import_manager.load_class(xbee_class,
+                                                   relative_module="zigbee")
+        self._xbee_sensor = xbee_type(self.arguments, self.thread_manager,
+                                      self.usb_manager, self.get_raw_location,
+                                      self.receive_packet, self.location_valid)
 
     def get_vehicle(self):
         return self.vehicle

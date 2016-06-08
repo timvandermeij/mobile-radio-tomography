@@ -406,9 +406,10 @@
             },
             "xbee_type": {
                 "help": "XBee sensor class type",
-                "type": "string",
-                "options": ["physical", "simulator"],
+                "type": "class",
+                "module": "zigbee.XBee_Sensor",
                 "required": false,
+                "replace": [" ", "_"],
                 "default": ""
             },
             "infrared_sensor": {

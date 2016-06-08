@@ -7,6 +7,11 @@ from ..settings import Arguments
 from TDMA_Scheduler import TDMA_Scheduler
 from XBee_Packet import XBee_Packet
 
+# pylint: disable=undefined-all-variable
+__all__ = [
+    "XBee_Sensor_Physical", "XBee_Sensor_Simulator"
+]
+
 class SensorClosedError(Exception):
     """
     A special exception indicating that the sensor was disabled by deactivate

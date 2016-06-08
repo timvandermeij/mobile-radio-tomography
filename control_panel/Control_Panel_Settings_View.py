@@ -306,7 +306,7 @@ class Control_Panel_Settings_View(Control_Panel_View):
                 if bestMatch[0] is None or matchType < bestMatch[0]:
                     bestMatch = (matchType, key)
 
-        if bestMatch:
+        if bestMatch[0] is not None:
             self._best_matches[index] = bestMatch[1]
             return True
 
