@@ -1125,6 +1125,11 @@
                 "type": "bool",
                 "default": true
             },
+            "default_branch": {
+                "help": "Git branch that is the default from which other branches fork",
+                "type": "string",
+                "default": "master"
+            },
             "profile_sort": {
                 "help": "Sort method to use for the profile statistics",
                 "type": "string",

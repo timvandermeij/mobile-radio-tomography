@@ -168,21 +168,53 @@ class Test_Run(object):
 
         return unused_imports
 
+    def _get_travis_environment(self, name):
+        """
+        Retrieve the string value of an environment variable with a name that
+        starts with `TRAVIS_`, followed by the given `name`.
+
+        If the environment variable is not found, an empty string is returned.
+        """
+
+        environment_variable = "TRAVIS_{}".format(name)
+        if environment_variable not in os.environ:
+            return ""
+
+        return os.environ[environment_variable]
+
     def get_changed_files(self):
         """
         Retrieve the files that were changed in a commit range.
 
         The Git commit range is retrieved from the environment variable
         `TRAVIS_COMMIT_RANGE`, which is set by Travis CI when the tests are run.
+        The commit range is altered to contain all commits from the current
+        branch stated in the `TRAVIS_BRANCH` environment variable, but only if
+        the branch is not "master" and the `TRAVIS_PULL_REQUEST` environment
+        variable has the value "false" denoting that  it is not a PR build.
 
         Only files that were changed and not deleted in those commits are
         included in the returned list.
         """
 
-        if "TRAVIS_COMMIT_RANGE" not in os.environ:
+        commit_range = self._get_travis_environment("COMMIT_RANGE")
+        if not commit_range:
             return []
 
-        commit_range = os.environ["TRAVIS_COMMIT_RANGE"]
+        if self._get_travis_environment("PULL_REQUEST") == "false":
+            branch = self._get_travis_environment("BRANCH")
+            default_branch = self._settings.get("default_branch")
+            if branch != default_branch:
+                range_parts = commit_range.split('.')
+                latest_commit = range_parts[-1]
+                commits = check_output([
+                    "git", "rev-list", "--boundary",
+                    "{}..{}".format(default_branch, branch)
+                ]).splitlines()
+                fork_commits = [commit[1:] for commit in commits if commit.startswith('-')]
+                if fork_commits:
+                    commit_range = "{}..{}".format(fork_commits[-1], latest_commit)
+
         output = check_output([
             "git", "diff-tree", "--no-commit-id", "--name-only",
             "--diff-filter=ACMRTUXB", "-r", commit_range
