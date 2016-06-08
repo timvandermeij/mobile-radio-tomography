@@ -46,6 +46,7 @@ class XBee_CC2530_Sensor_Physical(XBee_Sensor):
                                                           usb_manager, location_callback,
                                                           receive_callback, valid_callback)
 
+        self._address = str(self._id)
         self._data = []
         self._serial_connection = None
         self._synchronized = False
@@ -284,3 +285,10 @@ class XBee_CC2530_Sensor_Physical(XBee_Sensor):
         ground_station_packet = self._make_rssi_ground_station_packet(packet)
         ground_station_packet.set("rssi", rssi)
         self._data.append(ground_station_packet)
+
+    def _format_address(self, address):
+        """
+        Pretty print a given address.
+        """
+
+        return address
