@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from vrml.vrml97 import basenodes, nodetypes, parser, parseprocessor
 
@@ -7,7 +8,7 @@ class VRMLLoader(object):
     http://www.web3d.org/documents/specifications/14772/V2.0/index.html
     """
 
-    def __init__(self, environment, filename, translation=None):
+    def __init__(self, environment, filename, translation=None, transform=None):
         self.environment = environment
         self.filename = filename
 
@@ -17,29 +18,40 @@ class VRMLLoader(object):
             raise ValueError("Translation must be a 3-component offset")
 
         self.translation = tuple(translation)
+        self._transform = transform
 
         vrml_parser = parser.Parser(parser.grammar, "vrmlFile")
         processor = parseprocessor.ParseProcessor(baseURI=self.filename)
         with open(self.filename, 'r') as f:
             data = f.read()
-            self.scene = vrml_parser.parse(data, processor=processor)[1][1]
+            self._scene = vrml_parser.parse(data, processor=processor)[1][1]
 
-        self.objects = None
+        self._objects = None
 
     def get_objects(self):
-        if self.objects is None:
-            self.objects = []
-            self._parse_children(self.scene)
+        """
+        Retrieve the objects from the VRML scene file.
 
-        return self.objects
+        The objects are provided as a list of lists of lists, where the deepest
+        nested lists are faces describing a polygon using point locations. Each
+        element of the list can therefore have multiple faces.
+        """
+
+        if self._objects is None:
+            self._objects = []
+            self._parse_children(self._scene, self._transform)
+
+        return self._objects
 
     def _parse_children(self, group, transform=None):
         for child in group.children:
             if isinstance(child, basenodes.Inline):
-                loader = VRMLLoader(self.environment, child.url, self.translation)
-                self.objects.extend(loader.get_objects())
+                # Include the objects from the referenced file into the scene.
+                path = os.path.join(os.path.dirname(self.filename), child.url[0])
+                loader = VRMLLoader(self.environment, path, self.translation, transform)
+                self._objects.extend(loader.get_objects())
             elif isinstance(child, basenodes.Transform):
-                # Jumble up transformation matrices
+                # Jumble up transformation matrices, in case they are nested.
                 forward = child.localMatrices().data[0]
                 if forward is not None:
                     if transform is not None:
@@ -51,8 +63,10 @@ class VRMLLoader(object):
 
                 self._parse_children(child, new_transform)
             elif isinstance(child, nodetypes.Grouping):
+                # Retrieve children from grouped nodes.
                 self._parse_children(child, transform)
             elif isinstance(child, basenodes.Shape):
+                # Parse the coordinates from a shape's geometry.
                 self._parse_geometry(child.geometry, transform)
 
     def _parse_geometry(self, geometry, transform=None):
@@ -84,4 +98,4 @@ class VRMLLoader(object):
 
         if len(face) > 0:
             faces.append(face)
-        self.objects.append(faces)
+        self._objects.append(faces)

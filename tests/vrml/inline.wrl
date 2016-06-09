@@ -1,0 +1,15 @@
+#VRML V2.0 utf8
+
+Transform {
+  translation 1 0 0
+  rotation 1 0 0 -0.2
+  children [
+	Transform {
+	  translation 1 0 0
+	  rotation 1 0 0 -0.2
+	  children [
+	    Inline { url "trees_river.wrl" }
+	  ]
+	}
+  ]
+}

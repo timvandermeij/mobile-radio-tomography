@@ -223,7 +223,7 @@ DEF OB_Cube_001 Transform {
 79 83 78 -1, 
 84 86 99 -1, 
 98 101 94 -1, 
-100 96 95 -1, 
+100 96 95, 
 						]
 						texCoord TextureCoordinate {
 							point [
