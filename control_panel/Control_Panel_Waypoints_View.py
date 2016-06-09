@@ -1,9 +1,9 @@
 import json
 import os
 from PyQt4 import QtGui
+from Control_Panel_RF_Sensor_Sender import Control_Panel_RF_Sensor_Sender
 from Control_Panel_View import Control_Panel_View
 from Control_Panel_Waypoints_Widgets import WaypointsTableWidget
-from Control_Panel_XBee_Sender import Control_Panel_XBee_Sender
 from ..zigbee.Packet import Packet
 
 class Control_Panel_Waypoints_View(Control_Panel_View):
@@ -341,8 +341,8 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             "max_retries": self._max_retries,
             "retry_interval": self._retry_interval
         }
-        sender = Control_Panel_XBee_Sender(self._controller, waypoints, total,
-                                           configuration)
+        sender = Control_Panel_RF_Sensor_Sender(self._controller, waypoints, total,
+                                                configuration)
         sender.start()
 
     def _make_add_waypoint_packet(self, vehicle, index, waypoint):
@@ -350,7 +350,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         Create a `Packet` object with the `waypoint_add` specification
         and fill its fields with correct values.
 
-        This is a callback for the `Control_Panel_XBee_Sender`.
+        This is a callback for the `Control_Panel_RF_Sensor_Sender`.
         """
 
         packet = Packet()

@@ -1,9 +1,9 @@
 import json
 from PyQt4 import QtGui
+from Control_Panel_RF_Sensor_Sender import Control_Panel_RF_Sensor_Sender
 from Control_Panel_View import Control_Panel_View, Control_Panel_View_Name
 from Control_Panel_Widgets import QLineEditClear
 from Control_Panel_Settings_Widgets import SettingsWidget
-from Control_Panel_XBee_Sender import Control_Panel_XBee_Sender
 from ..settings import Settings
 from ..zigbee.Packet import Packet
 
@@ -229,8 +229,8 @@ class Control_Panel_Settings_View(Control_Panel_View):
             "max_retries": self._settings.get("settings_max_retries"),
             "retry_interval": self._settings.get("settings_retry_interval")
         }
-        sender = Control_Panel_XBee_Sender(self._controller, vehicle_settings,
-                                           count, configuration)
+        sender = Control_Panel_RF_Sensor_Sender(self._controller, vehicle_settings,
+                                                count, configuration)
 
         if groundCheckBox.isChecked():
             sender.connect_accepted(self._set_ground_station_settings)

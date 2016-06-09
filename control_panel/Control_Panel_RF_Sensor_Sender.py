@@ -2,9 +2,9 @@ from functools import partial
 from PyQt4 import QtGui, QtCore
 from ..zigbee.Packet import Packet
 
-class Control_Panel_XBee_Sender(object):
+class Control_Panel_RF_Sensor_Sender(object):
     """
-    Handler for sending status changes to the XBee devices on the vehicles.
+    Handler for sending packets to the RF sensors on the vehicles.
     """
 
     def __init__(self, controller, data, total, configuration):
