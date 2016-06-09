@@ -54,6 +54,12 @@ class TestSettings(SettingsTestCase):
         with self.assertRaisesRegexp(KeyError, "'qux'.*'child'"):
             settings.get("qux")
 
+    def test_get_parent(self):
+        settings = Settings("tests/settings/empty.json", "child",
+                            defaults_file="tests/settings/defaults.json")
+        self.assertEqual(settings.get("bar"), 2)
+        self.assertEqual(settings.get("baz"), False)
+
     def test_get_override(self):
         settings = Settings("tests/settings/settings.json", "foo",
                             defaults_file="tests/settings/defaults.json")
@@ -139,6 +145,19 @@ class TestSettings(SettingsTestCase):
         settings.set("bar", 3)
         self.assertEqual(settings.get("bar"), 3)
 
+    def test_set_parent(self):
+        parent_settings = Settings("tests/settings/empty.json", "foo",
+                                   defaults_file="tests/settings/defaults.json")
+        child_settings = Settings("tests/settings/empty.json", "child",
+                                  defaults_file="tests/settings/defaults.json")
+        child_settings.set("bar", 3)
+        self.assertEqual(parent_settings.get("bar"), 3)
+        self.assertEqual(child_settings.get("bar"), 3)
+
+        child_settings.set("baz", False)
+        self.assertEqual(parent_settings.get("baz"), True)
+        self.assertEqual(child_settings.get("baz"), False)
+
     def test_nonexistent_set(self):
         settings = Settings("tests/settings/settings.json", "foo",
                             defaults_file="tests/settings/defaults.json")
@@ -186,12 +205,3 @@ class TestSettings(SettingsTestCase):
         self.assertEqual(settings.get("setters"), "defaults")
         with self.assertRaisesRegexp(ValueError, "match the format"):
             settings.set("setters", "tests/settings.py")
-
-    def test_parent(self):
-        settings = Settings("tests/settings/empty.json", "child",
-                            defaults_file="tests/settings/defaults.json")
-        self.assertEqual(settings.get("bar"), 2)
-        self.assertEqual(settings.get("baz"), False)
-        # Test: Exception should still mention child component
-        with self.assertRaisesRegexp(KeyError, "'child'"):
-            settings.get("qux")

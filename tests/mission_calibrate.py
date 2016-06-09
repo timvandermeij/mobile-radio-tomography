@@ -2,6 +2,7 @@ from collections import deque
 from mock import patch
 from dronekit import LocationLocal
 from ..mission.Mission_Calibrate import Mission_Calibrate
+from ..vehicle.Mock_Vehicle import Mock_Vehicle
 from environment import EnvironmentTestCase
 
 class TestMissionCalibrate(EnvironmentTestCase):
@@ -26,6 +27,24 @@ class TestMissionCalibrate(EnvironmentTestCase):
             (3, 4), (2, 4), (1, 4), (0, 4),
             (0, 3), (0, 2)
         ]
+
+    def test_setup_robot_vehicle(self):
+        # Check that the mission can only be run using a robot vehicle.
+        with self.assertRaises(ValueError):
+            vehicle = Mock_Vehicle(self.arguments, self.environment.geometry,
+                                   self.environment.import_manager,
+                                   self.environment.thread_manager,
+                                   self.environment.usb_manager)
+            self.mission.vehicle = vehicle
+            with patch('sys.stdout'):
+                self.mission.setup()
+
+    def test_setup_location(self):
+        # Check that the mission requires a valid starting location.
+        with self.assertRaises(ValueError):
+            self.vehicle._location = (4, 2)
+            with patch('sys.stdout'):
+                self.mission.setup()
 
     def test_setup(self):
         with patch('sys.stdout'):
@@ -58,6 +77,7 @@ class TestMissionCalibrate(EnvironmentTestCase):
         self.assertEqual(self.mission.round_number, 16)
 
         self.assertEqual(len(self.mission.waypoints), 16 * 14) # (4**2)*(4*4-2)
+        self.assertEqual(len(self.mission.get_points()), 16 * 14)
 
         self.assertEqual(self.mission.waypoints[0:wplen], [(0, 1)]*wplen)
         self.assertEqual(self.mission.waypoints[wplen:wplen*2],

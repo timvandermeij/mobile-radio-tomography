@@ -2,6 +2,7 @@ import itertools
 from mock import patch
 from dronekit import LocationLocal
 from ..mission.Mission_Cycle import Mission_Cycle
+from ..vehicle.Mock_Vehicle import Mock_Vehicle
 from ..vehicle.Robot_Vehicle import Robot_Vehicle, Robot_State
 from environment import EnvironmentTestCase
 
@@ -32,7 +33,25 @@ class TestMissionCycle(EnvironmentTestCase):
             (2, 1), (2, 0), (1, 0), (0, 0)
         ]
 
-    def test_setup(self):
+    def test_setup_robot_vehicle(self):
+        # Check that the mission can only be run using a robot vehicle.
+        with self.assertRaises(ValueError):
+            vehicle = Mock_Vehicle(self.arguments, self.environment.geometry,
+                                   self.environment.import_manager,
+                                   self.environment.thread_manager,
+                                   self.environment.usb_manager)
+            self.mission.vehicle = vehicle
+            with patch('sys.stdout'):
+                self.mission.setup()
+
+    def test_setup_location(self):
+        # Check that the mission requires a valid starting location.
+        with self.assertRaises(ValueError):
+            self.vehicle._location = (4, 2)
+            with patch('sys.stdout'):
+                self.mission.setup()
+
+    def test_setup_init(self):
         with patch('sys.stdout'):
             self.mission.setup()
 

@@ -98,3 +98,7 @@ class TestMemoryMap(EnvironmentTestCase):
         self.assertAlmostEqual(loc.north, location.north, delta=self.coord_delta)
         self.assertAlmostEqual(loc.east, location.east, delta=self.coord_delta)
         self.assertEqual(loc.down, location.down)
+
+        # Test that a location that is outside the map does not raise an error.
+        outside_location = memory_map.handle_sensor(1000, math.pi)
+        self.assertFalse(memory_map.location_in_bounds(outside_location))
