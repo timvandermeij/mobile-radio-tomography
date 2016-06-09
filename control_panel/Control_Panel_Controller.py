@@ -111,7 +111,7 @@ class Control_Panel_Controller(object):
 
     def _receive(self, packet):
         """
-        Handle a received custom `XBee_Packet`.
+        Handle a received custom `Packet` object `packet`.
         """
 
         specification = packet.get("specification")
@@ -124,7 +124,7 @@ class Control_Panel_Controller(object):
 
     def add_packet_callback(self, specification, callback):
         """
-        Register a function `callback` to be called when an XBee packet with
+        Register a function `callback` to be called when a packet with
         the given `specification` is received.
         """
 
@@ -135,7 +135,7 @@ class Control_Panel_Controller(object):
 
     def remove_packet_callback(self, specification):
         """
-        Unregister the callback for a given XBee packet `specification`.
+        Unregister the callback for a given packet `specification`.
 
         If no such callback is registered for that specification, this method
         does nothing.

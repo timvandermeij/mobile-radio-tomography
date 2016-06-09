@@ -4,7 +4,7 @@ from PyQt4 import QtGui
 from Control_Panel_View import Control_Panel_View
 from Control_Panel_Waypoints_Widgets import WaypointsTableWidget
 from Control_Panel_XBee_Sender import Control_Panel_XBee_Sender
-from ..zigbee.XBee_Packet import XBee_Packet
+from ..zigbee.Packet import Packet
 
 class Control_Panel_Waypoints_View(Control_Panel_View):
     def __init__(self, controller, settings):
@@ -347,13 +347,13 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
     def _make_add_waypoint_packet(self, vehicle, index, waypoint):
         """
-        Create a `XBee_Packet` object with the `waypoint_add` specification
+        Create a `Packet` object with the `waypoint_add` specification
         and fill its fields with correct values.
 
         This is a callback for the `Control_Panel_XBee_Sender`.
         """
 
-        packet = XBee_Packet()
+        packet = Packet()
         packet.set("specification", "waypoint_add")
         packet.set("latitude", waypoint[0])
         packet.set("longitude", waypoint[1])

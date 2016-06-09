@@ -1,6 +1,6 @@
 from functools import partial
 from PyQt4 import QtGui, QtCore
-from ..zigbee.XBee_Packet import XBee_Packet
+from ..zigbee.Packet import Packet
 
 class Control_Panel_XBee_Sender(object):
     """
@@ -61,7 +61,7 @@ class Control_Panel_XBee_Sender(object):
             self._send_clear(vehicle)
 
     def _send_clear(self, vehicle):
-        packet = XBee_Packet()
+        packet = Packet()
         packet.set("specification", self._clear_message)
         packet.set("to_id", vehicle)
 
@@ -77,7 +77,7 @@ class Control_Panel_XBee_Sender(object):
         if self._is_done(vehicle):
             # Enqueue a packet indicating that sending data to this vehicle is 
             # done.
-            packet = XBee_Packet()
+            packet = Packet()
             packet.set("specification", self._done_message)
             packet.set("to_id", vehicle)
             self._controller.xbee.enqueue(packet, to=vehicle)

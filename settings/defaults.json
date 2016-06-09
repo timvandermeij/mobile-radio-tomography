@@ -843,7 +843,7 @@
                 "default": [0, 0]
             },
             "stream_record": {
-                "help": "Whether to record the received XBee packets for saving afterward",
+                "help": "Whether to record the received packets for saving afterward",
                 "short": "Record",
                 "type": "bool",
                 "default": false
@@ -1039,7 +1039,7 @@
         "parent": "xbee_sensor_physical",
         "settings": {
             "packet_length": {
-                "help": "Number of bytes in the serialized XBee packet",
+                "help": "Number of bytes in the serialized packet",
                 "type": "int",
                 "min": 0,
                 "max": 255,

@@ -206,7 +206,7 @@ class Environment(object):
 
     def add_packet_action(self, action, callback):
         """
-        Register a `callback` for a given XBee packet specification `action`.
+        Register a `callback` for a given packet specification `action`.
 
         The `action` must not already have a callback registered for it.
         When a packet with the specification `action` is received, then the
@@ -225,7 +225,7 @@ class Environment(object):
         """
         Callback method for the receive callback of the `XBee_Sensor`.
 
-        The given `packet` is an `XBee_Packet` that may have a specification
+        The given `packet` is a `Packet` object that may have a specification
         registered in `add_packet_action`.
         """
 

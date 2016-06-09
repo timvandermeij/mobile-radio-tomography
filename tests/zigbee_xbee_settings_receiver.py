@@ -3,8 +3,8 @@ from StringIO import StringIO
 from mock import Mock, mock_open, patch
 from ..core.Thread_Manager import Thread_Manager
 from ..settings import Settings
+from ..zigbee.Packet import Packet
 from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
-from ..zigbee.XBee_Packet import XBee_Packet
 from ..zigbee.XBee_Settings_Receiver import XBee_Settings_Receiver
 from environment import EnvironmentTestCase
 
@@ -30,7 +30,7 @@ class TestZigBeeXBeeSettingsReceiver(EnvironmentTestCase):
     @patch.object(XBee_Sensor_Simulator, "enqueue")
     def test_clear(self, enqueue_mock):
         # Packets not meant for the current XBee are ignored.
-        packet = XBee_Packet()
+        packet = Packet()
         packet.set("specification", "setting_clear")
         packet.set("to_id", self.xbee.id + 42)
 
@@ -39,7 +39,7 @@ class TestZigBeeXBeeSettingsReceiver(EnvironmentTestCase):
         self.assertNotEqual(self.arguments.groups, {})
         enqueue_mock.assert_not_called()
 
-        packet = XBee_Packet()
+        packet = Packet()
         packet.set("specification", "setting_clear")
         packet.set("to_id", self.xbee.id)
 
@@ -48,7 +48,7 @@ class TestZigBeeXBeeSettingsReceiver(EnvironmentTestCase):
         self.assertEqual(enqueue_mock.call_count, 1)
         args, kwargs = enqueue_mock.call_args
         self.assertEqual(len(args), 1)
-        self.assertIsInstance(args[0], XBee_Packet)
+        self.assertIsInstance(args[0], Packet)
         self.assertEqual(args[0].get_all(), {
             "specification": "setting_ack",
             "next_index": 0,
@@ -61,7 +61,7 @@ class TestZigBeeXBeeSettingsReceiver(EnvironmentTestCase):
 
     @patch.object(XBee_Sensor_Simulator, "enqueue")
     def test_add(self, enqueue_mock):
-        packet = XBee_Packet()
+        packet = Packet()
         packet.set("specification", "setting_add")
         packet.set("index", 0)
         packet.set("key", "home_location")
@@ -81,7 +81,7 @@ class TestZigBeeXBeeSettingsReceiver(EnvironmentTestCase):
         self.assertEqual(enqueue_mock.call_count, 1)
         args, kwargs = enqueue_mock.call_args
         self.assertEqual(len(args), 1)
-        self.assertIsInstance(args[0], XBee_Packet)
+        self.assertIsInstance(args[0], Packet)
         self.assertEqual(args[0].get_all(), {
             "specification": "setting_ack",
             "next_index": 1,
@@ -104,14 +104,14 @@ class TestZigBeeXBeeSettingsReceiver(EnvironmentTestCase):
         self.settings_receiver._new_settings = new_settings
 
         # Packets not meant for the current XBee are ignored.
-        packet = XBee_Packet()
+        packet = Packet()
         packet.set("specification", "setting_done")
         packet.set("to_id", self.xbee.id + 42)
         self.environment.receive_packet(packet)
         self.assertNotEqual(Settings.settings_files, {})
         self.assertNotEqual(self.arguments.groups, {})
 
-        packet = XBee_Packet()
+        packet = Packet()
         packet.set("specification", "setting_done")
         packet.set("to_id", self.xbee.id)
 

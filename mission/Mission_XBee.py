@@ -1,7 +1,7 @@
 import time
 from dronekit import LocationGlobalRelative
 from Mission_Auto import Mission_Auto
-from ..zigbee.XBee_Packet import XBee_Packet
+from ..zigbee.Packet import Packet
 
 class Mission_XBee(Mission_Auto):
     def setup(self):
@@ -67,12 +67,12 @@ class Mission_XBee(Mission_Auto):
 
         xbee_sensor = self.environment.get_xbee_sensor()
 
-        ack_packet = XBee_Packet()
-        ack_packet.set("specification", "waypoint_ack")
-        ack_packet.set("next_index", self._next_index)
-        ack_packet.set("sensor_id", xbee_sensor.id)
+        packet = Packet()
+        packet.set("specification", "waypoint_ack")
+        packet.set("next_index", self._next_index)
+        packet.set("sensor_id", xbee_sensor.id)
 
-        xbee_sensor.enqueue(ack_packet, to=0)
+        xbee_sensor.enqueue(packet, to=0)
 
     def _clear_waypoints(self, packet):
         """

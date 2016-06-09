@@ -5,7 +5,7 @@ from Control_Panel_Widgets import QLineEditClear
 from Control_Panel_Settings_Widgets import SettingsWidget
 from Control_Panel_XBee_Sender import Control_Panel_XBee_Sender
 from ..settings import Settings
-from ..zigbee.XBee_Packet import XBee_Packet
+from ..zigbee.Packet import Packet
 
 class Setting_Filter_Match(object):
     NONE = 0
@@ -238,7 +238,7 @@ class Control_Panel_Settings_View(Control_Panel_View):
         sender.start()
 
     def _make_add_setting_packet(self, vehicle, index, key):
-        packet = XBee_Packet()
+        packet = Packet()
         packet.set("specification", "setting_add")
         packet.set("index", index)
         packet.set("key", str(key))

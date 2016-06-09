@@ -7,8 +7,8 @@ from ..geometry.Geometry_Spherical import Geometry_Spherical
 from ..settings import Arguments
 from ..trajectory.Servo import Servo
 from ..vehicle.Mock_Vehicle import Mock_Vehicle
+from ..zigbee.Packet import Packet
 from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
-from ..zigbee.XBee_Packet import XBee_Packet
 from geometry import LocationTestCase
 from settings import SettingsTestCase
 from core_thread_manager import ThreadableTestCase
@@ -136,7 +136,7 @@ class TestEnvironment(EnvironmentTestCase):
             self.environment.add_packet_action("waypoint_add", MagicMock())
 
         # Callback is called for correct specification.
-        packet = XBee_Packet()
+        packet = Packet()
         packet.set("specification", "waypoint_add")
         packet.set("latitude", 12.345)
         packet.set("longitude", 32.109)
@@ -147,7 +147,7 @@ class TestEnvironment(EnvironmentTestCase):
 
         # Callback is not called for another specification.
         mock_callback.reset_mock()
-        packet = XBee_Packet()
+        packet = Packet()
         packet.set("specification", "waypoint_clear")
         packet.set("to_id", 1)
 

@@ -1,6 +1,6 @@
 import json
-from XBee_Packet import XBee_Packet
 from ..settings import Settings
+from Packet import Packet
 
 class XBee_Settings_Receiver(object):
     """
@@ -24,7 +24,7 @@ class XBee_Settings_Receiver(object):
         self._new_settings = {}
 
     def _send_ack(self, index=-1):
-        packet = XBee_Packet()
+        packet = Packet()
         packet.set("specification", "setting_ack")
         packet.set("next_index", index + 1)
         packet.set("sensor_id", self._xbee.id)

@@ -2,8 +2,8 @@ from mock import patch
 from dronekit import LocationLocal
 from ..mission.Mission_XBee import Mission_XBee
 from ..vehicle.Robot_Vehicle import Robot_State
+from ..zigbee.Packet import Packet
 from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
-from ..zigbee.XBee_Packet import XBee_Packet
 from environment import EnvironmentTestCase
 
 class TestMissionXBee(EnvironmentTestCase):
@@ -43,7 +43,7 @@ class TestMissionXBee(EnvironmentTestCase):
                 self.mission.arm_and_takeoff()
 
     def _send_waypoint_add(self, index, latitude, longitude, id_offset=0):
-        packet = XBee_Packet()
+        packet = Packet()
         packet.set("specification", "waypoint_add")
         packet.set("index", index)
         packet.set("latitude", latitude)
@@ -63,7 +63,7 @@ class TestMissionXBee(EnvironmentTestCase):
         self._send_waypoint_add(0, 4.0, 2.0)
 
         # Packets not meant for the current XBee are ignored.
-        packet = XBee_Packet()
+        packet = Packet()
         packet.set("specification", "waypoint_clear")
         packet.set("to_id", self.xbee.id + 42)
 
@@ -72,7 +72,7 @@ class TestMissionXBee(EnvironmentTestCase):
 
         enqueue_mock.reset_mock()
 
-        packet = XBee_Packet()
+        packet = Packet()
         packet.set("specification", "waypoint_clear")
         packet.set("to_id", self.xbee.id)
 
@@ -82,7 +82,7 @@ class TestMissionXBee(EnvironmentTestCase):
         self.assertEqual(enqueue_mock.call_count, 1)
         args, kwargs = enqueue_mock.call_args
         self.assertEqual(len(args), 1)
-        self.assertIsInstance(args[0], XBee_Packet)
+        self.assertIsInstance(args[0], Packet)
         self.assertEqual(args[0].get_all(), {
             "specification": "waypoint_ack",
             "next_index": 0,
@@ -108,7 +108,7 @@ class TestMissionXBee(EnvironmentTestCase):
         self.assertEqual(enqueue_mock.call_count, 1)
         args, kwargs = enqueue_mock.call_args
         self.assertEqual(len(args), 1)
-        self.assertIsInstance(args[0], XBee_Packet)
+        self.assertIsInstance(args[0], Packet)
         self.assertEqual(args[0].get_all(), {
             "specification": "waypoint_ack",
             "next_index": 1,
@@ -129,7 +129,7 @@ class TestMissionXBee(EnvironmentTestCase):
         self.assertEqual(enqueue_mock.call_count, 1)
         args, kwargs = enqueue_mock.call_args
         self.assertEqual(len(args), 1)
-        self.assertIsInstance(args[0], XBee_Packet)
+        self.assertIsInstance(args[0], Packet)
         self.assertEqual(args[0].get_all(), {
             "specification": "waypoint_ack",
             "next_index": 0,
@@ -151,14 +151,14 @@ class TestMissionXBee(EnvironmentTestCase):
         self._send_waypoint_add(3, 4.0, 0.0)
 
         # Packets not meant for us are ignored.
-        packet = XBee_Packet()
+        packet = Packet()
         packet.set("specification", "waypoint_done")
         packet.set("to_id", self.xbee.id + 42)
         self.environment.receive_packet(packet)
 
         self.assertFalse(self.mission.waypoints_complete)
 
-        packet = XBee_Packet()
+        packet = Packet()
         packet.set("specification", "waypoint_done")
         packet.set("to_id", self.xbee.id)
 

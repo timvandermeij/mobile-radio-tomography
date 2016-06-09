@@ -1,7 +1,7 @@
 from mock import MagicMock
-from ..zigbee.XBee_Packet import XBee_Packet
 from ..reconstruction.Stream_Buffer import Stream_Buffer
 from ..settings import Arguments
+from ..zigbee.Packet import Packet
 from settings import SettingsTestCase
 
 class TestReconstructionStreamBuffer(SettingsTestCase):
@@ -14,7 +14,7 @@ class TestReconstructionStreamBuffer(SettingsTestCase):
         self.settings = arguments.get_settings("reconstruction_stream")
         self.mock_sensor = MagicMock(number_of_sensors=42)
 
-        self.packet = XBee_Packet()
+        self.packet = Packet()
         self.packet.set("specification", "rssi_ground_station")
         self.packet.set("sensor_id", 1)
         self.packet.set("from_latitude", 1)

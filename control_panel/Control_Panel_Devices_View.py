@@ -145,8 +145,7 @@ class Control_Panel_Devices_View(Control_Panel_View):
 
     def _refresh_vehicle(self, packet):
         """
-        Refresh a single vehicle using information from in
-        node discovery XBee packet.
+        Refresh a single vehicle using information from a node discovery `packet`.
         """
 
         vehicle = self._devices[packet["id"]]
