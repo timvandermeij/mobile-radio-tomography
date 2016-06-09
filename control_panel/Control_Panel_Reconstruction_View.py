@@ -540,7 +540,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._buffer = buffer_class(settings)
 
         if isinstance(self._buffer, Stream_Buffer):
-            self._buffer.register_xbee(self._controller.rf_sensor)
+            self._buffer.register_rf_sensor(self._controller.rf_sensor)
 
             if settings.get("stream_record") or settings.get("stream_calibrate"):
                 # Create a stream recorder instance to record all incoming 
