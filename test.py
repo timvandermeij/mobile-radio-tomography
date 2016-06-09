@@ -178,6 +178,11 @@ class Test_Run(object):
         if not commit_range:
             return []
 
+        # Determine the latest commit of the current branch.
+        range_parts = commit_range.split('.')
+        first_commit = range_parts[0]
+        latest_commit = range_parts[-1]
+
         if self._get_travis_environment("PULL_REQUEST") == "false":
             branch = self._get_travis_environment("BRANCH")
             default_branch = self._settings.get("default_branch")
@@ -185,10 +190,6 @@ class Test_Run(object):
                 # Retrieve the FETCH_HEAD of the default branch, since Travis 
                 # has a partial clone that does not contain all branch heads.
                 check_call(["git", "fetch", "origin", default_branch])
-
-                # Determine the latest commit of the current branch.
-                range_parts = commit_range.split('.')
-                latest_commit = range_parts[-1]
 
                 # Find commit hash of the earliest boundary point, which should 
                 # be the fork point of the current branch, i.e. where the 
@@ -204,7 +205,9 @@ class Test_Run(object):
 
                 fork_commits = [commit[1:] for commit in commits if commit.startswith('-')]
                 if fork_commits:
-                    commit_range = "{}..{}".format(fork_commits[-1], latest_commit)
+                    first_commit = fork_commits[-1]
+
+        commit_range = "{}..{}".format(first_commit, latest_commit)
 
         # Retrieve all files that were changed in a commit. This excludes 
         # deleted files which no longer exist at this point. Based on 
