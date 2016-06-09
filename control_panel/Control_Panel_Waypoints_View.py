@@ -28,7 +28,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         self._listWidget = QtGui.QListWidget()
         self._stackedLayout = QtGui.QStackedLayout()
 
-        for vehicle in xrange(1, self._controller.xbee.number_of_sensors + 1):
+        for vehicle in xrange(1, self._controller.rf_sensor.number_of_sensors + 1):
             # Create the list item for the vehicle.
             self._listWidget.addItem("Waypoints for vehicle {}".format(vehicle))
 

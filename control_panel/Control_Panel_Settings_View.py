@@ -116,7 +116,7 @@ class Control_Panel_Settings_View(Control_Panel_View):
         except KeyError:
             devices = []
 
-        for vehicle in xrange(1, self._controller.xbee.number_of_sensors + 1):
+        for vehicle in xrange(1, self._controller.rf_sensor.number_of_sensors + 1):
             if vehicle < len(devices):
                 vehicleJoined = devices[vehicle].joined
             else:
@@ -156,7 +156,7 @@ class Control_Panel_Settings_View(Control_Panel_View):
 
         boxLayout = QtGui.QVBoxLayout()
         boxLayout.addWidget(groundCheckBox)
-        for vehicle in xrange(1, self._controller.xbee.number_of_sensors + 1):
+        for vehicle in xrange(1, self._controller.rf_sensor.number_of_sensors + 1):
             boxLayout.addWidget(vehicleCheckBoxes[vehicle])
 
         groupBox = QtGui.QGroupBox("Save locations")
@@ -209,7 +209,7 @@ class Control_Panel_Settings_View(Control_Panel_View):
         vehicle_settings = {}
         keys = sorted(self._new_settings.keys())
         count = 0
-        for vehicle in xrange(1, self._controller.xbee.number_of_sensors + 1):
+        for vehicle in xrange(1, self._controller.rf_sensor.number_of_sensors + 1):
             if vehicleCheckBoxes[vehicle].isChecked():
                 vehicle_settings[vehicle] = keys
                 count += len(keys)

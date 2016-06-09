@@ -37,15 +37,15 @@ class Control_Panel_Controller(object):
         self._view_actions = {}
 
         # Create arguments (for obtaining various settings in views)
-        # and a USB manager (for checking insertion of XBee devices).
+        # and a USB manager (for checking insertion of RF sensors).
         self.arguments = Arguments("settings.json", self._get_arguments())
         self.import_manager = Import_Manager()
         self.thread_manager = Thread_Manager()
         self.usb_manager = USB_Manager()
         self.usb_manager.index()
 
-        # Initialize the XBee sensor for use by specific views.
-        self.setup_xbee()
+        # Initialize the RF sensor for use by specific views.
+        self.setup_rf_sensor()
 
         # Initialize settings components, in-process shared data and Settings 
         # objects for the specific views.
@@ -82,18 +82,18 @@ class Control_Panel_Controller(object):
 
         return argv
 
-    def setup_xbee(self):
+    def setup_rf_sensor(self):
         """
-        Initialize the XBee object for specific views.
+        Initialize the RF sensor for specific views.
         """
 
         settings = self.arguments.get_settings("control_panel")
-        xbee_class = settings.get("controller_xbee_type")
-        xbee_type = self.import_manager.load_class(xbee_class,
-                                                   relative_module="zigbee")
-        self.xbee = xbee_type(self.arguments, self.thread_manager,
-                              self.usb_manager, self._get_location,
-                              self._receive, self._location_valid)
+        rf_sensor_class = settings.get("rf_sensor_class")
+        rf_sensor_type = self.import_manager.load_class(rf_sensor_class,
+                                                        relative_module="zigbee")
+        self.rf_sensor = rf_sensor_type(self.arguments, self.thread_manager,
+                                        self.usb_manager, self._get_location,
+                                        self._receive, self._location_valid)
 
         self._packet_callbacks = {}
 

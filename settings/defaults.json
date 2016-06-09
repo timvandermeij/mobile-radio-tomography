@@ -2,8 +2,8 @@
     "control_panel": {
         "name": "Control panel",
         "settings": {
-            "controller_xbee_type": {
-                "help": "Controller XBee sensor class type",
+            "rf_sensor_class": {
+                "help": "RF sensor class to use for the control panel",
                 "type": "class",
                 "module": "zigbee.XBee_Sensor",
                 "required": true,
@@ -15,8 +15,8 @@
     "control_panel_loading": {
         "name": "Control panel (loading view)",
         "settings": {
-            "loading_xbee_insertion_delay": {
-                "help": "Frequency in seconds to check for a newly inserted XBee",
+            "loading_insertion_delay": {
+                "help": "Frequency in seconds to check for a newly inserted RF sensor",
                 "type": "float",
                 "min": 0.0,
                 "default": 0.1
@@ -27,7 +27,7 @@
         "name": "Control panel (devices view)",
         "settings": {
             "devices_discover_delay": {
-                "help": "Frequency in seconds to handle a discovered XBee device",
+                "help": "Frequency in seconds to handle a discovered RF sensor",
                 "type": "float",
                 "min": 0.0,
                 "default": 0.5

@@ -65,7 +65,7 @@ class Control_Panel_XBee_Sender(object):
         packet.set("specification", self._clear_message)
         packet.set("to_id", vehicle)
 
-        self._controller.xbee.enqueue(packet, to=vehicle)
+        self._controller.rf_sensor.enqueue(packet, to=vehicle)
 
         self._set_label(vehicle, "Clearing old {}s".format(self._name))
         self._timers[vehicle].start()
@@ -80,7 +80,7 @@ class Control_Panel_XBee_Sender(object):
             packet = Packet()
             packet.set("specification", self._done_message)
             packet.set("to_id", vehicle)
-            self._controller.xbee.enqueue(packet, to=vehicle)
+            self._controller.rf_sensor.enqueue(packet, to=vehicle)
 
             self._update_value()
             if all(self._is_done(vehicle) for vehicle in self._indexes):
@@ -93,7 +93,7 @@ class Control_Panel_XBee_Sender(object):
 
         packet = self._add_callback(vehicle, index, data)
 
-        self._controller.xbee.enqueue(packet, to=vehicle)
+        self._controller.rf_sensor.enqueue(packet, to=vehicle)
 
         self._set_label(vehicle, "Sending {} #{}: {}".format(self._name, index+1, data))
         self._timers[vehicle].start()
