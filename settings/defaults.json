@@ -1108,12 +1108,6 @@
                 "type": "string",
                 "default": "*.py"
             },
-            "import_exclude": {
-                "help": "List of imports to ignore in the unused import checker",
-                "type": "list",
-                "subtype": "string",
-                "default": ["__package__"]
-            },
             "verbosity": {
                 "help": "Level of verboseness of the test runner",
                 "type": "int",
@@ -1124,6 +1118,11 @@
                 "help": "Provide a code coverage report",
                 "type": "bool",
                 "default": true
+            },
+            "default_branch": {
+                "help": "Git branch that is the default from which other branches fork",
+                "type": "string",
+                "default": "master"
             },
             "profile_sort": {
                 "help": "Sort method to use for the profile statistics",

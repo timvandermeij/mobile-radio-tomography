@@ -4,15 +4,16 @@ import os
 import sys
 from cProfile import Profile
 from pstats import Stats
-from subprocess import check_output
+from subprocess import check_call, check_output
 from StringIO import StringIO
 
 # Unit test imports
 import unittest
 from mock import patch
 
-# Coverage imports
+# Additional test report imports
 import coverage
+import pylint.lint
 
 # Package imports
 from __init__ import __package__
@@ -142,30 +143,95 @@ class Test_Run(object):
 
         return None
 
-    def execute_unused_imports_check(self):
+    def _get_travis_environment(self, name):
         """
-        Execute the unused imports check.
+        Retrieve the string value of an environment variable with a name that
+        starts with `TRAVIS_`, followed by the given `name`.
 
-        Returns a list of unused imports, and causes the test to fail in case
-        there are unused imports.
+        If the environment variable is not found, an empty string is returned.
         """
 
-        excludes = self._settings.get("import_exclude")
-        output = check_output(["importchecker", "."])
-        unused_imports = []
-        for line in output.splitlines():
-            ignore = False
-            for exclude in excludes:
-                if exclude in line:
-                    ignore = True
+        environment_variable = "TRAVIS_{}".format(name)
+        if environment_variable not in os.environ:
+            return ""
 
-            if ignore:
-                continue
+        return os.environ[environment_variable]
 
-            unused_imports.append(line.rstrip())
-            self._failed = True
+    def get_changed_files(self):
+        """
+        Retrieve the files that were changed in a commit range.
 
-        return unused_imports
+        The Git commit range is retrieved from the environment variable
+        `TRAVIS_COMMIT_RANGE`, which is set by Travis CI when the tests are run.
+        The commit range is altered to contain all commits from the current
+        branch stated in the `TRAVIS_BRANCH` environment variable, but only if
+        the branch is not the default and the `TRAVIS_PULL_REQUEST` environment
+        variable has the value "false" denoting that it is not a PR build.
+
+        Only files that were changed and not deleted in those commits are
+        included in the returned list.
+        """
+
+        # Check the commit range determined by Travis. We do not provide a list 
+        # of changed files if we are not running on Travis.
+        commit_range = self._get_travis_environment("COMMIT_RANGE")
+        if not commit_range:
+            return []
+
+        # Determine the latest commit of the current branch.
+        range_parts = commit_range.split('.')
+        first_commit = range_parts[0]
+        latest_commit = range_parts[-1]
+
+        if self._get_travis_environment("PULL_REQUEST") == "false":
+            branch = self._get_travis_environment("BRANCH")
+            default_branch = self._settings.get("default_branch")
+            if branch != default_branch:
+                # Retrieve the FETCH_HEAD of the default branch, since Travis 
+                # has a partial clone that does not contain all branch heads.
+                check_call(["git", "fetch", "origin", default_branch])
+
+                # Find commit hash of the earliest boundary point, which should 
+                # be the fork point of the current branch, i.e. where the 
+                # commits diverge from master ignoring merges from master. This 
+                # could also be found using `git merge-base --fork-point`, but 
+                # this is not supported on Git 1.8. There are more contrived 
+                # solutions at http://stackoverflow.com/q/1527234 but this 
+                # single call works good enough.
+                commits = check_output([
+                    "git", "rev-list", "--boundary",
+                    "FETCH_HEAD...{}".format(latest_commit)
+                ]).splitlines()
+
+                fork_commits = [commit[1:] for commit in commits if commit.startswith('-')]
+                if fork_commits:
+                    first_commit = fork_commits[-1]
+
+        commit_range = "{}..{}".format(first_commit, latest_commit)
+
+        # Retrieve all files that were changed in a commit. This excludes 
+        # deleted files which no longer exist at this point. Based on 
+        # a solution at http://stackoverflow.com/q/424071
+        output = check_output([
+            "git", "diff-tree", "--no-commit-id", "--name-only",
+            "--diff-filter=ACMRTUXB", "-r", commit_range
+        ])
+
+        return output.splitlines()
+
+    def execute_pylint(self, files):
+        """
+        Execute pylint on a given list of files.
+
+        Only Python files are included in the lint check.
+        """
+
+        files = [filename for filename in files if filename.endswith('.py')]
+        try:
+            pylint.lint.Run(["--disable=duplicate-code", "--reports=n"] + files)
+        except SystemExit as e:
+            if e.code != 0:
+                self._failed = True
 
     def read_logs_directory(self):
         """
@@ -213,10 +279,10 @@ def main(argv):
         print("> Executing code coverage")
         print(coverage_report)
 
-    print("> Executing unused imports check")
-    unused_imports = test_run.execute_unused_imports_check()
-    for unused_import in unused_imports:
-        print("Unused import found: {}".format(unused_import))
+    files = test_run.get_changed_files()
+    if files:
+        print("> Executing pylint on changed files")
+        test_run.execute_pylint(files)
 
     print("> Cleaning up the logs directory")
     log_contents = test_run.read_logs_directory()
