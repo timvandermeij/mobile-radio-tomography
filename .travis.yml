@@ -10,7 +10,6 @@ install:
   - pip install simpleparse
   - pip install PyVRML97
   - pip install PyDispatcher
-  - pip install importchecker
   - pip install coverage
   - pip install pylint
   - pip install pyudev

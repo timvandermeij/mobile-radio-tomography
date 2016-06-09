@@ -72,7 +72,6 @@ go. The packages are sorted by purpose as follows:
     * pyglet
 * Testing:
     * mock
-    * importchecker
     * coverage
     * pylint
 

@@ -32,6 +32,5 @@ pyglet
 
 # Testing
 mock
-importchecker
 coverage
 pylint

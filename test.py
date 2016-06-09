@@ -143,31 +143,6 @@ class Test_Run(object):
 
         return None
 
-    def execute_unused_imports_check(self):
-        """
-        Execute the unused imports check.
-
-        Returns a list of unused imports, and causes the test to fail in case
-        there are unused imports.
-        """
-
-        excludes = self._settings.get("import_exclude")
-        output = check_output(["importchecker", "."])
-        unused_imports = []
-        for line in output.splitlines():
-            ignore = False
-            for exclude in excludes:
-                if exclude in line:
-                    ignore = True
-
-            if ignore:
-                continue
-
-            unused_imports.append(line.rstrip())
-            self._failed = True
-
-        return unused_imports
-
     def _get_travis_environment(self, name):
         """
         Retrieve the string value of an environment variable with a name that
@@ -284,11 +259,6 @@ def main(argv):
     if coverage_report is not None:
         print("> Executing code coverage")
         print(coverage_report)
-
-    print("> Executing unused imports check")
-    unused_imports = test_run.execute_unused_imports_check()
-    for unused_import in unused_imports:
-        print("Unused import found: {}".format(unused_import))
 
     files = test_run.get_changed_files()
     if files:

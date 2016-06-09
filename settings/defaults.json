@@ -1108,12 +1108,6 @@
                 "type": "string",
                 "default": "*.py"
             },
-            "import_exclude": {
-                "help": "List of imports to ignore in the unused import checker",
-                "type": "list",
-                "subtype": "string",
-                "default": ["__package__"]
-            },
             "verbosity": {
                 "help": "Level of verboseness of the test runner",
                 "type": "int",
