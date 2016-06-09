@@ -165,13 +165,15 @@ class Test_Run(object):
         `TRAVIS_COMMIT_RANGE`, which is set by Travis CI when the tests are run.
         The commit range is altered to contain all commits from the current
         branch stated in the `TRAVIS_BRANCH` environment variable, but only if
-        the branch is not "master" and the `TRAVIS_PULL_REQUEST` environment
-        variable has the value "false" denoting that  it is not a PR build.
+        the branch is not the default and the `TRAVIS_PULL_REQUEST` environment
+        variable has the value "false" denoting that it is not a PR build.
 
         Only files that were changed and not deleted in those commits are
         included in the returned list.
         """
 
+        # Check the commit range determined by Travis. We do not provide a list 
+        # of changed files if we are not running on Travis.
         commit_range = self._get_travis_environment("COMMIT_RANGE")
         if not commit_range:
             return []
@@ -180,19 +182,33 @@ class Test_Run(object):
             branch = self._get_travis_environment("BRANCH")
             default_branch = self._settings.get("default_branch")
             if branch != default_branch:
-                # Retrieve the FETCH_HEAD of the master branch, since Travis 
-                # has a partial checkout
+                # Retrieve the FETCH_HEAD of the default branch, since Travis 
+                # has a partial clone that does not contain all branch heads.
                 check_call(["git", "fetch", "origin", default_branch])
+
+                # Determine the latest commit of the current branch.
                 range_parts = commit_range.split('.')
                 latest_commit = range_parts[-1]
+
+                # Find commit hash of the earliest boundary point, which should 
+                # be the fork point of the current branch, i.e. where the 
+                # commits diverge from master ignoring merges from master. This 
+                # could also be found using `git merge-base --fork-point`, but 
+                # this is not supported on Git 1.8. There are more contrived 
+                # solutions at http://stackoverflow.com/q/1527234 but this 
+                # single call works good enough.
                 commits = check_output([
                     "git", "rev-list", "--boundary",
                     "FETCH_HEAD...{}".format(latest_commit)
                 ]).splitlines()
+
                 fork_commits = [commit[1:] for commit in commits if commit.startswith('-')]
                 if fork_commits:
                     commit_range = "{}..{}".format(fork_commits[-1], latest_commit)
 
+        # Retrieve all files that were changed in a commit. This excludes 
+        # deleted files which no longer exist at this point. Based on 
+        # a solution at http://stackoverflow.com/q/424071
         output = check_output([
             "git", "diff-tree", "--no-commit-id", "--name-only",
             "--diff-filter=ACMRTUXB", "-r", commit_range
