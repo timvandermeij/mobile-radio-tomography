@@ -4,7 +4,7 @@ from ..core.Thread_Manager import Thread_Manager
 from ..core.USB_Manager import USB_Manager
 from ..trajectory.Servo import Servo
 from ..vehicle.Vehicle import Vehicle
-from ..zigbee.XBee_Settings_Receiver import XBee_Settings_Receiver
+from ..zigbee.Settings_Receiver import Settings_Receiver
 from dronekit import LocationLocal
 
 class Environment(object):
@@ -105,7 +105,7 @@ class Environment(object):
         self._setup_xbee_sensor()
         self.invalidate_measurement()
 
-        self._settings_receiver = XBee_Settings_Receiver(self)
+        self._settings_receiver = Settings_Receiver(self)
 
         if self.settings.get("infrared_sensor"):
             from ..control.Infrared_Sensor import Infrared_Sensor

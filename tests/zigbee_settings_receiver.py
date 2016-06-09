@@ -4,15 +4,15 @@ from mock import Mock, mock_open, patch
 from ..core.Thread_Manager import Thread_Manager
 from ..settings import Settings
 from ..zigbee.Packet import Packet
+from ..zigbee.Settings_Receiver import Settings_Receiver
 from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
-from ..zigbee.XBee_Settings_Receiver import XBee_Settings_Receiver
 from environment import EnvironmentTestCase
 
-class TestZigBeeXBeeSettingsReceiver(EnvironmentTestCase):
+class TestZigBeeSettingsReceiver(EnvironmentTestCase):
     def setUp(self):
         self.register_arguments([], use_infrared_sensor=False)
 
-        super(TestZigBeeXBeeSettingsReceiver, self).setUp()
+        super(TestZigBeeSettingsReceiver, self).setUp()
 
         self.xbee = self.environment.get_xbee_sensor()
         self.settings_receiver = self.environment._settings_receiver
@@ -115,7 +115,7 @@ class TestZigBeeXBeeSettingsReceiver(EnvironmentTestCase):
         packet.set("specification", "setting_done")
         packet.set("to_id", self.xbee.id)
 
-        # Override the open function used in the XBee_Settings_Receiver so that 
+        # Override the `open` function used in the settings receiver so that 
         # it does not actually write a file. Instead, make an Mock that 
         # simulated the open function. Additionally, attach a wrapper mock to 
         # the file's write function so that we can intercept the written data 
@@ -124,7 +124,7 @@ class TestZigBeeXBeeSettingsReceiver(EnvironmentTestCase):
         open_mock = mock_open()
         write_mock = Mock(wraps=output.write)
         open_mock.return_value.attach_mock(write_mock, "write")
-        open_func = '{}.open'.format(XBee_Settings_Receiver.__module__)
+        open_func = '{}.open'.format(Settings_Receiver.__module__)
         with patch(open_func, open_mock, create=True):
             self.environment.receive_packet(packet)
 

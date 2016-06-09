@@ -2,9 +2,9 @@ import json
 from ..settings import Settings
 from Packet import Packet
 
-class XBee_Settings_Receiver(object):
+class Settings_Receiver(object):
     """
-    Handler for receiving XBee status packets that change settings.
+    Handler for receiving packets that change settings.
     """
 
     def __init__(self, environment):
