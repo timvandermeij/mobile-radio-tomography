@@ -4,7 +4,7 @@ import os
 import sys
 from cProfile import Profile
 from pstats import Stats
-from subprocess import check_output
+from subprocess import check_call, check_output
 from StringIO import StringIO
 
 # Unit test imports
@@ -205,11 +205,14 @@ class Test_Run(object):
             branch = self._get_travis_environment("BRANCH")
             default_branch = self._settings.get("default_branch")
             if branch != default_branch:
+                # Retrieve the FETCH_HEAD of the master branch, since Travis 
+                # has a partial checkout
+                check_call(["git", "fetch", "origin", default_branch])
                 range_parts = commit_range.split('.')
                 latest_commit = range_parts[-1]
                 commits = check_output([
                     "git", "rev-list", "--boundary",
-                    "{}..{}".format(default_branch, branch)
+                    "FETCH_HEAD...{}".format(latest_commit)
                 ]).splitlines()
                 fork_commits = [commit[1:] for commit in commits if commit.startswith('-')]
                 if fork_commits:
@@ -232,8 +235,9 @@ class Test_Run(object):
         files = [filename for filename in files if filename.endswith('.py')]
         try:
             pylint.lint.Run(["--disable=duplicate-code", "--reports=n"] + files)
-        except SystemExit:
-            self._failed = True
+        except SystemExit as e:
+            if e.code != 0:
+                self._failed = True
 
     def read_logs_directory(self):
         """
