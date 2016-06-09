@@ -1,10 +1,11 @@
 # Core imports
 import os
 import unittest
+from functools import partial
 
 # Library imports
 import serial
-from mock import patch, MagicMock
+from mock import patch, Mock
 
 # Package imports
 from ..core.USB_Manager import USB_Manager, USB_Device_Category, USB_Device_Baud_Rate, USB_Device_Fingerprint
@@ -15,6 +16,20 @@ class USBManagerTestCase(unittest.TestCase):
     the USB manager contains a fixed number of devices instead of
     looking for the real devices.
     """
+
+    @classmethod
+    def _mock_list_devices(cls, usb_devices, amba_devices,
+                           subsystem=None, parent=None, ID_BUS=None, **kwargs):
+        if ID_BUS == "usb":
+            return usb_devices
+
+        if subsystem == "amba":
+            return ["AMBA_PARENT"]
+
+        if parent == "AMBA_PARENT":
+            return amba_devices
+
+        raise ValueError("Unexpected argument values: subsystem={}, parent={}, ID_BUS={}, {}".format(subsystem, parent, ID_BUS, kwargs))
 
     def setUp(self):
         super(USBManagerTestCase, self).setUp()
@@ -39,8 +54,8 @@ class USBManagerTestCase(unittest.TestCase):
         slave_other = os.openpty()[1]
         self._other_port = os.ttyname(slave_other)
 
-        # Mock the method for obtaining USB devices.
-        mock_obtain_usb_devices = MagicMock(return_value=[
+        # Create a specific list of inserted USB devices.
+        self._usb_devices = [
             { # XBee device
                 "ID_VENDOR_ID": USB_Device_Fingerprint.XBEE[0],
                 "ID_MODEL_ID": USB_Device_Fingerprint.XBEE[1],
@@ -61,18 +76,25 @@ class USBManagerTestCase(unittest.TestCase):
                 "ID_MODEL_ID": "6012",
                 "DEVNAME": self._other_port
             }
-        ])
-        self.usb_manager._obtain_usb_devices = mock_obtain_usb_devices
+        ]
 
-        # Mock the method for obtaining AMBA devices.
-        mock_obtain_amba_devices = MagicMock(return_value=[
+        # Create a specific list of detected AMBA devices.
+        self._amba_devices = [
             { # CC2530 device
                 "MAJOR": USB_Device_Fingerprint.CC2530[0],
                 "MINOR": USB_Device_Fingerprint.CC2530[1],
                 "DEVNAME": self._cc2530_port
             }
-        ])
-        self.usb_manager._obtain_amba_devices = mock_obtain_amba_devices
+        ]
+
+        # Mock the pyudev library to return the devices lists on specific 
+        # argument input.
+        list_devices_mock = Mock(side_effect=partial(self._mock_list_devices,
+                                                     self._usb_devices, self._amba_devices))
+        context_mock = Mock(list_devices=list_devices_mock)
+
+        self._pyudev_patcher = patch('pyudev.Context', return_value=context_mock)
+        self._pyudev_patcher.start()
 
         # Disable internal pySerial updates of the DTR state since they do not 
         # function correctly when the serial device is mocked as a virtual pty.
@@ -86,6 +108,8 @@ class USBManagerTestCase(unittest.TestCase):
 
         self.usb_manager.clear()
         self._ttl_device.close()
+
+        self._pyudev_patcher.stop()
 
         self._dtr_patcher.stop()
         self._rts_patcher.stop()
