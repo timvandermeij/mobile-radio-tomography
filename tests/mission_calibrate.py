@@ -20,7 +20,6 @@ class TestMissionCalibrate(EnvironmentTestCase):
 
         settings = self.arguments.get_settings("mission")
         self.mission = Mission_Calibrate(self.environment, settings)
-        self.xbee = self.environment.get_xbee_sensor()
         self.first_waypoints = [
             (1, 0), (2, 0), (3, 0), (4, 0),
             (4, 1), (4, 2), (4, 3), (4, 4),

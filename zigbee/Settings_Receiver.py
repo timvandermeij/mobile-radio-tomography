@@ -10,7 +10,7 @@ class Settings_Receiver(object):
     def __init__(self, environment):
         self._environment = environment
         self._arguments = self._environment.get_arguments()
-        self._xbee = self._environment.get_xbee_sensor()
+        self._rf_sensor = self._environment.get_xbee_sensor()
         self._thread_manager = self._environment.thread_manager
         self._new_settings = {}
 
@@ -27,13 +27,13 @@ class Settings_Receiver(object):
         packet = Packet()
         packet.set("specification", "setting_ack")
         packet.set("next_index", index + 1)
-        packet.set("sensor_id", self._xbee.id)
+        packet.set("sensor_id", self._rf_sensor.id)
 
-        self._xbee.enqueue(packet, to=0)
+        self._rf_sensor.enqueue(packet, to=0)
 
     def _clear(self, packet):
         # Ignore packets that are not meant for us.
-        if packet.get("to_id") != self._xbee.id:
+        if packet.get("to_id") != self._rf_sensor.id:
             return
 
         self._cleanup()
@@ -41,7 +41,7 @@ class Settings_Receiver(object):
 
     def _add(self, packet):
         # Ignore packets that are not meant for us.
-        if packet.get("to_id") != self._xbee.id:
+        if packet.get("to_id") != self._rf_sensor.id:
             return
 
         index = packet.get("index")
@@ -54,7 +54,7 @@ class Settings_Receiver(object):
 
     def _done(self, packet):
         # Ignore packets that are not meant for us.
-        if packet.get("to_id") != self._xbee.id:
+        if packet.get("to_id") != self._rf_sensor.id:
             return
 
         with open(self._arguments.settings_file, 'w') as settings_file:
@@ -63,4 +63,4 @@ class Settings_Receiver(object):
         # Clean up cached settings and stop the program so that we can restart 
         # it with the new settings.
         self._cleanup()
-        self._thread_manager.interrupt(self._xbee.thread_name)
+        self._thread_manager.interrupt(self._rf_sensor.thread_name)

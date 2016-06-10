@@ -14,13 +14,13 @@ class TestZigBeeSettingsReceiver(EnvironmentTestCase):
 
         super(TestZigBeeSettingsReceiver, self).setUp()
 
-        self.xbee = self.environment.get_xbee_sensor()
+        self.rf_sensor = self.environment.get_xbee_sensor()
         self.settings_receiver = self.environment._settings_receiver
 
     def test_setup(self):
         self.assertEqual(self.settings_receiver._environment, self.environment)
         self.assertEqual(self.settings_receiver._arguments, self.arguments)
-        self.assertEqual(self.settings_receiver._xbee, self.xbee)
+        self.assertEqual(self.settings_receiver._rf_sensor, self.rf_sensor)
         self.assertEqual(self.settings_receiver._thread_manager, self.environment.thread_manager)
         self.assertEqual(self.settings_receiver._new_settings, {})
         self.assertIn("setting_clear", self.environment._packet_callbacks.keys())
@@ -29,10 +29,10 @@ class TestZigBeeSettingsReceiver(EnvironmentTestCase):
 
     @patch.object(XBee_Sensor_Simulator, "enqueue")
     def test_clear(self, enqueue_mock):
-        # Packets not meant for the current XBee are ignored.
+        # Packets not meant for the current RF sensor are ignored.
         packet = Packet()
         packet.set("specification", "setting_clear")
-        packet.set("to_id", self.xbee.id + 42)
+        packet.set("to_id", self.rf_sensor.id + 42)
 
         self.environment.receive_packet(packet)
         self.assertNotEqual(Settings.settings_files, {})
@@ -41,7 +41,7 @@ class TestZigBeeSettingsReceiver(EnvironmentTestCase):
 
         packet = Packet()
         packet.set("specification", "setting_clear")
-        packet.set("to_id", self.xbee.id)
+        packet.set("to_id", self.rf_sensor.id)
 
         self.environment.receive_packet(packet)
 
@@ -52,7 +52,7 @@ class TestZigBeeSettingsReceiver(EnvironmentTestCase):
         self.assertEqual(args[0].get_all(), {
             "specification": "setting_ack",
             "next_index": 0,
-            "sensor_id": self.xbee.id
+            "sensor_id": self.rf_sensor.id
         })
         self.assertEqual(kwargs, {"to": 0})
 
@@ -67,14 +67,14 @@ class TestZigBeeSettingsReceiver(EnvironmentTestCase):
         packet.set("key", "home_location")
         packet.set("value", (1, 2))
 
-        # Packets not meant for the current XBee are ignored.
-        packet.set("to_id", self.xbee.id + 42)
+        # Packets not meant for the current RF sensor are ignored.
+        packet.set("to_id", self.rf_sensor.id + 42)
 
         self.environment.receive_packet(packet)
         self.assertNotIn("home_location", self.settings_receiver._new_settings)
         enqueue_mock.assert_not_called()
 
-        packet.set("to_id", self.xbee.id)
+        packet.set("to_id", self.rf_sensor.id)
 
         self.environment.receive_packet(packet)
 
@@ -85,7 +85,7 @@ class TestZigBeeSettingsReceiver(EnvironmentTestCase):
         self.assertEqual(args[0].get_all(), {
             "specification": "setting_ack",
             "next_index": 1,
-            "sensor_id": self.xbee.id
+            "sensor_id": self.rf_sensor.id
         })
         self.assertEqual(kwargs, {"to": 0})
 
@@ -103,17 +103,17 @@ class TestZigBeeSettingsReceiver(EnvironmentTestCase):
         pretty_json = json.dumps(new_settings, indent=4, sort_keys=True)
         self.settings_receiver._new_settings = new_settings
 
-        # Packets not meant for the current XBee are ignored.
+        # Packets not meant for the current RF sensor are ignored.
         packet = Packet()
         packet.set("specification", "setting_done")
-        packet.set("to_id", self.xbee.id + 42)
+        packet.set("to_id", self.rf_sensor.id + 42)
         self.environment.receive_packet(packet)
         self.assertNotEqual(Settings.settings_files, {})
         self.assertNotEqual(self.arguments.groups, {})
 
         packet = Packet()
         packet.set("specification", "setting_done")
-        packet.set("to_id", self.xbee.id)
+        packet.set("to_id", self.rf_sensor.id)
 
         # Override the `open` function used in the settings receiver so that 
         # it does not actually write a file. Instead, make an Mock that 
