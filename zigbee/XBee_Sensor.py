@@ -65,7 +65,7 @@ class XBee_Sensor(Threadable):
             raise ValueError("'arguments' must be an instance of Arguments")
 
         self._sensor = None
-        self._id = self._settings.get("xbee_id")
+        self._id = self._settings.get("rf_sensor_id")
         self._number_of_sensors = self._settings.get("number_of_sensors")
         self._buffer = None
         self._address = None

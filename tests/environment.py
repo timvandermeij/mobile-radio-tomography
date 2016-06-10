@@ -36,7 +36,7 @@ class EnvironmentTestCase(LocationTestCase, SettingsTestCase,
     def register_arguments(self, argv, simulated=True, distance_sensors=None,
                            use_infrared_sensor=True):
         self._argv = argv
-        self._argv.extend(["--rf-sensor-class", "XBee_Sensor_Simulator", "--xbee-id", "1"])
+        self._argv.extend(["--rf-sensor-class", "XBee_Sensor_Simulator", "--rf-sensor-id", "1"])
 
         self._simulated = simulated
         # WiringPiTestCase provides a patcher for RPi.GPIO, which is necessary 

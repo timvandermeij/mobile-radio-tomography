@@ -11,7 +11,7 @@ class TestMissionCalibrate(EnvironmentTestCase):
             "--vehicle-class", "Robot_Vehicle_Arduino",
             "--geometry-class", "Geometry", "--space-size", "5",
             "--number-of-sensors", "2", "--closeness", "0",
-            "--xbee-synchronization"
+            "--rf-sensor-synchronization"
         ], use_infrared_sensor=False)
 
         super(TestMissionCalibrate, self).setUp()

@@ -25,7 +25,7 @@ class TestZigBeeXBeeSensorSimulator(ThreadableTestCase, SettingsTestCase):
         super(TestZigBeeXBeeSensorSimulator, self).setUp()
 
         self.sensor_id = 1
-        self.arguments = Arguments("settings.json", ["--xbee-id", "1"])
+        self.arguments = Arguments("settings.json", ["--rf-sensor-id", "1"])
         self.settings = self.arguments.get_settings("xbee_sensor_simulator")
         self.thread_manager = Thread_Manager()
         self.sensor = XBee_Sensor_Simulator(self.arguments, self.thread_manager,

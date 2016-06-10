@@ -12,7 +12,7 @@ class TestMissionRFSensor(EnvironmentTestCase):
             "--vehicle-class", "Robot_Vehicle_Arduino",
             "--geometry-class", "Geometry",
             "--space-size", "10", "--closeness", "0",
-            "--xbee-synchronization", "--number-of-sensors", "2"
+            "--rf-sensor-synchronization", "--number-of-sensors", "2"
         ], use_infrared_sensor=False)
 
         super(TestMissionRFSensor, self).setUp()

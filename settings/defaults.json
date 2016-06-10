@@ -333,7 +333,7 @@
                 "min": 0.0,
                 "default": 0.5
             },
-            "xbee_synchronization": {
+            "rf_sensor_synchronization": {
                 "help": "Whether to wait for measurements to be complete at waypoints",
                 "type": "bool",
                 "default": true
@@ -931,8 +931,8 @@
                 "min": 0,
                 "default": 2
             },
-            "xbee_id": {
-                "help": "Identifier of the current XBee (overridden by the physical sensor)",
+            "rf_sensor_id": {
+                "help": "Identifier for the current RF sensor (overridden by the physical sensor)",
                 "type": "int",
                 "min": 0,
                 "default": 0
