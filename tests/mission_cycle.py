@@ -21,7 +21,7 @@ class TestMissionCycle(EnvironmentTestCase):
 
         settings = self.arguments.get_settings("mission")
         self.mission = Mission_Cycle(self.environment, settings)
-        self.rf_sensor = self.environment.get_xbee_sensor()
+        self.rf_sensor = self.environment.get_rf_sensor()
         self.first_waypoints = [
             (1, 0), (2, 0),
             (1, 0), (0, 0), (0, 1), (0, 2),

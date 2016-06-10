@@ -63,7 +63,7 @@ class Control_Panel_Loading_View(Control_Panel_View):
 
             # Reload the sensor class.
             settings = self._controller.arguments.get_settings("control_panel")
-            settings.set("rf_sensor_class", rf_sensor_class)
+            settings.set("core_rf_sensor_class", rf_sensor_class)
             self._controller.setup_rf_sensor()
 
             # An RF sensor has been inserted, but we need to check that it
@@ -99,5 +99,5 @@ class Control_Panel_Loading_View(Control_Panel_View):
         """
 
         settings = self._controller.arguments.get_settings("control_panel")
-        settings.set("rf_sensor_class", "XBee_Sensor_Simulator")
+        settings.set("core_rf_sensor_class", "XBee_Sensor_Simulator")
         self._controller.setup_rf_sensor()

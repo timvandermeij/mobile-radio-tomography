@@ -14,7 +14,7 @@ class Mission_RF_Sensor(Mission_Auto):
         self._waypoints_complete = False
         self._next_index = 0
 
-        self._rf_sensor = self.environment.get_xbee_sensor()
+        self._rf_sensor = self.environment.get_rf_sensor()
 
     def arm_and_takeoff(self):
         # Wait until all the waypoints have been received before arming.

@@ -2,7 +2,7 @@
     "control_panel": {
         "name": "Control panel",
         "settings": {
-            "rf_sensor_class": {
+            "core_rf_sensor_class": {
                 "help": "RF sensor class to use for the control panel",
                 "type": "class",
                 "module": "zigbee.XBee_Sensor",
@@ -407,8 +407,8 @@
                     }
                 ]
             },
-            "xbee_type": {
-                "help": "XBee sensor class type",
+            "rf_sensor_class": {
+                "help": "RF sensor class to use for the environment",
                 "type": "class",
                 "module": "zigbee.XBee_Sensor",
                 "required": false,

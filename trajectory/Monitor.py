@@ -18,7 +18,7 @@ class Monitor(object):
         self.step_delay = self.settings.get("step_delay")
 
         self.sensors = self.environment.get_distance_sensors()
-        self.rf_sensor = self.environment.get_xbee_sensor()
+        self.rf_sensor = self.environment.get_rf_sensor()
 
         self.colors = ["red", "purple", "black"]
 

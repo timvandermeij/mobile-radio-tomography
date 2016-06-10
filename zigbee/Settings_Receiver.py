@@ -10,7 +10,7 @@ class Settings_Receiver(object):
     def __init__(self, environment):
         self._environment = environment
         self._arguments = self._environment.get_arguments()
-        self._rf_sensor = self._environment.get_xbee_sensor()
+        self._rf_sensor = self._environment.get_rf_sensor()
         self._thread_manager = self._environment.thread_manager
         self._new_settings = {}
 

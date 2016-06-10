@@ -36,7 +36,7 @@ class EnvironmentTestCase(LocationTestCase, SettingsTestCase,
     def register_arguments(self, argv, simulated=True, distance_sensors=None,
                            use_infrared_sensor=True):
         self._argv = argv
-        self._argv.extend(["--xbee-type", "XBee_Sensor_Simulator", "--xbee-id", "1"])
+        self._argv.extend(["--rf-sensor-class", "XBee_Sensor_Simulator", "--xbee-id", "1"])
 
         self._simulated = simulated
         # WiringPiTestCase provides a patcher for RPi.GPIO, which is necessary 
@@ -121,7 +121,7 @@ class TestEnvironment(EnvironmentTestCase):
         for servo in self.environment.get_servos():
             self.assertIsInstance(servo, Servo)
 
-        self.assertIsInstance(self.environment.get_xbee_sensor(), XBee_Sensor_Simulator)
+        self.assertIsInstance(self.environment.get_rf_sensor(), XBee_Sensor_Simulator)
         self.assertIsNotNone(self.environment.get_infrared_sensor())
 
     def test_packet_action(self):
@@ -162,25 +162,25 @@ class TestEnvironment(EnvironmentTestCase):
         self.assertEqual(0, waypoint_index)
 
     def test_location_valid(self):
-        xbee = self.environment.get_xbee_sensor()
+        rf_sensor = self.environment.get_rf_sensor()
 
         self.assertEqual(self.environment._valid_measurements, {})
-        self.assertEqual(self.environment._required_sensors, set(range(1, xbee.number_of_sensors + 1)))
+        self.assertEqual(self.environment._required_sensors, set(range(1, rf_sensor.number_of_sensors + 1)))
 
         self.assertTrue(self.environment.location_valid())
         self.assertFalse(self.environment.is_measurement_valid())
-        self.assertEqual(self.environment._valid_measurements, {xbee.id: 0})
+        self.assertEqual(self.environment._valid_measurements, {rf_sensor.id: 0})
 
-        self.assertTrue(self.environment.location_valid(other_valid=True, other_id=xbee.id + 1, other_index=0))
+        self.assertTrue(self.environment.location_valid(other_valid=True, other_id=rf_sensor.id + 1, other_index=0))
         self.assertFalse(self.environment.is_measurement_valid())
-        self.assertEqual(self.environment._valid_measurements, {xbee.id: 0, xbee.id + 1: 0})
+        self.assertEqual(self.environment._valid_measurements, {rf_sensor.id: 0, rf_sensor.id + 1: 0})
 
-        self.assertTrue(self.environment.location_valid(other_valid=True, other_id=xbee.id + 2, other_index=0))
+        self.assertTrue(self.environment.location_valid(other_valid=True, other_id=rf_sensor.id + 2, other_index=0))
         self.assertTrue(self.environment.is_measurement_valid())
 
         # Requiring a specific set of sensors
-        self.environment.invalidate_measurement(required_sensors=[xbee.id + 1])
+        self.environment.invalidate_measurement(required_sensors=[rf_sensor.id + 1])
         self.assertFalse(self.environment.is_measurement_valid())
 
-        self.assertTrue(self.environment.location_valid(other_valid=True, other_id=xbee.id + 1, other_index=0))
+        self.assertTrue(self.environment.location_valid(other_valid=True, other_id=rf_sensor.id + 1, other_index=0))
         self.assertTrue(self.environment.is_measurement_valid())

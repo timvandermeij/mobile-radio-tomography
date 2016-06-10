@@ -14,7 +14,7 @@ class TestZigBeeSettingsReceiver(EnvironmentTestCase):
 
         super(TestZigBeeSettingsReceiver, self).setUp()
 
-        self.rf_sensor = self.environment.get_xbee_sensor()
+        self.rf_sensor = self.environment.get_rf_sensor()
         self.settings_receiver = self.environment._settings_receiver
 
     def test_setup(self):

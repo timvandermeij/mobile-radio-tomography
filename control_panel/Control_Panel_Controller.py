@@ -88,7 +88,7 @@ class Control_Panel_Controller(object):
         """
 
         settings = self.arguments.get_settings("control_panel")
-        rf_sensor_class = settings.get("rf_sensor_class")
+        rf_sensor_class = settings.get("core_rf_sensor_class")
         rf_sensor_type = self.import_manager.load_class(rf_sensor_class,
                                                         relative_module="zigbee")
         self.rf_sensor = rf_sensor_type(self.arguments, self.thread_manager,

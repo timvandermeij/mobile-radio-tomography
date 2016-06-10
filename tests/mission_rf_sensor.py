@@ -21,7 +21,7 @@ class TestMissionRFSensor(EnvironmentTestCase):
 
         settings = self.arguments.get_settings("mission")
         self.mission = Mission_RF_Sensor(self.environment, settings)
-        self.rf_sensor = self.environment.get_xbee_sensor()
+        self.rf_sensor = self.environment.get_rf_sensor()
 
     def test_setup(self):
         with patch('sys.stdout'):
