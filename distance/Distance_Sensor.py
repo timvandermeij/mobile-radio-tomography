@@ -12,7 +12,14 @@ class Distance_Sensor(object):
 
     def get_angle(self, bearing=None):
         """
-        Convert a bearing angle given in `bearing` to an angle that the distance sensor uses.
+        Convert a bearing angle given in `bearing` to a mathematical angle that
+        the distance sensor can use.
+
+        The bearing is an angle that is zero degrees when facing north, and it
+        increases clockwise rather than counterclockwise. The `bearing` must
+        be given in radians. If `bearing` is not given, then the current yaw
+        of the given distance sensor, depending on servo and environment setup,
+        is used instead.
 
         The angle is returned in radians.
         """
@@ -29,7 +36,12 @@ class Distance_Sensor(object):
         return (angle + self.angle*math.pi/180) % (2*math.pi)
 
     def get_pitch(self, bearing=None):
+        """
+        Get the pitch of the distance sensor given the current pitch `bearing`
+        of the vehicle.
+        """
+
         if bearing is None:
             bearing = self.environment.get_pitch()
 
-        return 2*math.pi - bearing
+        return (2*math.pi - bearing) % (2*math.pi)

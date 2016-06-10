@@ -60,8 +60,10 @@ class Distance_Sensor_Simulator(Distance_Sensor):
             dists = []
             edges = self.geometry.get_point_edges(face)
             for edge in edges:
-                dists.append(self.geometry.get_edge_distance(edge, location, yaw_angle,
-                                                             pitch_angle, altitude_margin=self.altitude_margin))
+                dist = self.geometry.get_edge_distance(edge, location,
+                                                       yaw_angle, pitch_angle,
+                                                       altitude_margin=self.altitude_margin)
+                dists.append(dist)
 
             d_min = min(dists)
             e_min = dists.index(d_min)
@@ -180,4 +182,6 @@ class Distance_Sensor_Simulator(Distance_Sensor):
                 e0 = memory_map.get_xy_index(self.current_edge)
                 e1 = e0
 
-            plt.annotate("D", e0, e1, arrowprops=options, horizontalalignment='center', verticalalignment='center')
+            plt.annotate("D", e0, e1, arrowprops=options,
+                         horizontalalignment='center',
+                         verticalalignment='center')
