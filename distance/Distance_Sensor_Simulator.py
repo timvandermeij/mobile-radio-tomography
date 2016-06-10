@@ -25,11 +25,11 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         self.current_object = -1
         self.current_face = -1
 
-    def get_face_distance(self, face, location, yaw_angle, pitch_angle):
+    def _get_face_distance(self, face, location, yaw_angle, pitch_angle):
         """
         Get the direction distance to a plane `face` given as a polygon in a
         list of points from the `location` with yaw and pitch angles given by
-        `yaw_angle` and `[itch_angle`.
+        `yaw_angle` and `pitch_angle`.
 
         Returns the distance as well as the edge that was closest to the
         location, if there is any.
@@ -71,12 +71,14 @@ class Distance_Sensor_Simulator(Distance_Sensor):
 
         return (sys.float_info.max, None)
 
-    def get_plane_distance(self, face, location, yaw_angle, pitch_angle, verbose=False):
-        # Another point on the line.
-        p1 = self.geometry.get_location_angle(location, 1.0, yaw_angle, pitch_angle)
+    def _get_plane_distance(self, face, location, yaw_angle, pitch_angle,
+                            verbose=False):
+        # Another point on the line, one meter ahead.
+        p1 = self.geometry.get_location_angle(location, 1.0,
+                                              yaw_angle, pitch_angle)
         return self.geometry.get_plane_distance(face, location, p1, verbose)
 
-    def get_circle_distance(self, obj, location, yaw_angle):
+    def _get_circle_distance(self, obj, location, yaw_angle):
         center = self.geometry.get_location_local(obj['center'])
         location = self.geometry.get_location_local(location)
         if location.down > center.down - self.altitude_margin:
@@ -91,15 +93,27 @@ class Distance_Sensor_Simulator(Distance_Sensor):
 
         return sys.float_info.max
 
-    def get_obj_distance(self, obj, location, yaw_angle, pitch_angle, verbose=False):
+    def _get_object_distance(self, obj, location, yaw_angle, pitch_angle,
+                             verbose=False):
+        """
+        Calculate the distance from the Location object `location` to the given
+        object `obj`. The object can be represented as a list of face lists,
+        a tuple of top polygon points, or a dictionary containing a circular
+        cylinder, with a `center` location and `radius` distance.
+
+        Returns a tuple of distance and detected edge information, if any.
+        """
+
         if isinstance(obj, list):
             # List of faces.
             dists = []
             edges = []
             j = 0
             for face in obj:
-                dist, edge = self.get_plane_distance(face, location, yaw_angle, pitch_angle,
-                                                     verbose and j == self.current_face)
+                current_verbose = verbose and j == self.current_face
+                dist, edge = self._get_plane_distance(face, location,
+                                                      yaw_angle, pitch_angle,
+                                                      verbose=current_verbose)
                 dists.append(dist)
                 edges.append(edge)
                 j = j + 1
@@ -110,16 +124,18 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         elif isinstance(obj, tuple):
             # Single face with edges that are always perpendicular to our line 
             # of sight, from the ground up.
-            if self.geometry.point_inside_polygon(location, obj, altitude_margin=self.altitude_margin):
+            if self.geometry.point_inside_polygon(location, obj,
+                                                  altitude_margin=self.altitude_margin):
                 return (0, None)
 
-            return self.get_face_distance(obj, location, yaw_angle, pitch_angle)
-        elif 'center' in obj:
+            return self._get_face_distance(obj, location,
+                                           yaw_angle, pitch_angle)
+        elif isinstance(obj, dict) and 'center' in obj:
             # Cone object.
-            dist = self.get_circle_distance(obj, location, yaw_angle)
+            dist = self._get_circle_distance(obj, location, yaw_angle)
             return (dist, obj['center'])
 
-        return (self.maximum_distance, None)
+        raise ValueError("Invalid object '{}'".format(obj))
 
     def get_distance(self, location=None, yaw=None, pitch=None, **kwargs):
         """
@@ -142,7 +158,10 @@ class Distance_Sensor_Simulator(Distance_Sensor):
         distance = self.maximum_distance
         i = 0
         for obj in self.environment.get_objects():
-            dist, edge = self.get_obj_distance(obj, location, yaw_angle, pitch_angle, i == self.current_object)
+            is_current = i == self.current_object
+            dist, edge = self._get_object_distance(obj, location,
+                                                   yaw_angle, pitch_angle,
+                                                   verbose=is_current)
             if dist < distance:
                 distance = dist
                 if isinstance(edge, list):

@@ -73,7 +73,7 @@ class TestDistanceSensorSimulator(EnvironmentTestCase):
         self.check_draw_current_edge_calls(0, 1)
 
         # Non-straight angle
-        self.assertTrue(self.distance_sensor.get_distance(yaw=1.425*math.pi) < 2000)
+        self.assertTrue(self.distance_sensor.get_distance(yaw=0.33*math.pi) < 2000)
         self.assertIsInstance(self.distance_sensor.current_edge, tuple)
 
         # Inside an object
@@ -93,3 +93,8 @@ class TestDistanceSensorSimulator(EnvironmentTestCase):
         self.environment._load_objects(scenefile="tests/vrml/castle.wrl")
         self.distance_sensor.get_distance()
         self.check_draw_current_edge_calls(-1)
+
+    def test_get_distance_other(self):
+        self.environment.objects = [None]
+        with self.assertRaises(ValueError):
+            self.distance_sensor.get_distance()
