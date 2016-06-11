@@ -1,8 +1,10 @@
-from mock import patch, MagicMock
+from mock import patch, MagicMock, PropertyMock
 from ..core.Import_Manager import Import_Manager
 from ..core.Thread_Manager import Thread_Manager
+from ..core.USB_Manager import USB_Manager
 from ..distance.Distance_Sensor_Simulator import Distance_Sensor_Simulator
 from ..environment.Environment import Environment
+from ..environment.Environment_Simulator import Environment_Simulator
 from ..geometry.Geometry_Spherical import Geometry_Spherical
 from ..settings import Arguments
 from ..trajectory.Servo import Servo
@@ -93,6 +95,41 @@ class TestEnvironment(EnvironmentTestCase):
         super(TestEnvironment, self).setUp()
 
     def test_setup(self):
+        environment = Environment.setup(self.arguments,
+                                        simulated=self._simulated)
+        self.assertIsInstance(environment.usb_manager, USB_Manager)
+
+        geometry = Geometry_Spherical()
+        import_manager = Import_Manager()
+        thread_manager = Thread_Manager()
+        usb_manager = USB_Manager()
+        vehicle = Mock_Vehicle(self.arguments, geometry, import_manager,
+                               thread_manager, usb_manager)
+        environment = Environment.setup(self.arguments,
+                                        geometry_class="Geometry_Spherical",
+                                        vehicle=vehicle,
+                                        thread_manager=thread_manager,
+                                        usb_manager=usb_manager)
+        self.assertIsInstance(environment, Environment_Simulator)
+        self.assertIsInstance(environment.geometry, Geometry_Spherical)
+        self.assertEqual(environment.vehicle, vehicle)
+        self.assertEqual(environment.thread_manager, thread_manager)
+        self.assertEqual(environment.usb_manager, usb_manager)
+
+        with self.assertRaises(ValueError):
+            environment = Environment.setup(self.arguments, vehicle=vehicle)
+
+        simulation_mock = PropertyMock(return_value=False)
+        with patch.object(Mock_Vehicle, 'use_simulation', new_callable=simulation_mock):
+            vehicle = Mock_Vehicle(self.arguments, geometry, import_manager,
+                                   thread_manager, usb_manager)
+            with self.assertRaises(ValueError):
+                environment = Environment.setup(self.arguments, vehicle=vehicle,
+                                                thread_manager=thread_manager,
+                                                usb_manager=usb_manager,
+                                                simulated=True)
+
+    def test_initialization(self):
         self.assertIsInstance(self.environment, Environment)
         self.assertIsInstance(self.environment.vehicle, Mock_Vehicle)
         self.assertIsInstance(self.environment.geometry, Geometry_Spherical)
@@ -102,6 +139,7 @@ class TestEnvironment(EnvironmentTestCase):
         self.assertEqual(self.environment.arguments, self.arguments)
         self.assertTrue(self.environment.settings.get("infrared_sensor"))
 
+    def test_interface(self):
         self.assertEqual(self.environment.get_vehicle(), self.environment.vehicle)
         self.assertEqual(self.environment.get_geometry(), self.environment.geometry)
         self.assertEqual(self.environment.get_arguments(), self.environment.arguments)
