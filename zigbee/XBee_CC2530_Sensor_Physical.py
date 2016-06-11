@@ -39,8 +39,6 @@ class XBee_CC2530_Sensor_Physical(XBee_Sensor):
         data that we transfer is packed a `Packet` objects.
         """
 
-        self._type = "xbee_cc2530_sensor_physical"
-
         super(XBee_CC2530_Sensor_Physical, self).__init__(arguments, thread_manager,
                                                           usb_manager, location_callback,
                                                           receive_callback, valid_callback)
@@ -69,6 +67,10 @@ class XBee_CC2530_Sensor_Physical(XBee_Sensor):
             "cts_pin": self._settings.get("cts_pin"),
             "reset_pin": self._settings.get("reset_pin")
         }
+
+    @property
+    def type(self):
+        return "xbee_cc2530_sensor_physical"
 
     def setup(self):
         """

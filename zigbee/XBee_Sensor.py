@@ -60,7 +60,7 @@ class XBee_Sensor(Threadable):
             raise TypeError("Valid location callback is not callable")
 
         if isinstance(arguments, Arguments):
-            self._settings = arguments.get_settings(self._type)
+            self._settings = arguments.get_settings(self.type)
         else:
             raise ValueError("'arguments' must be an instance of Arguments")
 
@@ -87,6 +87,10 @@ class XBee_Sensor(Threadable):
     @property
     def id(self):
         return self._id
+
+    @property
+    def type(self):
+        raise NotImplementedError("Subclasses must implement `type` property")
 
     @property
     def number_of_sensors(self):

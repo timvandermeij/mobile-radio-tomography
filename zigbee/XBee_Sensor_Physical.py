@@ -14,8 +14,6 @@ class XBee_Sensor_Physical(XBee_Sensor):
         Initialize the physical XBee sensor.
         """
 
-        self._type = "xbee_sensor_physical"
-
         super(XBee_Sensor_Physical, self).__init__(arguments, thread_manager, usb_manager,
                                                    location_callback, receive_callback, valid_callback)
 
@@ -31,6 +29,10 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._sensors = self._settings.get("sensors")
         for index, address in enumerate(self._sensors):
             self._sensors[index] = address.decode("string_escape")
+
+    @property
+    def type(self):
+        return "xbee_sensor_physical"
 
     def setup(self):
         """
