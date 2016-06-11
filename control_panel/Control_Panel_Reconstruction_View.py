@@ -1,8 +1,3 @@
-# TODO:
-# - Investigate canvas flipping
-# - Average measurements of the same link
-# - Tweak calibration/ellipse width/singular values/model (based on grid experiments)
-
 # Core imports
 import json
 import thread
