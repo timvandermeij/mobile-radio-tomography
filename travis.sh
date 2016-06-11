@@ -15,6 +15,7 @@ if [ ! "$(ls -A lirc_install)" ]; then
     ./configure --prefix=$HOME/lirc_install CFLAGS='-g -O2 -lrt' CXXFLAGS='-g -O2 -lrt'
     make systemdsystemunitdir=$HOME/lirc_systemd
     make install systemdsystemunitdir=$HOME/lirc_systemd
+    popd
 fi
 
 if [ ! "$(ls -A qt_install)" ]; then
