@@ -1,7 +1,7 @@
 [![Build status](https://travis-ci.org/timvandermeij/mobile-radio-tomography.svg)](https://travis-ci.org/timvandermeij/mobile-radio-tomography)
 
 The mobile radio tomography framework provides tools for performing mobile radio
-tomographic imaging using XBee chips mounted on unmanned vehicles such as rover 
+tomographic imaging using RF sensors mounted on unmanned vehicles such as rover 
 cars or drones. This framework is the result of research projects and master 
 theses by Tim van der Meij ([@timvandermeij](https://github.com/timvandermeij)) 
 and Leon Helwerda ([@lhelwerd](https://github.com/lhelwerd)). The research is 
@@ -181,9 +181,9 @@ XBee sensor (physical)
 The physical XBee sensor code controls one XBee chip connected to the
 device via USB. Such a device can either be a computer or a Raspberry
 Pi. Start `screen` and run `python2 xbee_sensor_physical.py` to
-activate the XBee chip mounted onto an XBee USB dongle. Each sensor
-constantly receives packets (asynchronously), but sends packets according
-to a fixed TDMA schedule as defined by the settings in `settings.json`.
+activate the XBee chip mounted onto a USB dongle. Each sensor constantly
+receives packets (asynchronously), but sends packets according to a fixed
+TDMA schedule as defined by the settings in `settings.json`.
 
 To create the setup, first plug the ground station XBee chip into a USB
 port of the ground station computer. Start the physical XBee sensor code
@@ -247,18 +247,17 @@ tools, but work in concert with each other. We list the various views below.
 
 ### Loading view
 
-When starting the control panel, it starts in a splash screen that is 
-responsible for setting up XBee-related components.
+When starting the control panel, it starts a splash screen responsible for
+setting up components related to the RF sensors.
 
-The loading view checks whether a physical XBee sensor configured as a ground 
+The loading view checks whether a physical RF sensor configured as a ground 
 station sensor is connected through USB; otherwise, it waits for its insertion. 
-If you do not have a physical XBee, then use the button to switch to the 
-simulated version or run `python2 control_panel.py 
---controller-xbee-simulation` to start the control panel in this mode.
+If you do not have a physical RF sensor, then use the button to switch to the 
+simulated version.
 
 ### Devices view
 
-The devices view displays status information about the XBee sensors in the 
+The devices view displays status information about the RF sensors in the 
 network. It displays their numerical identifier, their category type, their 
 address identifier and their joined status. The number of sensors is determined 
 by a setting; adjust this setting in the [settings view](#settings-view) if 
@@ -283,10 +282,10 @@ the total time needed for the mission.
 
 ### Reconstruction view
 
-The reconstruction view converts a dataset, dump or XBee data stream with 
-signal strength measurements to input for the reconstructor, such as weight 
-matrices and grid pixel data. The result of the reconstruction is visualized as 
-a set of two-dimensional images. We provide multiple reconstructors:
+The reconstruction view converts a dataset, dump or stream of signal strength
+measurements to input for the reconstructor, such as weight matrices and grid
+pixel data. The result of the reconstruction is visualized as a set of
+two-dimensional images. We provide multiple reconstructors:
 
 * SVD
 * Total variation
@@ -300,7 +299,7 @@ calibration or analysis.
 ### Waypoints view
 
 The waypoints view makes it possible to define a mission when the vehicles are 
-operating in the `Mission_XBee` mission. You can add waypoints in each table 
+operating in the `Mission_RF_Sensor` mission. You can add waypoints in each table 
 and optionally synchronize between vehicles at each waypoint. It is possible to 
 import and export JSON waypoints for later usage. The waypoints are sent to the 
 vehicles using custom packets.
