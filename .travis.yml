@@ -6,20 +6,19 @@ addons:
         packages:
             - xsltproc
 before_install:
+    - export LD_LIBRARY_PATH=$HOME/lirc_install/lib:$HOME/qt_install/lib
+    - export LIBRARY_PATH=$HOME/lirc_install/lib:$HOME/qt_install/lib
+    - export CPATH=$HOME/lirc_install/include:$HOME/qt_install/include
+    - export PYTHONPATH=$PYTHONPATH:$HOME/qt_install/lib/python2.7/site-packages
     - ./travis.sh
 install:
-    - export LD_LIBRARY_PATH=$HOME/.local/lib
-    - export LIBRARY_PATH=$HOME/.local/lib
-    - export CPATH=$HOME/.local/include
     - pip install --upgrade pip
     - pip install -r requirements.txt
 cache:
     pip: true
     directories:
-        - $HOME/lirc
-        - $HOME/sip-4.18
-        - $HOME/PyQt-x11-gpl-4.11.4
+        - $HOME/lirc_install
+        - $HOME/qt_install
 script: make test
-sudo: true
 notifications:
     email: false
