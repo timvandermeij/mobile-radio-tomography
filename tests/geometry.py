@@ -1,7 +1,10 @@
 # Core imports
 import math
 import sys
+
+# Unit test imports
 import unittest
+from mock import patch
 
 # Library imports
 import numpy as np
@@ -42,11 +45,11 @@ class TestGeometry(LocationTestCase):
         self.coord_delta = self.dist_delta
         self.angle_delta = sys.float_info.epsilon * 10
 
-    def _make_global_location(self, x, y, z):
-        return LocationLocal(x, y, z)
+    def _make_global_location(self, x, y, z=0.0):
+        return LocationLocal(x, y, -z)
 
-    def _make_relative_location(self, x, y, z):
-        return LocationLocal(x, y, z)
+    def _make_relative_location(self, x, y, z=0.0):
+        return LocationLocal(x, y, -z)
 
     def test_home_location_type(self):
         with self.assertRaises(TypeError):
@@ -129,14 +132,6 @@ class TestGeometry(LocationTestCase):
         self.assertEqual(self.geometry.get_direction(0.0, math.pi/2), -1)
         self.assertEqual(self.geometry.get_direction(-math.pi/2, math.pi), 1)
 
-    def test_get_point_edges(self):
-        self.assertEqual(self.geometry.get_point_edges([]), [])
-        locations = [self._make_relative_location(*p) for p in [(1, 2, 3), (20.0, 4.3, 2.5), (3.14, 4.443, 1.2)]]
-        edges = self.geometry.get_point_edges(locations)
-        self.assertEqual(edges[0], (locations[0], locations[1]))
-        self.assertEqual(edges[1], (locations[1], locations[2]))
-        self.assertEqual(edges[2], (locations[2], locations[0]))
-
     def test_get_neighbor_offsets(self):
         offsets = self.geometry.get_neighbor_offsets()
         self.assertEqual(offsets.shape, (8, 2))
@@ -145,6 +140,97 @@ class TestGeometry(LocationTestCase):
         self.assertTrue(np.array_equal(offsets, [(-1, -1), (-1, 0), (-1, 1),
                                                   (0, -1),           (0, 1),
                                                   (1, -1),  (1, 0),  (1, 1)]))
+
+    def test_ray_intersects_segment(self):
+        cases = [
+            [(1, 0), (2, 1), (0, 1), True], # Vertical edge
+            [(1, 1), (2, 1), (0, 1), True], # Precisely on vertical edge
+            [(1, 1), (1, 4), (4, 1), True], # Non-straight edge
+            [(2, 0), (3, 1), (5.5, 3.25), False], # Too far north
+            [(3, 20), (3, 2), (5, 7.6), False], # Too far east
+            [(2, 3.5), (1, 1), (4, 4), False], # Right from edge
+            [(2, 4), (1, 1), (4, 4), False] # Right from edge
+        ]
+        for case in cases:
+            P = self._make_relative_location(*case[0])
+            start = self._make_relative_location(*case[1])
+            end = self._make_relative_location(*case[2])
+            expected = case[3]
+            with patch('sys.stdout'):
+                actual = self.geometry.ray_intersects_segment(P, start, end,
+                                                              verbose=True)
+                msg = "Ray from {0} must{expect} intersect start={1}, end={2}"
+                msg = msg.format(*case, expect="" if expected else " not")
+                self.assertEqual(actual, expected, msg=msg)
+
+    def test_point_inside_polygon(self):
+        # http://rosettacode.org/wiki/Ray-casting_algorithm#Python
+        polys = {
+            "square": [(0, 0), (10, 0), (10, 10), (0, 10)],
+            "square_hole": [
+                (0, 0), (10, 0), (10, 10), (0, 10), (0, 0),
+                (2.5, 2.5), (7.5, 2.5), (7.5, 7.5), (2.5, 7.5)
+            ],
+            "exagon": [(3, 0), (7, 0), (10, 5), (7, 10), (3, 10), (0, 5)]
+        }
+        locs = [(5, 8), (-10, 5), (10, 10)]
+        results = {
+            "square": [True, False, False],
+            "square_hole": [True, False, False],
+            "exagon": [True, False, False]
+        }
+
+        for name, poly in polys.iteritems():
+            points = [self._make_relative_location(*p) for p in poly]
+            for loc, expected in zip(locs, results[name]):
+                location = self._make_relative_location(*loc)
+                actual = self.geometry.point_inside_polygon(location, points)
+                msg = "Point {} must{} be inside polygon {}".format(loc, "" if expected else " not", name)
+                self.assertEqual(actual, expected, msg=msg)
+
+        poly = polys["square"]
+        points = [self._make_relative_location(p[0], p[1], 0.0) for p in poly]
+        location = self._make_relative_location(1, 2, 3)
+        with patch('sys.stdout'):
+            inside = self.geometry.point_inside_polygon(location, points,
+                                                        alt=True, verbose=True)
+            self.assertFalse(inside)
+
+    def test_get_edge_distance(self):
+        start_location = self._make_relative_location(0.0, 0.0, 0.0)
+        cases = [
+            [(1, 0), (2, 1), (0, 1), 1.0], # Vertical edge
+            [(1, 0), (2, 0), (2, 2), sys.float_info.max], # Horizontal edge
+            [(1, 1), (2, 1), (0, 1), 0.0], # Precisely on vertical edge
+            [(1, 1), (1, 4), (4, 1), 3.0], # Non-straight edge
+            [(1, 1), (4, 1), (1, 4), 3.0], # Non-straight edge (swapped)
+            [(1, 1), (2, 4), (4, 2), sys.float_info.max] # Non-extended line
+        ]
+        for case in cases:
+            loc = self.geometry.get_location_meters(start_location, *case[0])
+            start = self.geometry.get_location_meters(start_location, *case[1])
+            end = self.geometry.get_location_meters(start_location, *case[2])
+            expected = case[3]
+
+            actual = self.geometry.get_edge_distance((start, end), loc)
+            self.assertAlmostEqual(actual, expected, delta=self.dist_delta)
+
+        # Miss the edge
+        loc = self.geometry.get_location_meters(start_location, 1, 0, 1.0)
+        start = self.geometry.get_location_meters(start_location, 2, 1, 0)
+        end = self.geometry.get_location_meters(start_location, 0, 1, 0)
+        actual = self.geometry.get_edge_distance((start, end), loc,
+                                                 pitch_angle=1.5*math.pi)
+        self.assertEqual(actual, sys.float_info.max)
+
+    def test_get_point_edges(self):
+        self.assertEqual(self.geometry.get_point_edges([]), [])
+        points = [(1, 2, 3), (20.0, 4.3, 2.5), (3.14, 4.443, 1.2)]
+        locations = [self._make_relative_location(*p) for p in points]
+        edges = self.geometry.get_point_edges(locations)
+        self.assertEqual(edges[0], (locations[0], locations[1]))
+        self.assertEqual(edges[1], (locations[1], locations[2]))
+        self.assertEqual(edges[2], (locations[2], locations[0]))
 
 class TestGeometry_Grid(TestGeometry):
     def setUp(self):
@@ -178,10 +264,10 @@ class TestGeometry_Spherical(TestGeometry):
         # curvature into account.
         self.angle_delta = 0.15 * math.pi/180
 
-    def _make_global_location(self, x, y, z):
+    def _make_global_location(self, x, y, z=0.0):
         return LocationGlobal(x, y, z)
 
-    def _make_relative_location(self, x, y, z):
+    def _make_relative_location(self, x, y, z=0.0):
         return LocationGlobalRelative(x, y, z)
 
     def test_home_location_type(self):

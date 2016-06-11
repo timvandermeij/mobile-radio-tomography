@@ -76,9 +76,18 @@ class TestDistanceSensorSimulator(EnvironmentTestCase):
         self.assertTrue(self.distance_sensor.get_distance(yaw=0.33*math.pi) < 2000)
         self.assertIsInstance(self.distance_sensor.current_edge, tuple)
 
+        # Yaw angle misses objects
+        self.assertFalse(self.distance_sensor.get_distance(yaw=0.25*math.pi) < 2000)
+        self.assertIsNone(self.distance_sensor.current_edge)
+
+        # Pitch agle misses objects
+        self.assertFalse(self.distance_sensor.get_distance(pitch=0.5*math.pi) < 2000)
+        self.assertIsNone(self.distance_sensor.current_edge)
+
         # Inside an object
         loc = self.environment.get_location(100, 0, 5)
         self.assertEqual(self.distance_sensor.get_distance(location=loc), 0.0)
+        self.assertIsNone(self.distance_sensor.current_edge)
 
     def test_get_distance_circle(self):
         self.environment._load_objects()
