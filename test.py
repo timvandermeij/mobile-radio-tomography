@@ -157,6 +157,58 @@ class Test_Run(object):
 
         return os.environ[environment_variable]
 
+    def _get_commit_range(self):
+        """
+        Retrieve a Git commit range specification that includes the current
+        branch, pull request or pushed commits.
+
+        If no such range can be found, this returns an empty string.
+        """
+
+        # Check the commit range determined by Travis.
+        commit_range = self._get_travis_environment("COMMIT_RANGE")
+        if not commit_range:
+            # For branches with only one commit, there may be no commit range. 
+            # Try to find the one commit.
+            return self._get_travis_environment("COMMIT")
+
+        # Determine the commit range of the current branch.
+        range_parts = commit_range.split('.')
+        first_commit = range_parts[0]
+        latest_commit = range_parts[-1]
+        pull_request = self._get_travis_environment("PULL_REQUEST")
+        base_commit = ""
+
+        if pull_request == "false":
+            branch = self._get_travis_environment("BRANCH")
+            default_branch = self._settings.get("default_branch")
+            if branch != default_branch:
+                # Retrieve the FETCH_HEAD of the default branch, since Travis 
+                # has a partial clone that does not contain all branch heads.
+                check_call(["git", "fetch", "origin", default_branch])
+                base_commit = "FETCH_HEAD"
+        elif pull_request:
+            base_commit = self._get_travis_environment("BRANCH")
+
+        if base_commit:
+            # Find commit hash of the earliest boundary point, which should be 
+            # the fork point of the current branch, i.e. where the commits 
+            # diverge from master ignoring merges from master. This could also 
+            # be found using `git merge-base --fork-point`, but this is not 
+            # supported on Git 1.8. There are more contrived solutions at 
+            # http://stackoverflow.com/q/1527234 but this single call works 
+            # good enough.
+            commits = check_output([
+                "git", "rev-list", "--boundary",
+                "{}...{}".format(base_commit, latest_commit)
+            ]).splitlines()
+
+            fork_commits = [commit[1:] for commit in commits if commit.startswith('-')]
+            if fork_commits:
+                first_commit = fork_commits[-1]
+
+        return "{}..{}".format(first_commit, latest_commit)
+
     def get_changed_files(self):
         """
         Retrieve the files that were changed in a commit range.
@@ -169,45 +221,13 @@ class Test_Run(object):
         variable has the value "false" denoting that it is not a PR build.
 
         Only files that were changed and not deleted in those commits are
-        included in the returned list.
+        included in the returned list. The commit range is also returned.
         """
 
-        # Check the commit range determined by Travis. We do not provide a list 
-        # of changed files if we are not running on Travis.
-        commit_range = self._get_travis_environment("COMMIT_RANGE")
+        commit_range = self._get_commit_range()
         if not commit_range:
-            return []
-
-        # Determine the latest commit of the current branch.
-        range_parts = commit_range.split('.')
-        first_commit = range_parts[0]
-        latest_commit = range_parts[-1]
-
-        if self._get_travis_environment("PULL_REQUEST") == "false":
-            branch = self._get_travis_environment("BRANCH")
-            default_branch = self._settings.get("default_branch")
-            if branch != default_branch:
-                # Retrieve the FETCH_HEAD of the default branch, since Travis 
-                # has a partial clone that does not contain all branch heads.
-                check_call(["git", "fetch", "origin", default_branch])
-
-                # Find commit hash of the earliest boundary point, which should 
-                # be the fork point of the current branch, i.e. where the 
-                # commits diverge from master ignoring merges from master. This 
-                # could also be found using `git merge-base --fork-point`, but 
-                # this is not supported on Git 1.8. There are more contrived 
-                # solutions at http://stackoverflow.com/q/1527234 but this 
-                # single call works good enough.
-                commits = check_output([
-                    "git", "rev-list", "--boundary",
-                    "FETCH_HEAD...{}".format(latest_commit)
-                ]).splitlines()
-
-                fork_commits = [commit[1:] for commit in commits if commit.startswith('-')]
-                if fork_commits:
-                    first_commit = fork_commits[-1]
-
-        commit_range = "{}..{}".format(first_commit, latest_commit)
+            # We can only determine the commit range on Travis.
+            return [], ""
 
         # Retrieve all files that were changed in a commit. This excludes 
         # deleted files which no longer exist at this point. Based on 
@@ -217,7 +237,7 @@ class Test_Run(object):
             "--diff-filter=ACMRTUXB", "-r", commit_range
         ])
 
-        return output.splitlines()
+        return output.splitlines(), commit_range
 
     def execute_pylint(self, files):
         """
@@ -285,9 +305,9 @@ def main(argv):
         print("> Executing code coverage")
         print(coverage_report)
 
-    files = test_run.get_changed_files()
+    files, commit_range = test_run.get_changed_files()
     if files:
-        print("> Executing pylint on changed files")
+        print("> Executing pylint on changed files from {}".format(commit_range))
         test_run.execute_pylint(files)
 
     print("> Cleaning up the logs directory")
