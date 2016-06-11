@@ -17,21 +17,23 @@ work on Windows or any other operating system since all prerequisites are also
 available for those systems, perhaps with slightly different installation 
 procedures.
 
-* Git
+* [Git](https://git-scm.com/)
 * Binaries and development headers for the [LIRC](http://www.lirc.org/) package 
   for remote control support. Check whether and how your package manager 
   provides these packages, otherwise you can retrieve them from the LIRC 
   website itself.
 * Python 2.7. Note that Python 3 cannot be used at this moment.
-* PyQt4
+* [SIP](https://www.riverbankcomputing.com/software/sip) and 
+  [PyQt4](https://www.riverbankcomputing.com/software/pyqt). These may be 
+  available from package managers, but are not available through `pip`.
 * `pip` for Python 2.7. `pip` is often not available on extremely old and bare
   systems. If it is not delivered by a package manager, one can also
   [install it with get-pip.py](https://pip.pypa.io/en/latest/installing.html).
   Ensure that you have the correct version of `pip` with `pip2 --version`. See 
   the [Python packages](#python-packages) section below for installing the 
   required packages using `pip`.
-* ArduPilot for vehicle simulation. See the [ArduPilot](#ardupilot) section 
-  below for more details.
+* [ArduPilot](http://dev.ardupilot.com/ardupilot/index.html) for vehicle 
+  simulation. See the [ArduPilot section](#ardupilot) below for more details.
 
 For all commands in this file, replace `python2` with `python`, and `pip2` with 
 `pip` if your operating system does not need to distinguish between Python 
