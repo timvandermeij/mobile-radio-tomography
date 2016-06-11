@@ -159,17 +159,19 @@ class XBee_Sensor_Simulator(XBee_Sensor):
         Receive and process packets from all other sensors in the network.
         """
 
-        if not self._check_receive(packet):
-            if self._id > 0:
-                self._next_timestamp = self._scheduler.synchronize(packet)
+        # Show all received packets (including private ones) in simulation mode.
+        self._receive_callback(packet)
 
-                # Create and complete the packet for the ground station.
-                ground_station_packet = self._make_rssi_ground_station_packet(packet)
-                ground_station_packet.set("rssi", -random.randint(30, 70))
-                frame_id = chr(random.randint(1, 255))
-                self._data[frame_id] = ground_station_packet
-            elif self._buffer is not None:
-                self._buffer.put(packet)
+        if self._id > 0:
+            self._next_timestamp = self._scheduler.synchronize(packet)
+
+            # Create and complete the packet for the ground station.
+            ground_station_packet = self._make_rssi_ground_station_packet(packet)
+            ground_station_packet.set("rssi", -random.randint(30, 70))
+            frame_id = chr(random.randint(1, 255))
+            self._data[frame_id] = ground_station_packet
+        elif self._buffer is not None:
+            self._buffer.put(packet)
 
     def _format_address(self, address):
         """
