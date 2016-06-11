@@ -13,7 +13,7 @@ fi
 
 pushd lirc
 sudo make install
-popd lirc
+popd
 
 # SIP
 if [ ! "$(ls -A sip-4.18)" ]; then
