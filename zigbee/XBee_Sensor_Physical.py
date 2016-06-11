@@ -4,7 +4,7 @@ import thread
 import time
 from xbee import ZigBee
 from NTP import NTP
-from XBee_Packet import XBee_Packet
+from Packet import Packet
 from XBee_Sensor import XBee_Sensor, SensorClosedError
 
 class XBee_Sensor_Physical(XBee_Sensor):
@@ -13,8 +13,6 @@ class XBee_Sensor_Physical(XBee_Sensor):
         """
         Initialize the physical XBee sensor.
         """
-
-        self._type = "xbee_sensor_physical"
 
         super(XBee_Sensor_Physical, self).__init__(arguments, thread_manager, usb_manager,
                                                    location_callback, receive_callback, valid_callback)
@@ -31,6 +29,10 @@ class XBee_Sensor_Physical(XBee_Sensor):
         self._sensors = self._settings.get("sensors")
         for index, address in enumerate(self._sensors):
             self._sensors[index] = address.decode("string_escape")
+
+    @property
+    def type(self):
+        return "xbee_sensor_physical"
 
     def setup(self):
         """
@@ -226,8 +228,8 @@ class XBee_Sensor_Physical(XBee_Sensor):
         Process RX packets and handle NTP and RSSI requests.
         """
 
-        # Convert the raw packet to an XBee packet according to specifications.
-        packet = XBee_Packet()
+        # Convert the raw packet to a `Packet` object according to specifications.
+        packet = Packet()
         packet.unserialize(raw_packet["rf_data"])
 
         # Check whether the packet is not private and pass it along to the 

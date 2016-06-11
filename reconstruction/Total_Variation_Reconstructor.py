@@ -1,8 +1,3 @@
-# TODO:
-# - Use entire distance matrix?
-# - Norm versus square?
-# - Experiment with different parameters/difference matrix kernels/OpenBLAS
-
 # Core imports
 from functools import partial
 
