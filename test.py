@@ -226,7 +226,13 @@ class Test_Run(object):
         Only Python files are included in the lint check.
         """
 
+        # Filter list of file names to only include Python files.
         files = [filename for filename in files if filename.endswith('.py')]
+        # There might not be any Python files left after filtering the list, so 
+        # do not run pylint if this is the case.
+        if not files:
+            return
+
         try:
             pylint.lint.Run(["--disable=duplicate-code", "--reports=n"] + files)
         except SystemExit as e:
