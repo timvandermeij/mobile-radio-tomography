@@ -7,10 +7,10 @@ import pylint.checkers.exceptions as exceptions
 import pylint.checkers.utils as utils
 
 def is_raising(linter, body):
+    handlers = ("destroy", "error", "interrupt", "format_exc", "print_exc")
     for node in body:
         if isinstance(node, astroid.Expr) and isinstance(node.value, astroid.Call):
-            func = utils.safe_infer(node.value.func)
-            if func.name in ("destroy", "interrupt", "print_exc"):
+            if node.value.func.attrname in handlers:
                 return True
 
     return linter._old_is_raising(body)
