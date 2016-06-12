@@ -233,7 +233,7 @@ class RF_Sensor(Threadable):
 
     def _send_tx_frame(self, packet, to=None):
         """
-        Send a TX frame to another sensor.
+        Send a TX frame with `packet` as payload `to` another sensor.
 
         Classes that inherit this base class must extend this method.
         """

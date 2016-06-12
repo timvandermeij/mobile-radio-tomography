@@ -974,7 +974,7 @@
         "name": "XBee sensor (simulator)",
         "parent": "zigbee_base",
         "settings": {
-            "ip": {
+            "socket_ip": {
                 "help": "IP address to connect the socket to",
                 "type": "string",
                 "required": false,
