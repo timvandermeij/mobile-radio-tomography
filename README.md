@@ -167,37 +167,22 @@ important setting might be the mission class to use for calculating what
 trajectory to take. You can choose one of the classes in `trajectory/Mission.py`
 using `--mission-class <Mission_Name>`.
 
-XBee sensor (simulator)
------------------------
+RF sensor
+---------
 
-The XBee sensor simulator is used to simulate the behavior of an XBee
-sensor network. This is especially useful for determining communication
-schemes for the sensors. Start the tool on a laptop or desktop computer
-with `python2 xbee_sensor_simulator.py` in a terminal to get output in the
-terminal. Settings for the simulation, such as the number of sensors in the
-network, can be altered in the `settings.json` file.
+This tool allows you to work with all supported RF sensor classes. It is
+possible to start simulated RF sensors as well as physical RF sensors such as
+XBee devices or Texas Instruments devices. Start the tool with `python2
+rf_sensor.py [class_name] [arguments]`. For example, to create a simulated
+sensor network, open three terminals and run the following commands:
 
-XBee sensor (physical)
-----------------------
+- In terminal 1: `python2 rf_sensor.py XBee_Sensor_Simulator --rf-sensor-id 0`
+- In terminal 2: `python2 rf_sensor.py XBee_Sensor_Simulator --rf-sensor-id 1`
+- In terminal 3: `python2 rf_sensor.py XBee_Sensor_Simulator --rf-sensor-id 2`
 
-The physical XBee sensor code controls one XBee chip connected to the
-device via USB. Such a device can either be a computer or a Raspberry
-Pi. Start `screen` and run `python2 xbee_sensor_physical.py` to
-activate the XBee chip mounted onto a USB dongle. Each sensor constantly
-receives packets (asynchronously), but sends packets according to a fixed
-TDMA schedule as defined by the settings in `settings.json`.
-
-To create the setup, first plug the ground station XBee chip into a USB
-port of the ground station computer. Start the physical XBee sensor code
-as mentioned above and observe that nothing is happening yet. Then, for
-each other XBee chip in the network, power up the accompanying Raspberry
-Pi, connect it to the ground station computer via an Ethernet cable as 
-described in the Raspberry Pi document, plug in the XBee USB dongle
-and start the physical XBee sensor code as mentioned above. You should now
-see packets arriving in the ground station's terminal. Note that once the
-process is running, you can detach the screen and disconnect the Ethernet
-cable to have unconnected nodes that you can move around (assuming that
-they are powered by a battery pack).
+You should see packets being output in each terminal window. The simulation
+mode is especially useful for debugging and scheduling research, while the
+physical mode is primarily used for performing signal strength measurements.
 
 Distance sensor (physical)
 --------------------------
