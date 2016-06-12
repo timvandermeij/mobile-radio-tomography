@@ -1,6 +1,7 @@
 # Core imports
 import copy
 import Queue
+import thread
 import time
 
 # Package imports
@@ -142,6 +143,41 @@ class RF_Sensor(Threadable):
             "address": self._address,
             "joined": self._joined
         }
+
+    def activate(self):
+        """
+        Activate the sensor to start sending and receiving packets.
+
+        Classes that inherit this base class may extend this method.
+        """
+
+        super(RF_Sensor, self).activate()
+
+        if not self._activated:
+            self._activated = True
+
+            if self._connection is None:
+                self._setup()
+
+            thread.start_new_thread(self._loop, ())
+
+    def deactivate(self):
+        """
+        Deactivate the sensor to stop sending and receiving packets.
+
+        Classes that inherit this base class may extend this method.
+        """
+
+        super(RF_Sensor, self).deactivate()
+
+        if self._activated:
+            self._activated = False
+
+        if self._connection is not None:
+            # Close the connection and clean up so that the thread might get 
+            # the signal faster and we can correctly reactivate later on.
+            self._connection.close()
+            self._connection = None
 
     def start(self):
         """

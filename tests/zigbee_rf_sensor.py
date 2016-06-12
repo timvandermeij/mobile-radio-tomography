@@ -1,5 +1,6 @@
 # Core imports
 import Queue
+import thread
 import time
 
 # Library imports
@@ -101,6 +102,30 @@ class TestZigBeeRFSensor(SettingsTestCase):
             "address": self.rf_sensor._address,
             "joined": self.rf_sensor._joined
         })
+
+    def test_activate(self):
+        with patch.object(RF_Sensor, "_setup") as setup_mock:
+            with patch.object(thread, "start_new_thread") as start_new_thread_mock:
+                self.rf_sensor.activate()
+
+                # The sensor must be setup and the loop thread must be started.
+                self.assertEqual(self.rf_sensor._activated, True)
+                self.assertEqual(setup_mock.call_count, 1)
+                self.assertEqual(start_new_thread_mock.call_count, 1)
+
+    def test_deactivate(self):
+        connection_mock = MagicMock()
+
+        with patch.object(RF_Sensor, "_setup"):
+            with patch.object(thread, "start_new_thread"):
+                self.rf_sensor.activate()
+                self.rf_sensor._connection = connection_mock
+                self.rf_sensor.deactivate()
+
+                # The connection must be closed and the sensor must be deactivated.
+                self.assertEqual(self.rf_sensor._activated, False)
+                self.assertEqual(connection_mock.close.call_count, 1)
+                self.assertEqual(self.rf_sensor._connection, None)
 
     def test_start(self):
         # The sensor must be started for sending RSSI broadcast/ground
