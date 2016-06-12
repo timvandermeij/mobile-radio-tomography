@@ -970,25 +970,25 @@
             }
         }
     },
-    "xbee_sensor_simulator": {
-        "name": "XBee sensor (simulator)",
+    "rf_sensor_simulator": {
+        "name": "RF sensor simulator",
         "parent": "zigbee_base",
         "settings": {
             "socket_ip": {
-                "help": "IP address to connect the socket to",
+                "help": "IP address for connecting the socket",
                 "type": "string",
                 "required": false,
                 "default": "127.0.0.1"
             },
             "socket_port": {
-                "help": "Network port to connect the socket to",
+                "help": "Port for connecting the socket",
                 "type": "int",
                 "min": 0,
                 "max": 65535,
                 "default": 3233
             },
             "buffer_size": {
-                "help": "Size of the buffer to read at most from the socket each time",
+                "help": "Number of bytes to read from the socket at once",
                 "type": "int",
                 "min": 1,
                 "default": 256
