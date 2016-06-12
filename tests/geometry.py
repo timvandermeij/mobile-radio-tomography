@@ -216,11 +216,11 @@ class TestGeometry(LocationTestCase):
             self.assertAlmostEqual(actual, expected, delta=self.dist_delta)
 
         # Miss the edge
-        loc = self.geometry.get_location_meters(start_location, 1, 0, 1.0)
+        loc = self.geometry.get_location_meters(start_location, 1, 0.66, 0)
         start = self.geometry.get_location_meters(start_location, 2, 1, 0)
         end = self.geometry.get_location_meters(start_location, 0, 1, 0)
         actual = self.geometry.get_edge_distance((start, end), loc,
-                                                 pitch_angle=1.5*math.pi)
+                                                 pitch_angle=0.25*math.pi)
         self.assertEqual(actual, sys.float_info.max)
 
     def test_get_point_edges(self):
@@ -231,6 +231,70 @@ class TestGeometry(LocationTestCase):
         self.assertEqual(edges[0], (locations[0], locations[1]))
         self.assertEqual(edges[1], (locations[1], locations[2]))
         self.assertEqual(edges[2], (locations[2], locations[0]))
+
+    def test_get_plane_distance(self):
+        start_location = self._make_relative_location(0.0, 0.0, 0.0)
+        cases = [
+            # Upward polygon
+            {
+                "points": [(1, 2, 3), (1, 4, 3), (1, 4, 9), (1, 2, 9)],
+                "location1": (0, 3, 6),
+                "location2": (0.1, 3, 6),
+                "distance": 1.0,
+                "loc_point": (1, 3, 6)
+            },
+            # Missing the polygon
+            {
+                "points": [(1, 2, 3), (1, 4, 3), (1, 4, 9), (1, 2, 9)],
+                "location1": (0, 5, 6),
+                "location2": (0.1, 5, 6),
+                "distance": sys.float_info.max,
+                "loc_point": None
+            },
+            # Line segment in the other direction
+            {
+                "points": [(1, 2, 3), (1, 4, 3), (1, 4, 9), (1, 2, 9)],
+                "location1": (0, 3, 6),
+                "location2": (-0.1, 3, 6),
+                "distance": sys.float_info.max,
+                "loc_point": None
+            },
+            # Not intersecting with plane
+            {
+                "points": [(1, 2, 3), (1, 4, 3), (1, 4, 9), (1, 2, 9)],
+                "location1": (0, 3, 6),
+                "location2": (0, 3.1, 6),
+                "distance": sys.float_info.max,
+                "loc_point": None
+            },
+            # Incomplete face
+            {
+                "points": [(1, 2, 3), (1, 4, 3)],
+                "location1": (0, 3, 6),
+                "location2": (0.1, 3, 6),
+                "distance": sys.float_info.max,
+                "loc_point": None
+            }
+        ]
+        for case in cases:
+            face = [self.geometry.get_location_meters(start_location, *p) for p in case["points"]]
+            loc1 = self.geometry.get_location_meters(start_location, *case["location1"])
+            loc2 = self.geometry.get_location_meters(start_location, *case["location2"])
+            with patch('sys.stdout'):
+                dist, point = self.geometry.get_plane_distance(face,
+                                                               loc1, loc2,
+                                                               verbose=True)
+
+            self.assertAlmostEqual(dist, case["distance"], delta=self.dist_delta)
+            if case["loc_point"] is None:
+                self.assertIsNone(point)
+            else:
+                actual = self.geometry.get_location_local(point)
+                loc_point = self.geometry.get_location_meters(start_location, *case["loc_point"])
+                expected = self.geometry.get_location_local(loc_point)
+                self.assertAlmostEqual(actual.north, expected.north, delta=self.coord_delta)
+                self.assertAlmostEqual(actual.east, expected.east, delta=self.coord_delta)
+                self.assertAlmostEqual(actual.down, expected.down, delta=self.coord_delta)
 
 class TestGeometry_Grid(TestGeometry):
     def setUp(self):

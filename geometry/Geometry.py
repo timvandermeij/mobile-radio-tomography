@@ -440,7 +440,7 @@ class Geometry(object):
 
         return cp, d
 
-    def check_dot(self, dot):
+    def _check_dot(self, dot):
         """
         Check whether a dot product `dot` is large enough to be noticeable.
 
@@ -547,7 +547,7 @@ class Geometry(object):
         u = np.array(self.diff_location_meters(location1, location2))
         # Dot product between the line and the plane vector
         nu_dot = np.dot(cp, u)
-        if not self.check_dot(nu_dot):
+        if not self._check_dot(nu_dot):
             if verbose:
                 print("Dot product not good enough, no intersection: dot={}, u={}.".format(nu_dot, u))
 
