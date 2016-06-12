@@ -4,11 +4,11 @@ import sys
 
 # Unit test imports
 import unittest
-from mock import patch
+from mock import patch, Mock, PropertyMock
 
 # Library imports
 import numpy as np
-from dronekit import LocationGlobal, LocationGlobalRelative, LocationLocal
+from dronekit import LocationGlobal, LocationGlobalRelative, LocationLocal, Locations
 
 # Package imports
 from ..geometry.Geometry import Geometry
@@ -81,6 +81,22 @@ class TestGeometry(LocationTestCase):
     def test_angle_to_bearing(self):
         angle = 180.0 * math.pi/180
         self.assertEqual(self.geometry.angle_to_bearing(angle), 270.0 * math.pi/180)
+
+    def test_get_location_local(self):
+        loc = LocationLocal(7.6, 5.4, -3.2)
+        self.assertEqual(self.geometry.get_location_local(loc), loc)
+
+        locations_mock = Mock(spec_set=Locations)
+        local_mock = PropertyMock(return_value=loc)
+        type(locations_mock).local_frame = local_mock
+        self.assertEqual(self.geometry.get_location_local(locations_mock), loc)
+        local_mock.assert_called_once_with()
+
+    def test_get_location_local_other(self):
+        with self.assertRaises(TypeError):
+            self.geometry.get_location_local(LocationGlobal(1.0, 2.0, 3.0))
+        with self.assertRaises(TypeError):
+            self.geometry.get_location_local(LocationGlobalRelative(1.0, 2.0, 3.0))
 
     def test_location_meters(self):
         loc = LocationLocal(5.4, 3.2, -1.0)
@@ -341,10 +357,69 @@ class TestGeometry_Spherical(TestGeometry):
         with self.assertRaises(TypeError):
             self.geometry.set_home_location(LocationLocal(3.0, 2.0, 1.0))
 
+        locations_mock = Mock(spec_set=Locations)
+        global_mock = PropertyMock(return_value=LocationGlobal(3.0, 2.0, 1.0))
+        type(locations_mock).global_frame = global_mock
+        self.geometry.set_home_location(locations_mock)
+        global_mock.assert_called_once_with()
+
+    def test_get_location_local_other(self):
+        home_loc = self._make_global_location(5.0, 3.14, 10.0)
+        self.geometry.set_home_location(home_loc)
+
+        relative_loc = self.geometry.get_location_meters(home_loc, 0.4, 0.06, 1.0)
+        local_loc = LocationLocal(0.4, 0.06, -1.0)
+        new_loc = self.geometry.get_location_local(relative_loc)
+        self.assertAlmostEqual(new_loc.north, local_loc.north, delta=self.coord_delta)
+        self.assertAlmostEqual(new_loc.east, local_loc.east, delta=self.coord_delta)
+        self.assertAlmostEqual(new_loc.down, local_loc.down, delta=self.coord_delta)
+
+        global_loc = LocationGlobal(relative_loc.lat, relative_loc.lon, 11.0)
+        new_loc = self.geometry.get_location_local(global_loc)
+        self.assertAlmostEqual(new_loc.north, local_loc.north, delta=self.coord_delta)
+        self.assertAlmostEqual(new_loc.east, local_loc.east, delta=self.coord_delta)
+        self.assertAlmostEqual(new_loc.down, local_loc.down, delta=self.coord_delta)
+
+    def test_get_locations_frame(self):
+        locations_mock = Mock(spec_set=Locations)
+
+        global_relative_loc = LocationGlobalRelative(6.0, 5.0, 4.0)
+        global_loc = LocationGlobal(3.0, 2.0, 1.0)
+        local_loc = LocationLocal(0.0, -1.0, -2.0)
+
+        global_relative_mock = PropertyMock(return_value=global_relative_loc)
+        global_mock = PropertyMock(return_value=global_loc)
+        local_mock = PropertyMock(return_value=local_loc)
+
+        type(locations_mock).global_relative_frame = global_relative_mock
+        type(locations_mock).global_frame = global_mock
+        type(locations_mock).local_frame = local_mock
+
+        loc1 = LocationGlobalRelative(5.4, 3.2, 1.0)
+        self.assertEqual(self.geometry.get_locations_frame(locations_mock, loc1), global_relative_loc)
+        global_relative_mock.assert_called_once_with()
+
+        loc2 = LocationGlobal(8.6, 4.2, 0.8)
+        self.assertEqual(self.geometry.get_locations_frame(locations_mock, loc2), global_loc)
+        global_mock.assert_called_once_with()
+
+        loc3 = LocationLocal(-2.0, 4.5, -2.5)
+        self.assertEqual(self.geometry.get_locations_frame(locations_mock, loc3), local_loc)
+        local_mock.assert_called_once_with()
+
     def test_equalize(self):
         home_loc = self._make_global_location(5.0, 3.14, 10.0)
         self.geometry.set_home_location(home_loc)
         loc1 = self.geometry.get_location_meters(home_loc, 0.4, 0.06, 1.0)
         loc2 = LocationLocal(0.4, 0.06, -1.0)
-        loc1, loc2 = self.geometry.equalize(loc1, loc2)
-        self.assertEqual(loc1, loc2)
+        self.assertEqual(*self.geometry.equalize(loc1, loc2))
+
+        locations_mock = Mock(spec_set=Locations)
+        local_mock = PropertyMock(return_value=loc2)
+        type(locations_mock).local_frame = local_mock
+        self.assertEqual(*self.geometry.equalize(locations_mock, loc2))
+        local_mock.assert_called_once_with()
+
+        local_mock.reset_mock()
+        self.assertEqual(*self.geometry.equalize(loc2, locations_mock))
+        local_mock.assert_called_once_with()
