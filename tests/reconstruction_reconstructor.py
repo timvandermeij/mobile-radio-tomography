@@ -9,7 +9,7 @@ class TestReconstructionReconstructor(SettingsTestCase):
         self.settings = self.arguments.get_settings("reconstruction")
         self.reconstructor = Reconstructor(self.settings)
 
-    def test_initialize(self):
+    def test_initialization(self):
         # Verify that settings for the reconstructor are available.
         self.assertEqual(self.reconstructor._settings, self.settings)
 

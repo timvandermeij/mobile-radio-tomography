@@ -106,6 +106,27 @@ class RF_Sensor(Threadable):
         return self._number_of_sensors
 
     @property
+    def buffer(self):
+        """
+        Get the buffer of the RF sensor.
+        """
+
+        return self._buffer
+
+    @buffer.setter
+    def buffer(self, buffer):
+        """
+        Set the buffer.
+
+        The `buffer` argument must be a `Buffer` object.
+        """
+
+        if not isinstance(buffer, Buffer):
+            raise ValueError("The `buffer` argument must be a `Buffer` object")
+
+        self._buffer = buffer
+
+    @property
     def type(self):
         raise NotImplementedError("Subclasses must implement the `type` property")
 
@@ -121,19 +142,6 @@ class RF_Sensor(Threadable):
             "address": self._address,
             "joined": self._joined
         }
-
-    @buffer.setter
-    def buffer(self, buffer):
-        """
-        Set the buffer.
-
-        The buffer must be a `Buffer` object.
-        """
-
-        if not isinstance(buffer, Buffer):
-            raise ValueError("The buffer object must be a `Buffer` object")
-
-        self._buffer = buffer
 
     def start(self):
         """
@@ -202,11 +210,11 @@ class RF_Sensor(Threadable):
 
         # Create and send the RSSI broadcast packets.
         packet = self._create_rssi_broadcast_packet()
-        for index in xrange(1, self._number_of_sensors + 1):
-            if index == self._id:
+        for to_id in xrange(1, self._number_of_sensors + 1):
+            if to_id == self._id:
                 continue
 
-            self._send_tx_frame(packet, index)
+            self._send_tx_frame(packet, to_id)
 
         # Send collected packets to the ground station.
         for packet in self._packets:
@@ -231,10 +239,10 @@ class RF_Sensor(Threadable):
         """
 
         if not isinstance(packet, Packet):
-            raise ValueError("Invalid packet specified")
+            raise TypeError("Only `Packet` objects can be sent")
 
         if to is None:
-            raise ValueError("Invalid destination specified: {}".format(to))
+            raise TypeError("Invalid destination '{}' has been provided".format(to))
 
     def _receive(self, packet):
         raise NotImplementedError("Subclasses must implement `_receive(packet)`")
