@@ -1,5 +1,6 @@
 # Core imports
 from StringIO import StringIO
+from argparse import Action, ArgumentParser
 
 # Library imports
 from mock import patch, MagicMock
@@ -13,13 +14,44 @@ class MockModule(object):
         return ['g', 'h', 'i', 'j']
 
 class TestArguments(SettingsTestCase):
+    def setUp(self):
+        super(TestArguments, self).setUp()
+        self.defaults_file = "tests/settings/defaults.json"
+        self.positional_args = [
+            {
+                "name": "first",
+                "type": "int",
+                "required": True
+            },
+            {
+                "name": "second",
+                "type": "string",
+                "value": "xyz"
+            },
+            {
+                "name": "third",
+                "type": "float"
+            }
+        ]
+
+    def test_initialization(self):
+        arguments = Arguments("tests/settings/settings.json", ['1', '--xyz'],
+                              program_name="TestProgram",
+                              defaults_file=self.defaults_file)
+
+        self.assertEqual(str(arguments), "TestProgram")
+        # Positional arguments are immediately removed
+        self.assertEqual(arguments.argv, ['--xyz'])
+        self.assertIsInstance(arguments.parser, ArgumentParser)
+        self.assertEqual(arguments.groups, {})
+
     def test_default_settings(self):
         arguments = Arguments("tests/settings/invalid.json", [
             "tests/settings/settings.json"
-        ], defaults_file="tests/settings/defaults.json")
+        ], defaults_file=self.defaults_file)
         # Command line input for settings file is initialized immediately
         self.assertEqual(arguments.settings_file, "tests/settings/settings.json")
-        self.assertEqual(arguments.defaults_file, "tests/settings/defaults.json")
+        self.assertEqual(arguments.defaults_file, self.defaults_file)
         settings = arguments.get_settings("foo")
         self.assertIsInstance(settings, Settings)
         self.assertEqual(settings.get("bar"), 2)
@@ -28,7 +60,7 @@ class TestArguments(SettingsTestCase):
         arguments = Arguments("tests/settings/settings.json", [
             '--bar', '5', '--no-baz', '--long-name', 'my_text',
             '--items', '4', '5', '--other'
-        ], defaults_file="tests/settings/defaults.json")
+        ], defaults_file=self.defaults_file)
         settings = arguments.get_settings("foo")
         # We get the same object every time
         self.assertEqual(id(settings), id(arguments.get_settings("foo")))
@@ -43,7 +75,7 @@ class TestArguments(SettingsTestCase):
 
     def test_check_help(self):
         arguments = Arguments("tests/settings/settings.json", ['--help'],
-                              defaults_file="tests/settings/defaults.json")
+                              defaults_file=self.defaults_file)
         arguments.get_settings("foo")
 
         # Buffer help output so it doesn't mess up the test output and we can 
@@ -59,9 +91,51 @@ class TestArguments(SettingsTestCase):
         self.assertRegexpMatches(output.getvalue(), "--help")
         self.assertRegexpMatches(output.getvalue(), r"Foo component \(foo\)")
 
+    def test_positional(self):
+        arguments = Arguments("tests/settings/settings.json", ["3", "abc"],
+                              positionals=self.positional_args,
+                              defaults_file=self.defaults_file)
+
+        positional = arguments.get_positional_args()[:len(self.positional_args)]
+        self.assertEqual(positional, self.positional_args)
+
+        actions = arguments.get_positional_actions()
+        self.assertEqual(len(actions), len(self.positional_args) + 1)
+        self.assertTrue(all(isinstance(action, Action) for action in actions))
+
+        self.assertEqual(arguments.get_positional_value("first"), 3)
+        self.assertEqual(arguments.get_positional_value("second"), "abc")
+        self.assertIsNone(arguments.get_positional_value("third"))
+
+    def test_positional_required(self):
+        # Buffer help output so it doesn't mess up the test output.
+        output = StringIO()
+        with patch('sys.stdout', output):
+            with patch('sys.stderr', output):
+                with self.assertRaises(SystemExit):
+                    Arguments("tests/settings/settings.json", [],
+                              positionals=self.positional_args,
+                              defaults_file=self.defaults_file)
+
+        self.assertRegexpMatches(output.getvalue(), "Positional argument 'first' is required")
+
+    def test_positional_error_help(self):
+        # Buffer help output so it doesn't mess up the test output.
+        output = StringIO()
+        with patch('sys.stdout', output):
+            with patch('sys.stderr', output):
+                with self.assertRaises(SystemExit):
+                    Arguments("tests/settings/settings.json",
+                              ["42", "?", "aah", "--help"],
+                              positionals=self.positional_args,
+                              defaults_file=self.defaults_file)
+
+        self.assertRegexpMatches(output.getvalue(), "could not convert string to float: aah")
+        self.assertRegexpMatches(output.getvalue(), "--help")
+
     def test_arguments_after_help(self):
         arguments = Arguments("tests/settings/settings.json", ['--no-baz'],
-                              defaults_file="tests/settings/defaults.json")
+                              defaults_file=self.defaults_file)
         settings = arguments.get_settings("foo")
 
         # Buffer help output so it doesn't mess up the test output.
@@ -83,7 +157,7 @@ class TestArguments(SettingsTestCase):
 
     def test_required_settings(self):
         arguments = Arguments("tests/settings/settings.json", ['--long-name'],
-                              defaults_file="tests/settings/defaults.json")
+                              defaults_file=self.defaults_file)
 
         # Buffer help output so it doesn't mess up the test output and we can 
         # actually test whether it prints help.
@@ -100,7 +174,7 @@ class TestArguments(SettingsTestCase):
 
     def test_required_error(self):
         arguments = Arguments("tests/settings/settings.json", ['--long-name='],
-                              defaults_file="tests/settings/defaults.json")
+                              defaults_file=self.defaults_file)
 
         # Buffer help output so it doesn't mess up the test output and we can 
         # actually test whether it prints help.
@@ -117,7 +191,7 @@ class TestArguments(SettingsTestCase):
 
     def test_nonexistent_settings(self):
         arguments = Arguments("tests/settings/settings.json", ['--qux', '42'],
-                              defaults_file="tests/settings/defaults.json")
+                              defaults_file=self.defaults_file)
 
         # Buffer help output so it doesn't mess up the test output and we can 
         # actually test whether it prints help.
@@ -133,14 +207,14 @@ class TestArguments(SettingsTestCase):
 
     def test_get_help(self):
         arguments = Arguments("tests/settings/settings.json", [],
-                              defaults_file="tests/settings/defaults.json")
+                              defaults_file=self.defaults_file)
         info = {"help": "Help text"}
         self.assertEqual(arguments.get_help("okey", info), info["help"])
         self.assertEqual(arguments.get_help("long_setting", {}), "Long setting")
 
     def test_choices(self):
         arguments = Arguments("tests/settings/settings.json", ['--select='],
-                              defaults_file="tests/settings/defaults.json")
+                              defaults_file=self.defaults_file)
 
         # It is possible to select an empty default when the setting is not 
         # required.
@@ -149,7 +223,7 @@ class TestArguments(SettingsTestCase):
 
     def test_get_choices(self):
         arguments = Arguments("tests/settings/settings.json", [],
-                              defaults_file="tests/settings/defaults.json")
+                              defaults_file=self.defaults_file)
         info = {"options": ["foo", "bar", "baz"]}
         self.assertEqual(arguments.get_choices(info), info["options"])
 

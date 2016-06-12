@@ -24,20 +24,23 @@ def main(argv):
 
     usb_manager.index()
 
+    arguments = Arguments("settings.json", argv, positionals=[{
+        "name": "rf_sensor_class",
+        "help": "Sensor class to use for the RF sensor",
+        "type": "class",
+        "module": "zigbee.XBee_Sensor",
+        "required": True
+    }])
+
+    rf_sensor_class = arguments.get_positional_value("rf_sensor_class")
+    rf_sensor_type = import_manager.load_class(rf_sensor_class,
+                                               relative_module="zigbee")
+    rf_sensor = rf_sensor_type(arguments, thread_manager, usb_manager,
+                               get_location, receive_packet, location_valid)
+
+    arguments.check_help()
+
     try:
-        arguments = Arguments("settings.json", argv[1:])
-
-        if len(argv) == 0:
-            raise ValueError("No RF sensor class has been provided.")
-
-        rf_sensor_class = argv[0]
-        rf_sensor_type = import_manager.load_class(rf_sensor_class,
-                                                   relative_module="zigbee")
-        rf_sensor = rf_sensor_type(arguments, thread_manager, usb_manager,
-                                   get_location, receive_packet, location_valid)
-
-        arguments.check_help()
-
         rf_sensor.activate()
         raw_input("RF sensor has joined the network. Press Enter to continue...")
         rf_sensor.start()
