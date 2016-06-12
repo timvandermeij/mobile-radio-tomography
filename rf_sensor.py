@@ -35,8 +35,8 @@ def main(argv):
     rf_sensor_class = arguments.get_positional_value("rf_sensor_class")
     rf_sensor_type = import_manager.load_class(rf_sensor_class,
                                                relative_module="zigbee")
-    rf_sensor = rf_sensor_type(arguments, thread_manager, usb_manager,
-                               get_location, receive_packet, location_valid)
+    rf_sensor = rf_sensor_type(arguments, thread_manager, get_location,
+                               receive_packet, location_valid, usb_manager=usb_manager)
 
     arguments.check_help()
 
