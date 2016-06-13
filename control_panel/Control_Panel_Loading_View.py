@@ -70,25 +70,18 @@ class Control_Panel_Loading_View(Control_Panel_View):
             # actually is a ground station RF sensor.
             self._progressBar.setRange(0, 2)
             self._progressBar.setValue(1)
-            self._label.setText("Identifying the inserted RF sensor...")
-            self._label.repaint()
-            self._controller.app.processEvents()
-
-            self._controller.rf_sensor.setup()
-            if self._controller.rf_sensor.id != 0:
-                QtGui.QMessageBox.critical(self._controller.central_widget, "RF sensor error",
-                                           "The inserted RF sensor is not a ground station.")
-                self._controller.window.close()
-                sys.exit(1)
-
-            # We now know that a valid RF sensor has been inserted.
-            # Therefore update the label and proceed with activating the RF sensor.
-            self._progressBar.setValue(2)
-            self._label.setText("Activating ground station RF sensor and wireless network...")
+            self._label.setText("Activating the inserted RF sensor...")
             self._label.repaint()
             self._controller.app.processEvents()
 
             self._controller.rf_sensor.activate()
+            if self._controller.rf_sensor.id != 0:
+                QtGui.QMessageBox.critical(self._controller.central_widget, "RF sensor error",
+                                           "The inserted RF sensor is not a ground station.")
+                self._controller.window.close()
+                self._controller.rf_sensor.deactivate()
+                sys.exit(1)
+
             self._controller.show_view(Control_Panel_View_Name.DEVICES)
         except KeyError:
             QtCore.QTimer.singleShot(self._insertion_delay, self._insertion_loop)

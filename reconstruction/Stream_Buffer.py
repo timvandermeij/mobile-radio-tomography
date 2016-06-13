@@ -39,7 +39,7 @@ class Stream_Buffer(Buffer):
         """
 
         self._number_of_sensors = rf_sensor.number_of_sensors
-        rf_sensor.set_buffer(self)
+        rf_sensor.buffer = self
 
     def get(self):
         """

@@ -97,7 +97,7 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
         called when an RF sensor reports its identity.
         """
 
-        super(RF_Sensor_Physical_Texas_Instruments).discover(callback)
+        super(RF_Sensor_Physical_Texas_Instruments, self).discover(callback)
 
         # Send a ping to all sensors in the network.
         packet = Packet()
