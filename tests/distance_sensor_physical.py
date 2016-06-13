@@ -32,7 +32,7 @@ class TestDistanceSensorPhysical(EnvironmentTestCase):
     def test_elapsed_time_triggers(self):
         # Configure the RPi.GPIO.input function to return a specific sequence 
         # for the echo pin values, to test that the echo pin is checked the 
-        # same number times to detect its raising/falling edge changes.
+        # same number times to detect its rising/falling edge changes.
         self.distance_sensor.gpio.input.configure_mock(side_effect=[0, 1, 1, 0])
         self.distance_sensor.get_distance()
 
@@ -42,7 +42,7 @@ class TestDistanceSensorPhysical(EnvironmentTestCase):
             call(self.settings.get("trigger_pin"), False)
         ])
 
-        # The echo pin must be checked four times .
+        # The echo pin must be checked four times.
         self.assertEqual(self.distance_sensor.gpio.input.call_count, 4)
         self.assertEqual(self.distance_sensor.gpio.input.call_args_list, [
             call(self.settings.get("echo_pin"))
