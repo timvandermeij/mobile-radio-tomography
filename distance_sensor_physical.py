@@ -1,5 +1,6 @@
 import sys
 import time
+import traceback
 from __init__ import __package__
 from settings import Arguments
 from environment import Environment
@@ -7,9 +8,15 @@ from environment import Environment
 def main(argv):
     arguments = Arguments("settings.json", argv)
 
-    environment = Environment.setup(arguments, simulated=False)
-    distance_sensors = environment.get_distance_sensors()
+    try:
+        environment = Environment.setup(arguments, simulated=False)
+        distance_sensors = environment.get_distance_sensors()
+    except Exception:
+        arguments.error(traceback.format_exc())
+
     settings = arguments.get_settings("distance_sensor_physical")
+
+    arguments.check_help()
 
     while True:
         for sensor in distance_sensors:

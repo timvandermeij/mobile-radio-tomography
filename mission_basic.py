@@ -23,12 +23,19 @@ class Setup(object):
         self.arguments = arguments
         self.activated = False
 
+        self.environment = None
+        self.mission = None
+        self.monitor = None
+
     def setup(self):
-        self.environment = Environment.setup(self.arguments)
+        try:
+            self.environment = Environment.setup(self.arguments)
 
-        self.mission = Mission.create(self.environment, self.arguments)
+            self.mission = Mission.create(self.environment, self.arguments)
 
-        self.monitor = Monitor(self.mission, self.environment)
+            self.monitor = Monitor(self.mission, self.environment)
+        except Exception:
+            self.arguments.error(traceback.format_exc())
 
         self.arguments.check_help()
 
@@ -94,9 +101,12 @@ class Setup(object):
             print("Stopped mission")
 
         try:
-            self.monitor.stop()
-            self.environment.thread_manager.destroy()
-            self.environment.usb_manager.clear()
+            if self.monitor:
+                self.monitor.stop()
+
+            if self.environment:
+                self.environment.thread_manager.destroy()
+                self.environment.usb_manager.clear()
         except:
             traceback.print_exc()
             sys.exit(1)
@@ -109,7 +119,7 @@ def main(argv):
     setup = Setup(arguments)
     try:
         setup.setup()
-    except:
+    except Exception:
         traceback.print_exc()
     finally:
         setup.disable()
