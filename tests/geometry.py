@@ -1,11 +1,14 @@
 # Core imports
 import math
 import sys
+
+# Unit test imports
 import unittest
+from mock import patch, Mock, PropertyMock
 
 # Library imports
 import numpy as np
-from dronekit import LocationGlobal, LocationGlobalRelative, LocationLocal
+from dronekit import LocationGlobal, LocationGlobalRelative, LocationLocal, Locations
 
 # Package imports
 from ..geometry.Geometry import Geometry
@@ -42,11 +45,11 @@ class TestGeometry(LocationTestCase):
         self.coord_delta = self.dist_delta
         self.angle_delta = sys.float_info.epsilon * 10
 
-    def _make_global_location(self, x, y, z):
-        return LocationLocal(x, y, z)
+    def _make_global_location(self, x, y, z=0.0):
+        return LocationLocal(x, y, -z)
 
-    def _make_relative_location(self, x, y, z):
-        return LocationLocal(x, y, z)
+    def _make_relative_location(self, x, y, z=0.0):
+        return LocationLocal(x, y, -z)
 
     def test_home_location_type(self):
         with self.assertRaises(TypeError):
@@ -78,6 +81,22 @@ class TestGeometry(LocationTestCase):
     def test_angle_to_bearing(self):
         angle = 180.0 * math.pi/180
         self.assertEqual(self.geometry.angle_to_bearing(angle), 270.0 * math.pi/180)
+
+    def test_get_location_local(self):
+        loc = LocationLocal(7.6, 5.4, -3.2)
+        self.assertEqual(self.geometry.get_location_local(loc), loc)
+
+        locations_mock = Mock(spec_set=Locations)
+        local_mock = PropertyMock(return_value=loc)
+        type(locations_mock).local_frame = local_mock
+        self.assertEqual(self.geometry.get_location_local(locations_mock), loc)
+        local_mock.assert_called_once_with()
+
+    def test_get_location_local_other(self):
+        with self.assertRaises(TypeError):
+            self.geometry.get_location_local(LocationGlobal(1.0, 2.0, 3.0))
+        with self.assertRaises(TypeError):
+            self.geometry.get_location_local(LocationGlobalRelative(1.0, 2.0, 3.0))
 
     def test_location_meters(self):
         loc = LocationLocal(5.4, 3.2, -1.0)
@@ -129,14 +148,6 @@ class TestGeometry(LocationTestCase):
         self.assertEqual(self.geometry.get_direction(0.0, math.pi/2), -1)
         self.assertEqual(self.geometry.get_direction(-math.pi/2, math.pi), 1)
 
-    def test_get_point_edges(self):
-        self.assertEqual(self.geometry.get_point_edges([]), [])
-        locations = [self._make_relative_location(*p) for p in [(1, 2, 3), (20.0, 4.3, 2.5), (3.14, 4.443, 1.2)]]
-        edges = self.geometry.get_point_edges(locations)
-        self.assertEqual(edges[0], (locations[0], locations[1]))
-        self.assertEqual(edges[1], (locations[1], locations[2]))
-        self.assertEqual(edges[2], (locations[2], locations[0]))
-
     def test_get_neighbor_offsets(self):
         offsets = self.geometry.get_neighbor_offsets()
         self.assertEqual(offsets.shape, (8, 2))
@@ -145,6 +156,161 @@ class TestGeometry(LocationTestCase):
         self.assertTrue(np.array_equal(offsets, [(-1, -1), (-1, 0), (-1, 1),
                                                   (0, -1),           (0, 1),
                                                   (1, -1),  (1, 0),  (1, 1)]))
+
+    def test_ray_intersects_segment(self):
+        cases = [
+            [(1, 0), (2, 1), (0, 1), True], # Vertical edge
+            [(1, 1), (2, 1), (0, 1), True], # Precisely on vertical edge
+            [(1, 1), (1, 4), (4, 1), True], # Non-straight edge
+            [(2, 0), (3, 1), (5.5, 3.25), False], # Too far north
+            [(3, 20), (3, 2), (5, 7.6), False], # Too far east
+            [(2, 3.5), (1, 1), (4, 4), False], # Right from edge
+            [(2, 4), (1, 1), (4, 4), False] # Right from edge
+        ]
+        for case in cases:
+            P = self._make_relative_location(*case[0])
+            start = self._make_relative_location(*case[1])
+            end = self._make_relative_location(*case[2])
+            expected = case[3]
+            with patch('sys.stdout'):
+                actual = self.geometry.ray_intersects_segment(P, start, end,
+                                                              verbose=True)
+                msg = "Ray from {0} must{expect} intersect start={1}, end={2}"
+                msg = msg.format(*case, expect="" if expected else " not")
+                self.assertEqual(actual, expected, msg=msg)
+
+    def test_point_inside_polygon(self):
+        # http://rosettacode.org/wiki/Ray-casting_algorithm#Python
+        polys = {
+            "square": [(0, 0), (10, 0), (10, 10), (0, 10)],
+            "square_hole": [
+                (0, 0), (10, 0), (10, 10), (0, 10), (0, 0),
+                (2.5, 2.5), (7.5, 2.5), (7.5, 7.5), (2.5, 7.5)
+            ],
+            "exagon": [(3, 0), (7, 0), (10, 5), (7, 10), (3, 10), (0, 5)]
+        }
+        locs = [(5, 8), (-10, 5), (10, 10)]
+        results = {
+            "square": [True, False, False],
+            "square_hole": [True, False, False],
+            "exagon": [True, False, False]
+        }
+
+        for name, poly in polys.iteritems():
+            points = [self._make_relative_location(*p) for p in poly]
+            for loc, expected in zip(locs, results[name]):
+                location = self._make_relative_location(*loc)
+                actual = self.geometry.point_inside_polygon(location, points)
+                msg = "Point {} must{} be inside polygon {}".format(loc, "" if expected else " not", name)
+                self.assertEqual(actual, expected, msg=msg)
+
+        poly = polys["square"]
+        points = [self._make_relative_location(p[0], p[1], 0.0) for p in poly]
+        location = self._make_relative_location(1, 2, 3)
+        with patch('sys.stdout'):
+            inside = self.geometry.point_inside_polygon(location, points,
+                                                        alt=True, verbose=True)
+            self.assertFalse(inside)
+
+    def test_get_edge_distance(self):
+        start_location = self._make_relative_location(0.0, 0.0, 0.0)
+        cases = [
+            [(1, 0), (2, 1), (0, 1), 1.0], # Vertical edge
+            [(1, 0), (2, 0), (2, 2), sys.float_info.max], # Horizontal edge
+            [(1, 1), (2, 1), (0, 1), 0.0], # Precisely on vertical edge
+            [(1, 1), (1, 4), (4, 1), 3.0], # Non-straight edge
+            [(1, 1), (4, 1), (1, 4), 3.0], # Non-straight edge (swapped)
+            [(1, 1), (2, 4), (4, 2), sys.float_info.max] # Non-extended line
+        ]
+        for case in cases:
+            loc = self.geometry.get_location_meters(start_location, *case[0])
+            start = self.geometry.get_location_meters(start_location, *case[1])
+            end = self.geometry.get_location_meters(start_location, *case[2])
+            expected = case[3]
+
+            actual = self.geometry.get_edge_distance((start, end), loc)
+            self.assertAlmostEqual(actual, expected, delta=self.dist_delta)
+
+        # Miss the edge
+        loc = self.geometry.get_location_meters(start_location, 1, 0.66, 0)
+        start = self.geometry.get_location_meters(start_location, 2, 1, 0)
+        end = self.geometry.get_location_meters(start_location, 0, 1, 0)
+        actual = self.geometry.get_edge_distance((start, end), loc,
+                                                 pitch_angle=0.25*math.pi)
+        self.assertEqual(actual, sys.float_info.max)
+
+    def test_get_point_edges(self):
+        self.assertEqual(self.geometry.get_point_edges([]), [])
+        points = [(1, 2, 3), (20.0, 4.3, 2.5), (3.14, 4.443, 1.2)]
+        locations = [self._make_relative_location(*p) for p in points]
+        edges = self.geometry.get_point_edges(locations)
+        self.assertEqual(edges[0], (locations[0], locations[1]))
+        self.assertEqual(edges[1], (locations[1], locations[2]))
+        self.assertEqual(edges[2], (locations[2], locations[0]))
+
+    def test_get_plane_distance(self):
+        start_location = self._make_relative_location(0.0, 0.0, 0.0)
+        cases = [
+            # Upward polygon
+            {
+                "points": [(1, 2, 3), (1, 4, 3), (1, 4, 9), (1, 2, 9)],
+                "location1": (0, 3, 6),
+                "location2": (0.1, 3, 6),
+                "distance": 1.0,
+                "loc_point": (1, 3, 6)
+            },
+            # Missing the polygon
+            {
+                "points": [(1, 2, 3), (1, 4, 3), (1, 4, 9), (1, 2, 9)],
+                "location1": (0, 5, 6),
+                "location2": (0.1, 5, 6),
+                "distance": sys.float_info.max,
+                "loc_point": None
+            },
+            # Line segment in the other direction
+            {
+                "points": [(1, 2, 3), (1, 4, 3), (1, 4, 9), (1, 2, 9)],
+                "location1": (0, 3, 6),
+                "location2": (-0.1, 3, 6),
+                "distance": sys.float_info.max,
+                "loc_point": None
+            },
+            # Not intersecting with plane
+            {
+                "points": [(1, 2, 3), (1, 4, 3), (1, 4, 9), (1, 2, 9)],
+                "location1": (0, 3, 6),
+                "location2": (0, 3.1, 6),
+                "distance": sys.float_info.max,
+                "loc_point": None
+            },
+            # Incomplete face
+            {
+                "points": [(1, 2, 3), (1, 4, 3)],
+                "location1": (0, 3, 6),
+                "location2": (0.1, 3, 6),
+                "distance": sys.float_info.max,
+                "loc_point": None
+            }
+        ]
+        for case in cases:
+            face = [self.geometry.get_location_meters(start_location, *p) for p in case["points"]]
+            loc1 = self.geometry.get_location_meters(start_location, *case["location1"])
+            loc2 = self.geometry.get_location_meters(start_location, *case["location2"])
+            with patch('sys.stdout'):
+                dist, point = self.geometry.get_plane_distance(face,
+                                                               loc1, loc2,
+                                                               verbose=True)
+
+            self.assertAlmostEqual(dist, case["distance"], delta=self.dist_delta)
+            if case["loc_point"] is None:
+                self.assertIsNone(point)
+            else:
+                actual = self.geometry.get_location_local(point)
+                loc_point = self.geometry.get_location_meters(start_location, *case["loc_point"])
+                expected = self.geometry.get_location_local(loc_point)
+                self.assertAlmostEqual(actual.north, expected.north, delta=self.coord_delta)
+                self.assertAlmostEqual(actual.east, expected.east, delta=self.coord_delta)
+                self.assertAlmostEqual(actual.down, expected.down, delta=self.coord_delta)
 
 class TestGeometry_Grid(TestGeometry):
     def setUp(self):
@@ -178,10 +344,10 @@ class TestGeometry_Spherical(TestGeometry):
         # curvature into account.
         self.angle_delta = 0.15 * math.pi/180
 
-    def _make_global_location(self, x, y, z):
+    def _make_global_location(self, x, y, z=0.0):
         return LocationGlobal(x, y, z)
 
-    def _make_relative_location(self, x, y, z):
+    def _make_relative_location(self, x, y, z=0.0):
         return LocationGlobalRelative(x, y, z)
 
     def test_home_location_type(self):
@@ -191,10 +357,69 @@ class TestGeometry_Spherical(TestGeometry):
         with self.assertRaises(TypeError):
             self.geometry.set_home_location(LocationLocal(3.0, 2.0, 1.0))
 
+        locations_mock = Mock(spec_set=Locations)
+        global_mock = PropertyMock(return_value=LocationGlobal(3.0, 2.0, 1.0))
+        type(locations_mock).global_frame = global_mock
+        self.geometry.set_home_location(locations_mock)
+        global_mock.assert_called_once_with()
+
+    def test_get_location_local_other(self):
+        home_loc = self._make_global_location(5.0, 3.14, 10.0)
+        self.geometry.set_home_location(home_loc)
+
+        relative_loc = self.geometry.get_location_meters(home_loc, 0.4, 0.06, 1.0)
+        local_loc = LocationLocal(0.4, 0.06, -1.0)
+        new_loc = self.geometry.get_location_local(relative_loc)
+        self.assertAlmostEqual(new_loc.north, local_loc.north, delta=self.coord_delta)
+        self.assertAlmostEqual(new_loc.east, local_loc.east, delta=self.coord_delta)
+        self.assertAlmostEqual(new_loc.down, local_loc.down, delta=self.coord_delta)
+
+        global_loc = LocationGlobal(relative_loc.lat, relative_loc.lon, 11.0)
+        new_loc = self.geometry.get_location_local(global_loc)
+        self.assertAlmostEqual(new_loc.north, local_loc.north, delta=self.coord_delta)
+        self.assertAlmostEqual(new_loc.east, local_loc.east, delta=self.coord_delta)
+        self.assertAlmostEqual(new_loc.down, local_loc.down, delta=self.coord_delta)
+
+    def test_get_locations_frame(self):
+        locations_mock = Mock(spec_set=Locations)
+
+        global_relative_loc = LocationGlobalRelative(6.0, 5.0, 4.0)
+        global_loc = LocationGlobal(3.0, 2.0, 1.0)
+        local_loc = LocationLocal(0.0, -1.0, -2.0)
+
+        global_relative_mock = PropertyMock(return_value=global_relative_loc)
+        global_mock = PropertyMock(return_value=global_loc)
+        local_mock = PropertyMock(return_value=local_loc)
+
+        type(locations_mock).global_relative_frame = global_relative_mock
+        type(locations_mock).global_frame = global_mock
+        type(locations_mock).local_frame = local_mock
+
+        loc1 = LocationGlobalRelative(5.4, 3.2, 1.0)
+        self.assertEqual(self.geometry.get_locations_frame(locations_mock, loc1), global_relative_loc)
+        global_relative_mock.assert_called_once_with()
+
+        loc2 = LocationGlobal(8.6, 4.2, 0.8)
+        self.assertEqual(self.geometry.get_locations_frame(locations_mock, loc2), global_loc)
+        global_mock.assert_called_once_with()
+
+        loc3 = LocationLocal(-2.0, 4.5, -2.5)
+        self.assertEqual(self.geometry.get_locations_frame(locations_mock, loc3), local_loc)
+        local_mock.assert_called_once_with()
+
     def test_equalize(self):
         home_loc = self._make_global_location(5.0, 3.14, 10.0)
         self.geometry.set_home_location(home_loc)
         loc1 = self.geometry.get_location_meters(home_loc, 0.4, 0.06, 1.0)
         loc2 = LocationLocal(0.4, 0.06, -1.0)
-        loc1, loc2 = self.geometry.equalize(loc1, loc2)
-        self.assertEqual(loc1, loc2)
+        self.assertEqual(*self.geometry.equalize(loc1, loc2))
+
+        locations_mock = Mock(spec_set=Locations)
+        local_mock = PropertyMock(return_value=loc2)
+        type(locations_mock).local_frame = local_mock
+        self.assertEqual(*self.geometry.equalize(locations_mock, loc2))
+        local_mock.assert_called_once_with()
+
+        local_mock.reset_mock()
+        self.assertEqual(*self.geometry.equalize(loc2, locations_mock))
+        local_mock.assert_called_once_with()

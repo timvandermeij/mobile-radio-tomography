@@ -107,7 +107,10 @@ class Geometry_Spherical(Geometry):
         newlat = original_location.lat + (lat * 180/math.pi)
         newlon = original_location.lon + (lon * 180/math.pi)
         newalt = original_location.alt + alt
-        return original_location.__class__(newlat, newlon, newalt)
+        if isinstance(original_location, LocationGlobal):
+            return LocationGlobal(newlat, newlon, newalt)
+
+        return LocationGlobalRelative(newlat, newlon, newalt)
 
     def get_distance_meters(self, location1, location2):
         """

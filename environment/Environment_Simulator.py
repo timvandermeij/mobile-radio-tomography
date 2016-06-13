@@ -23,11 +23,13 @@ class Environment_Simulator(Environment):
         translation = self.settings.get("translation")
 
         self.vehicle.home_location = self.get_location(*translation)
+        if scenefile is not None and self.settings.get("location_check"):
+            self.set_location_check()
 
+        self._load_objects(scenefile, translation)
+
+    def _load_objects(self, scenefile=None, translation=None):
         if scenefile is not None:
-            if self.settings.get("location_check"):
-                self.set_location_check()
-
             loader = VRMLLoader(self, scenefile, translation)
             self.objects = loader.get_objects()
             return

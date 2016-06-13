@@ -77,9 +77,10 @@ class Geometry(object):
         """
         Convert a `location` object to a `LocationLocal` object.
 
-        The base class does not accept any `location` that is not already local,
-        but extending classes may apply conversions.
-        Returns the converted location.
+        The base class does not accept any `location` that is not already
+        a `LocationLocal` type, but extending classes may apply conversions.
+
+        Returns the converted location object.
         """
 
         if isinstance(location, Locations):
@@ -158,9 +159,10 @@ class Geometry(object):
         (latitude and longitude) directions.
 
         Does not take curvature of earth in account, and should thus be used
-        only for close locations. Only gives the yaw angle, under the assumption
-        that the two locations are at the same level, and thus should not be
-        used for locations at different altitudes.
+        only for close locations. Returns the yaw angle, under the assumption
+        that the two locations are at the same level, i.e., ignoring the down
+        or altitude component. Thus, this should not be used for locations at
+        different altitudes.
         """
 
         dnorth, deast = self.diff_location_meters(location1, location2)[:2]
@@ -189,11 +191,12 @@ class Geometry(object):
 
     def check_angle(self, a1, a2, diff=0.0):
         """
-        Check whether two angles `a1` and `a2` are the same or differ at most by
-        an angle `diff`, in radians. The difference `diff` must be nonnegative.
+        Check whether two angles `a1` and `a2` are the same or differ at most
+        by an angle `diff`, in radians. The difference `diff` must be
+        nonnegative.
 
         The returned boolean is `True` when the difference between the angles
-        is at most `diff`.
+        is at most `diff`, and `False` otherwise.
         """
 
         return abs(self.diff_angle(a1, a2)) <= diff
@@ -213,8 +216,9 @@ class Geometry(object):
 
     def _get_edge_angles(self, P, start, end):
         """
-        Retrieve the angles between a location point `P` and two endpoint location
-        objects `start` and `end`, defining an edge.
+        Retrieve the angles between two endpoint location objects `start` and
+        `end`, defining the slope of an edge, as well as between `start` and
+        a point `P`. All locations must be `LocationLocal` objects.
         """
 
         if abs(start.east - end.east) > self.EPSILON:
@@ -240,8 +244,8 @@ class Geometry(object):
         to the first two coordinates.
         """
 
-        # Based on http://rosettacode.org/wiki/Ray-casting_algorithm#Python but 
-        # cleaned up logic and clarified somewhat
+        # Based on http://rosettacode.org/wiki/Ray-casting_algorithm#Python 
+        # but cleaned up logic and clarified somewhat
         P = self.get_location_local(P)
         start = self.get_location_local(start)
         end = self.get_location_local(end)
@@ -275,7 +279,7 @@ class Geometry(object):
         """
         From a given list of `points` in a polygon (sorted on edge positions),
         generate a list of edges.
-        
+
         The returned list has tuples of two points of the line segment that are
         next to each other, as well as the last and the first points.
 
@@ -288,15 +292,16 @@ class Geometry(object):
 
         return zip(points, list(points[1:]) + [points[0]])
 
-    def point_inside_polygon(self, location, points, alt=True, altitude_margin=0, verbose=False):
+    def point_inside_polygon(self, location, points, alt=True,
+                             altitude_margin=0, verbose=False):
         """
         Detect objectively whether a `location` is inside an object polygon
         with points `points`. If `alt` is True, then the points are considered
         to be upper points of a three-dimensional object extending up to it.
         """
 
-        # Ensure all points are local, which the base Geometry rather likes and 
-        # speeds up the ray intersection conversions.
+        # Ensure all points are local, which the base Geometry rather likes 
+        # and speeds up the ray intersection conversions.
         points = [self.get_location_local(point) for point in points]
         location = self.get_location_local(location)
 
@@ -314,18 +319,20 @@ class Geometry(object):
         edges = self.get_point_edges(points)
         inside = False
         for e in edges:
-            if self.ray_intersects_segment(location, e[0], e[1], verbose=verbose):
+            if self.ray_intersects_segment(location, e[0], e[1],
+                                           verbose=verbose):
                 inside = not inside
 
         return inside
 
     def _get_edge_ray(self, start, end, location, yaw_angle):
         """
-        Get the equation values of a line from a given `location` at a `yaw_angle`
-        to the edge defined by endpoint locations `start` and `end`.
+        Get the equation values of a line from a given `location` at a
+        `yaw_angle` to the edge defined by endpoint locations `start` and
+        `end`, which must be `LocationLocal` objects.
 
-        The given line might not actually intersect with the edge, but with lines
-        extending from the edge.
+        The returned line might not actually intersect with the edge, but with
+        lines extending from the edge. This needs to be checked afterward.
         """
 
         # Based on ray casting calculations from 
@@ -354,6 +361,8 @@ class Geometry(object):
 
             if m2 == m1:
                 x = float('inf')
+                if m1 == 0:
+                    return float('inf'), float('inf')
             else:
                 x = (b1 - b2) / (m2 - m1)
 
@@ -361,7 +370,8 @@ class Geometry(object):
 
         return y, x
 
-    def get_edge_distance(self, edge, location, yaw_angle, pitch_angle, altitude_margin=0.0):
+    def get_edge_distance(self, edge, location, yaw_angle=0.0, pitch_angle=0.0,
+                          altitude_margin=0.0):
         """
         Calculate the distance to a point on an `edge` that a ray from a given
         `location` with yaw and pitch radian angles given by `yaw_angle` and
@@ -380,8 +390,11 @@ class Geometry(object):
         y, x = self._get_edge_ray(start, end, location, yaw_angle)
 
         # Distance on same altitude
-        d = math.sqrt(abs(y - location.north)**2 + abs(x - location.east)**2)
-        z = math.tan(pitch_angle) * d - location.down
+        d = math.sqrt((y - location.north)**2 + (x - location.east)**2)
+        if pitch_angle == 0.0:
+            z = -location.down
+        else:
+            z = math.tan(pitch_angle) * d - location.down
 
         # Determine intersection point
         loc_point = LocationLocal(y, x, -z)
@@ -389,8 +402,8 @@ class Geometry(object):
         edge_dist = self.get_distance_meters(edge[0], edge[1])
         dists = [self.get_distance_meters(edge[i], loc_point) for i in (0, 1)]
         if max(dists) > edge_dist:
-            # Point is not actually on the edge, but on the line extending from 
-            # it. This edge case is possible even after skipping object 
+            # Point is not actually on the edge, but on the line extending 
+            # from it. This edge case is possible even after skipping object 
             # detection based on quadrants and angles, since it may be on one 
             # edge but not the other. This point is actually not detected.
             return sys.float_info.max
@@ -427,7 +440,7 @@ class Geometry(object):
 
         return cp, d
 
-    def check_dot(self, dot):
+    def _check_dot(self, dot):
         """
         Check whether a dot product `dot` is large enough to be noticeable.
 
@@ -462,9 +475,10 @@ class Geometry(object):
         Given a location `p`, project it to the first two 2D coordinates by
         ignoring the coordinate `ignore_index`.
 
-        For best results, `ignore_index` should be the least relevant coordinate
-        for the purposes of the location in its 3D model. The returned location
-        object may or may not have an altitude which is to be ignored.
+        For best results, `ignore_index` should be the least relevant
+        coordinate for the purposes of the location in its 3D model.
+        The returned `LocationLocal` object may or may not have a downward
+        altitude component, which is to be ignored.
         """
 
         p = self.get_location_local(p)
@@ -494,7 +508,9 @@ class Geometry(object):
         # the plane.
         ignore_index = np.argmax(np.absolute(cp))
 
-        projected_face = [self.get_projected_location(p, ignore_index) for p in face]
+        projected_face = [
+            self.get_projected_location(p, ignore_index) for p in face
+        ]
 
         projected_loc = self.get_projected_location(location, ignore_index)
         if verbose:
@@ -504,11 +520,12 @@ class Geometry(object):
         return self.point_inside_polygon(projected_loc, projected_face,
                                          alt=False, verbose=verbose)
 
-    def get_plane_intersection(self, face, location1, location2, verbose=False):
+    def get_plane_intersection(self, face, location1, location2,
+                               verbose=False):
         """
-        Check whether a 3D line segment between location objects `location1` and
-        `location2` intersects with the 3D plane defined by the location point
-        objects in a list `face`.
+        Check whether a 3D line segment between location objects `location1`
+        and `location2` intersects with the 3D plane defined by the location
+        point objects in a list `face`.
 
         Returns a tuple of a factor, the which is positive if and only if there
         is a positive ray intersection, and the intersection location object.
@@ -530,20 +547,21 @@ class Geometry(object):
         u = np.array(self.diff_location_meters(location1, location2))
         # Dot product between the line and the plane vector
         nu_dot = np.dot(cp, u)
-        if not self.check_dot(nu_dot):
+        if not self._check_dot(nu_dot):
             if verbose:
                 print("Dot product not good enough, no intersection: dot={}, u={}.".format(nu_dot, u))
 
-            # Dot product not good enough, usually caused by line and plane not 
-            # actually intersecting (line parallel to plane)
+            # Dot product not good enough, usually caused by line and plane 
+            # not actually intersecting (line parallel to plane)
             return (None, None)
 
         # Calculate the intersection point
-        factor, loc_point = self.get_intersection(face, cp, location1, u, nu_dot)
+        factor, loc_point = self.get_intersection(face, cp, location1, u,
+                                                  nu_dot)
 
         if not self.point_inside_plane(face, cp, loc_point, verbose=verbose):
-            # The intersection point is not actually inside the polygon, but on 
-            # the plane extending from it. Thus there is no intersection.
+            # The intersection point is not actually inside the polygon, but 
+            # on the plane extending from it. Thus there is no intersection.
             if verbose:
                 print("Point not actually inside polygon")
                 print(loc_point)
@@ -573,8 +591,8 @@ class Geometry(object):
                 print("Factor too small: {}".format(factor))
 
             # The factor is too small, which means that the intersection point 
-            # is on the line extending in the other direction, which we need to 
-            # ignore as well.
+            # is on the line extending in the other direction, which we need 
+            # to ignore as well.
             return (sys.float_info.max, None)
         else:
             dist = self.get_distance_meters(location1, loc_point)

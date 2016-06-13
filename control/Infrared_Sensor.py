@@ -25,10 +25,11 @@ class Infrared_Sensor(Threadable):
         elif not isinstance(settings, Settings):
             raise ValueError("'settings' must be an instance of Settings or Arguments")
 
-        self._remote = settings.get("remote")
-        self._program = settings.get("program")
-        self._buttons = settings.get("buttons")
-        self._wait_delay = settings.get("wait_delay")
+        self._settings = settings
+        self._remote = self._settings.get("remote")
+        self._program = self._settings.get("program")
+        self._buttons = self._settings.get("buttons")
+        self._wait_delay = self._settings.get("wait_delay")
 
         module = self.__class__.__module__
         self._base_path = os.path.dirname(sys.modules[module].__file__)
