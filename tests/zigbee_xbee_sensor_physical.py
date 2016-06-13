@@ -34,7 +34,7 @@ class TestZigBeeXBeeSensorPhysical(USBManagerTestCase, ThreadableTestCase, Setti
         self.sensor_id = 1
 
         self.arguments = Arguments("settings.json", ["--port", self._xbee_port])
-        self.settings = self.arguments.get_settings("xbee_sensor_physical")
+        self.settings = self.arguments.get_settings("rf_sensor_physical_xbee")
         self.thread_manager = Thread_Manager()
 
         self.usb_manager.index()

@@ -32,7 +32,7 @@ class XBee_Sensor_Physical(XBee_Sensor):
 
     @property
     def type(self):
-        return "xbee_sensor_physical"
+        return "rf_sensor_physical_xbee"
 
     def setup(self):
         """

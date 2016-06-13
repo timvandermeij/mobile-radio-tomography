@@ -28,7 +28,7 @@ class DisabledException(Exception):
 class RF_Sensor(Threadable):
     """
     Base class for all RF sensors.
-    
+
     This class is responsible for setting up the basic characteristics of an
     RF sensor and contains common code for the simulated and physical
     specializations.

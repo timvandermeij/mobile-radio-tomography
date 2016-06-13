@@ -989,37 +989,21 @@
             }
         }
     },
-    "xbee_sensor_physical": {
-        "name": "XBee sensor (physical)",
+    "rf_sensor_physical": {
+        "name": "RF sensor physical",
         "parent": "zigbee_base",
         "settings": {
             "port": {
-                "help": "Device name or port of the XBee to use. This overrides the USB manager detection.",
+                "help": "Device name or port of the RF sensor to use. This overrides the USB manager detection.",
                 "type": "string",
                 "required": false,
                 "default": ""
-            },
-            "sensors": {
-                "help": "XBee addresses of all devices in the network, ordered by their identifier",
-                "type": "list",
-                "subtype": "string",
-                "default": [
-                    "\\x00\\x13\\xa2\\x00@\\xe6n\\xbd",
-                    "\\x00\\x13\\xa2\\x00@\\xe6o5",
-                    "\\x00\\x13\\xa2\\x00@\\xe6n\\xb9"
-                ]
             },
             "ntp_delay": {
                 "help": "Delay in seconds to wait before retrying a synchronization attempt",
                 "type": "float",
                 "min": 0.0,
                 "default": 3.0
-            },
-            "response_delay": {
-                "help": "Delay in seconds to wait for a response to a command sent to the current XBee device",
-                "type": "float",
-                "min": 0.0,
-                "default": 0.3
             },
             "synchronize": {
                 "help": "Whether to synchronize the clock using the NTP algorithm, which is required for TDMA scheduling to work correctly. The program must run as root to do so.",
@@ -1028,9 +1012,31 @@
             }
         }
     },
+    "rf_sensor_physical_xbee": {
+        "name": "RF sensor physical (XBee)",
+        "parent": "rf_sensor_physical",
+        "settings": {
+            "sensors": {
+                "help": "Addresses of all devices in the network, ordered by their identifier",
+                "type": "list",
+                "subtype": "string",
+                "default": [
+                    "\\x00\\x13\\xa2\\x00@\\xe6n\\xbd",
+                    "\\x00\\x13\\xa2\\x00@\\xe6o5",
+                    "\\x00\\x13\\xa2\\x00@\\xe6n\\xb9"
+                ]
+            },
+            "response_delay": {
+                "help": "Delay in seconds to wait for a response to a command sent to an RF sensor",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.3
+            }
+        }
+    },
     "xbee_cc2530_sensor_physical": {
         "name": "XBee CC2530 sensor (physical)",
-        "parent": "xbee_sensor_physical",
+        "parent": "rf_sensor_physical",
         "settings": {
             "packet_length": {
                 "help": "Number of bytes in the serialized packet",
