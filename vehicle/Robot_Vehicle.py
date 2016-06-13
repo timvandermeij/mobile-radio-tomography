@@ -103,7 +103,7 @@ class Robot_Vehicle(Vehicle):
         self._line_follower = line_follower_class(
             self._home_location, self._direction,
             self.line_follower_callback, self.arguments,
-            thread_manager, usb_manager, line_follower_delay
+            thread_manager, usb_manager=usb_manager, delay=line_follower_delay
         )
         self._line_follower.set_state(Line_Follower_State.AT_INTERSECTION)
 

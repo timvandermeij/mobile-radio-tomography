@@ -4,7 +4,8 @@ from Line_Follower import Line_Follower
 from ..settings import Arguments, Settings
 
 class Line_Follower_Raspberry_Pi(Line_Follower):
-    def __init__(self, location, direction, callback, settings, thread_manager, usb_manager, delay=0):
+    def __init__(self, location, direction, callback, settings,
+                 thread_manager, delay=0, **kwargs):
         """
         Initialize the line follower object for the Raspberry Pi. Note that the
         pin numbers in the settings file are the pin numbers for the connection
@@ -12,12 +13,15 @@ class Line_Follower_Raspberry_Pi(Line_Follower):
         17 (A3), 11, 14 (A0), 16 (A2) and 5 on the Zumo rover.
         """
 
-        super(Line_Follower_Raspberry_Pi, self).__init__(location, direction, callback, thread_manager, delay)
+        super(Line_Follower_Raspberry_Pi, self).__init__(location, direction,
+                                                         callback,
+                                                         thread_manager,
+                                                         delay=delay)
 
         if isinstance(settings, Arguments):
             settings = settings.get_settings("line_follower_raspberry_pi")
         elif not isinstance(settings, Settings):
-            raise ValueError("'settings' must be an instance of Settings or Arguments")
+            raise TypeError("'settings' must be an instance of Settings or Arguments")
 
         self._sensors = settings.get("led_pins")
         if len(self._sensors) != 6:
@@ -78,7 +82,8 @@ class Line_Follower_Raspberry_Pi(Line_Follower):
         # Drive the sensor lines low and set them as inputs.
         # Disable the internal pull-up resistors.
         for led in self._readable_leds:
-            self.gpio.setup(self._sensors[led], self.gpio.IN, pull_up_down=self.gpio.PUD_DOWN)
+            self.gpio.setup(self._sensors[led], self.gpio.IN,
+                            pull_up_down=self.gpio.PUD_DOWN)
             self.gpio.setup(self._sensors[led], self.gpio.IN)
 
         # Determine the values of the sensors. The documentation of
@@ -103,6 +108,8 @@ class Line_Follower_Raspberry_Pi(Line_Follower):
 
         # Convert the sensor values to binary. If the sensor value is
         # above a threshold value, we say that the vehicle is above a line.
-        sensor_values = [int(sensor_value > self._line_threshold) for sensor_value in sensor_values]
+        sensor_values = [
+            int(value > self._line_threshold) for value in sensor_values
+        ]
 
         return sensor_values

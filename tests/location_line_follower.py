@@ -1,4 +1,5 @@
-from mock import call, MagicMock
+from mock import call, patch, MagicMock
+from ..core.Threadable import Threadable
 from ..core.Thread_Manager import Thread_Manager
 from ..location.Line_Follower import Line_Follower, Line_Follower_State, Line_Follower_Direction
 from core_thread_manager import ThreadableTestCase
@@ -38,6 +39,55 @@ class TestLocationLineFollower(ThreadableTestCase):
         self.assertEqual(line_follower._direction, self.direction)
         self.assertEqual(line_follower._callback, mock_callback)
         self.assertEqual(line_follower._state, Line_Follower_State.AT_LINE)
+        self.assertFalse(line_follower._running)
+
+    def test_interface(self):
+        with patch('thread.start_new_thread') as thread_mock:
+            self.line_follower.activate()
+            thread_mock.assert_called_once_with(self.line_follower._loop, ())
+
+        self.assertTrue(self.line_follower._running)
+        self.line_follower.deactivate()
+        self.assertFalse(self.line_follower._running)
+
+        with self.assertRaises(NotImplementedError):
+            self.line_follower.enable()
+        with self.assertRaises(NotImplementedError):
+            self.line_follower.disable()
+        with self.assertRaises(NotImplementedError):
+            self.line_follower.read()
+
+    @patch.object(Line_Follower, "enable")
+    @patch.object(Line_Follower, "disable")
+    @patch.object(Line_Follower, "read")
+    @patch.object(Line_Follower, "update")
+    def test_loop(self, update_mock, read_mock, disable_mock, enable_mock):
+        self.line_follower._running = True
+        with patch.object(Threadable, "interrupt") as interrupt_mock:
+            enable_mock.configure_mock(side_effect=RuntimeError)
+            self.line_follower._loop()
+            enable_mock.assert_called_once_with()
+            read_mock.assert_not_called()
+            interrupt_mock.assert_called_once_with()
+
+        enable_mock.reset_mock()
+        enable_mock.configure_mock(side_effect=None)
+        read_mock.configure_mock(side_effect=self.line_follower.deactivate)
+
+        self.line_follower._loop()
+        enable_mock.assert_called_once_with()
+        read_mock.assert_called_once_with()
+        update_mock.assert_not_called()
+        self.assertFalse(self.line_follower._running)
+
+        self.line_follower._running = True
+        enable_mock.reset_mock()
+        read_mock.reset_mock()
+        read_mock.configure_mock(side_effect=None)
+        disable_mock.configure_mock(side_effect=self.line_follower.deactivate)
+
+        self.line_follower._loop()
+        self.assertFalse(self.line_follower._running)
 
     def test_update_line(self):
         # Invalid sensor values should cause an error.
@@ -173,7 +223,7 @@ class TestLocationLineFollower(ThreadableTestCase):
             self.line_follower.set_state("intersection")
 
         # A valid state must be set.
-        self.line_follower.set_direction(Line_Follower_State.AT_LINE)
+        self.line_follower.set_state(Line_Follower_State.AT_LINE)
         self.assertEqual(self.line_follower._state, Line_Follower_State.AT_LINE)
 
     def test_set_direction(self):
