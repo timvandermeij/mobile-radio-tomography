@@ -44,3 +44,10 @@ class TestZigBeeRFSensorPhysical(SettingsTestCase):
 
         self.assertIsInstance(self.rf_sensor._ntp, NTP)
         self.assertEqual(self.rf_sensor._ntp_delay, self.settings.get("ntp_delay"))
+
+    def test_discover(self):
+        # The discovery callback must be registered.
+        self.rf_sensor.discover(MagicMock())
+
+        self.assertNotEqual(self.rf_sensor._discovery_callback, None)
+        self.assertTrue(hasattr(self.rf_sensor._discovery_callback, "__call__"))

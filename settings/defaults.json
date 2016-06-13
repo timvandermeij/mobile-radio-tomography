@@ -8,7 +8,7 @@
                 "module": "zigbee.XBee_Sensor",
                 "required": true,
                 "replace": [" ", "_"],
-                "default": "XBee_CC2530_Sensor_Physical"
+                "default": "RF_Sensor_Physical_Texas_Instruments"
             }
         }
     },
@@ -1034,8 +1034,8 @@
             }
         }
     },
-    "xbee_cc2530_sensor_physical": {
-        "name": "XBee CC2530 sensor (physical)",
+    "rf_sensor_physical_texas_instruments": {
+        "name": "RF sensor physical (Texas Instruments)",
         "parent": "rf_sensor_physical",
         "settings": {
             "packet_length": {
