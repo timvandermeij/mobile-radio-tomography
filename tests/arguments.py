@@ -253,7 +253,14 @@ class TestArguments(SettingsTestCase):
         }
         with patch.dict('sys.modules', modules):
             info = {"module": "mock_module"}
-            self.assertEqual(arguments.get_choices(info), expected)
+            actual = arguments.get_choices(info)
+            self.assertEqual(actual, expected)
+
+            # Adding a new choice to the return value does not change the 
+            # original reference.
+            actual.append('something')
+            self.assertNotIn('something', expected)
+            self.assertNotEqual(actual, expected)
 
         # Retrieving choices from dir() works as expected
         mock_module = MockModule()

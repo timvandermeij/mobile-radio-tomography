@@ -311,11 +311,11 @@ class Arguments(object):
         """
 
         if "options" in info:
-            return info["options"]
+            return copy(info["options"])
         if "keys" in info:
-            return self._get_keys(info["keys"], relative=False)
+            return copy(self._get_keys(info["keys"], relative=False))
         if "module" in info:
-            return self._get_keys([info["module"]], relative=True)
+            return copy(self._get_keys([info["module"]], relative=True))
 
         return None
 
