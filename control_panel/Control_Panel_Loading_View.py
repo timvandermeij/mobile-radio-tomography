@@ -61,10 +61,10 @@ class Control_Panel_Loading_View(Control_Panel_View):
                     self._controller.usb_manager.get_cc2531_device()
                     rf_sensor_class = "RF_Sensor_Physical_Texas_Instruments"
 
-            # Reload the sensor class.
-            settings = self._controller.arguments.get_settings("control_panel")
-            settings.set("core_rf_sensor_class", rf_sensor_class)
-            self._controller.setup_rf_sensor()
+                # Reload the sensor class.
+                settings = self._controller.arguments.get_settings("control_panel")
+                settings.set("core_rf_sensor_class", rf_sensor_class)
+                self._controller.setup_rf_sensor()
 
             # An RF sensor has been inserted, but we need to check that it
             # actually is a ground station RF sensor.
