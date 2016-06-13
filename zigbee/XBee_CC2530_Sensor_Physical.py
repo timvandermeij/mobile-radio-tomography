@@ -140,7 +140,6 @@ class XBee_CC2530_Sensor_Physical(XBee_Sensor):
                 # strength measurements.
                 if not self._started:
                     self._send_custom_packets()
-                    time.sleep(self._custom_packet_delay)
                 elif self._id > 0 and time.time() >= self._next_timestamp:
                     self._next_timestamp = self._scheduler.get_next_timestamp()
                     self._send()

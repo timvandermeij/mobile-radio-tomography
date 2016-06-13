@@ -75,19 +75,6 @@ class RF_Sensor_Simulator(RF_Sensor):
         self._connection.bind((self._ip, self._port + self._id))
         self._connection.setblocking(0)
 
-    def _loop(self):
-        """
-        Execute the sensor loop. This runs in a separate thread.
-        """
-
-        try:
-            while self._activated:
-                self._loop_body()
-        except DisabledException:
-            return
-        except:
-            super(RF_Sensor_Simulator, self).interrupt()
-
     def _loop_body(self):
         """
         Body of the sensor loop.
@@ -102,7 +89,6 @@ class RF_Sensor_Simulator(RF_Sensor):
         # strength measurements.
         if not self._started:
             self._send_custom_packets()
-            time.sleep(self._custom_packet_delay)
         elif self._id > 0 and time.time() >= self._scheduler_next_timestamp:
             self._scheduler_next_timestamp = self._scheduler.get_next_timestamp()
             self._send()

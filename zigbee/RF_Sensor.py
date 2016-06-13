@@ -84,7 +84,6 @@ class RF_Sensor(Threadable):
         self._started = False
 
         self._loop_delay = self._settings.get("loop_delay")
-        self._custom_packet_delay = self._settings.get("custom_packet_delay")
 
         self._location_callback = location_callback
         self._receive_callback = receive_callback
@@ -236,7 +235,20 @@ class RF_Sensor(Threadable):
         raise NotImplementedError("Subclasses must implement `_setup()`")
 
     def _loop(self):
-        raise NotImplementedError("Subclasses must implement `_loop()`")
+        """
+        Execute the sensor loop. This runs in a separate thread.
+        """
+
+        try:
+            while self._activated:
+                self._loop_body()
+        except DisabledException:
+            return
+        except:
+            super(RF_Sensor, self).interrupt()
+
+    def _loop_body(self):
+        raise NotImplementedError("Subclasses must implement `_loop_body()`")
 
     def _send(self):
         """

@@ -8,10 +8,11 @@ from mock import patch, MagicMock, PropertyMock
 
 # Package imports
 from ..core.Thread_Manager import Thread_Manager
+from ..core.Threadable import Threadable
 from ..settings.Arguments import Arguments
 from ..reconstruction.Buffer import Buffer
 from ..zigbee.Packet import Packet
-from ..zigbee.RF_Sensor import RF_Sensor
+from ..zigbee.RF_Sensor import RF_Sensor, DisabledException
 from ..zigbee.TDMA_Scheduler import TDMA_Scheduler
 from settings import SettingsTestCase
 
@@ -63,8 +64,6 @@ class TestZigBeeRFSensor(SettingsTestCase):
         self.assertEqual(self.rf_sensor._started, False)
 
         self.assertEqual(self.rf_sensor._loop_delay, self.settings.get("loop_delay"))
-        self.assertEqual(self.rf_sensor._custom_packet_delay,
-                         self.settings.get("custom_packet_delay"))
 
         self.assertTrue(hasattr(self.rf_sensor._location_callback, "__call__"))
         self.assertTrue(hasattr(self.rf_sensor._receive_callback, "__call__"))
@@ -196,10 +195,31 @@ class TestZigBeeRFSensor(SettingsTestCase):
             self.rf_sensor._setup()
 
     def test_loop(self):
+        self.rf_sensor._activated = True
+
+        with patch.object(Threadable, "interrupt") as interrupt_mock:
+            with patch.object(RF_Sensor, "_loop_body") as loop_body_mock:
+                # The loop body and interrupt handler must be called when
+                # an exception other than a `DisabledException` is raised.
+                loop_body_mock.configure_mock(side_effect=RuntimeError)
+                self.rf_sensor._loop()
+                loop_body_mock.assert_called_once_with()
+                interrupt_mock.assert_called_once_with()
+
+        with patch.object(Threadable, "interrupt") as interrupt_mock:
+            with patch.object(RF_Sensor, "_loop_body") as loop_body_mock:
+                # The loop body must be called when a `DisabledException` is
+                # raised, but nothing else must happen.
+                loop_body_mock.configure_mock(side_effect=DisabledException)
+                self.rf_sensor._loop()
+                loop_body_mock.assert_called_once_with()
+                interrupt_mock.assert_not_called()
+
+    def test_loop_body(self):
         # Verify that the interface requires subclasses to implement
-        # the `_loop` method.
+        # the `_loop_body` method.
         with self.assertRaises(NotImplementedError):
-            self.rf_sensor._loop()
+            self.rf_sensor._loop_body()
 
     def test_send(self):
         self.rf_sensor._packets.append(self.rf_sensor._create_rssi_broadcast_packet())

@@ -937,12 +937,6 @@
                 "min": 0,
                 "default": 0
             },
-            "custom_packet_delay": {
-                "help": "Delay in seconds between sending custom packets when not measuring",
-                "type": "float",
-                "min": 0.0,
-                "default": 0.1
-            },
             "loop_delay": {
                 "help": "Delay in seconds for each sensor loop",
                 "type": "float",
