@@ -53,7 +53,7 @@ class Arguments(object):
     """
     Command line argument handler.
 
-    This class read settings from positional and optional arguments and passes
+    This class reads settings from positional and optional arguments and passes
     them along to `Settings` objects. It handles incremental parsing, help
     formatting and type conversions.
     """
@@ -170,6 +170,13 @@ class Arguments(object):
         return self._program_name
 
     def _handle_positionals(self):
+        """
+        Parse the positional arguments from the argument list input.
+
+        The values read from the arguments list for the positional argument
+        registries are then available from `get_positional_value`.
+        """
+
         for info in self._positional_args:
             name = info["name"]
             if len(self.argv) > 0 and not self.argv[0].startswith('-'):
@@ -215,9 +222,11 @@ class Arguments(object):
 
     def get_settings(self, group):
         """
-        Retrieve the Settings object or create it if it did not exist yet.
+        Retrieve the `Settings` object for the given group name `group`, or
+        create it if it did not exist yet.
 
-        This returns a Settings object that may have its settings overridden with arguments from the input.
+        This returns a `Settings` object that may have its settings overridden
+        with arguments from the input.
         """
 
         if group in self.groups:
@@ -231,6 +240,13 @@ class Arguments(object):
         return self.groups[group]
 
     def _parse_settings(self, group, settings):
+        """
+        Parse the arguments relevant to the `Settings` object `settings` with
+        group name `group`. This registers the command line arguments in the
+        argument parser and partially parses the argument list to update the
+        settings with overridden values.
+        """
+
         if not self._done_help:
             self._add_arguments(group, settings)
             self._fill_settings(settings)
@@ -271,6 +287,14 @@ class Arguments(object):
         return dir(data)
 
     def get_help(self, key, info):
+        """
+        Retrieve a human-readable help message for the setting with the key
+        `key` and its registry information `info`.
+
+        Even if no help is defined for this setting, we may provide something
+        that is more readable than the key.
+        """
+
         if "help" in info:
             return info["help"]
 
@@ -278,6 +302,14 @@ class Arguments(object):
         return ' '.join([parts[0].title()] + parts[1:])
 
     def get_choices(self, info):
+        """
+        Retrieve a list of option choices from the setting registry `info`.
+
+        The returned list provides the possible choices for the value of this
+        setting. Note that if the setting is not required, then the empty string
+        is also a choice, even if it is not in this list.
+        """
+
         if "options" in info:
             return info["options"]
         if "keys" in info:
@@ -288,6 +320,14 @@ class Arguments(object):
         return None
 
     def _get_argument_options(self, key, info):
+        """
+        Convert the registry information `info` for a given setting key or
+        positional argument name `key` to action arguments that are suitable for
+        the argument parser.
+
+        Returns the options in a dictionary.
+        """
+
         kw = {
             "dest": key,
             "help": self.get_help(key, info)
@@ -324,6 +364,8 @@ class Arguments(object):
             table = string.maketrans(*info["replace"])
             kw["type"] = partial(lambda table, x: str(x).translate(table), table)
         elif info["type"] == "bool":
+            # Create options for enabling the setting. The counterpart for 
+            # disabling is handled in `_add_arguments`.
             kw["action"] = "store_true"
         elif info["type"] in self._type_names:
             kw["type"] = self._type_names[info["type"]]
@@ -332,7 +374,8 @@ class Arguments(object):
 
     def _add_arguments(self, group, settings):
         """
-        Register argument specifications in the argument parser for the Settings group.
+        Register argument specifications in the argument parser for the
+        given `Settings` object `settings` with group name `group`.
         """
 
         argument_group = self.parser.add_argument_group("{} ({})".format(settings.name, group))
@@ -356,6 +399,14 @@ class Arguments(object):
             sub_group.add_argument("--{}".format(opt), **kw)
 
     def _type_cast(self, value, info):
+        """
+        Cast the given string `value` to the correct type according to
+        registry information in `info`.
+
+        Returns the value of the type appropriate for the setting or positional
+        argument.
+        """
+
         if value is not None and "type" in info and info["type"] in self._type_names:
             typecast = self._type_names[info["type"]]
             return typecast(value)
@@ -379,6 +430,13 @@ class Arguments(object):
                 self.error(str(e))
 
     def error(self, message):
+        """
+        Display a textual error `message` and stop the program.
+
+        This method also checks whether the user wants to receive the full help
+        message rather than just the usage line and the error.
+        """
+
         try:
             self.check_help()
         except SystemExit:
