@@ -10,7 +10,7 @@ from ..settings import Arguments
 from ..trajectory.Servo import Servo
 from ..vehicle.Mock_Vehicle import Mock_Vehicle
 from ..zigbee.Packet import Packet
-from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
+from ..zigbee.RF_Sensor import RF_Sensor
 from geometry import LocationTestCase
 from settings import SettingsTestCase
 from core_thread_manager import ThreadableTestCase
@@ -38,7 +38,7 @@ class EnvironmentTestCase(LocationTestCase, SettingsTestCase,
     def register_arguments(self, argv, simulated=True, distance_sensors=None,
                            use_infrared_sensor=True):
         self._argv = argv
-        self._argv.extend(["--rf-sensor-class", "XBee_Sensor_Simulator", "--rf-sensor-id", "1"])
+        self._argv.extend(["--rf-sensor-class", "RF_Sensor_Simulator", "--rf-sensor-id", "1"])
 
         self._simulated = simulated
         # WiringPiTestCase provides a patcher for RPi.GPIO, which is necessary 
@@ -159,7 +159,7 @@ class TestEnvironment(EnvironmentTestCase):
         for servo in self.environment.get_servos():
             self.assertIsInstance(servo, Servo)
 
-        self.assertIsInstance(self.environment.get_rf_sensor(), XBee_Sensor_Simulator)
+        self.assertIsInstance(self.environment.get_rf_sensor(), RF_Sensor)
         self.assertIsNotNone(self.environment.get_infrared_sensor())
 
     def test_packet_action(self):

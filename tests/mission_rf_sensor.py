@@ -3,7 +3,7 @@ from dronekit import LocationLocal
 from ..mission.Mission_RF_Sensor import Mission_RF_Sensor
 from ..vehicle.Robot_Vehicle import Robot_State
 from ..zigbee.Packet import Packet
-from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
+from ..zigbee.RF_Sensor import RF_Sensor
 from environment import EnvironmentTestCase
 
 class TestMissionRFSensor(EnvironmentTestCase):
@@ -55,7 +55,7 @@ class TestMissionRFSensor(EnvironmentTestCase):
         with patch('sys.stdout'):
             self.environment.receive_packet(packet)
 
-    @patch.object(XBee_Sensor_Simulator, "enqueue")
+    @patch.object(RF_Sensor, "enqueue")
     def test_clear(self, enqueue_mock):
         with patch('sys.stdout'):
             self.mission.setup()
@@ -93,7 +93,7 @@ class TestMissionRFSensor(EnvironmentTestCase):
         self.assertEqual(self.mission.next_index, 0)
         self.assertEqual(self.vehicle._waypoints, [])
 
-    @patch.object(XBee_Sensor_Simulator, "enqueue")
+    @patch.object(RF_Sensor, "enqueue")
     def test_add(self, enqueue_mock):
         with patch('sys.stdout'):
             self.mission.setup()
@@ -119,7 +119,7 @@ class TestMissionRFSensor(EnvironmentTestCase):
         self.assertEqual(self.mission.next_index, 1)
         self.assertEqual(self.vehicle._waypoints, [(1, 4), None])
 
-    @patch.object(XBee_Sensor_Simulator, "enqueue")
+    @patch.object(RF_Sensor, "enqueue")
     def test_add_wrong_index(self, enqueue_mock):
         with patch('sys.stdout'):
             self.mission.setup()
@@ -140,7 +140,7 @@ class TestMissionRFSensor(EnvironmentTestCase):
         self.assertEqual(self.mission.next_index, 0)
         self.assertEqual(self.vehicle._waypoints, [])
 
-    @patch.object(XBee_Sensor_Simulator, "enqueue")
+    @patch.object(RF_Sensor, "enqueue")
     def test_done(self, enqueue_mock):
         with patch('sys.stdout'):
             self.mission.setup()

@@ -4,8 +4,8 @@ from mock import Mock, mock_open, patch
 from ..core.Thread_Manager import Thread_Manager
 from ..settings import Settings
 from ..zigbee.Packet import Packet
+from ..zigbee.RF_Sensor import RF_Sensor
 from ..zigbee.Settings_Receiver import Settings_Receiver
-from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
 from environment import EnvironmentTestCase
 
 class TestZigBeeSettingsReceiver(EnvironmentTestCase):
@@ -27,7 +27,7 @@ class TestZigBeeSettingsReceiver(EnvironmentTestCase):
         self.assertIn("setting_add", self.environment._packet_callbacks.keys())
         self.assertIn("setting_done", self.environment._packet_callbacks.keys())
 
-    @patch.object(XBee_Sensor_Simulator, "enqueue")
+    @patch.object(RF_Sensor, "enqueue")
     def test_clear(self, enqueue_mock):
         # Packets not meant for the current RF sensor are ignored.
         packet = Packet()
@@ -59,7 +59,7 @@ class TestZigBeeSettingsReceiver(EnvironmentTestCase):
         self.assertEqual(Settings.settings_files, {})
         self.assertEqual(self.arguments.groups, {})
 
-    @patch.object(XBee_Sensor_Simulator, "enqueue")
+    @patch.object(RF_Sensor, "enqueue")
     def test_add(self, enqueue_mock):
         packet = Packet()
         packet.set("specification", "setting_add")
@@ -133,4 +133,4 @@ class TestZigBeeSettingsReceiver(EnvironmentTestCase):
 
         self.assertEqual(Settings.settings_files, {})
         self.assertEqual(self.arguments.groups, {})
-        interrupt_mock.assert_called_once_with("xbee_sensor")
+        interrupt_mock.assert_called_once_with("rf_sensor")

@@ -9,7 +9,7 @@ from TDMA_Scheduler import TDMA_Scheduler
 
 # pylint: disable=undefined-all-variable
 __all__ = [
-    "XBee_CC2530_Sensor_Physical", "XBee_Sensor_Physical", "XBee_Sensor_Simulator"
+    "XBee_CC2530_Sensor_Physical", "XBee_Sensor_Physical", "RF_Sensor_Simulator"
 ]
 
 class SensorClosedError(Exception):

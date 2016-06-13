@@ -1,7 +1,7 @@
 import sys
 from PyQt4 import QtCore, QtGui
 from Control_Panel_View import Control_Panel_View, Control_Panel_View_Name
-from ..zigbee.XBee_Sensor_Simulator import XBee_Sensor_Simulator
+from ..zigbee.RF_Sensor_Simulator import RF_Sensor_Simulator
 
 class Control_Panel_Loading_View(Control_Panel_View):
     def __init__(self, controller, settings):
@@ -30,7 +30,7 @@ class Control_Panel_Loading_View(Control_Panel_View):
         vbox.addWidget(self._label)
         vbox.addStretch(1)
 
-        if not isinstance(self._controller.rf_sensor, XBee_Sensor_Simulator):
+        if not isinstance(self._controller.rf_sensor, RF_Sensor_Simulator):
             button = QtGui.QPushButton("Switch to simulation mode")
             button.clicked.connect(self._switch)
 
@@ -50,7 +50,7 @@ class Control_Panel_Loading_View(Control_Panel_View):
         """
 
         try:
-            if not isinstance(self._controller.rf_sensor, XBee_Sensor_Simulator):
+            if not isinstance(self._controller.rf_sensor, RF_Sensor_Simulator):
                 self._controller.usb_manager.index()
                 try:
                     # Assume the ground station is an XBee device.
@@ -99,5 +99,5 @@ class Control_Panel_Loading_View(Control_Panel_View):
         """
 
         settings = self._controller.arguments.get_settings("control_panel")
-        settings.set("core_rf_sensor_class", "XBee_Sensor_Simulator")
+        settings.set("core_rf_sensor_class", "RF_Sensor_Simulator")
         self._controller.setup_rf_sensor()

@@ -138,8 +138,8 @@ class Environment(object):
         rf_sensor_type = self.import_manager.load_class(rf_sensor_class,
                                                         relative_module="zigbee")
         self._rf_sensor = rf_sensor_type(self.arguments, self.thread_manager,
-                                         self.usb_manager, self.get_raw_location,
-                                         self.receive_packet, self.location_valid)
+                                         self.get_raw_location, self.receive_packet,
+                                         self.location_valid, usb_manager=self.usb_manager)
 
     def get_vehicle(self):
         return self.vehicle
