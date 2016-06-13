@@ -82,33 +82,45 @@ class RF_Sensor_Simulator(RF_Sensor):
 
         try:
             while self._activated:
-                # If the sensor has been activated, this loop will only send
-                # enqueued custom packets. If the sensor has been started, we
-                # stop sending custom packets and start performing signal
-                # strength measurements.
-                if not self._started:
-                    self._send_custom_packets()
-                    time.sleep(self._custom_packet_delay)
-                elif self._id > 0 and time.time() >= self._scheduler_next_timestamp:
-                    self._scheduler_next_timestamp = self._scheduler.get_next_timestamp()
-                    self._send()
-
-                time.sleep(self._loop_delay)
-
-                # Check if there is data to be processed.
-                try:
-                    data = self._connection.recv(self._buffer_size)
-                except socket.error:
-                    continue
-
-                # Unserialize the data (byte-encoded string).
-                packet = Packet()
-                packet.unserialize(data)
-                self._receive(packet)
-        except (AttributeError, DisabledException):
-            pass
+                self._loop_body()
+        except DisabledException:
+            return
         except:
             super(RF_Sensor_Simulator, self).interrupt()
+
+    def _loop_body(self):
+        """
+        Body of the sensor loop.
+
+        This is extracted into a separate method to make testing easier, as well
+        as for keeping the `_loop` implementation in the base class.
+        """
+
+        # If the sensor has been activated, this loop will only send
+        # enqueued custom packets. If the sensor has been started, we
+        # stop sending custom packets and start performing signal
+        # strength measurements.
+        if not self._started:
+            self._send_custom_packets()
+            time.sleep(self._custom_packet_delay)
+        elif self._id > 0 and time.time() >= self._scheduler_next_timestamp:
+            self._scheduler_next_timestamp = self._scheduler.get_next_timestamp()
+            self._send()
+
+        time.sleep(self._loop_delay)
+
+        # Process any data in the socket's buffer.
+        try:
+            data = self._connection.recv(self._buffer_size)
+
+            # Unserialize the data (byte-encoded string).
+            packet = Packet()
+            packet.unserialize(data)
+            self._receive(packet)
+        except AttributeError:
+            raise DisabledException
+        except socket.error:
+            return
 
     def _send_tx_frame(self, packet, to=None):
         """
