@@ -119,3 +119,17 @@ class TestZigBeeRFSensorPhysical(SettingsTestCase):
 
         with self.assertRaises(ValueError):
             self.rf_sensor._process(packet)
+
+    def test_process_rssi_broadcast_packet(self):
+        scheduler_next_timestamp = self.rf_sensor._scheduler_next_timestamp
+        packet = self.rf_sensor._create_rssi_broadcast_packet()
+
+        ground_station_packet = self.rf_sensor._process_rssi_broadcast_packet(packet)
+
+        # The scheduler's next timestamp must be updated.
+        self.assertNotEqual(scheduler_next_timestamp,
+                            self.rf_sensor._scheduler_next_timestamp)
+
+        # A ground station packet must be returned.
+        self.assertEqual(ground_station_packet.get("specification"),
+                         "rssi_ground_station")

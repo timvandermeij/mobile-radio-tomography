@@ -201,22 +201,18 @@ class RF_Sensor_Physical_XBee(RF_Sensor_Physical):
 
         self._process_rssi_broadcast_packet(rx_packet)
 
-    def _process_rssi_broadcast_packet(self, packet):
+    def _process_rssi_broadcast_packet(self, packet, **kwargs):
         """
-        Helper method for processing a `Packet` object `packet` that has been
-        created according to the "rssi_broadcast" specification.
+        Process a `Packet` object `packet` that has been created according to
+        the "rssi_broadcast" specification.
         """
 
-        # Synchronize the scheduler using the timestamp in the packet.
-        self._scheduler_next_timestamp = self._scheduler.synchronize(packet)
-
-        # Create the packet for the ground station.
-        ground_station_packet = self._create_rssi_ground_station_packet(packet)
+        packet = super(RF_Sensor_Physical_XBee, self)._process_rssi_broadcast_packet(packet)
 
         # Generate a frame ID to be able to match this packet and the
         # associated RSSI (DB command) request.
         frame_id = chr(random.randint(1, 255))
-        self._packets[frame_id] = ground_station_packet
+        self._packets[frame_id] = packet
 
         # Request the RSSI value for the received packet.
         self._sensor.send("at", command="DB", frame_id=frame_id)

@@ -95,3 +95,17 @@ class RF_Sensor_Physical(RF_Sensor):
         # Handle an RSSI broadcast packet.
         if packet.get("specification") != "rssi_broadcast":
             raise ValueError("Received packet is not an RSSI broadcast packet")
+
+    def _process_rssi_broadcast_packet(self, packet, **kwargs):
+        """
+        Process a `Packet` object `packet` that has been created according to
+        the "rssi_broadcast" specification.
+
+        Classes that inherit this base class must extend this method.
+        """
+
+        # Synchronize the scheduler using the timestamp in the packet.
+        self._scheduler_next_timestamp = self._scheduler.synchronize(packet)
+
+        # Create the packet for the ground station.
+        return self._create_rssi_ground_station_packet(packet)

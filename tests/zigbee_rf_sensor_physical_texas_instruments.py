@@ -211,17 +211,16 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(SettingsTestCase, USBManagerTes
         packet.set("specification", "rssi_broadcast")
 
         self.rf_sensor._process(packet, rssi=42)
-        self.rf_sensor._process_rssi_broadcast_packet.assert_called_once_with(packet, 42)
+        self.rf_sensor._process_rssi_broadcast_packet.assert_called_once_with(packet, rssi=42)
 
     def test_process_rssi_broadcast_packet(self):
-        scheduler_next_timestamp = self.rf_sensor._scheduler_next_timestamp
+        # RSSI value must be provided.
+        with self.assertRaises(TypeError):
+            self.rf_sensor._process_rssi_broadcast_packet(Packet())
 
         packet = self.rf_sensor._create_rssi_broadcast_packet()
-        self.rf_sensor._process_rssi_broadcast_packet(packet, 42)
 
-        # The scheduler's next timestamp must be updated.
-        self.assertNotEqual(scheduler_next_timestamp,
-                            self.rf_sensor._scheduler_next_timestamp)
+        self.rf_sensor._process_rssi_broadcast_packet(packet, rssi=42)
 
         # A ground station packet must be put in the packet list.
         self.assertEqual(len(self.rf_sensor._packets), 1)

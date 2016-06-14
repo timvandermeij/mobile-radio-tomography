@@ -209,18 +209,18 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
 
         super(RF_Sensor_Physical_Texas_Instruments, self)._process(packet, rssi=rssi)
 
-        self._process_rssi_broadcast_packet(packet, rssi)
+        self._process_rssi_broadcast_packet(packet, rssi=rssi)
 
-    def _process_rssi_broadcast_packet(self, packet, rssi):
+    def _process_rssi_broadcast_packet(self, packet, rssi=None, **kwargs):
         """
-        Helper method for processing a `Packet` object `packet` with RSSI value `rssi`
-        that has been created according to the "rssi_broadcast" specification.
+        Process a `Packet` object `packet` that has been created according to
+        the "rssi_broadcast" specification.
         """
 
-        # Synchronize the scheduler using the timestamp in the packet.
-        self._scheduler_next_timestamp = self._scheduler.synchronize(packet)
+        if rssi is None:
+            raise TypeError("RSSI value must be provided")
 
-        # Create the packet for the ground station.
-        ground_station_packet = self._create_rssi_ground_station_packet(packet)
-        ground_station_packet.set("rssi", rssi)
-        self._packets.append(ground_station_packet)
+        packet = super(RF_Sensor_Physical_Texas_Instruments, self)._process_rssi_broadcast_packet(packet,
+                                                                                                  rssi=rssi)
+        packet.set("rssi", rssi)
+        self._packets.append(packet)
