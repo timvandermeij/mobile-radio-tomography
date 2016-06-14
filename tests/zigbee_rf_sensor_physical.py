@@ -11,6 +11,8 @@ from settings import SettingsTestCase
 
 class TestZigBeeRFSensorPhysical(SettingsTestCase):
     def setUp(self):
+        super(TestZigBeeRFSensorPhysical, self).setUp()
+
         self.arguments = Arguments("settings.json", ["--rf-sensor-id", "1"])
         self.settings = self.arguments.get_settings("rf_sensor_physical")
 

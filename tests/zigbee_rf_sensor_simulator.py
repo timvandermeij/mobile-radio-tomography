@@ -16,6 +16,8 @@ from settings import SettingsTestCase
 
 class TestZigBeeRFSensorSimulator(SettingsTestCase):
     def setUp(self):
+        super(TestZigBeeRFSensorSimulator, self).setUp()
+
         self.arguments = Arguments("settings.json", ["--rf-sensor-id", "1"])
         self.settings = self.arguments.get_settings("rf_sensor_simulator")
 
@@ -31,7 +33,7 @@ class TestZigBeeRFSensorSimulator(SettingsTestCase):
 
     def test_initialization(self):
         # The simulated sensor must have joined the network immediately.
-        self.assertEqual(self.rf_sensor._joined, True)
+        self.assertTrue(self.rf_sensor._joined)
 
         # The simulated sensor must have its networking information set.
         self.assertEqual(self.rf_sensor._ip, self.settings.get("socket_ip"))
@@ -69,8 +71,6 @@ class TestZigBeeRFSensorSimulator(SettingsTestCase):
         self.assertIsInstance(self.rf_sensor._connection, socket.socket)
 
     def test_loop_body(self):
-        self.rf_sensor._started = False
-
         with patch.object(RF_Sensor_Simulator, "_send_custom_packets") as send_custom_packets_mock:
             # Send custom packets when the sensor has been activated,
             # but not started.
@@ -149,7 +149,6 @@ class TestZigBeeRFSensorSimulator(SettingsTestCase):
         self.rf_sensor._send_tx_frame(packet, to=2)
 
         # The packet must be sent over the socket connection.
-        self.assertEqual(connection_mock.sendto.call_count, 1)
         address = (self.rf_sensor._ip, self.rf_sensor._port + 2)
         connection_mock.sendto.assert_called_once_with(packet.serialize(), address)
 

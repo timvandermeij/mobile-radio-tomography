@@ -18,6 +18,8 @@ from settings import SettingsTestCase
 
 class TestZigBeeRFSensor(SettingsTestCase):
     def setUp(self):
+        super(TestZigBeeRFSensor, self).setUp()
+
         self.arguments = Arguments("settings.json", ["--rf-sensor-id", "1"])
         self.settings = self.arguments.get_settings("zigbee_base")
 
@@ -108,7 +110,7 @@ class TestZigBeeRFSensor(SettingsTestCase):
                 self.rf_sensor.activate()
 
                 # The sensor must be setup and the loop thread must be started.
-                self.assertEqual(self.rf_sensor._activated, True)
+                self.assertTrue(self.rf_sensor._activated)
                 self.assertEqual(setup_mock.call_count, 1)
                 self.assertEqual(start_new_thread_mock.call_count, 1)
 
@@ -130,7 +132,7 @@ class TestZigBeeRFSensor(SettingsTestCase):
         # The sensor must be started for sending RSSI broadcast/ground
         # station packets.
         self.rf_sensor.start()
-        self.assertEqual(self.rf_sensor._started, True)
+        self.assertTrue(self.rf_sensor._started)
 
     def test_stop(self):
         # The sensor must be stopped for sending custom packets.
@@ -292,7 +294,7 @@ class TestZigBeeRFSensor(SettingsTestCase):
         self.assertEqual(packet.get("specification"), "rssi_broadcast")
         self.assertEqual(packet.get("latitude"), 0)
         self.assertEqual(packet.get("longitude"), 0)
-        self.assertEqual(packet.get("valid"), True)
+        self.assertTrue(packet.get("valid"))
         self.assertEqual(packet.get("waypoint_index"), 0)
         self.assertEqual(packet.get("sensor_id"), self.rf_sensor.id)
         self.assertAlmostEqual(packet.get("timestamp"), time.time(), delta=0.1)
@@ -309,4 +311,4 @@ class TestZigBeeRFSensor(SettingsTestCase):
         self.assertEqual(packet.get("from_valid"), rssi_broadcast_packet.get("valid"))
         self.assertEqual(packet.get("to_latitude"), 0)
         self.assertEqual(packet.get("to_longitude"), 0)
-        self.assertEqual(packet.get("to_valid"), True)
+        self.assertTrue(packet.get("to_valid"))

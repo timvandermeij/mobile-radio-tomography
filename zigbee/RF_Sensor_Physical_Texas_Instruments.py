@@ -99,12 +99,12 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
 
         super(RF_Sensor_Physical_Texas_Instruments, self).discover(callback)
 
-        # Send a ping to all sensors in the network.
-        packet = Packet()
-        packet.set("specification", "ping_pong")
-
+        # Send a ping/pong packet to all sensors in the network.
         for index in xrange(1, self._number_of_sensors + 1):
+            packet = Packet()
+            packet.set("specification", "ping_pong")
             packet.set("sensor_id", index)
+
             self._send_tx_frame(packet, index)
 
     def _setup(self):
@@ -125,7 +125,7 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
             wiringpi.module.pinModeAlt(self._pins["rts_pin"], Raspberry_Pi_GPIO_Pin_Mode.ALT3)
             wiringpi.module.pinModeAlt(self._pins["cts_pin"], Raspberry_Pi_GPIO_Pin_Mode.ALT3)
 
-            # Reopen the serial connection.
+            # Open the serial connection.
             self._connection = self._usb_manager.get_cc2530_device()
 
             # Reset the CC2530 device.
@@ -196,55 +196,66 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
         data = data[0:length]
 
         # Convert the packet to a `Packet` object according to specifications.
-        unserialized_packet = Packet()
-        unserialized_packet.unserialize(data)
+        packet = Packet()
+        packet.unserialize(data)
+
+        self._process(packet, rssi)
+
+    def _process(self, packet, rssi):
+        """
+        Helper method for processing a `Packet` object `packet` with RSSI value `rssi`.
+        """
 
         # Check whether the packet is not private and pass it along to the 
         # receive callback.
-        if not unserialized_packet.is_private():
-            self._receive_callback(unserialized_packet)
+        if not packet.is_private():
+            self._receive_callback(packet)
             return
 
         # Handle NTP synchronization packets.
-        if unserialized_packet.get("specification") == "ntp":
-            self._ntp.process(unserialized_packet)
+        if packet.get("specification") == "ntp":
+            self._ntp.process(packet)
             return
 
         if self._id == 0:
             # Handle ping/pong packets.
-            if unserialized_packet.get("specification") == "ping_pong":
+            if packet.get("specification") == "ping_pong":
                 self._discovery_callback({
-                    "id": unserialized_packet.get("sensor_id"),
-                    "address": str(unserialized_packet.get("sensor_id"))
+                    "id": packet.get("sensor_id"),
+                    "address": str(packet.get("sensor_id"))
                 })
                 return
 
             # Handle an RSSI ground station packet.
-            if self._buffer is not None:
-                self._buffer.put(unserialized_packet)
+            if packet.get("specification") == "rssi_ground_station":
+                if self._buffer is not None:
+                    self._buffer.put(packet)
 
-            return
+                return
+
+            raise ValueError("Received packet is not an RSSI ground station packet")
 
         # Respond to ping/pong requests.
-        if unserialized_packet.get("specification") == "ping_pong":
-            self._send_tx_frame(unserialized_packet, 0)
+        if packet.get("specification") == "ping_pong":
+            self._send_tx_frame(packet, 0)
             return
 
         # Handle a received RSSI broadcast packet.
-        self._process_rssi_broadcast_packet(unserialized_packet, rssi=rssi)
+        if packet.get("specification") != "rssi_broadcast":
+            raise ValueError("Received packet is not an RSSI broadcast packet")
 
-    def _process_rssi_broadcast_packet(self, packet, rssi=None):
+        self._process_rssi_broadcast_packet(packet, rssi)
+
+    def _process_rssi_broadcast_packet(self, packet, rssi):
         """
-        Helper method to process a received packet with RSSI measurements.
+        Helper method for processing a `Packet` object `packet` with RSSI value `rssi`
+        that has been created according to the "rssi_broadcast" specification.
         """
 
         # Synchronize the scheduler using the timestamp in the packet.
         self._scheduler_next_timestamp = self._scheduler.synchronize(packet)
 
         # Create the packet for the ground station.
-        if rssi is None:
-            raise ValueError("Missing RSSI value for ground station packet")
-
         ground_station_packet = self._create_rssi_ground_station_packet(packet)
         ground_station_packet.set("rssi", rssi)
         self._packets.append(ground_station_packet)
