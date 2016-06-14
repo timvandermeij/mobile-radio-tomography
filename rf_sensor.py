@@ -28,7 +28,7 @@ def main(argv):
         "name": "rf_sensor_class",
         "help": "Sensor class to use for the RF sensor",
         "type": "class",
-        "module": "zigbee.XBee_Sensor",
+        "module": "zigbee.RF_Sensor",
         "required": True
     }])
 

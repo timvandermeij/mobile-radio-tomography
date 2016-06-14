@@ -273,6 +273,12 @@ class TestZigBeeRFSensor(SettingsTestCase):
             self.assertEqual(self.rf_sensor._queue.qsize(), 0)
 
     def test_send_tx_frame(self):
+        # Having a closed connection raises an exception.
+        with self.assertRaises(DisabledException):
+            self.rf_sensor._send_tx_frame(Packet(), to=2)
+
+        self.rf_sensor._connection = MagicMock()
+
         # Providing an invalid packet raises an exception.
         with self.assertRaises(TypeError):
             self.rf_sensor._send_tx_frame(None, to=2)

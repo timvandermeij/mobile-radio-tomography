@@ -254,6 +254,8 @@ class RF_Sensor(Threadable):
         """
         Send a broadcast packet to each other sensor in the network and
         send collected packets to the ground station.
+
+        Classes that inherit this base class may extend this method.
         """
 
         # Create and send the RSSI broadcast packets.
@@ -285,6 +287,9 @@ class RF_Sensor(Threadable):
 
         Classes that inherit this base class must extend this method.
         """
+
+        if self._connection is None:
+            raise DisabledException
 
         if not isinstance(packet, Packet):
             raise TypeError("Only `Packet` objects can be sent")

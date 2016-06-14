@@ -55,9 +55,9 @@ class Control_Panel_Loading_View(Control_Panel_View):
                 try:
                     # Assume the ground station is an XBee device.
                     self._controller.usb_manager.get_xbee_device()
-                    rf_sensor_class = "XBee_Sensor_Physical"
+                    rf_sensor_class = "RF_Sensor_Physical_XBee"
                 except KeyError:
-                    # Not an XBee device, so it must be a CC2531 device.
+                    # Not an XBee device, so it must be a Texas Instruments device.
                     self._controller.usb_manager.get_cc2531_device()
                     rf_sensor_class = "RF_Sensor_Physical_Texas_Instruments"
 

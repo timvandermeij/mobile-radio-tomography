@@ -5,7 +5,7 @@
             "core_rf_sensor_class": {
                 "help": "RF sensor class to use for the control panel",
                 "type": "class",
-                "module": "zigbee.XBee_Sensor",
+                "module": "zigbee.RF_Sensor",
                 "required": true,
                 "replace": [" ", "_"],
                 "default": "RF_Sensor_Physical_Texas_Instruments"
@@ -410,7 +410,7 @@
             "rf_sensor_class": {
                 "help": "RF sensor class to use for the environment",
                 "type": "class",
-                "module": "zigbee.XBee_Sensor",
+                "module": "zigbee.RF_Sensor",
                 "required": false,
                 "replace": [" ", "_"],
                 "default": ""
