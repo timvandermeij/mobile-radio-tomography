@@ -22,7 +22,8 @@ procedures.
   for remote control support. Check whether and how your package manager 
   provides these packages, otherwise you can retrieve them from the LIRC 
   website itself.
-* Python 2.7. Note that Python 3 cannot be used at this moment.
+* [Python](https://www.python.org/) 2.7. At least version 2.7.7 is required. 
+  Note that Python 3 cannot be used at this moment.
 * [SIP](https://www.riverbankcomputing.com/software/sip) and 
   [PyQt4](https://www.riverbankcomputing.com/software/pyqt). These may be 
   available from package managers, but are not available through `pip`.
@@ -36,8 +37,8 @@ procedures.
   simulation. See the [ArduPilot section](#ardupilot) below for more details.
 
 For all commands in this file, replace `python2` with `python`, and `pip2` with 
-`pip` if your operating system does not need to distinguish between Python 
-2 and Python 3.
+`pip` if your operating system does not need to distinguish between different 
+versions of Python, e.g., Python 2 and Python 3.
 
 Python packages
 ---------------
@@ -321,7 +322,9 @@ Code style
 Compatibility with the `pylint` code style checker is provided to allow testing 
 whether the code follows a certain coding standard and contains no other 
 errors. Some reports may be disabled in `.pylintrc` or through plugins. You can 
-use `pylint mobile-radio-tomography` to scan all files, which is quite slow.
+use `pylint mobile-radio-tomography` to scan all files, which is quite slow. 
+Travis CI automatically runs pylint on the Python files that were changed in 
+a commit range, an entire branch or a pull request.
 
 During development, you can enable lint checks in your editor to receive code 
 style help for the currently edited file on the go. For Vim, you can enable 
