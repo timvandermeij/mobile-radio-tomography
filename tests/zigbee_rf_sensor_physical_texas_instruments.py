@@ -131,7 +131,7 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(SettingsTestCase, USBManagerTes
             # The receive method must be called.
             self.rf_sensor._loop_body()
 
-            receive_mock.assert_called_once_with(None)
+            receive_mock.assert_called_once_with()
 
     def test_send_tx_frame(self):
         connection_mock = MagicMock()
@@ -154,7 +154,7 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(SettingsTestCase, USBManagerTes
         # Nothing should be done when there is not enough data in the serial buffer.
         self.rf_sensor._connection = MagicMock()
         self.rf_sensor._connection.in_waiting = 0
-        self.rf_sensor._receive(None)
+        self.rf_sensor._receive()
         self.rf_sensor._connection.read.assert_not_called()
 
         # Create the `Packet` object if there is enough data in the serial buffer.
@@ -163,7 +163,7 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(SettingsTestCase, USBManagerTes
         self.rf_sensor._connection.read.configure_mock(return_value=serialized_packet)
         self.rf_sensor._process = MagicMock()
 
-        self.rf_sensor._receive(None)
+        self.rf_sensor._receive()
 
         arguments = self.rf_sensor._process.call_args[0]
         self.assertIsInstance(arguments[0], Packet)

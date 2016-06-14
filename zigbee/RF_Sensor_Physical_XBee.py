@@ -175,10 +175,13 @@ class RF_Sensor_Physical_XBee(RF_Sensor_Physical):
         self._sensor.send("tx", dest_addr_long=self._sensors[to], dest_addr="\xFF\xFE",
                           frame_id="\x00", data=packet.serialize())
 
-    def _receive(self, packet):
+    def _receive(self, packet=None):
         """
         Receive and process a `packet` from another sensor in the network.
         """
+
+        if packet is None:
+            raise TypeError("Packet must be provided")
 
         if packet["id"] == "rx":
             self._process_rx(packet)

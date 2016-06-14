@@ -102,7 +102,7 @@ class TestZigBeeRFSensorSimulator(SettingsTestCase):
 
             recv_mock.assert_called_once_with(self.settings.get("buffer_size"))
             self.assertEqual(self.rf_sensor._receive.call_count, 1)
-            self.assertEqual(self.rf_sensor._receive.call_args[0][0].get_all(), {
+            self.assertEqual(self.rf_sensor._receive.call_args[1]["packet"].get_all(), {
                 "specification": "waypoint_add",
                 "latitude": 123456789.12,
                 "longitude": 123496785.34,
@@ -127,10 +127,14 @@ class TestZigBeeRFSensorSimulator(SettingsTestCase):
         connection_mock.sendto.assert_called_once_with(packet.serialize(), address)
 
     def test_receive(self):
+        # Not providing a packet raises an exception.
+        with self.assertRaises(TypeError):
+            self.rf_sensor._receive()
+
         scheduler_next_timestamp = self.rf_sensor._scheduler_next_timestamp
 
         packet = self.rf_sensor._create_rssi_broadcast_packet()
-        self.rf_sensor._receive(packet)
+        self.rf_sensor._receive(packet=packet)
 
         # The receive callback must be called with the packet.
         self.receive_callback.assert_called_once_with(packet)

@@ -144,7 +144,7 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
         as for keeping the `_loop` implementation in the base class.
         """
 
-        self._receive(None)
+        self._receive()
 
         super(RF_Sensor_Physical_Texas_Instruments, self)._loop_body()
 
@@ -164,7 +164,7 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
         self._connection.write(payload)
         self._connection.flush()
 
-    def _receive(self, packet):
+    def _receive(self, packet=None):
         """
         Receive and process a `packet` from another sensor in the network.
         """

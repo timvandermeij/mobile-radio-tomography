@@ -315,8 +315,8 @@ class RF_Sensor(Threadable):
         if to is None:
             raise TypeError("Invalid destination '{}' has been provided".format(to))
 
-    def _receive(self, packet):
-        raise NotImplementedError("Subclasses must implement `_receive(packet)`")
+    def _receive(self, packet=None):
+        raise NotImplementedError("Subclasses must implement `_receive(packet=None)`")
 
     def _create_rssi_broadcast_packet(self):
         """

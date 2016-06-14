@@ -303,7 +303,7 @@ class TestZigBeeRFSensor(SettingsTestCase):
         # Verify that the interface requires subclasses to implement
         # the `_receive` method.
         with self.assertRaises(NotImplementedError):
-            self.rf_sensor._receive(Packet())
+            self.rf_sensor._receive(packet=Packet())
 
     def test_create_rssi_broadcast_packet(self):
         packet = self.rf_sensor._create_rssi_broadcast_packet()

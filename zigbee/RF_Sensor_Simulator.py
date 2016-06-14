@@ -91,7 +91,7 @@ class RF_Sensor_Simulator(RF_Sensor):
             # Unserialize the data (byte-encoded string).
             packet = Packet()
             packet.unserialize(data)
-            self._receive(packet)
+            self._receive(packet=packet)
         except AttributeError:
             raise DisabledException
         except socket.error:
@@ -106,10 +106,13 @@ class RF_Sensor_Simulator(RF_Sensor):
 
         self._connection.sendto(packet.serialize(), (self._ip, self._port + to))
 
-    def _receive(self, packet):
+    def _receive(self, packet=None):
         """
         Receive and process a `packet` from another sensor in the network.
         """
+
+        if packet is None:
+            raise TypeError("Packet must be provided")
 
         # Show all received packets (including private ones) in simulation mode.
         self._receive_callback(packet)
