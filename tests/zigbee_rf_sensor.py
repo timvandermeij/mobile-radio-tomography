@@ -218,10 +218,22 @@ class TestZigBeeRFSensor(SettingsTestCase):
                 interrupt_mock.assert_not_called()
 
     def test_loop_body(self):
-        # Verify that the interface requires subclasses to implement
-        # the `_loop_body` method.
-        with self.assertRaises(NotImplementedError):
+        with patch.object(RF_Sensor, "_send_custom_packets") as send_custom_packets_mock:
+            # Send custom packets when the sensor has been activated,
+            # but not started.
             self.rf_sensor._loop_body()
+            send_custom_packets_mock.assert_called_once_with()
+
+        with patch.object(TDMA_Scheduler, "get_next_timestamp") as get_next_timestamp_mock:
+            with patch.object(RF_Sensor, "_send") as send_mock:
+                self.rf_sensor._started = True
+
+                # Send RSSI broadcast/ground station packets when the sensor
+                # has been activated and started.
+                self.rf_sensor._loop_body()
+
+                get_next_timestamp_mock.assert_called_once_with()
+                send_mock.assert_called_once_with()
 
     def test_send(self):
         self.rf_sensor._packets.append(self.rf_sensor._create_rssi_broadcast_packet())

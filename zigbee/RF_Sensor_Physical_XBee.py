@@ -140,17 +140,7 @@ class RF_Sensor_Physical_XBee(RF_Sensor_Physical):
             time.sleep(self._loop_delay)
             return
 
-        # If the sensor has been activated, this loop will only send
-        # enqueued custom packets. If the sensor has been started, we
-        # stop sending custom packets and start performing signal
-        # strength measurements.
-        if not self._started:
-            self._send_custom_packets()
-        elif self._id > 0 and time.time() >= self._scheduler_next_timestamp:
-            self._scheduler_next_timestamp = self._scheduler.get_next_timestamp()
-            self._send()
-
-        time.sleep(self._loop_delay)
+        super(RF_Sensor_Physical_XBee, self)._loop_body()
 
     def _send(self):
         """

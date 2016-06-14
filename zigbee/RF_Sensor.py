@@ -248,7 +248,25 @@ class RF_Sensor(Threadable):
             super(RF_Sensor, self).interrupt()
 
     def _loop_body(self):
-        raise NotImplementedError("Subclasses must implement `_loop_body()`")
+        """
+        Body of the sensor loop.
+
+        This is extracted into a separate method to make testing easier, as well
+        as for keeping the `_loop` implementation in the base class.
+
+        Classes that inherit this base class must extend this method.
+        """
+
+        # If the sensor has been activated, we only send enqueued custom packets.
+        # If the sensor has been started, we stop sending custom packets and
+        # start performing signal strength measurements.
+        if not self._started:
+            self._send_custom_packets()
+        elif self._id > 0 and time.time() >= self._scheduler_next_timestamp:
+            self._scheduler_next_timestamp = self._scheduler.get_next_timestamp()
+            self._send()
+
+        time.sleep(self._loop_delay)
 
     def _send(self):
         """

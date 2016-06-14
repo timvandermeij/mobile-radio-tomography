@@ -11,7 +11,6 @@ from ..settings.Arguments import Arguments
 from ..zigbee.Packet import Packet
 from ..zigbee.RF_Sensor import DisabledException
 from ..zigbee.RF_Sensor_Simulator import RF_Sensor_Simulator
-from ..zigbee.TDMA_Scheduler import TDMA_Scheduler
 from settings import SettingsTestCase
 
 class TestZigBeeRFSensorSimulator(SettingsTestCase):
@@ -71,30 +70,7 @@ class TestZigBeeRFSensorSimulator(SettingsTestCase):
         self.assertIsInstance(self.rf_sensor._connection, socket.socket)
 
     def test_loop_body(self):
-        with patch.object(RF_Sensor_Simulator, "_send_custom_packets") as send_custom_packets_mock:
-            # Send custom packets when the sensor has been activated,
-            # but not started.
-            send_custom_packets_mock.configure_mock(side_effect=RuntimeError)
-
-            with self.assertRaises(RuntimeError):
-                self.rf_sensor._loop_body()
-
-            send_custom_packets_mock.assert_called_once_with()
-
-        self.rf_sensor._started = True
-
-        with patch.object(TDMA_Scheduler, "get_next_timestamp") as get_next_timestamp_mock:
-            with patch.object(RF_Sensor_Simulator, "_send") as send_mock:
-                # Send RSSI broadcast/ground station packets when the sensor
-                # has been activated and started.
-                send_mock.configure_mock(side_effect=RuntimeError)
-
-                with self.assertRaises(RuntimeError):
-                    self.rf_sensor._loop_body()
-
-                get_next_timestamp_mock.assert_called_once_with()
-                send_mock.assert_called_once_with()
-
+        self.rf_sensor._receive = MagicMock()
         self.rf_sensor._connection = MagicMock()
         self.rf_sensor._connection.recv = MagicMock()
         recv_mock = self.rf_sensor._connection.recv
@@ -112,7 +88,6 @@ class TestZigBeeRFSensorSimulator(SettingsTestCase):
             # attribute error occurs (i.e., when the sensor has been
             # deactivated), a `DisabledException` must be raised.
             recv_mock.configure_mock(side_effect=AttributeError)
-
             with self.assertRaises(DisabledException):
                 self.rf_sensor._loop_body()
 
@@ -123,20 +98,19 @@ class TestZigBeeRFSensorSimulator(SettingsTestCase):
             packet = "\x06H\xe1zT4o\x9dA\xf6(\\E\xa5q\x9dA\xcd\xcc\xcc\xcc\xcc\xcc\x10@\x03\x16\x00\x00\x00\x02"
             recv_mock.configure_mock(side_effect=None, return_value=packet)
 
-            with patch.object(RF_Sensor_Simulator, "_receive") as receive_mock:
-                self.rf_sensor._loop_body()
+            self.rf_sensor._loop_body()
 
-                recv_mock.assert_called_once_with(self.settings.get("buffer_size"))
-                self.assertEqual(receive_mock.call_count, 1)
-                self.assertEqual(receive_mock.call_args[0][0].get_all(), {
-                    "specification": "waypoint_add",
-                    "latitude": 123456789.12,
-                    "longitude": 123496785.34,
-                    "altitude": 4.2,
-                    "wait_id": 3,
-                    "index": 22,
-                    "to_id": 2
-                })
+            recv_mock.assert_called_once_with(self.settings.get("buffer_size"))
+            self.assertEqual(self.rf_sensor._receive.call_count, 1)
+            self.assertEqual(self.rf_sensor._receive.call_args[0][0].get_all(), {
+                "specification": "waypoint_add",
+                "latitude": 123456789.12,
+                "longitude": 123496785.34,
+                "altitude": 4.2,
+                "wait_id": 3,
+                "index": 22,
+                "to_id": 2
+            })
 
     def test_send_tx_frame(self):
         connection_mock = MagicMock()

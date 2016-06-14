@@ -14,7 +14,6 @@ from ..settings.Arguments import Arguments
 from ..zigbee.Packet import Packet
 from ..zigbee.RF_Sensor_Physical_Texas_Instruments import RF_Sensor_Physical_Texas_Instruments
 from ..zigbee.RF_Sensor_Physical_Texas_Instruments import CC2530_Packet, Raspberry_Pi_GPIO_Pin_Mode
-from ..zigbee.TDMA_Scheduler import TDMA_Scheduler
 from core_usb_manager import USBManagerTestCase
 from settings import SettingsTestCase
 
@@ -129,28 +128,10 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(SettingsTestCase, USBManagerTes
 
     def test_loop_body(self):
         with patch.object(RF_Sensor_Physical_Texas_Instruments, "_receive") as receive_mock:
-            with patch.object(RF_Sensor_Physical_Texas_Instruments,
-                              "_send_custom_packets") as send_custom_packets_mock:
-                # Send custom packets when the sensor has been activated,
-                # but not started.
-                self.rf_sensor._loop_body()
+            # The receive method must be called.
+            self.rf_sensor._loop_body()
 
-                receive_mock.assert_called_once_with(None)
-                send_custom_packets_mock.assert_called_once_with()
-
-            receive_mock.reset_mock()
-
-            with patch.object(TDMA_Scheduler, "get_next_timestamp") as get_next_timestamp_mock:
-                with patch.object(RF_Sensor_Physical_Texas_Instruments, "_send") as send_mock:
-                    self.rf_sensor._started = True
-
-                    # Send RSSI broadcast/ground station packets when the sensor
-                    # has been activated and started.
-                    self.rf_sensor._loop_body()
-
-                    receive_mock.assert_called_once_with(None)
-                    get_next_timestamp_mock.assert_called_once_with()
-                    send_mock.assert_called_once_with()
+            receive_mock.assert_called_once_with(None)
 
     def test_send_tx_frame(self):
         connection_mock = MagicMock()
