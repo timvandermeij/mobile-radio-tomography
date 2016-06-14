@@ -470,7 +470,7 @@ class Mock_Vehicle(MAVLink_Vehicle):
     @attitude.setter
     def attitude(self, value):
         if not isinstance(value, MockAttitude):
-            raise ValueError("Must be given a MockAttitude.")
+            raise TypeError("Must be given a MockAttitude.")
 
         # No need to update since this forces a new attitude
         value.vehicle = self
@@ -550,9 +550,6 @@ class Mock_Vehicle(MAVLink_Vehicle):
     @home_location.setter
     def home_location(self, value):
         self._home_location = self._make_global_location(value)
-        self._location = LocationGlobalRelative(self._home_location.lat,
-                                                self._home_location.lon,
-                                                0.0)
 
     def _make_location(self, location_class, lat, lon, alt):
         if isinstance(self._geometry, Geometry_Spherical):
