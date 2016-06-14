@@ -1,6 +1,10 @@
+# Core imports
+import time
+
+# Package imports
+from ..core.USB_Manager import USB_Manager
 from NTP import NTP
 from RF_Sensor import RF_Sensor
-from ..core.USB_Manager import USB_Manager
 
 # pylint: disable=abstract-method
 class RF_Sensor_Physical(RF_Sensor):
@@ -48,3 +52,15 @@ class RF_Sensor_Physical(RF_Sensor):
         super(RF_Sensor_Physical, self).discover(callback)
 
         self._discovery_callback = callback
+
+    def _synchronize(self):
+        """
+        Synchronize the clock with the ground station's clock before
+        sending messages. This avoids clock skew caused by the fact that
+        the Raspberry Pi devices do not have an onboard real time clock.
+        """
+
+        if self._id > 0 and self._settings.get("synchronize"):
+            while not self._synchronized:
+                self._ntp.start()
+                time.sleep(self._ntp_delay)

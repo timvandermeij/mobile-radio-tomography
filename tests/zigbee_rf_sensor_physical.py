@@ -1,3 +1,6 @@
+# Core imports
+import time
+
 # Library imports
 from mock import patch, MagicMock, PropertyMock
 
@@ -53,3 +56,19 @@ class TestZigBeeRFSensorPhysical(SettingsTestCase):
 
         self.assertNotEqual(self.rf_sensor._discovery_callback, None)
         self.assertTrue(hasattr(self.rf_sensor._discovery_callback, "__call__"))
+
+    def test_synchronize(self):
+        # Enable synchronization mode and mock the NTP component.
+        self.settings.set("synchronize", True)
+        self.rf_sensor._ntp.start = MagicMock()
+
+        # Let `time.sleep` raise an exception to exit the loop.
+        with patch.object(time, "sleep", side_effect=RuntimeError) as sleep_mock:
+            with self.assertRaises(RuntimeError):
+                self.rf_sensor._synchronize()
+
+            # The NTP component must be called to start synchronization.
+            self.rf_sensor._ntp.start.assert_called_once_with()
+
+            # The NTP delay must be applied.
+            sleep_mock.assert_any_call(self.settings.get("ntp_delay"))

@@ -57,22 +57,12 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(SettingsTestCase, USBManagerTes
         self.assertEqual(self.rf_sensor.type, "rf_sensor_physical_texas_instruments")
 
     def test_activate(self):
-        # Enable synchronization mode and mock the NTP component.
-        self.settings.set("synchronize", True)
-        self.rf_sensor._ntp = MagicMock()
+        self.rf_sensor._synchronize = MagicMock()
 
         with patch.object(RF_Sensor_Physical_Texas_Instruments, "_setup"):
             with patch.object(thread, "start_new_thread"):
-                # Let `time.sleep` raise an exception to exit the loop.
-                with patch.object(time, "sleep", side_effect=RuntimeError) as sleep_mock:
-                    with self.assertRaises(RuntimeError):
-                        self.rf_sensor.activate()
-
-                    # The NTP component must be called to start synchronization.
-                    self.rf_sensor._ntp.start.assert_called_once_with()
-
-                    # The NTP delay must be applied.
-                    sleep_mock.assert_any_call(self.settings.get("ntp_delay"))
+                self.rf_sensor.activate()
+                self.rf_sensor._synchronize.assert_called_once_with()
 
     def test_discover(self):
         with patch.object(RF_Sensor_Physical_Texas_Instruments, "_send_tx_frame") as send_tx_frame_mock:
