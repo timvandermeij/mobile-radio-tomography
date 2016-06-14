@@ -9,22 +9,26 @@ class MAVLink_Vehicle(Vehicle):
     mission command sequences or other command message parsing.
 
     This class assumes the following properties and methods exist:
-    - `commands`: A `CommandSequence`-like object
-    - `flush`: A no-op that might perform backend changes for update_mission
+    - `commands`: A `CommandSequence`-like object, as described in
+      http://python.dronekit.io/automodule.html#dronekit.CommandSequence
+    - `flush`: A method that might perform backend changes for update_mission,
+      but can also be a no-op if no backend changes are necessary in this case.
+
+    Also, all abstract methods from `Vehicle` must also be implemented.
     """
 
     @property
     def commands(self):
-        raise NotImplementedError("Subclasses must provide `commands`")
+        raise NotImplementedError("Subclasses must provide `commands` property")
 
     def flush(self):
-        raise NotImplementedError("Subclasses must provide `flush` member")
+        raise NotImplementedError("Subclasses must provide `flush` method")
 
     def clear_waypoints(self):
         self.commands.clear()
         self.flush()
 
-        # After clearing the mission, we MUST re-download the mission from the 
+        # After clearing the mission, we must re-download the mission from the 
         # vehicle before vehicle.commands can be used again.
         # See https://github.com/dronekit/dronekit-python/issues/230 for 
         # reasoning.
