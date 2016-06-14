@@ -31,6 +31,20 @@ class USBManagerTestCase(unittest.TestCase):
 
         raise ValueError("Unexpected argument values: subsystem={}, parent={}, ID_BUS={}, {}".format(subsystem, parent, ID_BUS, kwargs))
 
+    def _get_virtual_pty(self):
+        master, slave = os.openpty()
+        self._master_ptys.add(master)
+        self._slave_ptys.add(slave)
+        return master, slave
+
+    def _close_virtual_ptys(self, ptys):
+        for pty in ptys:
+            # Only close virtual PTYs that are still open. Certain PTYs may be 
+            # closed by the tearDown method, e.g., ones that were opened as 
+            # files rather than left as file descriptors.
+            if os.isatty(pty):
+                os.close(pty)
+
     def setUp(self):
         super(USBManagerTestCase, self).setUp()
 
@@ -38,20 +52,25 @@ class USBManagerTestCase(unittest.TestCase):
         self.usb_manager = USB_Manager()
 
         # Create virtual serial ports for the mocked USB/AMBA devices.
-        slave_xbee = os.openpty()[1]
+        self._master_ptys = set()
+        self._slave_ptys = set()
+        self.addCleanup(self._close_virtual_ptys, self._master_ptys)
+        self.addCleanup(self._close_virtual_ptys, self._slave_ptys)
+
+        slave_xbee = self._get_virtual_pty()[1]
         self._xbee_port = os.ttyname(slave_xbee)
 
-        master_ttl, slave_ttl = os.openpty()
+        master_ttl, slave_ttl = self._get_virtual_pty()
         self._ttl_device = os.fdopen(master_ttl)
         self._ttl_port = os.ttyname(slave_ttl)
 
-        slave_cc2530 = os.openpty()[1]
+        slave_cc2530 = self._get_virtual_pty()[1]
         self._cc2530_port = os.ttyname(slave_cc2530)
 
-        slave_cc2531 = os.openpty()[1]
+        slave_cc2531 = self._get_virtual_pty()[1]
         self._cc2531_port = os.ttyname(slave_cc2531)
 
-        slave_other = os.openpty()[1]
+        slave_other = self._get_virtual_pty()[1]
         self._other_port = os.ttyname(slave_other)
 
         # Create a specific list of inserted USB devices.
