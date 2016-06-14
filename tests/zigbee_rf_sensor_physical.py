@@ -7,8 +7,10 @@ from mock import patch, MagicMock, PropertyMock
 # Package imports
 from ..core.Thread_Manager import Thread_Manager
 from ..core.USB_Manager import USB_Manager
+from ..reconstruction.Buffer import Buffer
 from ..settings.Arguments import Arguments
 from ..zigbee.NTP import NTP
+from ..zigbee.Packet import Packet
 from ..zigbee.RF_Sensor_Physical import RF_Sensor_Physical
 from settings import SettingsTestCase
 
@@ -72,3 +74,48 @@ class TestZigBeeRFSensorPhysical(SettingsTestCase):
 
             # The NTP delay must be applied.
             sleep_mock.assert_any_call(self.settings.get("ntp_delay"))
+
+    def test_process(self):
+        # Private packets must be passed along to the receive callback.
+        self.rf_sensor._receive_callback = MagicMock()
+
+        packet = Packet()
+        packet.set("specification", "waypoint_clear")
+
+        self.rf_sensor._process(packet)
+        self.rf_sensor._receive_callback.assert_called_once_with(packet)
+
+        # NTP synchronization packets must be handled.
+        self.rf_sensor._ntp.process = MagicMock()
+
+        packet = Packet()
+        packet.set("specification", "ntp")
+
+        self.rf_sensor._process(packet)
+        self.rf_sensor._ntp.process.assert_called_once_with(packet)
+
+        # RSSI ground station packets must be handled on the ground station.
+        self.rf_sensor._id = 0
+        self.rf_sensor.buffer = MagicMock(spec=Buffer)
+
+        packet = Packet()
+        packet.set("specification", "rssi_ground_station")
+
+        self.rf_sensor._process(packet)
+        self.rf_sensor.buffer.put.assert_called_once_with(packet)
+
+        # RSSI broadcast packets must raise an exception on the ground station.
+        packet = Packet()
+        packet.set("specification", "rssi_broadcast")
+
+        with self.assertRaises(ValueError):
+            self.rf_sensor._process(packet)
+
+        # RSSI ground station packets must raise an exception on other RF sensors.
+        self.rf_sensor._id = 1
+
+        packet = Packet()
+        packet.set("specification", "rssi_ground_station")
+
+        with self.assertRaises(ValueError):
+            self.rf_sensor._process(packet)

@@ -9,7 +9,6 @@ from mock import call, patch, MagicMock
 # Package imports
 from ..core.Thread_Manager import Thread_Manager
 from ..core.WiringPi import WiringPi
-from ..reconstruction.Buffer import Buffer
 from ..settings.Arguments import Arguments
 from ..zigbee.Packet import Packet
 from ..zigbee.RF_Sensor_Physical_Texas_Instruments import RF_Sensor_Physical_Texas_Instruments
@@ -166,35 +165,20 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(SettingsTestCase, USBManagerTes
         self.rf_sensor._receive()
 
         arguments = self.rf_sensor._process.call_args[0]
+        keyword_arguments = self.rf_sensor._process.call_args[1]
         self.assertIsInstance(arguments[0], Packet)
         self.assertEqual(arguments[0].get_all(), {
             "specification": "waypoint_clear",
             "to_id": 2
         })
-        self.assertEqual(arguments[1], 42)
+        self.assertEqual(keyword_arguments["rssi"], 42)
 
     def test_process(self):
+        # RSSI value must be provided.
+        with self.assertRaises(TypeError):
+            self.rf_sensor._process(Packet())
+
         self.rf_sensor._process_rssi_broadcast_packet = MagicMock()
-
-        # Private packets must be passed along to the receive callback.
-        self.rf_sensor._receive_callback = MagicMock()
-
-        packet = Packet()
-        packet.set("specification", "waypoint_clear")
-
-        self.rf_sensor._process(packet, 42)
-        self.rf_sensor._receive_callback.assert_called_once_with(packet)
-        self.rf_sensor._process_rssi_broadcast_packet.assert_not_called()
-
-        # NTP synchronization packets must be handled.
-        self.rf_sensor._ntp.process = MagicMock()
-
-        packet = Packet()
-        packet.set("specification", "ntp")
-
-        self.rf_sensor._process(packet, 42)
-        self.rf_sensor._ntp.process.assert_called_once_with(packet)
-        self.rf_sensor._process_rssi_broadcast_packet.assert_not_called()
 
         # Ping/pong packets must be handled on the ground station.
         self.rf_sensor._discovery_callback = MagicMock()
@@ -204,29 +188,12 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(SettingsTestCase, USBManagerTes
         packet.set("specification", "ping_pong")
         packet.set("sensor_id", 2)
 
-        self.rf_sensor._process(packet, 42)
+        self.rf_sensor._process(packet, rssi=42)
         self.rf_sensor._discovery_callback.assert_called_once_with({
             "id": packet.get("sensor_id"),
             "address": str(packet.get("sensor_id"))
         })
         self.rf_sensor._process_rssi_broadcast_packet.assert_not_called()
-
-        # RSSI ground station packets must be handled on the ground station.
-        self.rf_sensor.buffer = MagicMock(spec=Buffer)
-
-        packet = Packet()
-        packet.set("specification", "rssi_ground_station")
-
-        self.rf_sensor._process(packet, 42)
-        self.rf_sensor.buffer.put.assert_called_once_with(packet)
-        self.rf_sensor._process_rssi_broadcast_packet.assert_not_called()
-
-        # RSSI broadcast packets must raise an exception on the ground station.
-        packet = Packet()
-        packet.set("specification", "rssi_broadcast")
-
-        with self.assertRaises(ValueError):
-            self.rf_sensor._process(packet, 42)
 
         # Other RF sensors must respond to ping/pong packets.
         self.rf_sensor._send_tx_frame = MagicMock()
@@ -235,22 +202,15 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(SettingsTestCase, USBManagerTes
         packet = Packet()
         packet.set("specification", "ping_pong")
 
-        self.rf_sensor._process(packet, 42)
+        self.rf_sensor._process(packet, rssi=42)
         self.rf_sensor._send_tx_frame.assert_called_once_with(packet, 0)
         self.rf_sensor._process_rssi_broadcast_packet.assert_not_called()
-
-        # RSSI ground station packets must raise an exception on other RF sensors.
-        packet = Packet()
-        packet.set("specification", "rssi_ground_station")
-
-        with self.assertRaises(ValueError):
-            self.rf_sensor._process(packet, 42)
 
         # Other RF sensors must handle RSSI broadcast packets.
         packet = Packet()
         packet.set("specification", "rssi_broadcast")
 
-        self.rf_sensor._process(packet, 42)
+        self.rf_sensor._process(packet, rssi=42)
         self.rf_sensor._process_rssi_broadcast_packet.assert_called_once_with(packet, 42)
 
     def test_process_rssi_broadcast_packet(self):

@@ -64,3 +64,34 @@ class RF_Sensor_Physical(RF_Sensor):
             while not self._synchronized:
                 self._ntp.start()
                 time.sleep(self._ntp_delay)
+
+    def _process(self, packet, **kwargs):
+        """
+        Process a `Packet` object `packet`.
+
+        Classes that inherit this base class must extend this method.
+        """
+
+        # Check if the packet is public and pass it along to the receive callback.
+        if not packet.is_private():
+            self._receive_callback(packet)
+            return
+
+        # Handle an NTP synchronization packet.
+        if packet.get("specification") == "ntp":
+            self._ntp.process(packet)
+            return
+
+        if self._id == 0:
+            # Handle an RSSI ground station packet.
+            if packet.get("specification") == "rssi_ground_station":
+                if self._buffer is not None:
+                    self._buffer.put(packet)
+
+                return
+
+            raise ValueError("Received packet is not an RSSI ground station packet")
+
+        # Handle an RSSI broadcast packet.
+        if packet.get("specification") != "rssi_broadcast":
+            raise ValueError("Received packet is not an RSSI broadcast packet")

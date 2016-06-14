@@ -184,45 +184,22 @@ class RF_Sensor_Physical_XBee(RF_Sensor_Physical):
             raise TypeError("Packet must be provided")
 
         if packet["id"] == "rx":
-            self._process_rx(packet)
+            self._process(packet)
         elif packet["id"] == "at_response":
             self._process_at_response(packet)
 
-    def _process_rx(self, rx_packet):
+    def _process(self, packet, **kwargs):
         """
-        Helper method for processing an XBee `rx_packet`.
+        Process a `Packet` object `packet`.
         """
 
         # Convert the RX packet to a `Packet` object according to specifications.
-        packet = Packet()
-        packet.unserialize(rx_packet["rf_data"])
+        rx_packet = Packet()
+        rx_packet.unserialize(packet["rf_data"])
 
-        # Check whether the packet is not private and pass it along to the 
-        # receive callback.
-        if not packet.is_private():
-            self._receive_callback(packet)
-            return
+        super(RF_Sensor_Physical_XBee, self)._process(rx_packet)
 
-        # Handle NTP synchronization packets.
-        if packet.get("specification") == "ntp":
-            self._ntp.process(packet)
-            return
-
-        if self._id == 0:
-            # Handle an RSSI ground station packet.
-            if packet.get("specification") == "rssi_ground_station":
-                if self._buffer is not None:
-                    self._buffer.put(packet)
-
-                return
-
-            raise ValueError("Received packet is not an RSSI ground station packet")
-
-        # Handle a received RSSI broadcast packet.
-        if packet.get("specification") != "rssi_broadcast":
-            raise ValueError("Received packet is not an RSSI broadcast packet")
-
-        self._process_rssi_broadcast_packet(packet)
+        self._process_rssi_broadcast_packet(rx_packet)
 
     def _process_rssi_broadcast_packet(self, packet):
         """

@@ -183,26 +183,18 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
         packet = Packet()
         packet.unserialize(data)
 
-        self._process(packet, rssi)
+        self._process(packet, rssi=rssi)
 
-    def _process(self, packet, rssi):
+    def _process(self, packet, rssi=None, **kwargs):
         """
-        Helper method for processing a `Packet` object `packet` with RSSI value `rssi`.
+        Process a `Packet` object `packet`.
         """
 
-        # Check whether the packet is not private and pass it along to the 
-        # receive callback.
-        if not packet.is_private():
-            self._receive_callback(packet)
-            return
-
-        # Handle NTP synchronization packets.
-        if packet.get("specification") == "ntp":
-            self._ntp.process(packet)
-            return
+        if rssi is None:
+            raise TypeError("RSSI value must be provided")
 
         if self._id == 0:
-            # Handle ping/pong packets.
+            # Handle a ping/pong packet.
             if packet.get("specification") == "ping_pong":
                 self._discovery_callback({
                     "id": packet.get("sensor_id"),
@@ -210,23 +202,12 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
                 })
                 return
 
-            # Handle an RSSI ground station packet.
-            if packet.get("specification") == "rssi_ground_station":
-                if self._buffer is not None:
-                    self._buffer.put(packet)
-
-                return
-
-            raise ValueError("Received packet is not an RSSI ground station packet")
-
-        # Respond to ping/pong requests.
+        # Respond to a ping/pong request.
         if packet.get("specification") == "ping_pong":
             self._send_tx_frame(packet, 0)
             return
 
-        # Handle a received RSSI broadcast packet.
-        if packet.get("specification") != "rssi_broadcast":
-            raise ValueError("Received packet is not an RSSI broadcast packet")
+        super(RF_Sensor_Physical_Texas_Instruments, self)._process(packet, rssi=rssi)
 
         self._process_rssi_broadcast_packet(packet, rssi)
 
