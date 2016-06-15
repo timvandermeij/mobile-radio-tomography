@@ -133,21 +133,20 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(SettingsTestCase, USBManagerTes
             receive_mock.assert_called_once_with()
 
     def test_send_tx_frame(self):
-        connection_mock = MagicMock()
-
         packet = Packet()
         packet.set("specification", "waypoint_clear")
         packet.set("to_id", 2)
 
-        self.rf_sensor._connection = connection_mock
+        self.rf_sensor._connection = MagicMock()
+
         self.rf_sensor._send_tx_frame(packet, to=2)
 
         # The packet must be sent over the serial connection. The packet is serialized
         # using the struct format "BBB80s", i.e., three characters and a string padded
         # to 80 (packet length setting) bytes. We add the padding manually here.
         serialized_packet = "\x02\x02\x02\x05\x02{}".format("\x00" * 78)
-        connection_mock.write.assert_called_once_with(serialized_packet)
-        connection_mock.flush.assert_called_once_with()
+        self.rf_sensor._connection.write.assert_called_once_with(serialized_packet)
+        self.rf_sensor._connection.flush.assert_called_once_with()
 
     def test_receive(self):
         # Nothing should be done when there is not enough data in the serial buffer.

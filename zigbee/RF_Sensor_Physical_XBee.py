@@ -109,10 +109,22 @@ class RF_Sensor_Physical_XBee(RF_Sensor_Physical):
 
         time.sleep(self._startup_delay)
 
-        # Identify the sensor by fetching its node identifier and address.
+        self._set_node_identifier()
+        self._set_address()
+
+    def _set_node_identifier(self):
+        """
+        Set the node identifier of the sensor.
+        """
+
         while not self._node_identifier_set:
             self._sensor.send("at", command="NI")
             time.sleep(self._response_delay)
+
+    def _set_address(self):
+        """
+        Set the address of the sensor.
+        """
 
         while not self._address_set:
             self._sensor.send("at", command="SH")
