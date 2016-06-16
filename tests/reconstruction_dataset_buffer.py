@@ -52,11 +52,11 @@ class TestReconstructionDatasetBuffer(SettingsTestCase):
             self.assertEqual(packet.get_all(), {
                 "specification": "rssi_ground_station",
                 "sensor_id": self.sensor_id + 1,
-                "from_latitude": self.positions[index][0],
-                "from_longitude": self.positions[index][1],
+                "from_latitude": self.positions[index][1],
+                "from_longitude": self.positions[index][0],
                 "from_valid": True,
-                "to_latitude": self.positions[self.sensor_id][0],
-                "to_longitude": self.positions[self.sensor_id][1],
+                "to_latitude": self.positions[self.sensor_id][1],
+                "to_longitude": self.positions[self.sensor_id][0],
                 "to_valid": True,
                 "rssi": self.rssi[index]
             })
