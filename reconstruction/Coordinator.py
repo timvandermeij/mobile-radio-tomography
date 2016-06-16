@@ -35,8 +35,10 @@ class Coordinator(object):
         to the original RSSI for the stream data source when calibration mode is enabled.
         """
 
-        source = (packet.get("from_latitude"), packet.get("from_longitude"))
-        destination = (packet.get("to_latitude"), packet.get("to_longitude"))
+        # The x coordinate corresponds to the longitude and the y coordinate corresponds
+        # to the latitude.
+        source = (packet.get("from_longitude"), packet.get("from_latitude"))
+        destination = (packet.get("to_longitude"), packet.get("to_latitude"))
         rssi = calibrated_rssi
 
         # If the endpoints already exist (i.e., the link has already been measured before),

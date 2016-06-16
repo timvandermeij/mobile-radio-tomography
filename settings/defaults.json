@@ -761,7 +761,7 @@
                 "short": "Chunk size",
                 "type": "int",
                 "min": 1,
-                "default": 50
+                "default": 5
             },
             "reconstructor": {
                 "help": "Reconstruction algorithm to use",

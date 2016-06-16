@@ -75,14 +75,17 @@ class Dataset_Buffer(Buffer):
         destination_id = self._positions.index(destination) + 1
         rssi = packet[2]
 
+        # The x coordinate corresponds to the longitude and the y
+        # coordinate corresponds to the latitude, which is why we
+        # inverted the indexing.
         packet = Packet()
         packet.set("specification", "rssi_ground_station")
         packet.set("sensor_id", destination_id)
-        packet.set("from_latitude", source[0])
-        packet.set("from_longitude", source[1])
+        packet.set("from_latitude", source[1])
+        packet.set("from_longitude", source[0])
         packet.set("from_valid", True)
-        packet.set("to_latitude", destination[0])
-        packet.set("to_longitude", destination[1])
+        packet.set("to_latitude", destination[1])
+        packet.set("to_longitude", destination[0])
         packet.set("to_valid", True)
         packet.set("rssi", rssi)
 
