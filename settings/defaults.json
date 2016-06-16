@@ -5,10 +5,10 @@
             "core_rf_sensor_class": {
                 "help": "RF sensor class to use for the control panel",
                 "type": "class",
-                "module": "zigbee.XBee_Sensor",
+                "module": "zigbee.RF_Sensor",
                 "required": true,
                 "replace": [" ", "_"],
-                "default": "XBee_CC2530_Sensor_Physical"
+                "default": "RF_Sensor_Physical_Texas_Instruments"
             }
         }
     },
@@ -410,7 +410,7 @@
             "rf_sensor_class": {
                 "help": "RF sensor class to use for the environment",
                 "type": "class",
-                "module": "zigbee.XBee_Sensor",
+                "module": "zigbee.RF_Sensor",
                 "required": false,
                 "replace": [" ", "_"],
                 "default": ""
@@ -937,12 +937,6 @@
                 "min": 0,
                 "default": 0
             },
-            "custom_packet_delay": {
-                "help": "Delay in seconds between sending custom packets when not measuring",
-                "type": "float",
-                "min": 0.0,
-                "default": 0.1
-            },
             "loop_delay": {
                 "help": "Delay in seconds for each sensor loop",
                 "type": "float",
@@ -970,62 +964,46 @@
             }
         }
     },
-    "xbee_sensor_simulator": {
-        "name": "XBee sensor (simulator)",
+    "rf_sensor_simulator": {
+        "name": "RF sensor simulator",
         "parent": "zigbee_base",
         "settings": {
-            "ip": {
-                "help": "IP address to connect the socket to",
+            "socket_ip": {
+                "help": "IP address for connecting the socket",
                 "type": "string",
                 "required": false,
                 "default": "127.0.0.1"
             },
             "socket_port": {
-                "help": "Network port to connect the socket to",
+                "help": "Port for connecting the socket",
                 "type": "int",
                 "min": 0,
                 "max": 65535,
                 "default": 3233
             },
             "buffer_size": {
-                "help": "Size of the buffer to read at most from the socket each time",
+                "help": "Number of bytes to read from the socket at once",
                 "type": "int",
                 "min": 1,
                 "default": 256
             }
         }
     },
-    "xbee_sensor_physical": {
-        "name": "XBee sensor (physical)",
+    "rf_sensor_physical": {
+        "name": "RF sensor physical",
         "parent": "zigbee_base",
         "settings": {
             "port": {
-                "help": "Device name or port of the XBee to use. This overrides the USB manager detection.",
+                "help": "Device name or port of the RF sensor to use. This overrides the USB manager detection.",
                 "type": "string",
                 "required": false,
                 "default": ""
-            },
-            "sensors": {
-                "help": "XBee addresses of all devices in the network, ordered by their identifier",
-                "type": "list",
-                "subtype": "string",
-                "default": [
-                    "\\x00\\x13\\xa2\\x00@\\xe6n\\xbd",
-                    "\\x00\\x13\\xa2\\x00@\\xe6o5",
-                    "\\x00\\x13\\xa2\\x00@\\xe6n\\xb9"
-                ]
             },
             "ntp_delay": {
                 "help": "Delay in seconds to wait before retrying a synchronization attempt",
                 "type": "float",
                 "min": 0.0,
                 "default": 3.0
-            },
-            "response_delay": {
-                "help": "Delay in seconds to wait for a response to a command sent to the current XBee device",
-                "type": "float",
-                "min": 0.0,
-                "default": 0.3
             },
             "synchronize": {
                 "help": "Whether to synchronize the clock using the NTP algorithm, which is required for TDMA scheduling to work correctly. The program must run as root to do so.",
@@ -1034,9 +1012,31 @@
             }
         }
     },
-    "xbee_cc2530_sensor_physical": {
-        "name": "XBee CC2530 sensor (physical)",
-        "parent": "xbee_sensor_physical",
+    "rf_sensor_physical_xbee": {
+        "name": "RF sensor physical (XBee)",
+        "parent": "rf_sensor_physical",
+        "settings": {
+            "sensors": {
+                "help": "Addresses of all devices in the network, ordered by their identifier",
+                "type": "list",
+                "subtype": "string",
+                "default": [
+                    "\\x00\\x13\\xa2\\x00@\\xe6n\\xbd",
+                    "\\x00\\x13\\xa2\\x00@\\xe6o5",
+                    "\\x00\\x13\\xa2\\x00@\\xe6n\\xb9"
+                ]
+            },
+            "response_delay": {
+                "help": "Delay in seconds to wait for a response to a command sent to an RF sensor",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.3
+            }
+        }
+    },
+    "rf_sensor_physical_texas_instruments": {
+        "name": "RF sensor physical (Texas Instruments)",
+        "parent": "rf_sensor_physical",
         "settings": {
             "packet_length": {
                 "help": "Number of bytes in the serialized packet",

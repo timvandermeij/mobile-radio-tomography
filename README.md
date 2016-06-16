@@ -177,9 +177,9 @@ XBee devices or Texas Instruments devices. Start the tool with `python2
 rf_sensor.py [class_name] [arguments]`. For example, to create a simulated
 sensor network, open three terminals and run the following commands:
 
-- In terminal 1: `python2 rf_sensor.py XBee_Sensor_Simulator --rf-sensor-id 0`
-- In terminal 2: `python2 rf_sensor.py XBee_Sensor_Simulator --rf-sensor-id 1`
-- In terminal 3: `python2 rf_sensor.py XBee_Sensor_Simulator --rf-sensor-id 2`
+- In terminal 1: `python2 rf_sensor.py RF_Sensor_Simulator --rf-sensor-id 0`
+- In terminal 2: `python2 rf_sensor.py RF_Sensor_Simulator --rf-sensor-id 1`
+- In terminal 3: `python2 rf_sensor.py RF_Sensor_Simulator --rf-sensor-id 2`
 
 You should see packets being output in each terminal window. The simulation
 mode is especially useful for debugging and scheduling research, while the

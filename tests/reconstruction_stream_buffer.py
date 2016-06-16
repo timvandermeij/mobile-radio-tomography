@@ -55,7 +55,7 @@ class TestReconstructionStreamBuffer(SettingsTestCase):
         stream_buffer.register_rf_sensor(self.mock_sensor)
 
         self.assertEqual(stream_buffer.number_of_sensors, 42)
-        self.mock_sensor.set_buffer.assert_called_once_with(stream_buffer)
+        self.assertEqual(self.mock_sensor.buffer, stream_buffer)
 
     def test_get(self):
         stream_buffer = Stream_Buffer(self.settings)

@@ -4,11 +4,11 @@ import sys
 import traceback
 from collections import OrderedDict
 from functools import partial
-from PyQt4 import QtCore, QtGui
 
-# Markdown imports
+# Library imports
 import markdown
 from mdx_partial_gfm import PartialGithubFlavoredMarkdownExtension
+from PyQt4 import QtCore, QtGui
 
 # Package imports
 from Control_Panel_View import Control_Panel_View_Name
@@ -92,8 +92,8 @@ class Control_Panel_Controller(object):
         rf_sensor_type = self.import_manager.load_class(rf_sensor_class,
                                                         relative_module="zigbee")
         self.rf_sensor = rf_sensor_type(self.arguments, self.thread_manager,
-                                        self.usb_manager, self._get_location,
-                                        self._receive, self._location_valid)
+                                        self._get_location, self._receive,
+                                        self._location_valid, usb_manager=self.usb_manager)
 
         self._packet_callbacks = {}
 

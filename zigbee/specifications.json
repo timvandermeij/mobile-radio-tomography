@@ -235,7 +235,7 @@
             "format": "B"
         }
     ],
-    "cc2530_ping_pong": [
+    "ping_pong": [
         {
             "name": "id",
             "format": "B",

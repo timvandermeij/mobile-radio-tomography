@@ -19,8 +19,8 @@ class TestControlInfraredSensor(ThreadableTestCase):
         self._pylirc_patcher.start()
 
         # Skip configuration checks since we emulate the behavior of LIRC. We 
-        # test the configuration checks in test_initialize. This also requires 
-        # us to import the module within the tests instead of globally.
+        # test the configuration checks in `test_initialization`. This also
+        # requires us to import the module within the tests instead of globally.
         from ..control.Infrared_Sensor import Infrared_Sensor
         self.old_configure = Infrared_Sensor._configure
         Infrared_Sensor._configure = MagicMock()
@@ -43,7 +43,7 @@ class TestControlInfraredSensor(ThreadableTestCase):
         # Stop the pylirc module patcher
         self._pylirc_patcher.stop()
 
-    def test_initialize(self):
+    def test_initialization(self):
         # Test initialization of infrared sensor with a local import and 
         # a local thread manager rather than the ones already created at setUp.
         from ..control.Infrared_Sensor import Infrared_Sensor

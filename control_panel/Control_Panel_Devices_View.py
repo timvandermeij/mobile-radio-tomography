@@ -112,7 +112,7 @@ class Control_Panel_Devices_View(Control_Panel_View):
         Refresh the status of the ground station.
         """
 
-        identity = self._controller.rf_sensor.get_identity()
+        identity = self._controller.rf_sensor.identity
 
         ground_station = self._devices[0]
         ground_station.address = identity["address"]
