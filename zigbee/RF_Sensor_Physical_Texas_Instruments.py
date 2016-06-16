@@ -207,9 +207,9 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
             self._send_tx_frame(packet, 0)
             return
 
-        super(RF_Sensor_Physical_Texas_Instruments, self)._process(packet, rssi=rssi)
-
-        self._process_rssi_broadcast_packet(packet, rssi=rssi)
+        is_broadcast = super(RF_Sensor_Physical_Texas_Instruments, self)._process(packet, rssi=rssi)
+        if is_broadcast:
+            self._process_rssi_broadcast_packet(packet, rssi=rssi)
 
     def _process_rssi_broadcast_packet(self, packet, rssi=None, **kwargs):
         """

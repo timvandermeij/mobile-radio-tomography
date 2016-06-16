@@ -68,6 +68,14 @@ class TestZigBeeRFSensorPhysicalXBee(SettingsTestCase, USBManagerTestCase):
         # The `type` property must be implemented and correct.
         self.assertEqual(self.rf_sensor.type, "rf_sensor_physical_xbee")
 
+    def test_identity(self):
+        # The identity must include the ID, address and network join status.
+        self.assertEqual(self.rf_sensor.identity, {
+            "id": self.rf_sensor._id,
+            "address": self.rf_sensor._format_address(self.rf_sensor._address),
+            "joined": self.rf_sensor._joined
+        })
+
     def test_activate(self):
         # Helper function for joining the network.
         def join(*args):

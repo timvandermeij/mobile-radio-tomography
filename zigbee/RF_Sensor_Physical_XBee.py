@@ -36,9 +36,8 @@ class RF_Sensor_Physical_XBee(RF_Sensor_Physical):
         self._response_delay = self._settings.get("response_delay")
         self._startup_delay = self._settings.get("startup_delay")
 
-        self._sensors = self._settings.get("sensors")
-        for index, address in enumerate(self._sensors):
-            self._sensors[index] = address.decode("string_escape")
+        self._sensors = [address.decode("string_escape") for address in
+                         self._settings.get("sensors")]
 
     @property
     def type(self):
@@ -49,6 +48,19 @@ class RF_Sensor_Physical_XBee(RF_Sensor_Physical):
         """
 
         return "rf_sensor_physical_xbee"
+
+    @property
+    def identity(self):
+        """
+        Get the identity of the RF sensor, consisting of its ID, address and
+        network join status.
+        """
+
+        return {
+            "id": self._id,
+            "address": self._format_address(self._address),
+            "joined": self._joined
+        }
 
     def activate(self):
         """
@@ -209,9 +221,9 @@ class RF_Sensor_Physical_XBee(RF_Sensor_Physical):
         rx_packet = Packet()
         rx_packet.unserialize(packet["rf_data"])
 
-        super(RF_Sensor_Physical_XBee, self)._process(rx_packet)
-
-        self._process_rssi_broadcast_packet(rx_packet)
+        is_broadcast = super(RF_Sensor_Physical_XBee, self)._process(rx_packet)
+        if is_broadcast:
+            self._process_rssi_broadcast_packet(rx_packet)
 
     def _process_rssi_broadcast_packet(self, packet, **kwargs):
         """

@@ -67,7 +67,8 @@ class RF_Sensor_Physical(RF_Sensor):
 
     def _process(self, packet, **kwargs):
         """
-        Process a `Packet` object `packet`.
+        Process a `Packet` object `packet`. Returns whether or not `packet` is
+        an RSSI broadcast packet for further processing.
 
         Classes that inherit this base class must extend this method.
         """
@@ -75,12 +76,12 @@ class RF_Sensor_Physical(RF_Sensor):
         # Check if the packet is public and pass it along to the receive callback.
         if not packet.is_private():
             self._receive_callback(packet)
-            return
+            return False
 
         # Handle an NTP synchronization packet.
         if packet.get("specification") == "ntp":
             self._ntp.process(packet)
-            return
+            return False
 
         if self._id == 0:
             # Handle an RSSI ground station packet.
@@ -88,13 +89,15 @@ class RF_Sensor_Physical(RF_Sensor):
                 if self._buffer is not None:
                     self._buffer.put(packet)
 
-                return
+                return False
 
             raise ValueError("Received packet is not an RSSI ground station packet")
 
         # Handle an RSSI broadcast packet.
         if packet.get("specification") != "rssi_broadcast":
             raise ValueError("Received packet is not an RSSI broadcast packet")
+
+        return True
 
     def _process_rssi_broadcast_packet(self, packet, **kwargs):
         """

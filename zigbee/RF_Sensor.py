@@ -135,6 +135,8 @@ class RF_Sensor(Threadable):
         """
         Get the identity of the RF sensor, consisting of its ID, address and
         network join status.
+
+        Classes that inherit this base class may extend this property.
         """
 
         return {
