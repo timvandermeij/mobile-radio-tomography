@@ -13,7 +13,6 @@ class TestVehicleMockVehicle(VehicleTestCase):
         super(TestVehicleMockVehicle, self).setUp()
         self._message_listener_mock = MagicMock()
 
-        # pylint: disable=unused-variable
         @self.vehicle.on_message('*')
         def listener(vehicle, name, msg):
             self._message_listener_mock(vehicle, name, msg)
