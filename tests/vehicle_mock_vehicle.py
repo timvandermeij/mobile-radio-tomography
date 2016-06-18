@@ -1,15 +1,22 @@
 import math
-from dronekit import Locations, LocationGlobal, LocationGlobalRelative, LocationLocal
+from dronekit import Command, Locations, LocationGlobal, LocationGlobalRelative, LocationLocal
+from pymavlink import mavutil
 from mock import patch, MagicMock
 from ..geometry.Geometry_Spherical import Geometry_Spherical
 from ..trajectory.Servo import Servo
-from ..vehicle.Mock_Vehicle import Mock_Vehicle, CommandSequence, MockAttitude, VehicleMode
+from ..vehicle.Mock_Vehicle import Mock_Vehicle, CommandSequence, MockAttitude, VehicleMode, GlobalMessage
 from vehicle import VehicleTestCase
 
 class TestVehicleMockVehicle(VehicleTestCase):
     def setUp(self):
         self.set_arguments([], vehicle_class="Mock_Vehicle")
         super(TestVehicleMockVehicle, self).setUp()
+        self._message_listener_mock = MagicMock()
+
+        # pylint: disable=unused-variable
+        @self.vehicle.on_message('*')
+        def listener(vehicle, name, msg):
+            self._message_listener_mock(vehicle, name, msg)
 
     def test_interface_mode(self):
         # Test that the mode-related properties work as expected.
@@ -97,6 +104,8 @@ class TestVehicleMockVehicle(VehicleTestCase):
             self.vehicle.location = LocationGlobalRelative(1.0, 2.0, -3.0)
             self.assertEqual(self.vehicle.location.global_relative_frame,
                              LocationGlobalRelative(1.0, 2.0, -3.0))
+            msg = GlobalMessage(1.0 * 1e7, 2.0 * 1e7, -3.0 * 1000, -3.0 * 1000)
+            self._message_listener_mock.assert_called_once_with(self.vehicle, 'GLOBAL_POSITION_INT', msg)
 
             # Setting a location via a distance update works similarly.
             self.vehicle.set_location(3.4, 5.6, 8.7)
@@ -213,3 +222,79 @@ class TestVehicleMockVehicle(VehicleTestCase):
 
         commands.clear()
         self.assertEqual(commands.count, 0)
+
+    def test_parse_command(self):
+        # Ignore unsupported commands
+        self.vehicle._parse_command(None)
+        self.assertEqual(self.vehicle.commands.next, 1)
+
+        cmd = Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL,
+                      mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0,
+                      3.4, 2.3, 1.2)
+        self.vehicle._parse_command(cmd)
+        self.assertEqual(self.vehicle.commands.next, 2)
+
+        # Waypoint commands set a target location.
+        cmd = Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                      mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0,
+                      3.4, 2.3, 1.2)
+        with patch.object(Mock_Vehicle, "set_target_location") as target_mock:
+            self.vehicle._parse_command(cmd)
+            target_mock.assert_called_once_with(lat=3.4, lon=2.3, alt=1.2)
+
+        # Loiter commands set the target location to mark indefinite wait.
+        cmd = Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                      mavutil.mavlink.MAV_CMD_NAV_LOITER_UNLIM, 0, 0, 0, 0, 0,
+                      0, 0, 0, 0)
+        self.vehicle._parse_command(cmd)
+        self.assertFalse(self.vehicle._target_location)
+
+        # Takeoff commands set a target takeoff location, unless the vehicle 
+        # has already taken off.
+        cmd = Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                      mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0,
+                      0, 0, 45.0)
+        with patch.object(Mock_Vehicle, "set_target_location") as target_mock:
+            self.vehicle._parse_command(cmd)
+            target_mock.assert_called_once_with(alt=45.0, takeoff=True)
+
+        self.vehicle._takeoff = True
+        self.vehicle._parse_command(cmd)
+        self.assertEqual(self.vehicle.commands.next, 3)
+
+    def test_set_target_attitude(self):
+        self.vehicle.set_target_attitude()
+        self.assertEqual(self.vehicle._target_attitude,
+                         MockAttitude(0.0, 0.0, 0.0, self.vehicle))
+
+        self.vehicle.set_target_attitude(yaw=math.pi, yaw_direction=1)
+        self.assertEqual(self.vehicle._target_attitude,
+                         MockAttitude(0.0, math.pi, 0.0, self.vehicle))
+
+    def test_set_target_location(self):
+        loc = LocationGlobalRelative(1.0, 1.0, 5.6)
+
+        # Changing location has no effect when the vehicle has not taken off.
+        self.vehicle.set_target_location(location=loc)
+        self.assertIsNone(self.vehicle._target_location)
+
+        # Takeoff locations work as expected.
+        self.vehicle.set_target_location(alt=7.8, takeoff=True)
+        self.assertTrue(self.vehicle._takeoff)
+        self.assertEqual(self.vehicle._target_location,
+                         LocationLocal(0.0, 0.0, -7.8))
+
+        self.vehicle.set_target_location()
+        self.assertEqual(self.vehicle._target_location,
+                         LocationLocal(0.0, 0.0, 0.0))
+
+        with patch.object(self.vehicle, "_geometry", spec=Geometry_Spherical) as geometry_mock:
+            self.vehicle.set_target_location(location=loc)
+            self.assertEqual(self.vehicle._target_location, loc)
+            geometry_mock.get_angle.assert_called_once_with(self.vehicle.location, loc)
+            self.assertEqual(geometry_mock.angle_to_bearing.call_count, 1)
+            self.assertEqual(self.vehicle._target_attitude._yaw,
+                             geometry_mock.angle_to_bearing.return_value)
+
+        self.vehicle.clear_target_location()
+        self.assertIsNone(self.vehicle._target_location)
