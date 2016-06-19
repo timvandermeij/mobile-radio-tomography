@@ -10,24 +10,23 @@ class TestReconstructionWeightMatrix(SettingsTestCase):
         self.size = [4, 4]
         self.arguments = Arguments("settings.json", [])
         self.settings = self.arguments.get_settings("reconstruction_ellipse_model")
-        self.weight_matrix = Weight_Matrix(self.settings, self.origin, self.size)
+        self.weight_matrix = Weight_Matrix(self.arguments, self.origin, self.size)
 
     def test_initialization(self):
-        # Verify that only `Settings` and `Arguments` objects can be used to initialize.
-        Weight_Matrix(self.arguments, self.origin, self.size)
-        Weight_Matrix(self.settings, self.origin, self.size)
-        with self.assertRaises(ValueError):
+        # Verify that only `Arguments` objects can be used to initialize.
+        with self.assertRaises(TypeError):
+            Weight_Matrix(self.settings, self.origin, self.size)
+        with self.assertRaises(TypeError):
             Weight_Matrix(None, self.origin, self.size)
 
-        self.assertEqual(self.weight_matrix._lambda, self.settings.get("lambda"))
+        self.assertIsInstance(self.weight_matrix._distances, np.ndarray)
+        self.assertIsInstance(self.weight_matrix._matrix, np.ndarray)
         self.assertEqual(self.weight_matrix._origin, self.origin)
         self.assertEqual(self.weight_matrix._width, self.size[0])
         self.assertEqual(self.weight_matrix._height, self.size[1])
         self.assertIsInstance(self.weight_matrix._snapper, Snap_To_Boundary)
-        self.assertIsInstance(self.weight_matrix._distances, np.ndarray)
-        self.assertIsInstance(self.weight_matrix._matrix, np.ndarray)
-        self.assertIsInstance(self.weight_matrix._gridX, np.ndarray)
-        self.assertIsInstance(self.weight_matrix._gridY, np.ndarray)
+        self.assertIsInstance(self.weight_matrix._grid_x, np.ndarray)
+        self.assertIsInstance(self.weight_matrix._grid_y, np.ndarray)
 
     def test_is_valid_point(self):
         # Only points that are outside the network are valid points.

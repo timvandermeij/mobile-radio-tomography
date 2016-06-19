@@ -761,7 +761,7 @@
                 "short": "Chunk size",
                 "type": "int",
                 "min": 1,
-                "default": 5
+                "default": 10
             },
             "reconstructor": {
                 "help": "Reconstruction algorithm to use",
@@ -862,6 +862,19 @@
                 "full_name": true,
                 "required": false,
                 "default": null
+            }
+        }
+    },
+    "reconstruction_weight_matrix": {
+        "name": "Reconstruction (weight matrix)",
+        "settings": {
+            "model_class": {
+                "help": "Model class to use for the weight matrix",
+                "type": "class",
+                "module": "reconstruction.Model",
+                "required": true,
+                "replace": [" ", "_"],
+                "default": "Ellipse_Model"
             }
         }
     },

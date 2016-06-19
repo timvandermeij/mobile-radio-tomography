@@ -1,6 +1,9 @@
 # Package imports
 from ..settings import Arguments
 
+# pylint: disable=undefined-all-variable
+__all__ = ["Ellipse_Model"]
+
 class Model(object):
     """
     Base class for all signal disruption models.

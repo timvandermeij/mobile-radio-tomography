@@ -1,34 +1,44 @@
+# Library imports
 import numpy as np
+
+# Package imports
 from Snap_To_Boundary import Snap_To_Boundary, Point
-from ..settings import Arguments, Settings
+from ..core.Import_Manager import Import_Manager
+from ..settings import Arguments
 
 class Weight_Matrix(object):
-    def __init__(self, settings, origin, size, snap_inside=False):
+    def __init__(self, arguments, origin, size, snap_inside=False):
         """
         Initialize the weight matrix object.
         """
 
-        if isinstance(settings, Arguments):
-            settings = settings.get_settings("reconstruction_ellipse_model")
-        elif not isinstance(settings, Settings):
-            raise ValueError("'settings' must be an instance of Settings or Arguments")
+        if isinstance(arguments, Arguments):
+            settings = arguments.get_settings("reconstruction_weight_matrix")
+        else:
+            raise TypeError("'arguments' must be an instance of Arguments")
 
-        self._lambda = settings.get("lambda")
+        # Create the model object.
+        import_manager = Import_Manager()
+        model_class = settings.get("model_class")
+        model_type = import_manager.load_class(model_class,
+                                               relative_module="reconstruction")
+        self._model = model_type(arguments)
 
+        # Create the snap to boundary object and initialize variables for the matrix.
+        self._distances = None
+        self._matrix = None
         self._origin = origin
         self._width, self._height = size
         self._snapper = Snap_To_Boundary(self._origin, self._width,
                                          self._height, snap_inside=snap_inside)
-        self._distances = None
-        self._matrix = None
 
         # Create a grid for the space covered by the network. This represents a pixel
         # grid that we use to determine which pixels are intersected by a link. The
         # value 0.5 is used to obtain the center of each pixel.
-        offsetX, offsetY = self._origin
-        x = np.linspace(offsetX + 0.5, offsetX + self._width - 0.5, self._width)
-        y = np.linspace(offsetY + 0.5, offsetY + self._height - 0.5, self._height)
-        self._gridX, self._gridY = np.meshgrid(x, y)
+        offset_x, offset_y = self._origin
+        x = np.linspace(offset_x + 0.5, offset_x + self._width - 0.5, self._width)
+        y = np.linspace(offset_y + 0.5, offset_y + self._height - 0.5, self._height)
+        self._grid_x, self._grid_y = np.meshgrid(x, y)
 
         self.reset()
 
@@ -84,7 +94,7 @@ class Weight_Matrix(object):
         # Calculate the distance from a sensor to each center of a pixel on the
         # grid using the Pythagorean theorem. Do this only for new sensors.
         for sensor in new_sensors:
-            distance = np.sqrt((self._gridX - sensor[0]) ** 2 + (self._gridY - sensor[1]) ** 2)
+            distance = np.sqrt((self._grid_x - sensor[0]) ** 2 + (self._grid_y - sensor[1]) ** 2)
             self._distances = np.vstack([self._distances, distance.flatten()])
 
         # Update the weight matrix by adding a row for the new link. We use the
@@ -100,8 +110,8 @@ class Weight_Matrix(object):
             # snapping the points to the boundaries.
             return None
 
-        weight = (self._distances[source_index] + self._distances[destination_index] < length + self._lambda)
-        row = (1.0 / np.sqrt(length)) * weight
+        row = self._model.assign(length, self._distances[source_index],
+                                 self._distances[destination_index])
         self._matrix = np.vstack([self._matrix, row])
 
         return snapped_points

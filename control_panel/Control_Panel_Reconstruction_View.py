@@ -509,8 +509,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             return
 
         # Create the coordinator.
-        self._coordinator = Coordinator(self._controller.arguments,
-                                        self._buffer)
+        self._coordinator = Coordinator(self._controller.arguments, self._buffer)
 
         # Clear the graph and table and setup the graph.
         self._graph.clear()
