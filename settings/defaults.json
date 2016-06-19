@@ -889,6 +889,17 @@
             }
         }
     },
+    "reconstruction_gaussian_model": {
+        "name": "Reconstruction (Gaussian model)",
+        "settings": {
+            "sigma": {
+                "help": "Standard deviation of the Gaussian function that determines the width of the curve's top",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.3
+            }
+        }
+    },
     "reconstruction_total_variation": {
         "name": "Reconstruction (total variation)",
         "settings": {
