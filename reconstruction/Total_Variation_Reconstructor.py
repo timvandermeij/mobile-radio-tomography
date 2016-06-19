@@ -29,8 +29,9 @@ class Total_Variation_Reconstructor(Reconstructor):
         self._solver_iterations = settings.get("solver_iterations")
 
         self._D = None
+        self._guess = None
 
-    def execute(self, weight_matrix, rssi, buffer=None, guess=None):
+    def execute(self, weight_matrix, rssi, buffer=None):
         """
         Perform the total variation algorithm. We aim to solve `Ax = b` where
         `A` is the weight matrix and `b` is a column vector of signal strength
@@ -52,20 +53,16 @@ class Total_Variation_Reconstructor(Reconstructor):
         if self._D is None:
             self._D = self._create_difference_matrix(width, height)
 
-        # Create an empty guess if none exists yet.
-        if guess is None:
-            number_of_pixels = width * height
-            guess = np.zeros(number_of_pixels)
+        # Solve the total variation problem.
+        if self._guess is None:
+            self._guess = np.zeros(width * height)
 
-        # Solve the total variation problem. We use the solution of the previous
-        # iteration as the guess for the current iteration because successive frames
-        # are usually very similar.
         options = {
             "maxiter": self._solver_iterations
         }
         total_variation = partial(self._calculate_total_variation, A, b)
         total_variation_gradient = partial(self._calculate_total_variation_gradient, A, b)
-        solution = scipy.optimize.minimize(total_variation, guess, options=options,
+        solution = scipy.optimize.minimize(total_variation, self._guess, options=options,
                                            jac=total_variation_gradient, method=self._solver_method)
         return solution.x
 

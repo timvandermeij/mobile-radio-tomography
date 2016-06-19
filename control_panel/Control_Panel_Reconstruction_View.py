@@ -274,7 +274,6 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._stream_recorder = None
         self._reconstructor = None
 
-        self._previous_pixels = None
         self._chunk_count = 0
 
         self._import_manager = Import_Manager()
@@ -587,7 +586,6 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         # We attempt to reconstruct an image when the coordinator successfully
         # updated the weight matrix and the RSSI vector and when we have obtained
         # the required number of measurements to fill a chunk.
-        self._previous_pixels = None
         if self._coordinator.update(packet, calibrated_rssi):
             self._chunk_count += 1
             if self._chunk_count >= self._chunk_size:
@@ -606,8 +604,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             # Get the list of pixel values from the reconstructor.
             pixels = self._reconstructor.execute(self._coordinator.get_weight_matrix(),
                                                  self._coordinator.get_rssi_vector(),
-                                                 buffer=self._buffer, guess=self._previous_pixels)
-            self._previous_pixels = pixels
+                                                 buffer=self._buffer)
 
             # Reshape the list of pixel values to form the image. Smoothen the image
             # by suppressing pixel values that do not correspond to high attenuation.

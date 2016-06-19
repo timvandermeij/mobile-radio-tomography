@@ -11,5 +11,5 @@ class Reconstructor(object):
 
         self._settings = settings
 
-    def execute(self, weight_matrix, rssi, buffer=None, guess=None):
-        raise NotImplementedError("Subclasses must implement execute(weight_matrix, rssi, buffer, guess)")
+    def execute(self, weight_matrix, rssi, buffer=None):
+        raise NotImplementedError("Subclasses must implement execute(weight_matrix, rssi, buffer)")
