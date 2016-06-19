@@ -900,6 +900,17 @@
             }
         }
     },
+    "reconstruction_line_model": {
+        "name": "Reconstruction (line model)",
+        "settings": {
+            "threshold": {
+                "help": "Maximum difference from the link length for determining that a pixel is on the line-of-sight path",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.34
+            }
+        }
+    },
     "reconstruction_total_variation": {
         "name": "Reconstruction (total variation)",
         "settings": {

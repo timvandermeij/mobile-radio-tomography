@@ -2,7 +2,7 @@
 from ..settings import Arguments
 
 # pylint: disable=undefined-all-variable
-__all__ = ["Ellipse_Model", "Gaussian_Model"]
+__all__ = ["Ellipse_Model", "Gaussian_Model", "Line_Model"]
 
 class Model(object):
     """
