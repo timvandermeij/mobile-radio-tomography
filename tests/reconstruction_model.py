@@ -9,6 +9,40 @@ import numpy as np
 from ..reconstruction.Model import Model
 from ..settings.Arguments import Arguments
 
+class ModelTestCase(unittest.TestCase):
+    """
+    Test case for the signal disruption model classes. It provides an
+    example for testing weight assignment.
+    """
+
+    def test_assign(self):
+        """
+        Classes that inherit this test case class must extend this method.
+        """
+
+        def distance(x, y):
+            """
+            Helper function to calculate the distance from location
+            (0, 0) to the pixel center location of pixel (x, y).
+            """
+
+            return np.sqrt((x + 0.5) ** 2 + (y + 0.5) ** 2)
+
+        # The grid contains 16 pixels (four by four). The link goes from
+        # location (0, 0) to location (4, 4). Location (0, 0) is located
+        # in the top left corner and location (4, 4) is located in the
+        # bottom right corner of the grid.
+        length = np.sqrt(4 ** 2 + 4 ** 2)
+        source_distances = np.array([
+            distance(0, 0), distance(1, 0), distance(2, 0), distance(3, 0),
+            distance(0, 1), distance(1, 1), distance(2, 1), distance(3, 1),
+            distance(0, 2), distance(1, 2), distance(2, 2), distance(3, 2),
+            distance(0, 3), distance(1, 3), distance(2, 3), distance(3, 3)
+        ]).reshape(4, 4)
+        destination_distances = np.flipud(np.fliplr(source_distances))
+
+        return length, source_distances, destination_distances
+
 class TestReconstructionModel(unittest.TestCase):
     def setUp(self):
         super(TestReconstructionModel, self).setUp()
