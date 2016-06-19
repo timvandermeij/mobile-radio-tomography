@@ -9,7 +9,7 @@ class TestReconstructionWeightMatrix(SettingsTestCase):
         self.origin = [0, 0]
         self.size = [4, 4]
         self.arguments = Arguments("settings.json", [])
-        self.settings = self.arguments.get_settings("reconstruction_weight_matrix")
+        self.settings = self.arguments.get_settings("reconstruction_ellipse_model")
         self.weight_matrix = Weight_Matrix(self.settings, self.origin, self.size)
 
     def test_initialization(self):
@@ -19,7 +19,7 @@ class TestReconstructionWeightMatrix(SettingsTestCase):
         with self.assertRaises(ValueError):
             Weight_Matrix(None, self.origin, self.size)
 
-        self.assertEqual(self.weight_matrix._lambda, self.settings.get("distance_lambda"))
+        self.assertEqual(self.weight_matrix._lambda, self.settings.get("lambda"))
         self.assertEqual(self.weight_matrix._origin, self.origin)
         self.assertEqual(self.weight_matrix._width, self.size[0])
         self.assertEqual(self.weight_matrix._height, self.size[1])

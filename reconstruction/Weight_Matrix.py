@@ -9,11 +9,11 @@ class Weight_Matrix(object):
         """
 
         if isinstance(settings, Arguments):
-            settings = settings.get_settings("reconstruction_weight_matrix")
+            settings = settings.get_settings("reconstruction_ellipse_model")
         elif not isinstance(settings, Settings):
             raise ValueError("'settings' must be an instance of Settings or Arguments")
 
-        self._lambda = settings.get("distance_lambda")
+        self._lambda = settings.get("lambda")
 
         self._origin = origin
         self._width, self._height = size

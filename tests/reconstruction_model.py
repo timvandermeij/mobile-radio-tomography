@@ -34,8 +34,8 @@ class TestReconstructionModel(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             dummy = self.model.type
 
-    def test_execute(self):
+    def test_assign(self):
         # Verify that the interface requires subclasses to implement
-        # the `execute(link_length, source_distances, destination_distances)` method.
+        # the `assign(length, source_distances, destination_distances)` method.
         with self.assertRaises(NotImplementedError):
-            self.model.execute(42, np.empty(0), np.empty(0))
+            self.model.assign(42, np.empty(0), np.empty(0))

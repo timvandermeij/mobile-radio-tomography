@@ -865,11 +865,11 @@
             }
         }
     },
-    "reconstruction_weight_matrix": {
-        "name": "Reconstruction (weight matrix)",
+    "reconstruction_ellipse_model": {
+        "name": "Reconstruction (ellipse model)",
         "settings": {
-            "distance_lambda": {
-                "help": "Width of an ellipse in the measurement model",
+            "lambda": {
+                "help": "Minor axis diameter of the ellipse used in the model",
                 "type": "float",
                 "min": 0.0,
                 "default": 0.3

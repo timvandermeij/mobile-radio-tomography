@@ -1,3 +1,4 @@
+# Package imports
 from ..settings import Arguments
 
 class Model(object):
@@ -28,6 +29,6 @@ class Model(object):
     def type(self):
         raise NotImplementedError("Subclasses must implement the `type` property")
 
-    def execute(self, link_length, source_distances, destination_distances):
-        raise NotImplementedError("Subclasses must implement `execute(link_length, \
+    def assign(self, length, source_distances, destination_distances):
+        raise NotImplementedError("Subclasses must implement `assign(length, \
                                    source_distances, destination_distances)`")
