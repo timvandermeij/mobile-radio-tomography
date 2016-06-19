@@ -1,7 +1,12 @@
+# Core imports
 import copy
+
+# Library imports
+from dronekit import VehicleMode, LocationLocal, LocationGlobal, LocationGlobalRelative
+
+# Package imports
 from ..core.Threadable import Threadable
 from ..geometry.Geometry_Spherical import Geometry_Spherical
-from dronekit import VehicleMode, LocationLocal, LocationGlobal, LocationGlobalRelative
 
 class Vehicle(Threadable):
     """

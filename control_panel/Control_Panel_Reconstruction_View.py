@@ -3,18 +3,18 @@ import json
 import thread
 import os
 
-# Qt imports
-from PyQt4 import QtGui, QtCore
-import pyqtgraph as pg
-
 # matplotlib imports
 import matplotlib
 matplotlib.use("Qt4Agg")
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 
-# Other library imports
+# NumPy imports
 import numpy as np
+
+# Qt imports
+import pyqtgraph as pg
+from PyQt4 import QtGui, QtCore
 
 # Package imports
 from Control_Panel_Settings_Widgets import SettingsTableWidget
