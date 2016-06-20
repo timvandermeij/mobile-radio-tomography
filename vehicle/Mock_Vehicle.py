@@ -117,7 +117,8 @@ class MockAttitude(object):
         return False
 
 class Mock_Vehicle(MAVLink_Vehicle):
-    def __init__(self, arguments, geometry, import_manager, thread_manager, usb_manager):
+    def __init__(self, arguments, geometry, import_manager, thread_manager,
+                 usb_manager):
         super(Mock_Vehicle, self).__init__(arguments, geometry, import_manager,
                                            thread_manager, usb_manager)
 
@@ -130,7 +131,6 @@ class Mock_Vehicle(MAVLink_Vehicle):
 
         # The target location parsed from commands or a takeoff call.
         self._target_location = None
-        self._target_command = False
 
         # The last time the vehicle location was updated.
         self._update_time = time.time()
@@ -196,7 +196,8 @@ class Mock_Vehicle(MAVLink_Vehicle):
             else:
                 self.set_target_location(alt=cmd.z, takeoff=True)
 
-    def set_target_attitude(self, pitch=None, yaw=None, roll=None, yaw_direction=0):
+    def set_target_attitude(self, pitch=None, yaw=None, roll=None,
+                            yaw_direction=0):
         """
         Set the target attitude of the mock vehicle.
 
@@ -220,10 +221,13 @@ class Mock_Vehicle(MAVLink_Vehicle):
         if yaw_direction == 0:
             # -1 because the yaw is given as a bearing that increases clockwise 
             # while geometry works with angles that increase counterclockwise.
-            yaw_direction = -1 * self._geometry.get_direction(self._attitude._yaw, yaw)
+            current_yaw = self._attitude._yaw
+            yaw_direction = -1 * self._geometry.get_direction(current_yaw, yaw)
+
         self._yaw_direction = yaw_direction
 
-    def set_target_location(self, location=None, lat=None, lon=None, alt=None, takeoff=False):
+    def set_target_location(self, location=None, lat=None, lon=None, alt=None,
+                            takeoff=False):
         """
         Set the target waypoint location of the mock vehicle.
 
@@ -242,6 +246,8 @@ class Mock_Vehicle(MAVLink_Vehicle):
             return
 
         if location is not None:
+            # Track the target location and convert it so that the remainder of 
+            # this method can use global relative frame locations.
             self._target_location = location
             target_location = self._make_global_location(location)
         else:
@@ -252,8 +258,10 @@ class Mock_Vehicle(MAVLink_Vehicle):
             if alt is None:
                 alt = self._location.alt
 
+            # Create the target location and track it as an internal location.
             target_location = LocationGlobalRelative(lat, lon, alt)
-            self._target_location = self._make_location(LocationGlobalRelative, lat, lon, alt)
+            self._target_location = self._make_location(LocationGlobalRelative,
+                                                        lat, lon, alt)
 
         # Change yaw to go to new target location
         if self._location.lat == target_location.lat and self._location.lon == target_location.lon:
@@ -327,36 +335,54 @@ class Mock_Vehicle(MAVLink_Vehicle):
         vAlt = 0.0
 
         if self._speed != 0.0:
-            # Move to location with given `speed`
-            dist = self._geometry.get_distance_meters(self._locations, self._target_location)
+            # Move to location with given `speed`. Determine the distance to 
+            # the target location, both a normed distance and per-component 
+            # difference measures.
+            dist = self._geometry.get_distance_meters(self._locations,
+                                                      self._target_location)
+            dDist = self._geometry.diff_location_meters(self._locations,
+                                                        self._target_location)
+            dNorth, dEast, dAlt = dDist
+
             if isinstance(self._geometry, Geometry_Spherical):
                 dAlt = self._target_location.alt - self._location.alt
             else:
                 dAlt = -self._target_location.down - self._location.alt
-                if dist != 0.0 and dist < diff * self._speed:
-                    self.set_location(self._target_location.north,
-                                      self._target_location.east,
-                                      -self._target_location.down)
-            if dist != 0.0:
+                # Handle non-spherical target locations with down component, 
+                # when we are close enough to "snap" to the target location.
+                # This is the same case as below.
+                if (dNorth != 0.0 or dEast != 0.0) and dist < diff * self._speed:
+                    self.set_location(dNorth, dEast, dAlt)
+
+            if dNorth != 0.0 or dEast != 0.0:
+                # We are moving, but not straight up/down. Check whether the 
+                # distance to the target is smaller than the distance that we 
+                # can reach in this step, then we "snap" to the exact target 
+                # location. Otherwise, we make a step towards it.
                 if dist < diff * self._speed:
                     self.location = self._target_location
                 else:
                     return self._handle_speed(dist, dAlt)
             elif dAlt != 0.0:
+                # We are moving straight up/down. Check whether we can reach 
+                # the requested altitude in one step, and update the velocity 
+                # to match with such a step. Otherwise, we step towards it.
                 if dAlt / diff < self._speed:
                     vAlt = dAlt / diff
                 else:
                     vAlt = math.copysign(self._speed, dAlt)
             else:
-                # Reached target location.
-                print("Reached target location")
-                if self._target_command:
-                    self.commands.next = self.commands.next + 1
-
+                # We reached the target location exactly.
                 self._target_location = None
-                self._target_command = False
 
-            return vNorth, vEast, vAlt
+        return vNorth, vEast, vAlt
+
+    def _get_delta_time(self):
+        new_time = time.time()
+        # Seconds since last update (delta time)
+        diff = new_time - self._update_time
+
+        return diff, new_time
 
     def update_location(self):
         """
@@ -371,9 +397,8 @@ class Mock_Vehicle(MAVLink_Vehicle):
         if not self._takeoff or not self.armed:
             return
 
-        new_time = time.time()
-        # seconds since last update (delta time)
-        diff = new_time - self._update_time
+        diff, new_time = self._get_delta_time()
+
         # m/s
         vNorth = 0.0
         vEast = 0.0
@@ -412,6 +437,17 @@ class Mock_Vehicle(MAVLink_Vehicle):
 
     @location.setter
     def location(self, value):
+        """
+        Update the current location immediately.
+
+        This setter only changes the global and global relative frames of the
+        mock vehicle's location.
+
+        This setter should only be used to forcibly change the location of the
+        mock vehicle. It is not to be used to alter the target location,
+        for which `set_target_location` is responsible.
+        """
+
         if self._updating:
             raise RuntimeError("Recursion detected in location update")
 
@@ -423,13 +459,25 @@ class Mock_Vehicle(MAVLink_Vehicle):
         value = self._make_global_location(value)
         dalt = (value.alt - self._home_location.alt)
 
-        msg = GlobalMessage(value.lat * 1.0e7, value.lon * 1.0e7, dalt * 1000, value.alt * 1000)
+        msg = GlobalMessage(value.lat * 1.0e7, value.lon * 1.0e7, dalt * 1000,
+                            value.alt * 1000)
         self.notify_message_listeners('GLOBAL_POSITION_INT', msg)
         self._location = self._locations.global_relative_frame
         self._updating = False
         self._update_time = time.time()
 
     def set_location(self, north, east, alt):
+        """
+        Change the location to be at a certain offset from the current location.
+        The given arguments `north`, `east` and `alt` are in meters and specify
+        the location in those components. The location is immediately updated
+        in all frames (global, global relative and local).
+
+        This method should only be used to forcibly change the location of the
+        mock vehicle. It is not to be used to alter the target location,
+        for which `set_target_location` is responsible.
+        """
+
         local_location = self._locations.local_frame
         if local_location.north is None:
             local_location = LocationLocal(0.0, 0.0, 0.0)

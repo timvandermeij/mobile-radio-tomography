@@ -22,6 +22,7 @@ class TestVehicleMockVehicle(VehicleTestCase):
         self.assertTrue(self.vehicle.use_simulation)
         self.assertIsInstance(self.vehicle.commands, CommandSequence)
         self.assertFalse(self.vehicle.armed)
+        self.vehicle.flush()
         with patch.object(Mock_Vehicle, "update_location") as update_mock:
             update_mock.reset_mock()
             self.assertEqual(self.vehicle.mode.name, "SIMULATED")
@@ -297,3 +298,151 @@ class TestVehicleMockVehicle(VehicleTestCase):
 
         self.vehicle.clear_target_location()
         self.assertIsNone(self.vehicle._target_location)
+
+    def test_update_location_speed(self):
+        with patch.object(Mock_Vehicle, "_get_delta_time", return_value=(1.0, 1234567890.123)) as delta_mock:
+            self.vehicle.update_location()
+            delta_mock.assert_not_called()
+
+            self.vehicle.check_arming()
+            self.vehicle.armed = True
+            self.vehicle.speed = 1.5
+            self.vehicle.simple_takeoff(2.0)
+
+            # Takeoff works stepwise.
+            self.assertEqual(self.vehicle.location.local_frame,
+                             LocationLocal(0.0, 0.0, -1.5))
+            delta_mock.assert_called_once_with()
+
+            delta_mock.reset_mock()
+            self.assertEqual(self.vehicle.location.local_frame,
+                             LocationLocal(0.0, 0.0, -2.0))
+            delta_mock.assert_called_once_with()
+
+            self.vehicle.clear_target_location()
+            self.vehicle.velocity = [2.5, 0.0, 0.0]
+            delta_mock.reset_mock()
+
+            # Velocity step works.
+            self.assertEqual(self.vehicle.location.local_frame,
+                             LocationLocal(2.5, 0.0, -2.0))
+            delta_mock.assert_called_once_with()
+
+    def test_update_location_goto(self):
+        with patch.object(Mock_Vehicle, "_get_delta_time", return_value=(1.0, 1234567890.123)) as delta_mock:
+            self.vehicle.check_arming()
+            self.vehicle.armed = True
+            self.vehicle._takeoff = True
+            self.vehicle.speed = 7.5
+
+            # Goto snaps to the target location if it is reachable in one step.
+            loc = LocationLocal(5.0, 0.0, 0.0)
+            self.vehicle.set_target_location(location=loc)
+            delta_mock.reset_mock()
+            self.assertEqual(self.vehicle.location.local_frame, loc)
+            delta_mock.assert_called_once_with()
+
+    def test_update_location_goto_spherical(self):
+        with patch.object(Mock_Vehicle, "_get_delta_time", return_value=(1.0, 1234567890.123)):
+            loc = LocationGlobalRelative(0.01, 0.0, 1.0)
+            parameters = {
+                "spec": Geometry_Spherical,
+                "get_location_meters.return_value": loc,
+                "diff_location_meters.return_value": (0.01, 0.0, 1.0)
+            }
+            with patch.object(self.vehicle, "_geometry", **parameters):
+                self.vehicle.check_arming()
+                self.vehicle.armed = True
+                self.vehicle._takeoff = True
+                self.vehicle.speed = 7.5
+
+                # Goto snaps to the target location if it is reachable in one 
+                # step.
+                self.vehicle.set_target_location(location=loc)
+                self.assertEqual(self.vehicle.location.global_relative_frame, loc)
+
+    def test_update_location_auto(self):
+        with patch.object(Mock_Vehicle, "_get_delta_time", return_value=(1.0, 1234567890.123)) as delta_mock:
+            self.vehicle.check_arming()
+            self.vehicle.armed = True
+            self.vehicle._takeoff = True
+
+            self.vehicle.speed = 5.0
+            self.vehicle._attitude_speed = [10.0, 45.0, 10.0]
+            self.vehicle.mode = VehicleMode("AUTO")
+            cmd = Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                          mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0,
+                          2.0, 0.0, 0.0)
+            self.vehicle.commands.add(cmd)
+
+            cmd = Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                          mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0,
+                          2.0, 10.0, 0.0)
+            self.vehicle.commands.add(cmd)
+
+            cmd = Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                          mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0,
+                          2.0, 20.0, 10.0)
+            self.vehicle.commands.add(cmd)
+
+            # First call to update_location: command parsing
+            delta_mock.reset_mock()
+            self.vehicle.update_location()
+            self.assertEqual(self.vehicle.commands.next, 0)
+            self.assertEqual(self.vehicle._target_location,
+                             LocationLocal(2.0, 0.0, 0.0))
+            delta_mock.assert_called_once_with()
+
+            # Second call (via location): reached first location
+            delta_mock.reset_mock()
+            self.assertEqual(self.vehicle.location.local_frame,
+                             LocationLocal(2.0, 0.0, 0.0))
+            delta_mock.assert_called_once_with()
+
+            # Third call (via next): target location is reset
+            delta_mock.reset_mock()
+            self.vehicle.commands.next = self.vehicle.commands.next + 1
+            self.assertIsNone(self.vehicle._target_location)
+            delta_mock.assert_called_once_with()
+
+            # Fourth call to update_location: command parsing
+            delta_mock.reset_mock()
+            self.vehicle.update_location()
+            self.assertEqual(self.vehicle.commands.next, 1)
+            self.assertEqual(self.vehicle._target_location,
+                             LocationLocal(2.0, 10.0, 0.0))
+            delta_mock.assert_called_once_with()
+
+            # Fifth call (via attitude): rotating attitude
+            delta_mock.reset_mock()
+            self.assertEqual(self.vehicle.attitude,
+                             MockAttitude(0.0, 0.25*math.pi, 0.0, self.vehicle))
+            delta_mock.assert_called_once_with()
+
+            # Sixth call (via attitude): rotated attitude and going to second 
+            # location
+            self.assertEqual(self.vehicle.location.local_frame,
+                             LocationLocal(2.0, 5.0, 0.0))
+            self.assertEqual(self.vehicle.attitude,
+                             MockAttitude(0.0, 0.5*math.pi, 0.0, self.vehicle))
+
+            # Reached second location
+            delta_mock.reset_mock()
+            self.assertEqual(self.vehicle.location.local_frame,
+                             LocationLocal(2.0, 10.0, 0.0))
+            delta_mock.assert_called_once_with()
+
+            # Going to third location and reaching it at correct altitude
+            self.vehicle.commands.next = self.vehicle.commands.next + 1
+            self.vehicle.update_location()
+            self.assertEqual(self.vehicle.location.local_frame.east, 15.0)
+            self.vehicle.update_location()
+            self.assertEqual(self.vehicle.location.local_frame,
+                             LocationLocal(2.0, 20.0, -10.0))
+
+    def test_get_delta_time(self):
+        self.vehicle._update_time = 1234567890.25
+        with patch("time.time", return_value=1234567890.5):
+            diff, new_time = self.vehicle._get_delta_time()
+            self.assertEqual(diff, 0.25)
+            self.assertEqual(new_time, 1234567890.5)
