@@ -9,7 +9,7 @@ class SVD_Reconstructor(Reconstructor):
 
         super(SVD_Reconstructor, self).__init__(settings)
 
-    def execute(self, weight_matrix, rssi, buffer=None, guess=None):
+    def execute(self, weight_matrix, rssi, buffer=None):
         """
         Perform the singular value decomposition algorithm. We aim to solve
         `Ax = b` where `A` is the weight matrix and `b` is a column vector

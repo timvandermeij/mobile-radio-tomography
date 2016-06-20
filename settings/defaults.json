@@ -761,15 +761,24 @@
                 "short": "Chunk size",
                 "type": "int",
                 "min": 1,
-                "default": 5
+                "default": 10
             },
-            "reconstructor": {
+            "reconstructor_class": {
                 "help": "Reconstruction algorithm to use",
                 "short": "Reconstructor",
                 "type": "class",
                 "module": "reconstruction.Reconstructor",
                 "replace": [" ", "_"],
                 "default": "Total_Variation_Reconstructor"
+            },
+            "model_class": {
+                "help": "Model class to use for the weight matrix",
+                "short": "Model",
+                "type": "class",
+                "module": "reconstruction.Model",
+                "required": true,
+                "replace": [" ", "_"],
+                "default": "Ellipse_Model"
             }
         }
     },
@@ -865,18 +874,43 @@
             }
         }
     },
-    "reconstruction_weight_matrix": {
-        "name": "Reconstruction (weight matrix)",
+    "reconstruction_ellipse_model": {
+        "name": "Reconstruction (ellipse model)",
         "settings": {
-            "distance_lambda": {
-                "help": "Width of an ellipse in the measurement model",
+            "lambda": {
+                "help": "Minor axis diameter of the ellipse used in the model",
+                "short": "Lambda",
                 "type": "float",
                 "min": 0.0,
                 "default": 0.3
             }
         }
     },
-    "reconstruction_total_variation": {
+    "reconstruction_gaussian_model": {
+        "name": "Reconstruction (Gaussian model)",
+        "settings": {
+            "sigma": {
+                "help": "Standard deviation of the Gaussian function that determines the width of the curve's top",
+                "short": "Sigma",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.3
+            }
+        }
+    },
+    "reconstruction_line_model": {
+        "name": "Reconstruction (line model)",
+        "settings": {
+            "threshold": {
+                "help": "Maximum difference from the link length for determining that a pixel is on the line-of-sight path",
+                "short": "Threshold",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.34
+            }
+        }
+    },
+    "reconstruction_total_variation_reconstructor": {
         "name": "Reconstruction (total variation)",
         "settings": {
             "alpha": {
@@ -910,7 +944,7 @@
             }
         }
     },
-    "reconstruction_truncated_svd": {
+    "reconstruction_truncated_svd_reconstructor": {
         "name": "Reconstruction (truncated SVD)",
         "settings": {
             "singular_values": {
