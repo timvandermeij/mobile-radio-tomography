@@ -19,7 +19,7 @@ class Total_Variation_Reconstructor(Reconstructor):
         super(Total_Variation_Reconstructor, self).__init__(settings)
 
         if isinstance(settings, Arguments):
-            settings = settings.get_settings("reconstruction_total_variation")
+            settings = settings.get_settings("reconstruction_total_variation_reconstructor")
         elif not isinstance(settings, Settings):
             raise ValueError("'settings' must be an instance of Settings or Arguments")
 

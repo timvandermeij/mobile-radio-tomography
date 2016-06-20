@@ -13,7 +13,7 @@ class Weight_Matrix(object):
         """
 
         if isinstance(arguments, Arguments):
-            settings = arguments.get_settings("reconstruction_weight_matrix")
+            settings = arguments.get_settings("reconstruction")
         else:
             raise TypeError("'arguments' must be an instance of Arguments")
 
