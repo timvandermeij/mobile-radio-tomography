@@ -104,7 +104,8 @@ class Mission(object):
         """
         Display any details about the mission.
         """
-        pass
+
+        raise NotImplementedError("Must be implemented in child class")
 
     def clear_mission(self):
         """
@@ -139,7 +140,7 @@ class Mission(object):
         currently stored in the vehicle.
 
         It is used by the AUTO missions to fill the mission commands.
-        Other missions may use it for their own waypoin tracking purposes.
+        Other missions may use it for their own waypoint tracking purposes.
         """
 
         return []
@@ -155,6 +156,7 @@ class Mission(object):
         """
         Arms vehicle and fly to the target `altitude`.
         """
+
         print("Basic pre-arm checks")
         if not self.vehicle.check_arming():
             raise RuntimeError("Could not prepare for arming!")
@@ -205,7 +207,7 @@ class Mission(object):
         Perform any calculations for the current vehicle state.
         """
 
-        pass
+        raise NotImplementedError("Must be implemented in child class")
 
     def check_sensor_distance(self, sensor_distance, yaw, pitch):
         """
