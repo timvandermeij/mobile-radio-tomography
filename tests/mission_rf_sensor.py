@@ -175,9 +175,25 @@ class TestMissionRFSensor(EnvironmentTestCase):
             (1, 0), None, (2, 0), None, (3, 0), None, (4, 0), None
         ])
 
+    @patch.object(RF_Sensor, "enqueue")
+    def test_move(self, enqueue_mock):
         with patch('sys.stdout'):
+            self.mission.setup()
+
+        self._send_waypoint_add(0, 1.0, 0.0)
+        self._send_waypoint_add(1, 2.0, 0.0)
+
+        packet = Packet()
+        packet.set("specification", "waypoint_done")
+        packet.set("to_id", self.rf_sensor.id)
+
+        with patch('sys.stdout'):
+            self.environment.receive_packet(packet)
             self.mission.arm_and_takeoff()
             self.mission.start()
+
+        self.assertTrue(self.mission.waypoints_complete)
+        self.assertEqual(self.vehicle._waypoints, [(1, 0), None, (2, 0), None])
 
         self.assertEqual(self.vehicle.mode.name, "AUTO")
         self.assertTrue(self.vehicle.armed)
@@ -195,12 +211,15 @@ class TestMissionRFSensor(EnvironmentTestCase):
         with patch('sys.stdout'):
             self.assertTrue(self.mission.check_waypoint())
 
+        # The mission waits at the waypoint, until the other RF sensor sends 
+        # a valid location packet.
         self.assertEqual(self.vehicle._current_waypoint, 1)
-        self.assertEqual(self.vehicle.get_waypoint(), None)
+        self.assertIsNone(self.vehicle.get_waypoint())
         self.assertTrue(self.vehicle.is_wait())
 
-        # The mission waits for the other RF sensor to send a valid location packet.
-        self.assertTrue(self.environment.location_valid(other_valid=True, other_id=self.rf_sensor.id + 1,
+        other_id = self.rf_sensor.id + 1
+        self.assertTrue(self.environment.location_valid(other_valid=True,
+                                                        other_id=other_id,
                                                         other_index=1))
         with patch('sys.stdout'):
             self.assertTrue(self.mission.check_waypoint())
@@ -210,3 +229,22 @@ class TestMissionRFSensor(EnvironmentTestCase):
         self.vehicle._check_state()
         self.assertEqual(self.vehicle._current_waypoint, 2)
         self.assertEqual(self.vehicle._state.name, "move")
+
+        self.vehicle._location = (2, 0)
+        self.vehicle._state = Robot_State("intersection")
+        self.vehicle._check_state()
+        with patch('sys.stdout'):
+            self.assertTrue(self.mission.check_waypoint())
+
+        # The mission waits at the waypoint, until the other RF sensor sends 
+        # a valid location packet.
+        self.assertEqual(self.vehicle._current_waypoint, 3)
+        self.assertIsNone(self.vehicle.get_waypoint())
+        self.assertTrue(self.vehicle.is_wait())
+
+        other_id = self.rf_sensor.id + 1
+        self.assertTrue(self.environment.location_valid(other_valid=True,
+                                                        other_id=other_id,
+                                                        other_index=3))
+        with patch('sys.stdout'):
+            self.assertTrue(self.mission.check_waypoint())

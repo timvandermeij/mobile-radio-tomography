@@ -111,6 +111,7 @@ class Mission_Auto(Mission):
         self.vehicle.mode = VehicleMode("AUTO")
 
     def step(self):
+        # AUTO missions usually do not need to perform a step.
         pass
 
     def check_waypoint(self):
