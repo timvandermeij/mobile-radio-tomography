@@ -168,14 +168,14 @@ class Environment(object):
 
         if self._distance_sensors is None:
             if self._sensor_class is None:
-                self._distance_sensors = []
-            else:
-                sensor = self.import_manager.load_class(self._sensor_class,
-                                                        relative_module="distance")
-                angles = list(self.settings.get("distance_sensors"))
-                self._distance_sensors = [
-                    sensor(self, i, angles[i]) for i in range(len(angles))
-                ]
+                raise NotImplementedError("Subclasses must provide a `_sensor_class` for the distance sensor")
+
+            sensor = self.import_manager.load_class(self._sensor_class,
+                                                    relative_module="distance")
+            angles = list(self.settings.get("distance_sensors"))
+            self._distance_sensors = [
+                sensor(self, i, angles[i]) for i in range(len(angles))
+            ]
 
         return self._distance_sensors
 
@@ -267,8 +267,8 @@ class Environment(object):
         waypoint_index = self.vehicle.get_next_waypoint()
         if isinstance(location, LocationLocal):
             return (location.north, location.east), waypoint_index
-        else:
-            return (location.lat, location.lon), waypoint_index
+
+        return (location.lat, location.lon), waypoint_index
 
     def location_valid(self, other_valid=None, other_id=None, other_index=None):
         """
@@ -374,7 +374,8 @@ class Environment(object):
         """
         Helper function to get the yaw angle to the vehicle.
 
-        This performs conversion from bearing to angle, but still returns the angle in radians.
+        This performs conversion from bearing to angle, but still returns
+        the angle in radians.
         """
 
         return self.geometry.bearing_to_angle(self.get_yaw())
