@@ -104,7 +104,8 @@ class Mission(object):
         """
         Display any details about the mission.
         """
-        pass
+
+        raise NotImplementedError("Must be implemented in child class")
 
     def clear_mission(self):
         """
@@ -139,7 +140,7 @@ class Mission(object):
         currently stored in the vehicle.
 
         It is used by the AUTO missions to fill the mission commands.
-        Other missions may use it for their own waypoin tracking purposes.
+        Other missions may use it for their own waypoint tracking purposes.
         """
 
         return []
@@ -155,6 +156,7 @@ class Mission(object):
         """
         Arms vehicle and fly to the target `altitude`.
         """
+
         print("Basic pre-arm checks")
         if not self.vehicle.check_arming():
             raise RuntimeError("Could not prepare for arming!")
@@ -172,16 +174,19 @@ class Mission(object):
         self.vehicle.speed = self.speed
 
         if not taking_off:
+            # The vehicle is a ground vehicle, so do not check whether we reach 
+            # the target altitude.
             return
 
         # Wait until the vehicle reaches a safe height before processing the 
-        # goto (otherwise the command after Vehicle.commands.takeoff will 
-        # execute immediately).
+        # remainder of the mission, otherwise the command after a takeoff will 
+        # execute immediately.
         # Allow it to fly to just below target, in case of undershoot.
         altitude_undershoot = self.settings.get("altitude_undershoot")
         alt = self.altitude * altitude_undershoot
         while self.vehicle.location.global_relative_frame.alt < alt:
-            print("Altitude: {} m".format(self.vehicle.location.global_relative_frame.alt))
+            current_alt = self.vehicle.location.global_relative_frame.alt
+            print("Altitude: {} m".format(current_alt))
             time.sleep(1)
 
         print("Reached target altitude")
@@ -205,7 +210,7 @@ class Mission(object):
         Perform any calculations for the current vehicle state.
         """
 
-        pass
+        raise NotImplementedError("Must be implemented in child class")
 
     def check_sensor_distance(self, sensor_distance, yaw, pitch):
         """
@@ -267,12 +272,17 @@ class Mission(object):
         self.vehicle.velocity = [velocity_x, velocity_y, velocity_z]
 
     def _get_new_yaw(self, heading, relative):
-        if relative:
-            new_yaw = self.vehicle.attitude.yaw + heading * math.pi/180
-        else:
-            new_yaw = heading * math.pi/180
+        """
+        Calculate the yaw based on a given target `heading`, and optionally the
+        current yaw depending on `relative`.
 
-        return new_yaw
+        The given yaw in radians is returned.
+        """
+
+        if relative:
+            return self.vehicle.attitude.yaw + heading * math.pi/180
+
+        return heading * math.pi/180
 
     def set_yaw(self, heading, relative=False, direction=0):
         """
@@ -321,8 +331,11 @@ class Mission(object):
             self.set_yaw(heading, relative, direction)
             return
 
+        # Determine whether there is a corresponding servo that can put 
+        # a distance sensor in the requested angle.
         new_yaw = self._get_new_yaw(heading, relative)
-        yaw_angle = self.geometry.bearing_to_angle(new_yaw - self.vehicle.attitude.yaw) * 180/math.pi
+        relative_yaw = new_yaw - self.vehicle.attitude.yaw
+        yaw_angle = self.geometry.bearing_to_angle(relative_yaw) * 180/math.pi
         servo = None
         pwm = None
         for servo in self.environment.get_servos():

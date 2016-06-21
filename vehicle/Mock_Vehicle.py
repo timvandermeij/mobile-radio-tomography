@@ -153,8 +153,6 @@ class Mock_Vehicle(MAVLink_Vehicle):
 
         # The vehicle mode. Can be a "SIMULATED" placeholder, "AUTO", "GUIDED".
         self._mode = VehicleMode("SIMULATED")
-        # Whether the vehicle is armed. To be set before takeoff.
-        self.armed = False
         # Mock GPS info (has GPS, but no sattelites)
         self.gps_0 = GPSInfo(0.0, 0.0, 3, 0)
 

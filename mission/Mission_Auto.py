@@ -110,6 +110,10 @@ class Mission_Auto(Mission):
         # Set mode to AUTO to start mission
         self.vehicle.mode = VehicleMode("AUTO")
 
+    def step(self):
+        # AUTO missions usually do not need to perform a step.
+        pass
+
     def check_waypoint(self):
         if self.vehicle.is_wait():
             if self._rf_sensor_synchronization and self.environment.is_measurement_valid():

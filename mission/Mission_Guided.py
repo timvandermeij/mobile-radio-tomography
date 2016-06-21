@@ -9,7 +9,13 @@ class Mission_Guided(Mission):
     sensors.
     """
 
+    def display(self):
+        pass
+
     def start(self):
         # Set mode to GUIDED. In fact the arming should already have done this, 
         # but it is good to do it here as well.
         self.vehicle.mode = VehicleMode("GUIDED")
+
+    def step(self):
+        pass

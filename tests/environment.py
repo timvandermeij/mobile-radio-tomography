@@ -1,3 +1,5 @@
+import math
+from dronekit import LocationLocal, LocationGlobal
 from mock import patch, MagicMock, PropertyMock
 from ..core.Import_Manager import Import_Manager
 from ..core.Thread_Manager import Thread_Manager
@@ -8,7 +10,7 @@ from ..environment.Environment_Simulator import Environment_Simulator
 from ..geometry.Geometry_Spherical import Geometry_Spherical
 from ..settings import Arguments
 from ..trajectory.Servo import Servo
-from ..vehicle.Mock_Vehicle import Mock_Vehicle
+from ..vehicle.Mock_Vehicle import Mock_Vehicle, MockAttitude
 from ..zigbee.Packet import Packet
 from ..zigbee.RF_Sensor import RF_Sensor
 from geometry import LocationTestCase
@@ -38,7 +40,9 @@ class EnvironmentTestCase(LocationTestCase, SettingsTestCase,
     def register_arguments(self, argv, simulated=True, distance_sensors=None,
                            use_infrared_sensor=True):
         self._argv = argv
-        self._argv.extend(["--rf-sensor-class", "RF_Sensor_Simulator", "--rf-sensor-id", "1"])
+        self._argv.extend([
+            "--rf-sensor-class", "RF_Sensor_Simulator", "--rf-sensor-id", "1"
+        ])
 
         self._simulated = simulated
         # WiringPiTestCase provides a patcher for RPi.GPIO, which is necessary 
@@ -94,7 +98,18 @@ class TestEnvironment(EnvironmentTestCase):
 
         super(TestEnvironment, self).setUp()
 
+        self.servos = []
+        for pin in (6, 7):
+            methods = {
+                "get_pin.return_value": pin
+            }
+            self.servos.append(MagicMock(spec=Servo, **methods))
+
+        self.environment._servos = self.servos
+
     def test_setup(self):
+        settings = self.arguments.get_settings("environment")
+        settings.set("rf_sensor_class", "")
         environment = Environment.setup(self.arguments,
                                         simulated=self._simulated)
         self.assertIsInstance(environment.usb_manager, USB_Manager)
@@ -115,6 +130,10 @@ class TestEnvironment(EnvironmentTestCase):
         self.assertEqual(environment.vehicle, vehicle)
         self.assertEqual(environment.thread_manager, thread_manager)
         self.assertEqual(environment.usb_manager, usb_manager)
+        self.assertIsNone(environment.get_rf_sensor())
+        self.assertEqual(environment._required_sensors, set())
+        for servo in environment.get_servos():
+            self.assertIsInstance(servo, Servo)
 
         with self.assertRaises(ValueError):
             environment = Environment.setup(self.arguments, vehicle=vehicle)
@@ -129,6 +148,13 @@ class TestEnvironment(EnvironmentTestCase):
                                                 usb_manager=usb_manager,
                                                 simulated=True)
 
+        # Base class does not provide simulated objects or distance sensors.
+        environment = Environment(vehicle, geometry, self.arguments,
+                                  import_manager, thread_manager, usb_manager)
+        self.assertEqual(environment.get_objects(), [])
+        with self.assertRaises(NotImplementedError):
+            environment.get_distance_sensors()
+
     def test_initialization(self):
         self.assertIsInstance(self.environment, Environment)
         self.assertIsInstance(self.environment.vehicle, Mock_Vehicle)
@@ -140,13 +166,19 @@ class TestEnvironment(EnvironmentTestCase):
         self.assertTrue(self.environment.settings.get("infrared_sensor"))
 
     def test_interface(self):
-        self.assertEqual(self.environment.get_vehicle(), self.environment.vehicle)
-        self.assertEqual(self.environment.get_geometry(), self.environment.geometry)
-        self.assertEqual(self.environment.get_arguments(), self.environment.arguments)
+        self.assertEqual(self.environment.get_vehicle(),
+                         self.environment.vehicle)
+        self.assertEqual(self.environment.get_geometry(),
+                         self.environment.geometry)
+        self.assertEqual(self.environment.get_arguments(),
+                         self.environment.arguments)
 
-        self.assertEqual(self.environment.get_import_manager(), self.environment.import_manager)
-        self.assertEqual(self.environment.get_thread_manager(), self.environment.thread_manager)
-        self.assertEqual(self.environment.get_usb_manager(), self.environment.usb_manager)
+        self.assertEqual(self.environment.get_import_manager(),
+                         self.environment.import_manager)
+        self.assertEqual(self.environment.get_thread_manager(),
+                         self.environment.thread_manager)
+        self.assertEqual(self.environment.get_usb_manager(),
+                         self.environment.usb_manager)
 
         distance_sensors = self.environment.get_distance_sensors()
         expected_angles = [0, 90]
@@ -156,11 +188,25 @@ class TestEnvironment(EnvironmentTestCase):
             self.assertEqual(distance_sensors[i].id, i)
             self.assertEqual(distance_sensors[i].angle, expected_angle)
 
-        for servo in self.environment.get_servos():
-            self.assertIsInstance(servo, Servo)
-
         self.assertIsInstance(self.environment.get_rf_sensor(), RF_Sensor)
         self.assertIsNotNone(self.environment.get_infrared_sensor())
+
+    def test_on_servos(self):
+        pwms = {
+            6: 500,
+            7: 1000,
+            9: 1234,
+            "abc": 42
+        }
+        self.environment.on_servos(self.environment.vehicle, "servos", pwms)
+        self.servos[0].set_current_pwm.assert_called_once_with(500)
+        self.servos[1].set_current_pwm.assert_called_once_with(1000)
+
+    def test_on_home_location(self):
+        loc = LocationGlobal(1.0, 2.0, 3.0)
+        self.environment.on_home_location(self.environment.vehicle,
+                                          "home_location", loc)
+        self.assertEqual(self.environment.geometry.home_location, loc)
 
     def test_packet_action(self):
         # Callback must be callable
@@ -195,9 +241,18 @@ class TestEnvironment(EnvironmentTestCase):
     def test_location(self):
         location = self.environment.vehicle.location.global_relative_frame
         self.assertEqual(location, self.environment.get_location())
+
+        # Raw location provides the correct return value corresponding to the 
+        # real location
         raw_location, waypoint_index = self.environment.get_raw_location()
-        self.assertEqual((location.lat, location.lon), raw_location)
-        self.assertEqual(0, waypoint_index)
+        self.assertEqual(raw_location, (location.lat, location.lon))
+        self.assertEqual(waypoint_index, 0)
+
+        loc = LocationLocal(1.2, 3.4, -5.6)
+        with patch.object(Environment, "get_location", return_value=loc):
+            raw_location, waypoint_index = self.environment.get_raw_location()
+            self.assertEqual(raw_location, (loc.north, loc.east))
+            self.assertEqual(waypoint_index, 0)
 
     def test_location_valid(self):
         rf_sensor = self.environment.get_rf_sensor()
@@ -222,3 +277,8 @@ class TestEnvironment(EnvironmentTestCase):
 
         self.assertTrue(self.environment.location_valid(other_valid=True, other_id=rf_sensor.id + 1, other_index=0))
         self.assertTrue(self.environment.is_measurement_valid())
+
+    def test_get_angle(self):
+        vehicle = self.environment.vehicle
+        vehicle.attitude = MockAttitude(0.0, 0.5*math.pi, 0.0, vehicle)
+        self.assertEqual(self.environment.get_angle(), 0.0)
