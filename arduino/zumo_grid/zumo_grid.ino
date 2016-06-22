@@ -9,7 +9,7 @@
 
 // SENSOR_THRESHOLD is a value to compare reflectance sensor
 // readings to to decide if the sensor is over a black line
-#define SENSOR_THRESHOLD 300
+#define SENSOR_THRESHOLD 350
 
 // ABOVE_LINE is a helper macro that takes a reflectance sensor measurement
 // and returns 1 if the sensor is over the line and 0 if otherwise
