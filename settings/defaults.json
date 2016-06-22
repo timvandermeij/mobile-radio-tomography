@@ -746,7 +746,7 @@
                 "length": 2,
                 "subtype": "int",
                 "min": 0,
-                "default": [2, 10]
+                "default": [4, 9]
             },
             "interpolation": {
                 "help": "Pixel interpolation for the reconstruction display",
@@ -778,7 +778,7 @@
                 "module": "reconstruction.Model",
                 "required": true,
                 "replace": [" ", "_"],
-                "default": "Ellipse_Model"
+                "default": "Gaussian_Model"
             }
         }
     },
