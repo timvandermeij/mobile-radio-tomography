@@ -325,7 +325,7 @@
                 "help": "Mission class to use for the mission",
                 "type": "class",
                 "module": "mission",
-                "default": "Mission_Cycle"
+                "default": "Mission_Fan"
             },
             "measurement_delay": {
                 "help": "Time in seconds to wait at a waypoint to perform synchronized measurements",
