@@ -3,17 +3,17 @@ from dronekit import LocationLocal
 from Mission_Auto import Mission_Auto
 from ..vehicle.Robot_Vehicle import Robot_Vehicle
 
-class Mission_Cycle(Mission_Auto):
+class Mission_Fan_Straight(Mission_Auto):
     """
     A mission that performs fan beam and straight line measurements on a grid
     using a `Robot_Vehicle`.
     """
 
     def setup(self):
-        super(Mission_Cycle, self).setup()
+        super(Mission_Fan_Straight, self).setup()
 
         if not isinstance(self.vehicle, Robot_Vehicle):
-            raise ValueError("Mission_Cycle only works with robot vehicles")
+            raise ValueError("Mission_Fan_Straight only works with robot vehicles")
 
         wpzip = itertools.izip_longest
         grid_size = int(self.size)

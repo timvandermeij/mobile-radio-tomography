@@ -1,12 +1,12 @@
 import itertools
 from mock import patch
 from dronekit import LocationLocal
-from ..mission.Mission_Cycle import Mission_Cycle
+from ..mission.Mission_Fan_Straight import Mission_Fan_Straight
 from ..vehicle.Mock_Vehicle import Mock_Vehicle
 from ..vehicle.Robot_Vehicle import Robot_Vehicle, Robot_State
 from environment import EnvironmentTestCase
 
-class TestMissionCycle(EnvironmentTestCase):
+class TestMissionFanStraight(EnvironmentTestCase):
     def setUp(self):
         self.register_arguments([
             "--vehicle-class", "Robot_Vehicle_Arduino",
@@ -15,12 +15,12 @@ class TestMissionCycle(EnvironmentTestCase):
             "--rf-sensor-synchronization"
         ], use_infrared_sensor=False)
 
-        super(TestMissionCycle, self).setUp()
+        super(TestMissionFanStraight, self).setUp()
 
         self.vehicle = self.environment.get_vehicle()
 
         settings = self.arguments.get_settings("mission")
-        self.mission = Mission_Cycle(self.environment, settings)
+        self.mission = Mission_Fan_Straight(self.environment, settings)
         self.rf_sensor = self.environment.get_rf_sensor()
         self.first_waypoints = [
             (1, 0), (2, 0),
