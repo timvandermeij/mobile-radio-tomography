@@ -108,7 +108,7 @@ class RF_Sensor_Physical(RF_Sensor):
         """
 
         # Synchronize the scheduler using the timestamp in the packet.
-        self._scheduler_next_timestamp = self._scheduler.synchronize(packet)
+        self._scheduler.synchronize(packet)
 
         # Create the packet for the ground station.
         return self._create_rssi_ground_station_packet(packet)
