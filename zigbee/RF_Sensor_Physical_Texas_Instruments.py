@@ -50,6 +50,8 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
 
         self._packet_length = self._settings.get("packet_length")
         self._reset_delay = self._settings.get("reset_delay")
+        self._shift_minimum = self._settings.get("shift_minimum")
+        self._shift_maximum = self._settings.get("shift_maximum")
 
         # UART connection pins for RX, TX, RTS, CTS and reset. We use board pin
         # numbering. The pins must correspond to the GPIO pins that support RXD0/TXD0 on
@@ -154,7 +156,7 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
         # automatically by the synchronization method.
         if self._started and self._id > 0 and time.time() >= self._scheduler.timestamp:
             if not self._other_packet_received:
-                self._scheduler.shift(random.uniform(0.1, 0.3))
+                self._scheduler.shift(random.uniform(self._shift_minimum, self._shift_maximum))
                 self._scheduler.update()
                 return
 

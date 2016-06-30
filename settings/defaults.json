@@ -1119,6 +1119,18 @@
                 "min": 1,
                 "max": 40,
                 "default": 40
+            },
+            "shift_minimum": {
+                "help": "Minimum number of seconds to shift the schedule",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.1
+            },
+            "shift_maximum": {
+                "help": "Maximum number of seconds to shift the schedule",
+                "type": "float",
+                "min": 0.0,
+                "default": 0.3
             }
         }
     },

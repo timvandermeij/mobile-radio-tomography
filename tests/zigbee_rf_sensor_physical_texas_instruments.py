@@ -46,6 +46,8 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(SettingsTestCase, USBManagerTes
 
         self.assertEqual(self.rf_sensor._packet_length, self.settings.get("packet_length"))
         self.assertEqual(self.rf_sensor._reset_delay, self.settings.get("reset_delay"))
+        self.assertEqual(self.rf_sensor._shift_minimum, self.settings.get("shift_minimum"))
+        self.assertEqual(self.rf_sensor._shift_maximum, self.settings.get("shift_maximum"))
 
         self.assertEqual(self.rf_sensor._pins["rx_pin"], self.settings.get("rx_pin"))
         self.assertEqual(self.rf_sensor._pins["tx_pin"], self.settings.get("tx_pin"))
