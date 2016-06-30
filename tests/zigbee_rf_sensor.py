@@ -56,7 +56,6 @@ class TestZigBeeRFSensor(SettingsTestCase):
         self.assertEqual(self.rf_sensor._connection, None)
         self.assertEqual(self.rf_sensor._buffer, None)
         self.assertIsInstance(self.rf_sensor._scheduler, TDMA_Scheduler)
-        self.assertEqual(self.rf_sensor._scheduler_next_timestamp, 0)
         self.assertEqual(self.rf_sensor._packets, [])
         self.assertIsInstance(self.rf_sensor._queue, Queue.Queue)
         self.assertEqual(self.rf_sensor._queue.qsize(), 0)
@@ -224,7 +223,7 @@ class TestZigBeeRFSensor(SettingsTestCase):
             self.rf_sensor._loop_body()
             send_custom_packets_mock.assert_called_once_with()
 
-        with patch.object(TDMA_Scheduler, "get_next_timestamp") as get_next_timestamp_mock:
+        with patch.object(TDMA_Scheduler, "update") as update_mock:
             with patch.object(RF_Sensor, "_send") as send_mock:
                 self.rf_sensor._started = True
 
@@ -232,7 +231,7 @@ class TestZigBeeRFSensor(SettingsTestCase):
                 # has been activated and started.
                 self.rf_sensor._loop_body()
 
-                get_next_timestamp_mock.assert_called_once_with()
+                update_mock.assert_called_once_with()
                 send_mock.assert_called_once_with()
 
     def test_send(self):

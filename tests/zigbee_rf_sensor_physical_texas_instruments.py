@@ -11,8 +11,10 @@ from ..core.Thread_Manager import Thread_Manager
 from ..core.WiringPi import WiringPi
 from ..settings.Arguments import Arguments
 from ..zigbee.Packet import Packet
+from ..zigbee.RF_Sensor import DisabledException
 from ..zigbee.RF_Sensor_Physical_Texas_Instruments import RF_Sensor_Physical_Texas_Instruments
 from ..zigbee.RF_Sensor_Physical_Texas_Instruments import CC2530_Packet, Raspberry_Pi_GPIO_Pin_Mode
+from ..zigbee.TDMA_Scheduler import TDMA_Scheduler
 from core_usb_manager import USBManagerTestCase
 from settings import SettingsTestCase
 
@@ -40,6 +42,7 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(SettingsTestCase, USBManagerTes
     def test_initialization(self):
         self.assertEqual(self.rf_sensor._address, str(self.rf_sensor.id))
         self.assertTrue(self.rf_sensor._joined)
+        self.assertFalse(self.rf_sensor._other_packet_received)
 
         self.assertEqual(self.rf_sensor._packet_length, self.settings.get("packet_length"))
         self.assertEqual(self.rf_sensor._reset_delay, self.settings.get("reset_delay"))
@@ -126,11 +129,19 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(SettingsTestCase, USBManagerTes
                 connection_mock.reset_input_buffer.assert_called_once_with()
 
     def test_loop_body(self):
-        with patch.object(RF_Sensor_Physical_Texas_Instruments, "_receive") as receive_mock:
-            # The receive method must be called.
-            self.rf_sensor._loop_body()
+        self.rf_sensor._started = True
 
-            receive_mock.assert_called_once_with()
+        with patch.object(TDMA_Scheduler, "shift") as shift_mock:
+            with patch.object(RF_Sensor_Physical_Texas_Instruments, "_receive") as receive_mock:
+                # The receive method must be called, as well as the scheduler's
+                # shift method.
+                try:
+                    self.rf_sensor._loop_body()
+                except DisabledException:
+                    pass
+
+                receive_mock.assert_called_once_with()
+                self.assertEqual(shift_mock.call_count, 1)
 
     def test_send_tx_frame(self):
         packet = Packet()
@@ -162,6 +173,8 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(SettingsTestCase, USBManagerTes
         self.rf_sensor._process = MagicMock()
 
         self.rf_sensor._receive()
+
+        self.assertTrue(self.rf_sensor._other_packet_received)
 
         arguments = self.rf_sensor._process.call_args[0]
         keyword_arguments = self.rf_sensor._process.call_args[1]
