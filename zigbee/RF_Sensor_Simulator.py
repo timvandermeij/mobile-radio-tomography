@@ -118,7 +118,7 @@ class RF_Sensor_Simulator(RF_Sensor):
         self._receive_callback(packet)
 
         if self._id > 0:
-            self._scheduler_next_timestamp = self._scheduler.synchronize(packet)
+            self._scheduler.synchronize(packet)
 
             # Create and complete the packet for the ground station.
             ground_station_packet = self._create_rssi_ground_station_packet(packet)

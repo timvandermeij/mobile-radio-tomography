@@ -131,7 +131,7 @@ class TestZigBeeRFSensorSimulator(SettingsTestCase):
         with self.assertRaises(TypeError):
             self.rf_sensor._receive()
 
-        scheduler_next_timestamp = self.rf_sensor._scheduler_next_timestamp
+        timestamp = self.rf_sensor._scheduler.timestamp
 
         packet = self.rf_sensor._create_rssi_broadcast_packet()
         self.rf_sensor._receive(packet=packet)
@@ -139,9 +139,8 @@ class TestZigBeeRFSensorSimulator(SettingsTestCase):
         # The receive callback must be called with the packet.
         self.receive_callback.assert_called_once_with(packet)
 
-        # The scheduler's next timestamp must be updated.
-        self.assertNotEqual(scheduler_next_timestamp,
-                            self.rf_sensor._scheduler_next_timestamp)
+        # The scheduler's timestamp must be updated.
+        self.assertNotEqual(timestamp, self.rf_sensor._scheduler.timestamp)
 
         # A ground station packet must be put in the packet list.
         self.assertEqual(len(self.rf_sensor._packets), 1)

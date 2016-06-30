@@ -75,7 +75,6 @@ class RF_Sensor(Threadable):
         self._connection = None
         self._buffer = None
         self._scheduler = TDMA_Scheduler(self._id, arguments)
-        self._scheduler_next_timestamp = 0
         self._packets = []
         self._queue = Queue.Queue()
 
@@ -183,9 +182,12 @@ class RF_Sensor(Threadable):
     def start(self):
         """
         Start the signal strength measurements (and stop sending custom packets).
+
+        Classes that inherit this base class may extend this method.
         """
 
         self._started = True
+        self._packets = []
 
     def stop(self):
         """
@@ -264,9 +266,9 @@ class RF_Sensor(Threadable):
         # start performing signal strength measurements.
         if not self._started:
             self._send_custom_packets()
-        elif self._id > 0 and time.time() >= self._scheduler_next_timestamp:
-            self._scheduler_next_timestamp = self._scheduler.get_next_timestamp()
+        elif self._id > 0 and time.time() >= self._scheduler.timestamp:
             self._send()
+            self._scheduler.update()
 
         time.sleep(self._loop_delay)
 

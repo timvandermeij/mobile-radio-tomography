@@ -103,6 +103,11 @@ class TestZigBeeRFSensorPhysicalXBee(SettingsTestCase, USBManagerTestCase):
         self.rf_sensor._sensor.is_alive.assert_called_once_with()
         self.rf_sensor._sensor.halt.assert_called_once_with()
 
+    def test_start(self):
+        # The packet list must be an empty dictionary.
+        self.rf_sensor.start()
+        self.assertEqual(self.rf_sensor._packets, {})
+
     def test_discover(self):
         self.rf_sensor._sensor = MagicMock()
 

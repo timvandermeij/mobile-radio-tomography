@@ -121,14 +121,13 @@ class TestZigBeeRFSensorPhysical(SettingsTestCase):
             self.rf_sensor._process(packet)
 
     def test_process_rssi_broadcast_packet(self):
-        scheduler_next_timestamp = self.rf_sensor._scheduler_next_timestamp
-        packet = self.rf_sensor._create_rssi_broadcast_packet()
+        timestamp = self.rf_sensor._scheduler.timestamp
 
+        packet = self.rf_sensor._create_rssi_broadcast_packet()
         ground_station_packet = self.rf_sensor._process_rssi_broadcast_packet(packet)
 
-        # The scheduler's next timestamp must be updated.
-        self.assertNotEqual(scheduler_next_timestamp,
-                            self.rf_sensor._scheduler_next_timestamp)
+        # The scheduler's timestamp must be updated.
+        self.assertNotEqual(timestamp, self.rf_sensor._scheduler.timestamp)
 
         # A ground station packet must be returned.
         self.assertEqual(ground_station_packet.get("specification"),

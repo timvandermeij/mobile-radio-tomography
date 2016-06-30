@@ -1,4 +1,5 @@
 # Core imports
+import random
 import struct
 import time
 
@@ -45,9 +46,12 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
 
         self._address = str(self._id)
         self._joined = True
+        self._other_packet_received = False
 
         self._packet_length = self._settings.get("packet_length")
         self._reset_delay = self._settings.get("reset_delay")
+        self._shift_minimum = self._settings.get("shift_minimum")
+        self._shift_maximum = self._settings.get("shift_maximum")
 
         # UART connection pins for RX, TX, RTS, CTS and reset. We use board pin
         # numbering. The pins must correspond to the GPIO pins that support RXD0/TXD0 on
@@ -146,6 +150,16 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
 
         self._receive()
 
+        # We should have received a packet from another sensor. If not, it is very
+        # likely that their schedules interfere because of their activation time.
+        # Resolve this by randomly shifting the schedule. This will be corrected
+        # automatically by the synchronization method.
+        if self._started and self._id > 0 and time.time() >= self._scheduler.timestamp:
+            if not self._other_packet_received:
+                self._scheduler.shift(random.uniform(self._shift_minimum, self._shift_maximum))
+                self._scheduler.update()
+                return
+
         super(RF_Sensor_Physical_Texas_Instruments, self)._loop_body()
 
     def _send_tx_frame(self, packet, to=None):
@@ -183,6 +197,7 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
         packet = Packet()
         packet.unserialize(data)
 
+        self._other_packet_received = True
         self._process(packet, rssi=rssi)
 
     def _process(self, packet, rssi=None, **kwargs):
