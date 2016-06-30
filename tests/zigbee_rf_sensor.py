@@ -132,6 +132,7 @@ class TestZigBeeRFSensor(SettingsTestCase):
         # station packets.
         self.rf_sensor.start()
         self.assertTrue(self.rf_sensor._started)
+        self.assertEqual(self.rf_sensor._packets, [])
 
     def test_stop(self):
         # The sensor must be stopped for sending custom packets.

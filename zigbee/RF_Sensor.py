@@ -182,9 +182,12 @@ class RF_Sensor(Threadable):
     def start(self):
         """
         Start the signal strength measurements (and stop sending custom packets).
+
+        Classes that inherit this base class may extend this method.
         """
 
         self._started = True
+        self._packets = []
 
     def stop(self):
         """

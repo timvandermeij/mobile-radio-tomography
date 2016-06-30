@@ -96,6 +96,15 @@ class RF_Sensor_Physical_XBee(RF_Sensor_Physical):
 
         super(RF_Sensor_Physical_XBee, self).deactivate()
 
+    def start(self):
+        """
+        Start the signal strength measurements (and stop sending custom packets).
+        """
+
+        super(RF_Sensor_Physical_XBee, self).start()
+
+        self._packets = {}
+
     def discover(self, callback):
         """
         Discover all RF sensors in the network. The `callback` function is
