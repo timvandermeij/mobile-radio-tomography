@@ -154,7 +154,9 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
         # automatically by the synchronization method.
         if self._started and self._id > 0 and time.time() >= self._scheduler.timestamp:
             if not self._other_packet_received:
-                self._scheduler.shift(random.uniform(0.05, 0.2))
+                self._scheduler.shift(random.uniform(0.1, 0.3))
+                self._scheduler.update()
+                return
 
         super(RF_Sensor_Physical_Texas_Instruments, self)._loop_body()
 

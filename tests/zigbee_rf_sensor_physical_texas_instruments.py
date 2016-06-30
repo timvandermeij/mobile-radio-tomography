@@ -129,19 +129,29 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(SettingsTestCase, USBManagerTes
                 connection_mock.reset_input_buffer.assert_called_once_with()
 
     def test_loop_body(self):
+        # Shifting the schedule must be handled.
         self.rf_sensor._started = True
 
         with patch.object(TDMA_Scheduler, "shift") as shift_mock:
-            with patch.object(RF_Sensor_Physical_Texas_Instruments, "_receive") as receive_mock:
-                # The receive method must be called, as well as the scheduler's
-                # shift method.
-                try:
-                    self.rf_sensor._loop_body()
-                except DisabledException:
-                    pass
+            with patch.object(TDMA_Scheduler, "update") as update_mock:
+                with patch.object(RF_Sensor_Physical_Texas_Instruments, "_receive") as receive_mock:
+                    try:
+                        self.rf_sensor._loop_body()
+                    except DisabledException:
+                        pass
 
-                receive_mock.assert_called_once_with()
-                self.assertEqual(shift_mock.call_count, 1)
+                    receive_mock.assert_called_once_with()
+                    self.assertEqual(shift_mock.call_count, 1)
+                    self.assertEqual(update_mock.call_count, 1)
+
+        # Regular updates must be handled.
+        self.rf_sensor._started = False
+
+        with patch.object(RF_Sensor_Physical_Texas_Instruments, "_receive") as receive_mock:
+            # The receive method must be called.
+            self.rf_sensor._loop_body()
+
+            receive_mock.assert_called_once_with()
 
     def test_send_tx_frame(self):
         packet = Packet()

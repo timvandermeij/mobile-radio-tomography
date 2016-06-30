@@ -267,8 +267,8 @@ class RF_Sensor(Threadable):
         if not self._started:
             self._send_custom_packets()
         elif self._id > 0 and time.time() >= self._scheduler.timestamp:
-            self._scheduler.update()
             self._send()
+            self._scheduler.update()
 
         time.sleep(self._loop_delay)
 
