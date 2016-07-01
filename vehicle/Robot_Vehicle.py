@@ -4,7 +4,7 @@ import thread
 import time
 
 # Library imports
-from dronekit import LocationLocal, LocationGlobal, Attitude
+from dronekit import LocationLocal, Attitude
 import numpy as np
 
 # Package imports
@@ -192,15 +192,12 @@ class Robot_Vehicle(Vehicle):
 
     @property
     def home_location(self):
-        return LocationGlobal(0.0, 0.0, 0.0)
+        return self._geometry.make_location(*self._home_location)
 
     @home_location.setter
     def home_location(self, value):
-        if isinstance(value, LocationLocal):
-            self._home_location = (value.north, value.east)
-        else:
-            print("Warning: Using non-local locations")
-            self._home_location = (value.lat, value.lon)
+        self._home_location = self._geometry.get_coordinates(value)[:2]
+        self.notify_attribute_listeners("home_location", self.home_location)
 
     @property
     def mode(self):
@@ -247,11 +244,7 @@ class Robot_Vehicle(Vehicle):
                 self._line_follower.deactivate()
 
     def add_waypoint(self, location):
-        if isinstance(location, LocationLocal):
-            self._waypoints.append((location.north, location.east))
-        else:
-            print("Warning: Using non-local locations")
-            self._waypoints.append((location.lat, location.lon))
+        self._waypoints.append(self._geometry.get_coordinates(location)[:2])
 
     def add_wait(self):
         self._waypoints.append(None)

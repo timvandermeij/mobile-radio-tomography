@@ -65,9 +65,10 @@ class TestVehicle(VehicleTestCase):
         dummy = None
         with self.assertRaises(NotImplementedError):
             dummy = self.vehicle.use_simulation
+        with self.assertRaises(NotImplementedError):
+            dummy = self.vehicle.home_location
 
         self.vehicle.setup()
-        self.assertIsNone(self.vehicle.home_location)
         self.vehicle.update_mission()
 
         self.assertFalse(self.vehicle.add_takeoff(42))
@@ -145,11 +146,18 @@ class TestVehicle(VehicleTestCase):
         self.assertEqual(self.vehicle.armed, self.vehicle._armed)
 
     def test_location_valid(self):
-        self.assertTrue(self.vehicle.is_location_valid(LocationGlobal(1.0, 2.3, 4.2)))
-        self.assertFalse(self.vehicle.is_location_valid(LocationGlobal(None, 2.3, 4.2)))
-        self.assertFalse(self.vehicle.is_location_valid(LocationGlobal(1.0, 2.3, None)))
-        self.assertTrue(self.vehicle.is_location_valid(LocationLocal(5.0, 4.0, 3.0)))
-        self.assertFalse(self.vehicle.is_location_valid(LocationLocal(None, 4.0, 3.0)))
+        cases = [
+            (LocationGlobal(1.0, 2.3, 4.2), True),
+            (LocationGlobal(None, 2.3, 4.2), False),
+            (LocationGlobal(1.0, 2.3, None), False),
+            (LocationLocal(5.0, 4.0, 3.0), True),
+            (LocationLocal(None, 4.0, 3.0), False)
+        ]
+        for location, expected in cases:
+            neg = "" if expected else " not"
+            self.assertEqual(self.vehicle.is_location_valid(location), expected,
+                             msg="{} must{} be valid".format(location, neg))
+
         with self.assertRaises(TypeError):
             self.vehicle.is_location_valid((1, 2, 3))
 
@@ -164,21 +172,27 @@ class TestVehicle(VehicleTestCase):
 
         mock_callback.reset_mock()
         new_servos = {1: 42, 3: 1024}
-        result_servos = {1: 42, 2: 100, 3: 1024}
+        expected = {1: 42, 2: 100, 3: 1024}
         self.vehicle._set_servos(new_servos)
-        self.assertEqual(self.vehicle._servos, result_servos)
-        mock_callback.assert_called_once_with(self.vehicle, "servos", result_servos)
+        self.assertEqual(self.vehicle._servos, expected)
+        mock_callback.assert_called_once_with(self.vehicle, "servos", expected)
 
     def test_make_global_location(self):
         global_location = LocationGlobal(1.0, 2.0, 3.0)
         relative_location = LocationGlobalRelative(6.0, 7.0, 8.0)
         local_location = LocationLocal(4.0, 3.0, -2.0)
-        self.assertEqual(self.vehicle._make_global_location(global_location), global_location)
-        self.assertEqual(self.vehicle._make_global_location(relative_location), LocationGlobal(6.0, 7.0, 8.0))
-        self.assertEqual(self.vehicle._make_global_location(local_location), LocationGlobal(4.0, 3.0, 2.0))
+        self.assertEqual(self.vehicle._make_global_location(global_location),
+                         global_location)
+        self.assertEqual(self.vehicle._make_global_location(relative_location),
+                         LocationGlobal(6.0, 7.0, 8.0))
+        self.assertEqual(self.vehicle._make_global_location(local_location),
+                         LocationGlobal(4.0, 3.0, 2.0))
 
         self.vehicle.home_location = global_location
 
-        self.assertEqual(self.vehicle._make_global_location(global_location), global_location)
-        self.assertEqual(self.vehicle._make_global_location(relative_location), LocationGlobal(6.0, 7.0, 11.0))
-        self.assertEqual(self.vehicle._make_global_location(local_location), LocationGlobal(5.0, 5.0, 5.0))
+        self.assertEqual(self.vehicle._make_global_location(global_location),
+                         global_location)
+        self.assertEqual(self.vehicle._make_global_location(relative_location),
+                         LocationGlobal(6.0, 7.0, 11.0))
+        self.assertEqual(self.vehicle._make_global_location(local_location),
+                         LocationGlobal(5.0, 5.0, 5.0))

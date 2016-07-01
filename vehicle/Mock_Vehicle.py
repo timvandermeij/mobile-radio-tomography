@@ -245,7 +245,7 @@ class Mock_Vehicle(MAVLink_Vehicle):
 
         if location is not None:
             # Track the target location and convert it so that the remainder of 
-            # this method can use global relative frame locations.
+            # this method can use global (relative) frame locations.
             self._target_location = location
             target_location = self._make_global_location(location)
         else:
@@ -261,9 +261,12 @@ class Mock_Vehicle(MAVLink_Vehicle):
             self._target_location = self._make_location(LocationGlobalRelative,
                                                         lat, lon, alt)
 
-        # Change yaw to go to new target location
-        if self._location.lat == target_location.lat and self._location.lon == target_location.lon:
-            # Moving straight up/down does not require any angle change
+        # Decide which yaw we need to go to new target location.
+        current_coords = (self._location.lat, self._location.lon)
+        target_coords = (target_location.lat, target_location.lon)
+        if current_coords == target_coords:
+            # Moving straight up/down, i.e., no difference in latitude and 
+            # longitude, does not require any yaw angle change.
             yaw = self._attitude._yaw
         else:
             a = self._geometry.get_angle(self._locations, self._target_location)

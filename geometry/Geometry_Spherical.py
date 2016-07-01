@@ -36,32 +36,55 @@ class Geometry_Spherical(Geometry):
         is of equal type as `location2`.
         """
 
+        if not isinstance(location1, Locations):
+            raise TypeError("`location1` must be a `Locations` object")
+
         if isinstance(location2, LocationLocal):
             return location1.local_frame
         if isinstance(location2, LocationGlobal):
             return location1.global_frame
+        if isinstance(location2, (Locations, LocationGlobalRelative)):
+            return location1.global_relative_frame
 
-        return location1.global_relative_frame
+        raise TypeError("`location2` must be a `Location` type")
 
     def equalize(self, location1, location2):
+        # If one of the locations is a `Locations` object, retrieve the frame 
+        # that is equal to the other.
         if isinstance(location1, Locations):
             location1 = self.get_locations_frame(location1, location2)
         if isinstance(location2, Locations):
             location2 = self.get_locations_frame(location2, location1)
 
+        # Safety check that the provided locations are supported.
+        valid_types = (LocationLocal, LocationGlobal, LocationGlobalRelative)
+        if not isinstance(location1, valid_types):
+            raise TypeError("`location1` must be a `Location` type")
+        if not isinstance(location2, valid_types):
+            raise TypeError("`location2` must be a `Location` type")
+
+        # If the locations are of equal types due to the `Locations` frame 
+        # matching, or they had equal types to begin with, then we return them.
         if type(location1) is type(location2):
             return location1, location2
 
+        # If one of the locations is a `LocationLocal` object, then use its 
+        # coordinates to make a global relative location.
         if isinstance(location1, LocationLocal):
-            location1 = self.get_location_meters(self.home_location, location1.north,
-                                                 location1.east, -location1.down)
+            coords = self.get_coordinates(location1)
+            location1 = self.get_location_meters(self.home_location, *coords)
         elif isinstance(location2, LocationLocal):
-            location2 = self.get_location_meters(self.home_location, location2.north,
-                                                 location2.east, -location2.down)
+            coords = self.get_coordinates(location2)
+            location2 = self.get_location_meters(self.home_location, *coords)
 
+        # If the locations are now both `LocationGlobalRelative` objects, then 
+        # return them.
         if type(location1) is type(location2):
             return location1, location2
 
+        # One of the locations must now be a `LocationGlobal` object, while the 
+        # other is a `LocationGlobalRelative` object. Convert the second 
+        # location to conform to the first one.
         alt = self.home_location.alt
         if isinstance(location2, LocationGlobal):
             location2 = LocationGlobalRelative(location2.lat, location2.lon,
@@ -72,8 +95,19 @@ class Geometry_Spherical(Geometry):
 
         return location1, location2
 
-    def make_location(self, lat, lon, alt):
+    def make_location(self, lat, lon, alt=0):
         return LocationGlobalRelative(lat, lon, alt)
+
+    def get_coordinates(self, location):
+        if isinstance(location, LocationLocal):
+            return super(Geometry_Spherical, self).get_coordinates(location)
+
+        if isinstance(location, Locations):
+            location = location.global_relative_frame
+        elif not isinstance(location, (LocationGlobal, LocationGlobalRelative)):
+            raise TypeError("`location` must be a Location object")
+
+        return location.lat, location.lon, location.alt
 
     def get_location_local(self, location):
         if isinstance(location, LocationLocal):

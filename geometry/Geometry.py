@@ -5,10 +5,10 @@ from dronekit import Locations, LocationLocal
 
 class Geometry(object):
     """
-    Geometry utility functions
+    Geometry utility methods.
 
-    This is a class with functions that calculate distances, locations or 
-    angles based on specific input.
+    This is a class with methods that calculate distances, locations or angles
+    based on specific input.
 
     Note that some methods assume certain properties of the earth's surface, 
     such as it being spherical or being flat. Depending on these assumptions, 
@@ -16,7 +16,13 @@ class Geometry(object):
     subclasses make different assumptions about the geometry.
     Note that (`y`,`x`) = (`lat`,`lon`) = (`N`,`E`).
 
-    The base class does uses meters as the base unit for coordinates.
+    The base class does uses meters as the base unit for coordinates, and works
+    only with `LocationLocal` objects and the local frame of `Locations` objects
+    from the `dronekit` library. The third coordinate in `LocationLocal` is
+    calculated downward from the origin altitude, although in some methods we
+    convert this to an upward altitude coordinate for consistency with the two
+    other location objects.
+
     Use `Geometry_Spherical` for geographic coordinates on a spherical earth.
     """
 
@@ -55,7 +61,7 @@ class Geometry(object):
 
         return location1, location2
 
-    def make_location(self, lat, lon, alt):
+    def make_location(self, lat, lon, alt=0):
         """
         Create a location object based on user-specified coordinates `lat`,
         `lon` and `alt`. These may or may not actually correspond to the
@@ -68,6 +74,16 @@ class Geometry(object):
         """
 
         return LocationLocal(lat, lon, -alt)
+
+    def get_coordinates(self, location):
+        """
+        Retrieve the coordinates from the given `location`.
+
+        The location's coordinates are returned as a tuple.
+        """
+
+        location = self.get_location_local(location)
+        return location.north, location.east, -location.down
 
     def bearing_to_angle(self, bearing):
         """

@@ -47,7 +47,11 @@ class TestMission(EnvironmentTestCase):
             self.mission.display()
 
     def test_check_mission(self):
-        with patch.object(self.mission, "geometry", spec=Geometry_Spherical) as geometry_mock:
+        config = {
+            "spec": Geometry_Spherical,
+            "set_home_location.side_effect": TypeError
+        }
+        with patch.object(self.mission, "geometry", **config) as geometry_mock:
             with patch("sys.stdout"):
                 loc = LocationGlobal(0.1, 2.3, 4.5)
                 self.vehicle.home_location = loc

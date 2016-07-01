@@ -7,13 +7,17 @@ class MAVLink_Vehicle(Vehicle):
     A vehicle that supports some parts of the MAVLink protocol, e.g.,
     mission command sequences or other command message parsing.
 
-    This class assumes the following properties and methods exist:
+    In addition to the interface enforced by `Vehicle`, this class requires that
+    the following properties and methods exist with semantics:
     - `commands`: A `CommandSequence`-like object, as described in
       http://python.dronekit.io/automodule.html#dronekit.CommandSequence
     - `flush`: A method that might perform backend changes for update_mission,
       but can also be a no-op if no backend changes are necessary in this case.
+    - `location`: A read-only property, that returns the current location of
+      the vehicle as a `Locations` object. Other types are not allowed, although
+      the returned `Locations` may have frames with invalid locations.
 
-    Also, all abstract methods from `Vehicle` must also be implemented.
+    Of course, all abstract methods from `Vehicle` must also be implemented.
     """
 
     @property
