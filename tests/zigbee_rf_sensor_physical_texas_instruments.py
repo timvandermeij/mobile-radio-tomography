@@ -110,11 +110,12 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(ZigBeeRFSensorTestCase, USBMana
                     usb_manager_mock.get_cc2530_device.assert_called_once_with()
                     self.assertEqual(self.rf_sensor._connection, connection_mock)
 
-                    wiringpi_mock.pinMode.assert_called_once_with(self.settings.get("reset_pin"),
+                    reset_pin = self.settings.get("reset_pin")
+                    wiringpi_mock.pinMode.assert_called_once_with(reset_pin,
                                                                   wiringpi_mock.OUTPUT)
-                    wiringpi_mock.digitalWrite.assert_any_call(self.settings.get("reset_pin"), 0)
-                    sleep_mock.assert_called_once_with(self.settings.get("reset_delay"))
-                    wiringpi_mock.digitalWrite.assert_any_call(self.settings.get("reset_pin"), 1)
+                    wiringpi_mock.digitalWrite.assert_any_call(reset_pin, 0)
+                    sleep_mock.assert_any_call(self.settings.get("reset_delay"))
+                    wiringpi_mock.digitalWrite.assert_any_call(reset_pin, 1)
                     self.assertEqual(wiringpi_mock.digitalWrite.call_count, 2)
 
                     connection_mock.reset_input_buffer.assert_called_once_with()
