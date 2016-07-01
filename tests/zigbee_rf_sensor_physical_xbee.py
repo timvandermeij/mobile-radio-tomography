@@ -8,13 +8,11 @@ from mock import patch, MagicMock
 
 # Package imports
 from ..core.Threadable import Threadable
-from ..core.Thread_Manager import Thread_Manager
-from ..settings.Arguments import Arguments
 from ..zigbee.Packet import Packet
 from core_usb_manager import USBManagerTestCase
-from settings import SettingsTestCase
+from zigbee_rf_sensor import ZigBeeRFSensorTestCase
 
-class TestZigBeeRFSensorPhysicalXBee(SettingsTestCase, USBManagerTestCase):
+class TestZigBeeRFSensorPhysicalXBee(ZigBeeRFSensorTestCase, USBManagerTestCase):
     def setUp(self):
         super(TestZigBeeRFSensorPhysicalXBee, self).setUp()
 
@@ -29,21 +27,11 @@ class TestZigBeeRFSensorPhysicalXBee(SettingsTestCase, USBManagerTestCase):
 
         from ..zigbee.RF_Sensor_Physical_XBee import RF_Sensor_Physical_XBee
 
-        self.arguments = Arguments("settings.json", ["--rf-sensor-id", "1"])
         self.settings = self.arguments.get_settings("rf_sensor_physical_xbee")
-
-        self.thread_manager = Thread_Manager()
-        self.location_callback = MagicMock(return_value=((0, 0), 0))
-        self.receive_callback = MagicMock()
-        self.valid_callback = MagicMock(return_value=True)
-
         self.usb_manager.index()
 
-        self.rf_sensor = RF_Sensor_Physical_XBee(self.arguments, self.thread_manager,
-                                                 self.location_callback,
-                                                 self.receive_callback,
-                                                 self.valid_callback,
-                                                 usb_manager=self.usb_manager)
+        self.rf_sensor = self._create_sensor(RF_Sensor_Physical_XBee,
+                                             usb_manager=self.usb_manager)
 
     def tearDown(self):
         super(TestZigBeeRFSensorPhysicalXBee, self).tearDown()
@@ -81,27 +69,28 @@ class TestZigBeeRFSensorPhysicalXBee(SettingsTestCase, USBManagerTestCase):
         def join(*args):
             self.rf_sensor._joined = True
 
-        self.rf_sensor._sensor = MagicMock()
-        self.rf_sensor._synchronize = MagicMock()
-
-        with patch.object(self.rf_sensor, "_setup"):
-            with patch.object(thread, "start_new_thread"):
-                # The sensor must join the network and synchronize its clock.
-                with patch.object(time, "sleep", side_effect=join):
-                    self.rf_sensor.activate()
-                    self.rf_sensor._sensor.send.assert_any_call("at", command="AI")
-                    self.rf_sensor._synchronize.assert_called_once_with()
+        with patch.object(self.rf_sensor, "_sensor") as sensor_mock:
+            with patch.object(self.rf_sensor, "_synchronize") as synchronize_mock:
+                with patch.object(self.rf_sensor, "_setup"):
+                    with patch.object(thread, "start_new_thread"):
+                        # The sensor must join the network and synchronize its 
+                        # clock via NTP.
+                        with patch.object(time, "sleep", side_effect=join):
+                            self.rf_sensor.activate()
+                            sensor_mock.send.assert_any_call("at", command="AI")
+                            synchronize_mock.assert_called_once_with()
 
     def test_deactivate(self):
-        self.rf_sensor._connection = MagicMock()
-        self.rf_sensor._sensor = MagicMock()
-        self.rf_sensor._sensor.is_alive = MagicMock(return_value=True)
+        methods = {
+            "is_alive.return_value": True
+        }
+        with patch.object(self.rf_sensor, "_sensor", **methods) as sensor_mock:
+            with patch.object(self.rf_sensor, "_connection"):
+                self.rf_sensor.deactivate()
 
-        self.rf_sensor.deactivate()
-
-        # The sensor must be stopped when it is still active.
-        self.rf_sensor._sensor.is_alive.assert_called_once_with()
-        self.rf_sensor._sensor.halt.assert_called_once_with()
+                # The sensor must be stopped when it is still active.
+                sensor_mock.is_alive.assert_called_once_with()
+                sensor_mock.halt.assert_called_once_with()
 
     def test_start(self):
         # The packet list must be an empty dictionary.
@@ -109,34 +98,32 @@ class TestZigBeeRFSensorPhysicalXBee(SettingsTestCase, USBManagerTestCase):
         self.assertEqual(self.rf_sensor._packets, {})
 
     def test_discover(self):
-        self.rf_sensor._sensor = MagicMock()
+        with patch.object(self.rf_sensor, "_sensor") as sensor_mock:
+            self.rf_sensor.discover(MagicMock())
 
-        self.rf_sensor.discover(MagicMock())
-
-        # The sensor must send a node discovery packet.
-        self.rf_sensor._sensor.send.assert_called_once_with("at", command="ND")
+            # The sensor must send a node discovery packet.
+            sensor_mock.send.assert_called_once_with("at", command="ND")
 
     def test_setup(self):
-        self.rf_sensor._set_node_identifier = MagicMock()
-        self.rf_sensor._set_address = MagicMock()
+        with patch.object(self.rf_sensor, "_set_node_identifier") as set_node_identifier_mock:
+            with patch.object(self.rf_sensor, "_set_address") as set_address_mock:
+                self.rf_sensor._setup()
 
-        self.rf_sensor._setup()
+                # The connection and sensor must be initialized.
+                self.assertNotEqual(self.rf_sensor._connection, None)
+                self.assertIsInstance(self.rf_sensor._connection, serial.Serial)
+                self.assertNotEqual(self.rf_sensor._sensor, None)
 
-        # The connection and sensor must be initialized.
-        self.assertNotEqual(self.rf_sensor._connection, None)
-        self.assertIsInstance(self.rf_sensor._connection, serial.Serial)
-        self.assertNotEqual(self.rf_sensor._sensor, None)
+                set_node_identifier_mock.assert_called_once_with()
+                set_address_mock.assert_called_once_with()
 
-        self.rf_sensor._set_node_identifier.assert_called_once_with()
-        self.rf_sensor._set_address.assert_called_once_with()
+                # When a port is specified, the connection must be initialized.
+                self.rf_sensor._port = self._xbee_port
 
-        # When a port is specified, the connection must be initialized too.
-        self.rf_sensor._port = self._xbee_port
+                self.rf_sensor._setup()
 
-        self.rf_sensor._setup()
-
-        self.assertNotEqual(self.rf_sensor._connection, None)
-        self.assertIsInstance(self.rf_sensor._connection, serial.Serial)
+                self.assertNotEqual(self.rf_sensor._connection, None)
+                self.assertIsInstance(self.rf_sensor._connection, serial.Serial)
 
     def test_set_node_identifier(self):
         with patch.object(self.rf_sensor, "_sensor") as sensor_mock:
@@ -167,21 +154,21 @@ class TestZigBeeRFSensorPhysicalXBee(SettingsTestCase, USBManagerTestCase):
             interrupt_mock.assert_called_once_with()
 
     def test_loop_body(self):
-        self.rf_sensor._send_custom_packets = MagicMock()
+        with patch.object(self.rf_sensor, "_send_custom_packets") as send_custom_packets_mock:
+            # The sensor must wait until it has joined the network.
+            self.rf_sensor._loop_body()
+            send_custom_packets_mock.assert_not_called()
 
-        # The sensor must wait until it has joined the network.
-        self.rf_sensor._loop_body()
-        self.rf_sensor._send_custom_packets.assert_not_called()
+            # When the sensor has joined the network, the rest of the
+            # loop body must be executed.
+            self.rf_sensor._joined = True
 
-        # When the sensor has joined the network, the rest of the
-        # loop body must be executed.
-        self.rf_sensor._joined = True
-
-        self.rf_sensor._loop_body()
-        self.rf_sensor._send_custom_packets.assert_called_once_with()
+            self.rf_sensor._loop_body()
+            send_custom_packets_mock.assert_called_once_with()
 
     def test_send(self):
-        # Create two dummy packets, one of them having an associated RSSI value.
+        # Create two dummy packets, one of them having an associated RSSI 
+        # value.
         first_packet = self.rf_sensor._create_rssi_broadcast_packet()
         first_packet.set("rssi", 42)
         self.rf_sensor._packets[0] = first_packet
@@ -223,20 +210,19 @@ class TestZigBeeRFSensorPhysicalXBee(SettingsTestCase, USBManagerTestCase):
             })
 
     def test_send_tx_frame(self):
-        packet = Packet()
-        packet.set("specification", "waypoint_clear")
-        packet.set("to_id", 2)
+        self.packet.set("specification", "waypoint_clear")
+        self.packet.set("to_id", 2)
 
-        self.rf_sensor._connection = MagicMock()
-        self.rf_sensor._sensor = MagicMock()
+        with patch.object(self.rf_sensor, "_connection"):
+            with patch.object(self.rf_sensor, "_sensor") as sensor_mock:
+                self.rf_sensor._send_tx_frame(self.packet, to=2)
 
-        self.rf_sensor._send_tx_frame(packet, to=2)
-
-        to_address = self.rf_sensor._sensors[2]
-        self.rf_sensor._sensor.send.assert_called_once_with("tx", dest_addr_long=to_address,
-                                                            dest_addr="\xFF\xFE",
-                                                            frame_id="\x00",
-                                                            data=packet.serialize())
+                to_address = self.rf_sensor._sensors[2]
+                sensor_mock.send.assert_called_once_with("tx",
+                                                         dest_addr_long=to_address,
+                                                         dest_addr="\xFF\xFE",
+                                                         frame_id="\x00",
+                                                         data=self.packet.serialize())
 
     def test_receive(self):
         # Verify that a packet must be provided.
@@ -244,58 +230,54 @@ class TestZigBeeRFSensorPhysicalXBee(SettingsTestCase, USBManagerTestCase):
             self.rf_sensor._receive()
 
         # RX packets must be processed.
-        self.rf_sensor._process = MagicMock()
-        packet = {
-            "id": "rx"
-        }
-        self.rf_sensor._receive(packet)
-        self.rf_sensor._process.assert_called_once_with(packet)
+        with patch.object(self.rf_sensor, "_process") as process_mock:
+            packet = {
+                "id": "rx"
+            }
+            self.rf_sensor._receive(packet)
+            process_mock.assert_called_once_with(packet)
 
         # AT response packets must be processed.
-        self.rf_sensor._process_at_response = MagicMock()
-        packet = {
-            "id": "at_response"
-        }
-        self.rf_sensor._receive(packet)
-        self.rf_sensor._process_at_response.assert_called_once_with(packet)
+        with patch.object(self.rf_sensor, "_process_at_response") as process_at_response_mock:
+            packet = {
+                "id": "at_response"
+            }
+            self.rf_sensor._receive(packet)
+            process_at_response_mock.assert_called_once_with(packet)
 
     def test_process(self):
-        packet = Packet()
-        packet.set("specification", "rssi_broadcast")
-        packet.set("latitude", 123456789.12)
-        packet.set("longitude", 123459678.34)
-        packet.set("valid", True)
-        packet.set("waypoint_index", 1)
-        packet.set("sensor_id", 2)
-        packet.set("timestamp", time.time())
+        self.packet.set("specification", "rssi_broadcast")
+        self.packet.set("latitude", 123456789.12)
+        self.packet.set("longitude", 123459678.34)
+        self.packet.set("valid", True)
+        self.packet.set("waypoint_index", 1)
+        self.packet.set("sensor_id", 2)
+        self.packet.set("timestamp", time.time())
 
-        self.rf_sensor._process_rssi_broadcast_packet = MagicMock()
+        with patch.object(self.rf_sensor, "_process_rssi_broadcast_packet") as process_rssi_broadcast_packet_mock:
+            self.rf_sensor._process({
+                "rf_data": self.packet.serialize()
+            })
 
-        self.rf_sensor._process({
-            "rf_data": packet.serialize()
-        })
-
-        arguments = self.rf_sensor._process_rssi_broadcast_packet.call_args[0]
-        self.assertEqual(arguments[0].get_all(), packet.get_all())
+            arguments = process_rssi_broadcast_packet_mock.call_args[0]
+            self.assertEqual(arguments[0].get_all(), self.packet.get_all())
 
     def test_process_rssi_broadcast_packet(self):
-        packet = Packet()
-        packet.set("specification", "rssi_broadcast")
-        packet.set("latitude", 123456789.12)
-        packet.set("longitude", 123459678.34)
-        packet.set("valid", True)
-        packet.set("waypoint_index", 1)
-        packet.set("sensor_id", 2)
-        packet.set("timestamp", time.time())
+        self.packet.set("specification", "rssi_broadcast")
+        self.packet.set("latitude", 123456789.12)
+        self.packet.set("longitude", 123459678.34)
+        self.packet.set("valid", True)
+        self.packet.set("waypoint_index", 1)
+        self.packet.set("sensor_id", 2)
+        self.packet.set("timestamp", time.time())
 
-        self.rf_sensor._sensor = MagicMock()
+        with patch.object(self.rf_sensor, "_sensor") as sensor_mock:
+            self.rf_sensor._process_rssi_broadcast_packet(self.packet)
 
-        self.rf_sensor._process_rssi_broadcast_packet(packet)
-
-        self.assertTrue(len(self.rf_sensor._packets), 1)
-        frame_id = self.rf_sensor._packets.keys()[0]
-        self.rf_sensor._sensor.send.assert_called_once_with("at", command="DB",
-                                                            frame_id=frame_id)
+            self.assertTrue(len(self.rf_sensor._packets), 1)
+            frame_id = self.rf_sensor._packets.keys()[0]
+            sensor_mock.send.assert_called_once_with("at", command="DB",
+                                                     frame_id=frame_id)
 
     def test_process_at_response(self):
         # AT response DB packets should be processed. The parsed RSSI value
@@ -387,20 +369,20 @@ class TestZigBeeRFSensorPhysicalXBee(SettingsTestCase, USBManagerTestCase):
         self.assertEqual(self.rf_sensor._joined, True)
 
         # AT response ND packets should be processed.
-        self.rf_sensor._discovery_callback = MagicMock()
-        raw_packet = {
-            "id": "at_response",
-            "command": "ND",
-            "parameter": {
-                "node_identifier": "2",
-                "source_addr_long": "\x00\x13\xa2\x00@\xe6n\xbd"
+        with patch.object(self.rf_sensor, "_discovery_callback") as discovery_callback_mock:
+            raw_packet = {
+                "id": "at_response",
+                "command": "ND",
+                "parameter": {
+                    "node_identifier": "2",
+                    "source_addr_long": "\x00\x13\xa2\x00@\xe6n\xbd"
+                }
             }
-        }
-        self.rf_sensor._process_at_response(raw_packet)
-        self.rf_sensor._discovery_callback.assert_called_once_with({
-            "id": 2,
-            "address": "00:13:A2:00:40:E6:6E:BD"
-        })
+            self.rf_sensor._process_at_response(raw_packet)
+            discovery_callback_mock.assert_called_once_with({
+                "id": 2,
+                "address": "00:13:A2:00:40:E6:6E:BD"
+            })
 
     def test_format_address(self):
         expectations = {

@@ -2,10 +2,36 @@ import struct
 import unittest
 from ..zigbee.Packet import Packet
 
-class TestZigBeePacket(unittest.TestCase):
+class ZigBeePacketTestCase(unittest.TestCase):
+    """
+    A test case base class that provides the tests with a `Packet` instance
+    that they can fill, and some serialed packet messages for assertions.
+    """
+
     def setUp(self):
+        super(ZigBeePacketTestCase, self).setUp()
+
         self.packet = Packet()
 
+        self.waypoint_add_packet = Packet()
+        self.waypoint_add_packet.set("specification", "waypoint_add")
+        self.waypoint_add_packet.set("latitude", 123456789.12)
+        self.waypoint_add_packet.set("longitude", 123496785.34)
+        self.waypoint_add_packet.set("altitude", 4.2)
+        self.waypoint_add_packet.set("wait_id", 3)
+        self.waypoint_add_packet.set("wait_count", 6)
+        self.waypoint_add_packet.set("index", 22)
+        self.waypoint_add_packet.set("to_id", 2)
+        self.waypoint_add_message = "\x06H\xe1zT4o\x9dA\xf6(\\E\xa5q\x9dA" + \
+                                    "\xcd\xcc\xcc\xcc\xcc\xcc\x10@\x03" + \
+                                    "\x06\x00\x00\x00\x16\x00\x00\x00\x02"
+        self.setting_add_message = "\n\x00\x00\x00\x00\x03bar\x01i" + \
+                                   "*\x00\x00\x00\x01"
+        self.setting_add_list_message = "\n\x01\x00\x00\x00\x05items" + \
+                                    "\x00\x11x\x9c\x8b6\xd4Q0\xd2Q0" + \
+                                    "\x8e\x05\x00\t\x85\x01\xe7\x01"
+
+class TestZigBeePacket(ZigBeePacketTestCase):
     def test_initialization(self):
         # The packet must be empty.
         self.assertEqual(self.packet._contents, {})
@@ -132,16 +158,8 @@ class TestZigBeePacket(unittest.TestCase):
 
         # When all fields are provided, the specification field must be
         # unset and the packed message must be valid.
-        self.packet.set("specification", "waypoint_add")
-        self.packet.set("latitude", 123456789.12)
-        self.packet.set("longitude", 123496785.34)
-        self.packet.set("altitude", 4.2)
-        self.packet.set("wait_id", 3)
-        self.packet.set("index", 22)
-        self.packet.set("to_id", 2)
-        packed_message = self.packet.serialize()
-        self.assertEqual(packed_message,
-                         "\x06H\xe1zT4o\x9dA\xf6(\\E\xa5q\x9dA\xcd\xcc\xcc\xcc\xcc\xcc\x10@\x03\x16\x00\x00\x00\x02")
+        packed_message = self.waypoint_add_packet.serialize()
+        self.assertEqual(packed_message, self.waypoint_add_message)
 
     def test_serialize_object_packed(self):
         self.packet.set("specification", "setting_add")
@@ -151,7 +169,7 @@ class TestZigBeePacket(unittest.TestCase):
         self.packet.set("to_id", 1)
 
         packed_message = self.packet.serialize()
-        self.assertEqual(packed_message, "\n\x00\x00\x00\x00\x03bar\x01i*\x00\x00\x00\x01")
+        self.assertEqual(packed_message, self.setting_add_message)
 
     def test_serialize_object_compressed(self):
         self.packet.set("specification", "setting_add")
@@ -161,8 +179,7 @@ class TestZigBeePacket(unittest.TestCase):
         self.packet.set("to_id", 1)
 
         packed_message = self.packet.serialize()
-        self.assertEqual(packed_message,
-                         "\n\x01\x00\x00\x00\x05items\x00\x11x\x9c\x8b6\xd4Q0\xd2Q0\x8e\x05\x00\t\x85\x01\xe7\x01")
+        self.assertEqual(packed_message, self.setting_add_list_message)
 
     def test_unserialize(self):
         # Empty strings must be refused.
@@ -175,27 +192,28 @@ class TestZigBeePacket(unittest.TestCase):
 
         # All fields from the specification must be unserializable.
         with self.assertRaises(ValueError):
-            self.packet.unserialize("\n\x00\x00\x00\x00\x03bar") # Final part of packet missing
+            # Final part of packet missing
+            self.packet.unserialize("\n\x00\x00\x00\x00\x03bar")
 
         # Reset the packet as the previous test changed some fields in the packet.
         self.packet = Packet()
 
         # Valid messages must be unpacked.
-        message = "\x06H\xe1zT4o\x9dA\xf6(\\E\xa5q\x9dA\xcd\xcc\xcc\xcc\xcc\xcc\x10@\x03\x16\x00\x00\x00\x02"
-        self.packet.unserialize(message)
+        self.packet.unserialize(self.waypoint_add_message)
         self.assertEqual(self.packet.get_all(), {
             "specification": "waypoint_add",
             "latitude": 123456789.12,
             "longitude": 123496785.34,
             "altitude": 4.2,
             "wait_id": 3,
+            "wait_count": 6,
             "index": 22,
             "to_id": 2
         })
         self.assertFalse(self.packet.is_private())
 
     def test_unserialize_object_packed(self):
-        self.packet.unserialize("\n\x00\x00\x00\x00\x03bar\x01i*\x00\x00\x00\x01")
+        self.packet.unserialize(self.setting_add_message)
         self.assertEqual(self.packet.get_all(), {
             "specification": "setting_add",
             "index": 0,
@@ -206,8 +224,7 @@ class TestZigBeePacket(unittest.TestCase):
         self.assertFalse(self.packet.is_private())
 
     def test_unserialize_object_compressed(self):
-        message = "\n\x01\x00\x00\x00\x05items\x00\x11x\x9c\x8b6\xd4Q0\xd2Q0\x8e\x05\x00\t\x85\x01\xe7\x01"
-        self.packet.unserialize(message)
+        self.packet.unserialize(self.setting_add_list_message)
         self.assertEqual(self.packet.get_all(), {
             "specification": "setting_add",
             "index": 1,

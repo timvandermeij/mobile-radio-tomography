@@ -5,30 +5,17 @@ import socket
 from mock import patch, MagicMock
 
 # Package imports
-from ..core.Thread_Manager import Thread_Manager
 from ..reconstruction.Buffer import Buffer
-from ..settings.Arguments import Arguments
-from ..zigbee.Packet import Packet
 from ..zigbee.RF_Sensor import DisabledException
 from ..zigbee.RF_Sensor_Simulator import RF_Sensor_Simulator
-from settings import SettingsTestCase
+from zigbee_rf_sensor import ZigBeeRFSensorTestCase
 
-class TestZigBeeRFSensorSimulator(SettingsTestCase):
+class TestZigBeeRFSensorSimulator(ZigBeeRFSensorTestCase):
     def setUp(self):
         super(TestZigBeeRFSensorSimulator, self).setUp()
 
-        self.arguments = Arguments("settings.json", ["--rf-sensor-id", "1"])
         self.settings = self.arguments.get_settings("rf_sensor_simulator")
-
-        self.thread_manager = Thread_Manager()
-        self.location_callback = MagicMock(return_value=((0, 0), 0))
-        self.receive_callback = MagicMock()
-        self.valid_callback = MagicMock(return_value=True)
-
-        self.rf_sensor = RF_Sensor_Simulator(self.arguments, self.thread_manager,
-                                             self.location_callback,
-                                             self.receive_callback,
-                                             self.valid_callback)
+        self.rf_sensor = self._create_sensor(RF_Sensor_Simulator)
 
     def test_initialization(self):
         # The simulated sensor must have joined the network immediately.
@@ -69,13 +56,12 @@ class TestZigBeeRFSensorSimulator(SettingsTestCase):
 
         self.assertIsInstance(self.rf_sensor._connection, socket.socket)
 
-    def test_loop_body(self):
-        self.rf_sensor._receive = MagicMock()
-        self.rf_sensor._connection = MagicMock()
-        self.rf_sensor._connection.recv = MagicMock()
-        recv_mock = self.rf_sensor._connection.recv
+    @patch.object(RF_Sensor_Simulator, "_receive")
+    @patch.object(RF_Sensor_Simulator, "_send")
+    def test_loop_body(self, send_mock, receive_mock):
+        with patch.object(self.rf_sensor, "_connection") as connection_mock:
+            recv_mock = connection_mock.recv
 
-        with patch.object(RF_Sensor_Simulator, "_send"):
             # The socket's receive method must be called, but when a socket
             # error occurs (i.e., when there is no data available), we ignore
             # the error and continue.
@@ -95,36 +81,28 @@ class TestZigBeeRFSensorSimulator(SettingsTestCase):
             recv_mock.reset_mock()
 
             # Correct serialized packets must be received.
-            packet = "\x06H\xe1zT4o\x9dA\xf6(\\E\xa5q\x9dA\xcd\xcc\xcc\xcc\xcc\xcc\x10@\x03\x16\x00\x00\x00\x02"
-            recv_mock.configure_mock(side_effect=None, return_value=packet)
+            recv_mock.configure_mock(side_effect=None,
+                                     return_value=self.waypoint_add_message)
 
             self.rf_sensor._loop_body()
 
             recv_mock.assert_called_once_with(self.settings.get("buffer_size"))
-            self.assertEqual(self.rf_sensor._receive.call_count, 1)
-            self.assertEqual(self.rf_sensor._receive.call_args[1]["packet"].get_all(), {
-                "specification": "waypoint_add",
-                "latitude": 123456789.12,
-                "longitude": 123496785.34,
-                "altitude": 4.2,
-                "wait_id": 3,
-                "index": 22,
-                "to_id": 2
-            })
+            self.assertEqual(receive_mock.call_count, 1)
+            kwargs = receive_mock.call_args[1]
+            self.assertEqual(kwargs["packet"].get_all(),
+                             self.waypoint_add_packet.get_all())
 
     def test_send_tx_frame(self):
-        connection_mock = MagicMock()
+        self.packet.set("specification", "waypoint_clear")
+        self.packet.set("to_id", 2)
 
-        packet = Packet()
-        packet.set("specification", "waypoint_clear")
-        packet.set("to_id", 2)
+        with patch.object(self.rf_sensor, "_connection") as connection_mock:
+            self.rf_sensor._send_tx_frame(self.packet, to=2)
 
-        self.rf_sensor._connection = connection_mock
-        self.rf_sensor._send_tx_frame(packet, to=2)
-
-        # The packet must be sent over the socket connection.
-        address = (self.rf_sensor._ip, self.rf_sensor._port + 2)
-        connection_mock.sendto.assert_called_once_with(packet.serialize(), address)
+            # The packet must be sent over the socket connection.
+            address = (self.rf_sensor._ip, self.rf_sensor._port + 2)
+            connection_mock.sendto.assert_called_once_with(self.packet.serialize(),
+                                                           address)
 
     def test_receive(self):
         # Not providing a packet raises an exception.

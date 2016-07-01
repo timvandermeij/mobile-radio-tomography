@@ -1,5 +1,5 @@
 import serial
-from mock import MagicMock
+from mock import patch, MagicMock
 from ..core.USB_Manager import USB_Device_Baud_Rate
 from ..zigbee.XBee_Configurator import XBee_Configurator, XBee_Response_Status
 from ..settings import Arguments
@@ -14,7 +14,9 @@ class TestZigBeeXBeeConfigurator(USBManagerTestCase, SettingsTestCase):
         self.settings = self.arguments.get_settings("xbee_configurator")
 
         self.usb_manager.index()
-        self.configurator = XBee_Configurator(self.settings, self.usb_manager)
+        with patch("time.sleep"):
+            self.configurator = XBee_Configurator(self.settings,
+                                                  self.usb_manager)
 
         # Mock the sensor as we cannot test with the actual hardware.
         self.configurator._sensor = MagicMock()

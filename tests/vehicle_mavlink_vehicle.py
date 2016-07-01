@@ -102,7 +102,7 @@ class TestVehicleMockVehicle(VehicleTestCase):
         self.assertEqual(self.vehicle.get_waypoint(),
                          LocationLocal(3.4, 2.3, -1.2))
 
-        with patch.object(self.vehicle, "_geometry", spec=Geometry_Spherical):
+        with patch.object(self.vehicle, "_geometry", new=Geometry_Spherical()):
             self.assertEqual(self.vehicle.get_waypoint(),
                              LocationGlobalRelative(3.4, 2.3, 1.2))
 
@@ -130,7 +130,7 @@ class TestVehicleMockVehicle(VehicleTestCase):
             location_mock.return_value.configure_mock(local_frame=loc)
             self.assertFalse(self.vehicle.is_current_location_valid())
 
-            with patch.object(self.vehicle, "_geometry", spec=Geometry_Spherical):
+            with patch.object(self.vehicle, "_geometry", new=Geometry_Spherical()):
                 loc = LocationGlobalRelative(4, 5, 6)
                 location_mock.return_value.configure_mock(global_relative_frame=loc)
                 self.assertTrue(self.vehicle.is_current_location_valid())

@@ -59,6 +59,7 @@ class TestMissionRFSensor(EnvironmentTestCase):
         packet.set("longitude", longitude)
         packet.set("altitude", 0.0)
         packet.set("wait_id", 0)
+        packet.set("wait_count", 1)
         packet.set("to_id", self.rf_sensor.id + id_offset)
 
         with patch('sys.stdout'):
