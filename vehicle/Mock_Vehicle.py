@@ -600,10 +600,10 @@ class Mock_Vehicle(MAVLink_Vehicle):
     def _make_location(self, location_class, lat, lon, alt):
         if isinstance(self._geometry, Geometry_Spherical):
             return location_class(lat, lon, alt)
-        else:
-            return LocationLocal(lat - self._home_location.lat,
-                                 lon - self._home_location.lon,
-                                 self._home_location.alt - alt)
+
+        return LocationLocal(lat - self._home_location.lat,
+                             lon - self._home_location.lon,
+                             self._home_location.alt - alt)
 
     def flush(self):
         pass

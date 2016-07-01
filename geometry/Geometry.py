@@ -55,6 +55,20 @@ class Geometry(object):
 
         return location1, location2
 
+    def make_location(self, lat, lon, alt):
+        """
+        Create a location object based on user-specified coordinates `lat`,
+        `lon` and `alt`. These may or may not actually correspond to the
+        latitude, longitude and altitude coordinates, but to some similar
+        geometric coordinate system reference frame. The return location
+        object is most appropriate to this geometry.
+
+        This should only be used if we want to have a location that is valid
+        in this geometry, when we did not have a location object to begin with.
+        """
+
+        return LocationLocal(lat, lon, -alt)
+
     def bearing_to_angle(self, bearing):
         """
         Convert a `bearing` to the usual angle representation, both in radians.
@@ -89,6 +103,17 @@ class Geometry(object):
             return location
 
         raise TypeError("Base geometry can handle only local coordinates")
+
+    def get_location_frame(self, location):
+        """
+        Retrieve the most appropriate location frame from a `Locations` object
+        `location`, and return the corresponding location object
+        """
+
+        if not isinstance(location, Locations):
+            raise TypeError("`location` must be a `Locations` object")
+
+        return location.local_frame
 
     def get_location_meters(self, original_location, north, east, alt=0):
         """
@@ -135,6 +160,34 @@ class Geometry(object):
         location1, location2 = self.equalize(location1, location2)
         diff = self._diff_location(location1, location2)
         return diff.north, diff.east, -diff.down
+
+    def get_location_range(self, start_location, end_location, count=1):
+        """
+        Create a somewhat evenly-spaced range of locations between a starting
+        location `start_location` and ending location `end_location`, with
+        exactly `count` locations in the resulting range.
+
+        The range always contains the endpoint `location1` and never contains
+        `location2`. Certain geometries may bound the locations to specific
+        points, or otherwise affect the locations (but not the range length).
+        """
+
+        start_location = self.get_location_local(start_location)
+        end_location = self.get_location_local(end_location)
+        coord_pairs = [
+            (start_location.north, end_location.north),
+            (start_location.east, end_location.east),
+            (start_location.down, end_location.down)
+        ]
+
+        ranges = []
+        for start_coord, end_coord in coord_pairs:
+            ranges.append(self._get_range(start_coord, end_coord, count))
+
+        return [LocationLocal(*coords) for coords in zip(*ranges)]
+
+    def _get_range(self, start_coord, end_coord, count):
+        return np.linspace(start_coord, end_coord, num=count+1)[1:]
 
     def get_location_angle(self, location, distance, yaw, pitch=0):
         """

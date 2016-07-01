@@ -1,7 +1,6 @@
-from dronekit import LocationLocal, LocationGlobalRelative, Command
+from dronekit import LocationLocal, Command
 from pymavlink import mavutil
 from Vehicle import Vehicle
-from ..geometry.Geometry_Spherical import Geometry_Spherical
 
 class MAVLink_Vehicle(Vehicle):
     """
@@ -83,10 +82,7 @@ class MAVLink_Vehicle(Vehicle):
         lat = mission_item.x
         lon = mission_item.y
         alt = mission_item.z
-        if isinstance(self._geometry, Geometry_Spherical):
-            return LocationGlobalRelative(lat, lon, alt)
-
-        return LocationLocal(lat, lon, -alt)
+        return self._geometry.make_location(lat, lon, alt)
 
     def get_next_waypoint(self):
         return self.commands.next
@@ -101,7 +97,5 @@ class MAVLink_Vehicle(Vehicle):
         return self.commands.count
 
     def is_current_location_valid(self):
-        if isinstance(self._geometry, Geometry_Spherical):
-            return self.is_location_valid(self.location.global_relative_frame)
-
-        return self.is_location_valid(self.location.local_frame)
+        location = self._geometry.get_location_frame(self.location)
+        return self.is_location_valid(location)

@@ -1,7 +1,6 @@
 import time
-from dronekit import LocationLocal, LocationGlobalRelative, VehicleMode
+from dronekit import LocationLocal, VehicleMode
 from Mission import Mission
-from ..geometry.Geometry_Spherical import Geometry_Spherical
 
 class Mission_Auto(Mission):
     """
@@ -61,10 +60,7 @@ class Mission_Auto(Mission):
             return LocationLocal(point.north, point.east, down)
 
         alt = point.alt if point.alt != 0.0 else self.altitude
-        if isinstance(self.geometry, Geometry_Spherical):
-            return LocationGlobalRelative(point.lat, point.lon, alt)
-
-        return LocationLocal(point.lat, point.lon, -alt)
+        return self.geometry.make_location(point.lat, point.lon, alt)
 
     def add_waypoint(self, point, required_sensors=None):
         """

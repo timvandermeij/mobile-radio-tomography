@@ -24,6 +24,12 @@ class Geometry_Spherical(Geometry):
         else:
             raise TypeError("Home location must be global for spherical geometry, got: {}".format(home_location))
 
+    def get_location_frame(self, location):
+        if not isinstance(location, Locations):
+            raise TypeError("`location` must be a `Locations` object")
+
+        return location.global_relative_frame
+
     def get_locations_frame(self, location1, location2):
         """
         Retrieve the location frame from a `Locations` object `location1` that
@@ -32,10 +38,10 @@ class Geometry_Spherical(Geometry):
 
         if isinstance(location2, LocationLocal):
             return location1.local_frame
-        elif isinstance(location2, LocationGlobal):
+        if isinstance(location2, LocationGlobal):
             return location1.global_frame
-        else:
-            return location1.global_relative_frame
+
+        return location1.global_relative_frame
 
     def equalize(self, location1, location2):
         if isinstance(location1, Locations):
@@ -65,6 +71,9 @@ class Geometry_Spherical(Geometry):
                                        location2.alt + alt)
 
         return location1, location2
+
+    def make_location(self, lat, lon, alt):
+        return LocationGlobalRelative(lat, lon, alt)
 
     def get_location_local(self, location):
         if isinstance(location, LocationLocal):
