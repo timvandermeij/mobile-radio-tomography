@@ -15,11 +15,13 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
         self._vehicle_labels = []
         self._tables = []
-        self._column_labels = ["north", "east", "altitude", "wait for vehicle"]
+        self._column_labels = [
+            "north", "east", "altitude", "wait for vehicle", "wait count"
+        ]
         # Default values that are used when exporting/importing tables.
         # We initially require data for the north/east column, but the altitude 
         # and wait ID can be left out.
-        self._column_defaults = (None, None, 0.0, 0)
+        self._column_defaults = (None, None, 0.0, 0, 1)
 
         self._listWidget = None
         self._stackedLayout = None
@@ -96,7 +98,8 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         for table in self._tables:
             table.insertRow(table.rowCount())
 
-    def _format_row_data(self, vehicle, table, row, previous, repeat=True, errors=True):
+    def _format_row_data(self, vehicle, table, row, previous, repeat=True,
+                         errors=True):
         """
         Format a single row from a waypoints table for exporting.
 
@@ -108,19 +111,12 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         Can raise a `ValueError` for missing or invalid cell data.
         """
 
-        data = []
-        for col in range(len(self._column_labels)):
-            item = table.item(row, col)
-            # Handle unchanged columns (no item widget) or empty columns (text 
-            # contents equals to empty string)
-            if item is None or item.text() == "":
-                data.append(None)
-            else:
-                data.append(item.text())
+        data, empty = table.get_row_data(row)
 
-        if all(item is None for item in data) and previous == self._column_defaults:
-            # If the first table row is completely empty, then silently ignore 
-            # this row.
+        if empty and previous == self._column_defaults:
+            # If this is the first table row or all previous rows are empty, 
+            # and this row is (also) completely empty, i.e., no cells were 
+            # filled or altered, then silently ignore this row.
             return []
 
         if errors:
@@ -341,8 +337,8 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             "max_retries": self._max_retries,
             "retry_interval": self._retry_interval
         }
-        sender = Control_Panel_RF_Sensor_Sender(self._controller, waypoints, total,
-                                                configuration)
+        sender = Control_Panel_RF_Sensor_Sender(self._controller, waypoints,
+                                                total, configuration)
         sender.start()
 
     def _make_add_waypoint_packet(self, vehicle, index, waypoint):
@@ -359,6 +355,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         packet.set("longitude", waypoint[1])
         packet.set("altitude", waypoint[2])
         packet.set("wait_id", int(waypoint[3]))
+        packet.set("wait_count", int(waypoint[4]))
         packet.set("index", index)
         packet.set("to_id", vehicle)
 
