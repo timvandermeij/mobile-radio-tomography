@@ -61,7 +61,7 @@ class Geometry(object):
 
         return location1, location2
 
-    def make_location(self, lat, lon, alt=0):
+    def make_location(self, lat, lon, alt=0.0):
         """
         Create a location object based on user-specified coordinates `lat`,
         `lon` and `alt`. These may or may not actually correspond to the

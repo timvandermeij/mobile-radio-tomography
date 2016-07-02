@@ -51,15 +51,16 @@ class TestMissionRFSensor(EnvironmentTestCase):
             with self.assertRaises(RuntimeError):
                 self.mission.arm_and_takeoff()
 
-    def _send_waypoint_add(self, index, latitude, longitude, id_offset=0):
+    def _send_waypoint_add(self, index, latitude, longitude, altitude=0.0,
+                           wait_id=0, wait_count=1, id_offset=0):
         packet = Packet()
         packet.set("specification", "waypoint_add")
         packet.set("index", index)
         packet.set("latitude", latitude)
         packet.set("longitude", longitude)
-        packet.set("altitude", 0.0)
-        packet.set("wait_id", 0)
-        packet.set("wait_count", 1)
+        packet.set("altitude", altitude)
+        packet.set("wait_id", wait_id)
+        packet.set("wait_count", wait_count)
         packet.set("to_id", self.rf_sensor.id + id_offset)
 
         with patch('sys.stdout'):
@@ -126,6 +127,28 @@ class TestMissionRFSensor(EnvironmentTestCase):
 
         self.assertEqual(self.mission.next_index, 1)
         self.assertEqual(self.vehicle._waypoints, [(1, 4), None])
+
+    def test_add_wait_count(self):
+        with patch('sys.stdout'):
+            self.mission.setup()
+
+        self._send_waypoint_add(0, 0.0, 4.0, wait_count=4)
+
+        self.assertEqual(self.enqueue_mock.call_count, 1)
+        args, kwargs = self.enqueue_mock.call_args
+        self.assertEqual(len(args), 1)
+        self.assertIsInstance(args[0], Packet)
+        self.assertEqual(args[0].get_all(), {
+            "specification": "waypoint_ack",
+            "next_index": 1,
+            "sensor_id": self.rf_sensor.id
+        })
+        self.assertEqual(kwargs, {"to": 0})
+
+        self.assertEqual(self.mission.next_index, 1)
+        self.assertEqual(self.vehicle._waypoints, [
+            (0, 1), None, (0, 2), None, (0, 3), None, (0, 4), None
+        ])
 
     def test_add_wrong_index(self):
         with patch('sys.stdout'):

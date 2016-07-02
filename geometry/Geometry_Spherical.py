@@ -95,7 +95,7 @@ class Geometry_Spherical(Geometry):
 
         return location1, location2
 
-    def make_location(self, lat, lon, alt=0):
+    def make_location(self, lat, lon, alt=0.0):
         return LocationGlobalRelative(lat, lon, alt)
 
     def get_coordinates(self, location):

@@ -1,5 +1,4 @@
 import time
-from dronekit import LocationGlobalRelative
 from Mission_Auto import Mission_Auto
 from ..zigbee.Packet import Packet
 
@@ -13,6 +12,7 @@ class Mission_RF_Sensor(Mission_Auto):
 
         self._waypoints_complete = False
         self._next_index = 0
+        self._point = None
 
         self._rf_sensor = self.environment.get_rf_sensor()
 
@@ -109,15 +109,23 @@ class Mission_RF_Sensor(Mission_Auto):
             self._send_ack()
             return
 
+        if self._point is None:
+            self._point = self.geometry.home_location
+
         latitude = packet.get("latitude")
         longitude = packet.get("longitude")
         altitude = packet.get("altitude")
         wait_id = packet.get("wait_id")
-
-        # Make a location waypoint. `add_waypoint` handles any further 
-        # conversion steps.
-        point = LocationGlobalRelative(latitude, longitude, altitude)
+        wait_count = packet.get("wait_count")
         required_sensors = [wait_id] if wait_id > 0 else None
-        self.add_waypoint(point, required_sensors)
+
+        # Create location waypoints based on the intermediate wait count and 
+        # the geometry's range. `add_waypoint` handles any further conversions.
+        location = self.geometry.make_location(latitude, longitude, altitude)
+        for point in self.geometry.get_location_range(self._point, location,
+                                                      count=wait_count):
+            self.add_waypoint(point, required_sensors)
+
         self._next_index += 1
+        self._point = location
         self._send_ack()

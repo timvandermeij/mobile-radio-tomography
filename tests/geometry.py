@@ -247,6 +247,12 @@ class TestGeometry(LocationTestCase):
                 "end": (3.0, 4.0),
                 "count": 5,
                 "range": [(3.0, 4.0)]*5
+            },
+            {
+                "start": (4.0, 5.0),
+                "end": (6.0, 7.0),
+                "count": 1,
+                "range": [(6.0, 7.0)]
             }
         ]
         for case in cases:
@@ -256,9 +262,9 @@ class TestGeometry(LocationTestCase):
                                                       count=case["count"])
             self.assertEqual(len(actual), len(case["range"]))
             for actual_loc, p in zip(actual, case["range"]):
-                expected_loc = LocationLocal(p[0], p[1],
-                                             -p[2] if len(p) > 2 else 0.0)
-                self.assertEqual(actual_loc, expected_loc)
+                expected_loc = self.geometry.get_location_meters(home, *p)
+                self.assertEqual(actual_loc,
+                                 self.geometry.get_location_local(expected_loc))
 
     def test_get_location_angle(self):
         loc = LocationLocal(5.0, 3.0, -1.0)
