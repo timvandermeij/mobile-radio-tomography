@@ -1,6 +1,7 @@
 import sys
 import unittest
 from mock import patch, MagicMock
+from ..bench.Method_Coverage import covers
 from ..core.Import_Manager import Import_Manager
 
 class WiringPiTestCase(unittest.TestCase):
@@ -56,13 +57,14 @@ class WiringPiTestCase(unittest.TestCase):
             for module in ("RPi", "RPi.GPIO", "RPi._GPIO", "wiringpi"):
                 import_manager.unload(module, relative=False)
 
+@covers("core.WiringPi")
 class TestCoreWiringPi(WiringPiTestCase):
     def setUp(self):
         # Enable the RPi.GPIO patcher.
         self.set_rpi_patch()
         super(TestCoreWiringPi, self).setUp()
 
-    def test_raspberry_pi(self):
+    def test_interface_raspberry_pi(self):
         from ..core.WiringPi import WiringPi
 
         # Singleton creation ensures we always get the same object.
@@ -79,7 +81,7 @@ class TestCoreWiringPi(WiringPiTestCase):
         self.assertTrue(wiringpi.is_raspberry_pi)
         self.assertEqual(wiringpi.module, self.wiringpi_mock)
 
-    def test_not_raspberry_pi(self):
+    def test_interface_not_raspberry_pi(self):
         # Mark as nonexistent module
         sys.modules["RPi.GPIO"] = None
         from ..core.WiringPi import WiringPi

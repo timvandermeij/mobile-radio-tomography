@@ -3,26 +3,103 @@ import types
 import unittest
 from mock import patch, MagicMock
 
+__all__ = ["covers", "Method_Coverage"]
+
+# Global coverage tracking dictionaries that are filled with the decorator 
+# patterns found during Python interpretation of the tests.
+_class_coverage = {}
+_function_coverage = {}
+
+def covers(target):
+    """
+    Decorator for specifying a specific coverage target.
+
+    This decorator can be used in two ways: as a class decorator and as method
+    decorator. For the class decorator, one can change which class a test class
+    is supposed to be testing. This is useful if the test class name does not
+    match enough with the actual class name for this relation to be inferred.
+    For example, if the class name is `MyInt` but the test class is `TestInts`,
+    then, assuming `MyInt` is imported into the test case, the class coverage
+    can be declared with:
+    ```
+    @covers(MyInt)
+    class TestInts(unittest.TestCase):
+        pass
+    ```
+    One can also provide the class name as a string if the class is not imported
+    in the test at that point, using dot syntax for relative modules, but this
+    is not recommended since the inference can fail more easily.
+
+    The second case is similar, but affirms a relationship between a test method
+    and an actual method in the class to be tested. For example, if `MyInt` has
+    a method called `add`, but the test method is called `test_operations`, then
+    we can declare the method coverage with:
+    ```
+    @covers(MyInt)
+    class TestInts(unittest.TestCase):
+        @covers("add")
+        def test_operations(self):
+            something = MyInt(5)
+            self.assertEqual(something.add(1), MyInt(6))
+    ```
+
+    Method decorators can be stacked so that they cover multiple methods. Thus,
+    if `test_operations` also tests a `substract` method of `MyInt`, then we
+    can just add another `@covers("subtract")` line before the definition. This
+    is not the case for the class decorator, which can only cover one class.
+    """
+
+    def decorator(subject):
+        # `subject` is the test class or test function that is being decorated, 
+        # which `target` is the actual class or method name that is covered by 
+        # this test.
+        # Note: At this point we cannot deduce which class a test function 
+        # belongs to, because the class is not yet fully instantiated. However, 
+        # once we do have the full class and instance methods, then we can 
+        # easily compare the instance method's internal function with the 
+        # function that we caught here. Also, because class types and functions 
+        # are hashable, we can use dictionaries for easy lookups.
+        if isinstance(subject, type):
+            # Class coverage
+            _class_coverage[subject] = target
+        elif isinstance(subject, types.FunctionType):
+            # Method coverage
+            if subject not in _function_coverage:
+                _function_coverage[subject] = []
+
+            _function_coverage[subject].append(target)
+
+        return subject
+
+    return decorator
+
 class Method_Coverage(object):
     """
     Method coverage tracker.
     """
 
-    def __init__(self, import_manager, test_class_prefix='Test',
-                 test_method_prefix='test'):
+    def __init__(self, arguments, import_manager):
         """
         Set up the method coverage tracker.
 
+        The given `arguments` is an `Arguments` object.
         The given `import_manager` is an `Import_Manager` object for the package
-        where the tests are run. The `test_class_prefix` is a prefix that is
-        removed from a test class when we infer an actual class from it.
-        The same applies for `test_method_prefix`, which applies to test methods
-        and has the addition that underscores after it are also removed.
+        where the tests are run.
         """
 
         self._import_manager = import_manager
-        self._class_prefix = test_class_prefix
-        self._method_prefix = test_method_prefix
+
+        settings = arguments.get_settings("test_method_coverage")
+        # A prefix that is removed from a test class when we infer an actual 
+        # class from it.
+        self._class_prefix = settings.get("test_class_prefix")
+        # A prefix that is removed from a test method when we infer an actual 
+        # method from it. In addition, underscores after it are also removed.
+        self._method_prefix = settings.get("test_method_prefix")
+        # Method names for tests that cover an `__init__`  method
+        self._init_test_methods = settings.get("init_test_methods")
+        # Method name for tests that cover all properties of a class.
+        self._interface_test_methods = settings.get("interface_test_methods")
 
         # Dictionary of actual classes. This doubles as a lookup cache for test 
         # classes that have been inferred previously, as well as method 
@@ -34,6 +111,9 @@ class Method_Coverage(object):
         # - "methods": A dictionary containing relevant methods that exist in 
         #   the inferred class, with values indicating whether that method has 
         #   been covered by a test method.
+        # - "properties": A list of property names. These names match with keys
+        #   in "methods". All properties are covered if there is a test method
+        #   with the `interface_test_method` name.
         self._classes = {}
 
         # Warnings that were generated during the inference process.
@@ -99,7 +179,8 @@ class Method_Coverage(object):
         total_methods = 0
         total_covered = 0
 
-        for test_class, data in self._classes.iteritems():
+        for test_class, data in sorted(self._classes.iteritems(),
+                                       key=lambda pair: pair[0]):
             if data is None:
                 continue
 
@@ -107,7 +188,10 @@ class Method_Coverage(object):
             class_name = data["class"].__name__
             total = len(data["methods"])
             covered = sum(data["methods"].values())
-            if total == 0:
+
+            total_methods += total
+            total_covered += covered
+            if total == 0 or total == covered:
                 continue
 
             stats_format = "\n{} -> {}.{}: {}/{} ({:.0%})\n"
@@ -116,14 +200,12 @@ class Method_Coverage(object):
 
             if covered < total:
                 missing_methods = []
-                for method, found in data["methods"].iteritems():
+                for method, found in sorted(data["methods"].iteritems(),
+                                            key=lambda pair: pair[0]):
                     if not found:
                         missing_methods.append(method)
 
                 out += "Missed methods: {}\n".format(', '.join(missing_methods))
-
-            total_methods += total
-            total_covered += covered
 
         if total_methods > 0:
             total_format = "\nTotal method coverage: {}/{} ({:.0%})\n"
@@ -145,28 +227,93 @@ class Method_Coverage(object):
         test_class = test.__class__.__name__
         test_method = test._testMethodName
         if test_class not in self._classes:
-            self._classes[test_class] = self._convert_test_class(test_class)
+            self._classes[test_class] = self._convert_test(test)
 
         if self._classes[test_class] is None:
             return
 
-        target_method = self._convert_test_method(test_class, test_method)
-        if target_method is not None:
-            self._classes[test_class]["methods"][target_method] = True
+        target_methods = self._convert_test_method(test, test_method)
+        for target_method in target_methods:
+            if target_method not in self._classes[test_class]["methods"]:
+                msg = "Test method '{}.{}' covers nonexistent method '{}'"
+                self._warnings.append(msg.format(test_class, test_method,
+                                                 target_method))
+            else:
+                self._classes[test_class]["methods"][target_method] = True
 
-    def _convert_test_class(self, test_class):
+    def _convert_test(self, test):
         """
-        Handle the test class name `test_class`.
+        Handle the test class `test` to deduce module, class and methods
+        for the actual class that it tests.
 
-        This pulls the class name through various conversion and inference steps
-        to retrieve an actual class.
+        This pulls the class name through various inference steps to retrieve
+        an actual class, and then retrieves the methods in that class.
 
         If the actual class can be inferred, then this returns a dictionary
         containing the inferred module name, actual class type and methods to be
         covered. If any of the steps fail, then `None` is returned and a warning
-        will be added to the output in `show_result`. 
+        will be added to the output in `get_results`. 
         """
 
+        target_module, target_class = self._convert_test_class(test)
+        if target_module is None or target_class is None:
+            return None
+
+        # Retrieve the methods in the inferred class, and register them as not 
+        # yet covered. We only consider methods implemented in that class, not 
+        # inherited methods from superclasses.
+        target_methods = {}
+        target_properties = []
+        for method, attribute in target_class.__dict__.iteritems():
+            # Filter internal methods and non-methods such as class variables. 
+            if method.startswith('__') and method != "__init__":
+                continue
+
+            if isinstance(attribute, property):
+                target_properties.append(method)
+            elif not isinstance(attribute, types.FunctionType):
+                continue
+
+            target_methods[method] = False
+
+        return {
+            "module": target_module,
+            "class": target_class,
+            "methods": target_methods,
+            "properties": target_properties
+        }
+
+    def _convert_test_class(self, test):
+        """
+        Handle the test case object `test` to deduce a module and class type.
+
+        This pulls the class name through various inference steps to retrieve
+        an actual class.
+
+        If the actual class can be inferred, then this returns a tuple of
+        the inferred module name and actual class type. If one or both of these
+        cannot be inferred, then one or both will be `None` and a warning will
+        be added to the output of `get_results`.
+        """
+
+        # Check if the test class is decorated with a `covers` decorator, and 
+        # the decorator holds a valid class.
+        if test.__class__ in _class_coverage:
+            target_class = _class_coverage[test.__class__]
+            if isinstance(target_class, str):
+                match = re.match(r'(?:(.*)\.)?([^\.]*)', target_class)
+                target_module, class_name = match.groups()
+                target_class = self._load_class(target_module, class_name)
+                return target_module, target_class
+
+            if not isinstance(target_class, type):
+                return None, None
+
+            target_module = target_class.__module__
+            return target_module, target_class
+
+        # Convert the test class name.
+        test_class = test.__class__.__name__
         if test_class.startswith(self._class_prefix):
             test_class = test_class[len(self._class_prefix):]
 
@@ -180,7 +327,7 @@ class Method_Coverage(object):
             # Module not found
             msg = "Could not infer module from test class '{}'"
             self._warnings.append(msg.format(test_class))
-            return None
+            return None, None
 
         # Infer the class from the (remaining) test class name parts.
         target_class = self._infer_class(target_class_parts, target_module,
@@ -188,28 +335,8 @@ class Method_Coverage(object):
         if target_class is None:
             msg = "Could not infer class from test '{}' in module '{}'"
             self._warnings.append(msg.format(test_class, target_module))
-            return None
 
-        # Retrieve the methods in the inferred class, and register them as not 
-        # yet covered.
-        target_methods = {}
-        for method, attribute in target_class.__dict__.iteritems():
-            # Filter optional methods such as __init__, internal methods, 
-            # properties and non-method variables. These would probably be 
-            # covered by a test that has an inexactly-matching name such as 
-            # "initialization" or "interface".
-            if method.startswith('__'):
-                continue
-            if not isinstance(attribute, types.FunctionType):
-                continue
-
-            target_methods[method] = False
-
-        return {
-            "module": target_module,
-            "class": target_class,
-            "methods": target_methods
-        }
+        return target_module, target_class
 
     def _infer_module(self, target_class_parts):
         """
@@ -255,33 +382,47 @@ class Method_Coverage(object):
         """
 
         target_class = None
-        kw = {
-            "relative_module": target_module
-        }
         for class_length in range(target_length + 2):
             # Make a class name from the last few parts. We try to create 
             # a class using the module name (or a part of it) or without the 
             # inferred module name parts, but we never leave any part unused.
             class_name = '_'.join(target_class_parts[class_length:])
-            try:
-                target_class = self._import_manager.load_class(class_name, **kw)
-            except ImportError:
-                continue
-            else:
+            target_class = self._load_class(target_module, class_name)
+            if target_class is not None:
                 break
 
         return target_class
 
-    def _convert_test_method(self, test_class, test_method):
+    def _load_class(self, module, class_name):
         """
-        Handle a test method with the name `test_method` in class `test_class`.
+        Attempt to load a class with name `class_name` from `module`.
 
-        This pulls the method name to some conversion steps to infer the method
-        that it tests. Returns the actual method name if this is possible,
-        otherwise it returns `None` and a warning will be added to the output of
-        `show_result`.
+        Returns the class type if it could be loaded, otherwise this method
+        returns `None`.
         """
 
+        try:
+            return self._import_manager.load_class(class_name,
+                                                   relative_module=module)
+        except ImportError:
+            return None
+
+    def _convert_test_method(self, test, test_method):
+        """
+        Handle a test method with the name `test_method` in test case `test`.
+
+        This pulls the method name to some conversion steps to infer the methods
+        that it tests. Returns a list with actual method names if this is
+        possible, otherwise it returns an empty list and a warning will be
+        added to the output of `get_results`.
+        """
+
+        target_methods = []
+        test_function = getattr(test, test_method).im_func
+        if test_function in _function_coverage:
+            target_methods = _function_coverage[test_function]
+
+        test_class = test.__class__.__name__
         target_class = self._classes[test_class]["class"]
         class_name = target_class.__name__
         methods = target_class.__dict__
@@ -295,20 +436,28 @@ class Method_Coverage(object):
         target_method = None
         for method_length in range(len(target_method_parts), 0, -1):
             method = '_'.join(target_method_parts[:method_length])
-            if method == "interface":
-                # Interface tests do not cover methods (or if they do, then we 
-                # should specify this), so do not try to match it.
-                return None
-
-            if method == "initialization" or method in methods:
-                target_method = method
+            if method in self._interface_test_methods:
+                # An interface test does not cover methods (or if it does, then 
+                # we should specify this via decorators), so do not match the 
+                # method name automatically. However, an interface test is 
+                # expected to cover all properties.
+                target_methods.extend(self._classes[test_class]["properties"])
                 break
+
+            if method in self._init_test_methods:
+                target_method = "__init__"
+            elif method in methods:
+                target_method = method
             elif "_{}".format(method) in methods:
                 target_method = "_{}".format(method)
+
+            if target_method is not None:
                 break
 
-        if target_method is None:
+        if target_method is not None:
+            target_methods.append(target_method)
+        if not target_methods:
             msg = "Could not infer method from test function '{}.{}'"
             self._warnings.append(msg.format(class_name, test_method))
 
-        return target_method
+        return target_methods

@@ -9,11 +9,11 @@ class Test_Result_Factory(object):
     This can be used for the `resultclass` argument of a `TextTestRunner`.
     """
 
-    def __init__(self, settings):
-        self._settings = settings
+    def __init__(self, arguments):
+        self._arguments = arguments
 
     def __call__(self, stream, descriptions, verbosity):
-        return BenchTestResult(self._settings, stream, descriptions, verbosity)
+        return BenchTestResult(self._arguments, stream, descriptions, verbosity)
 
 class BenchTestResult(unittest.runner.TextTestResult):
     """
@@ -21,8 +21,9 @@ class BenchTestResult(unittest.runner.TextTestResult):
     such as profile output and benchmarks.
     """
 
-    def __init__(self, settings, stream, descriptions, verbosity):
+    def __init__(self, arguments, stream, descriptions, verbosity):
         super(BenchTestResult, self).__init__(stream, descriptions, verbosity)
+        settings = arguments.get_settings("test_result")
         self._sort = settings.get("profile_sort")
         self._limit = settings.get("profile_limit")
         self._benchmark = verbosity > 2

@@ -26,7 +26,8 @@ class Test_Run(object):
     """
 
     def __init__(self, arguments):
-        self._settings = arguments.get_settings("test_runner")
+        self._arguments = arguments
+        self._settings = self._arguments.get_settings("test_runner")
         self._failed = False
 
         self._import_manager = Import_Manager()
@@ -36,6 +37,7 @@ class Test_Run(object):
         ]
 
         self._loader = unittest.TestLoader()
+        self._loader.testMethodPrefix = self._settings.get("test_method_prefix")
 
         if self._settings.get("coverage"):
             # Only consider our own module so that we exclude system and site 
@@ -49,9 +51,8 @@ class Test_Run(object):
             self._code_coverage = coverage.Coverage(include="{}/*".format(path),
                                                     omit=excluded_paths)
 
-            prefix = self._loader.testMethodPrefix
-            self._method_coverage = Method_Coverage(self._import_manager,
-                                                    test_method_prefix=prefix)
+            self._method_coverage = Method_Coverage(self._arguments,
+                                                    self._import_manager)
         else:
             self._code_coverage = None
             self._method_coverage = None
@@ -90,7 +91,7 @@ class Test_Run(object):
         tests = self._loader.discover("tests", pattern=pattern,
                                       top_level_dir="..")
 
-        factory = Test_Result_Factory(self._settings)
+        factory = Test_Result_Factory(self._arguments)
         runner = unittest.runner.TextTestRunner(verbosity=verbosity,
                                                 resultclass=factory)
 
