@@ -14,6 +14,7 @@ import pylint.lint
 
 # Package imports
 from ..core.Import_Manager import Import_Manager
+from Method_Coverage import Method_Coverage
 from Test_Result import Test_Result_Factory
 
 class Test_Run(object):
@@ -34,6 +35,8 @@ class Test_Run(object):
             "settings.Arguments"
         ]
 
+        self._loader = unittest.TestLoader()
+
         if self._settings.get("coverage"):
             # Only consider our own module so that we exclude system and site 
             # packages, and exclude the test bench, test runner and tests 
@@ -43,10 +46,15 @@ class Test_Run(object):
             excluded_paths = [
                 "{}/{}".format(path, pattern) for pattern in excluded_patterns
             ]
-            self._coverage = coverage.Coverage(include="{}/*".format(path),
-                                               omit=excluded_paths)
+            self._code_coverage = coverage.Coverage(include="{}/*".format(path),
+                                                    omit=excluded_paths)
+
+            prefix = self._loader.testMethodPrefix
+            self._method_coverage = Method_Coverage(self._import_manager,
+                                                    test_method_prefix=prefix)
         else:
-            self._coverage = None
+            self._code_coverage = None
+            self._method_coverage = None
 
     def is_passed(self):
         """
@@ -75,12 +83,12 @@ class Test_Run(object):
         pattern = self._settings.get("pattern")
         verbosity = self._settings.get("verbosity")
 
-        if self._coverage is not None:
+        if self._code_coverage is not None:
             # Enable code coverage around the loading and running of tests.
-            self._coverage.start()
+            self._code_coverage.start()
 
-        loader = unittest.TestLoader()
-        tests = loader.discover("tests", pattern=pattern, top_level_dir="..")
+        tests = self._loader.discover("tests", pattern=pattern,
+                                      top_level_dir="..")
 
         factory = Test_Result_Factory(self._settings)
         runner = unittest.runner.TextTestRunner(verbosity=verbosity,
@@ -88,29 +96,43 @@ class Test_Run(object):
 
         result = runner.run(tests)
 
-        if self._coverage is not None:
-            self._coverage.stop()
+        if self._code_coverage is not None:
+            self._code_coverage.stop()
+
+        # Reload the Import_Manager so that the Method_Coverage can safely use 
+        # it again to load modules.
+        self._import_manager.reload_unloaded("core.Import_Manager")
+        if self._method_coverage is not None:
+            self._method_coverage.run(tests)
 
         if not result.wasSuccessful():
             self._failed = True
 
-    def execute_coverage_report(self):
+    def execute_code_coverage_report(self):
         """
         Create a code coverage report if coverage is enabled and all tests
-        have succeeded.
+        have succeeded. Returns the report text if so, otherwise `None`.
         """
 
-        if self._failed:
+        if self._failed or self._code_coverage is None:
             return None
 
-        if self._coverage is not None:
-            report = StringIO()
-            self._coverage.report(file=report,
-                                  show_missing=True, skip_covered=True)
+        report = StringIO()
+        self._code_coverage.report(file=report,
+                                   show_missing=True, skip_covered=True)
 
-            return report.getvalue()
+        return report.getvalue()
 
-        return None
+    def execute_method_coverage_report(self):
+        """
+        Create a method coverage report if coverage is enabled and all tests
+        have succeeded. Returns the report text if so, otherwise `None`.
+        """
+
+        if self._failed or self._method_coverage is None:
+            return None
+
+        return self._method_coverage.get_results()
 
     def _get_travis_environment(self, name):
         """

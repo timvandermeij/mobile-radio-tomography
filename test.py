@@ -17,10 +17,15 @@ def main(argv):
     print("> Executing unit tests")
     test_run.execute_unit_tests()
 
-    coverage_report = test_run.execute_coverage_report()
-    if coverage_report is not None:
+    code_coverage_report = test_run.execute_code_coverage_report()
+    if code_coverage_report is not None:
         print("> Executing code coverage")
-        print(coverage_report)
+        print(code_coverage_report)
+
+    method_coverage_report = test_run.execute_method_coverage_report()
+    if method_coverage_report is not None:
+        print("> Executing method coverage")
+        print(method_coverage_report)
 
     files, commit_range = test_run.get_changed_files()
     if files:
