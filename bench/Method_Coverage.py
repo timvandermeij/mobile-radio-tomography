@@ -116,8 +116,9 @@ class Method_Coverage(object):
         #   with the `interface_test_method` name.
         self._classes = {}
 
-        # Warnings that were generated during the inference process.
-        self._warnings = []
+        # Warnings that were generated during the inference process, grouped by 
+        # the relevant test class name.
+        self._warnings = {}
 
         # Regular expression to split a CamelCase name into word parts.
         # This regular expression tries to keep uppercase acronyms with three 
@@ -166,6 +167,16 @@ class Method_Coverage(object):
             elif isinstance(test, unittest.TestCase):
                 self._handle_test(test)
 
+    def _add_warning(self, test_class, warning):
+        """
+        Add a warning message `warning` related to the class name `test_class`.
+        """
+
+        if test_class not in self._warnings:
+            self._warnings[test_class] = []
+
+        self._warnings[test_class].append(warning)
+
     def get_results(self):
         """
         Format the results of the method coverage.
@@ -174,14 +185,22 @@ class Method_Coverage(object):
         inference process, the coverage statistics and untested methods.
         """
 
-        out = "\n".join(self._warnings)
+        out = ""
 
         total_methods = 0
         total_covered = 0
 
         for test_class, data in sorted(self._classes.iteritems(),
                                        key=lambda pair: pair[0]):
+            name = self._get_test_class_name(test_class)
+            if name in self._warnings:
+                warnings = "\n".join(self._warnings[name]) + "\n"
+            else:
+                warnings = ""
+
             if data is None:
+                out += "\n{}: {}".format(test_class,
+                                         warnings if warnings else "no data")
                 continue
 
             module_name = data["module"]
@@ -197,6 +216,7 @@ class Method_Coverage(object):
             stats_format = "\n{} -> {}.{}: {}/{} ({:.0%})\n"
             out += stats_format.format(test_class, module_name, class_name,
                                        covered, total, covered / float(total))
+            out += warnings
 
             if covered < total:
                 missing_methods = []
@@ -235,9 +255,9 @@ class Method_Coverage(object):
         target_methods = self._convert_test_method(test, test_method)
         for target_method in target_methods:
             if target_method not in self._classes[test_class]["methods"]:
-                msg = "Test method '{}.{}' covers nonexistent method '{}'"
-                self._warnings.append(msg.format(test_class, test_method,
-                                                 target_method))
+                msg = "Test method '{}' covers nonexistent method '{}'"
+                self._add_warning(self._get_test_class_name(test_class),
+                                  msg.format(test_method, target_method))
             else:
                 self._classes[test_class]["methods"][target_method] = True
 
@@ -313,9 +333,7 @@ class Method_Coverage(object):
             return target_module, target_class
 
         # Convert the test class name.
-        test_class = test.__class__.__name__
-        if test_class.startswith(self._class_prefix):
-            test_class = test_class[len(self._class_prefix):]
+        test_class = self._get_test_class_name(test.__class__.__name__)
 
         # Split the class name into its CamelCase parts.
         matches = self._camel_case_regex.finditer(test_class)
@@ -326,17 +344,27 @@ class Method_Coverage(object):
         if target_module is None:
             # Module not found
             msg = "Could not infer module from test class '{}'"
-            self._warnings.append(msg.format(test_class))
+            self._add_warning(test_class, msg.format(test_class))
             return None, None
 
         # Infer the class from the (remaining) test class name parts.
         target_class = self._infer_class(target_class_parts, target_module,
                                          target_length)
         if target_class is None:
-            msg = "Could not infer class from test '{}' in module '{}'"
-            self._warnings.append(msg.format(test_class, target_module))
+            msg = "Could not infer class in module '{}'"
+            self._add_warning(test_class, msg.format(target_module))
 
         return target_module, target_class
+
+    def _get_test_class_name(self, test_class):
+        """
+        Return the class name from the name `test_class`, excluding the prefix.
+        """
+
+        if test_class.startswith(self._class_prefix):
+            test_class = test_class[len(self._class_prefix):]
+
+        return test_class
 
     def _infer_module(self, target_class_parts):
         """
@@ -424,7 +452,6 @@ class Method_Coverage(object):
 
         test_class = test.__class__.__name__
         target_class = self._classes[test_class]["class"]
-        class_name = target_class.__name__
         methods = target_class.__dict__
 
         if test_method.startswith(self._method_prefix):
@@ -457,7 +484,8 @@ class Method_Coverage(object):
         if target_method is not None:
             target_methods.append(target_method)
         if not target_methods:
-            msg = "Could not infer method from test function '{}.{}'"
-            self._warnings.append(msg.format(class_name, test_method))
+            msg = "Could not infer method from test function '{}'"
+            self._add_warning(self._get_test_class_name(test_class),
+                              msg.format(test_method))
 
         return target_methods
