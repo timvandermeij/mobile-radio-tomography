@@ -10,6 +10,23 @@ __all__ = ["covers", "Method_Coverage"]
 _class_coverage = {}
 _function_coverage = {}
 
+def _unwrap(function):
+    """
+    Unwrap the decorators from a function.
+
+    This determines whether the original function was wrapped by a decorator
+    that does not return the original function but a wrapper. This function is
+    able to detect wrappers created by `six.wraps` or `functools.wraps` in
+    Python 3.2 or later. This includes decorators like `patch` from `mock`.
+
+    The bare function object is returned.
+    """
+
+    while hasattr(function, "__wrapped__"):
+        function = function.__wrapped__
+
+    return function
+
 def covers(target):
     """
     Decorator for specifying a specific coverage target.
@@ -45,8 +62,13 @@ def covers(target):
 
     Method decorators can be stacked so that they cover multiple methods. Thus,
     if `test_operations` also tests a `substract` method of `MyInt`, then we
-    can just add another `@covers("subtract")` line before the definition. This
-    is not the case for the class decorator, which can only cover one class.
+    can just add another `@covers("subtract")` line before the definition. The
+    two decorators can also be combined like `@covers(["add", "subtract"])`.
+
+    The multiple coverage functionality is not the supported for the class
+    decorator, which only covers at most one class. One can however specify that
+    a test does not cover any class using `@covers(None)` as the class decorator
+    (this removes it from the coverage report and silences any warnings).
     """
 
     def decorator(subject):
@@ -64,10 +86,14 @@ def covers(target):
             _class_coverage[subject] = target
         elif isinstance(subject, types.FunctionType):
             # Method coverage
-            if subject not in _function_coverage:
-                _function_coverage[subject] = []
+            function = _unwrap(subject)
+            if function not in _function_coverage:
+                _function_coverage[function] = []
 
-            _function_coverage[subject].append(target)
+            if isinstance(target, list):
+                _function_coverage[function].extend(target)
+            else:
+                _function_coverage[function].append(target)
 
         return subject
 
@@ -199,8 +225,12 @@ class Method_Coverage(object):
                 warnings = ""
 
             if data is None:
-                out += "\n{}: {}".format(test_class,
-                                         warnings if warnings else "no data")
+                # No data for this class, which either means it was explicitly 
+                # marked as not covering anything, or there is an inference 
+                # warning which we should show.
+                if warnings:
+                    out += "\n{}: {}".format(test_class, warnings)
+
                 continue
 
             module_name = data["module"]
@@ -291,7 +321,7 @@ class Method_Coverage(object):
 
             if isinstance(attribute, property):
                 target_properties.append(method)
-            elif not isinstance(attribute, types.FunctionType):
+            elif not isinstance(attribute, (classmethod, types.FunctionType)):
                 continue
 
             target_methods[method] = False
@@ -446,7 +476,7 @@ class Method_Coverage(object):
         """
 
         target_methods = []
-        test_function = getattr(test, test_method).im_func
+        test_function = _unwrap(test.__class__.__dict__[test_method])
         if test_function in _function_coverage:
             target_methods = _function_coverage[test_function]
 

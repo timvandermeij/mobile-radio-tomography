@@ -2,10 +2,10 @@ import os
 import numpy as np
 from vrml.vrml97 import basenodes, nodetypes, parser, parseprocessor
 
-class VRMLLoader(object):
+class VRML_Loader(object):
     """
-    Parser for VRML files. The VRML language is described in its specification at
-    http://www.web3d.org/documents/specifications/14772/V2.0/index.html
+    Parser for VRML files. The VRML language is described in its specification
+    at http://www.web3d.org/documents/specifications/14772/V2.0/index.html
     """
 
     def __init__(self, environment, filename, translation=None, transform=None):
@@ -47,8 +47,11 @@ class VRMLLoader(object):
         for child in group.children:
             if isinstance(child, basenodes.Inline):
                 # Include the objects from the referenced file into the scene.
-                path = os.path.join(os.path.dirname(self.filename), child.url[0])
-                loader = VRMLLoader(self.environment, path, self.translation, transform)
+                path = os.path.join(os.path.dirname(self.filename),
+                                    child.url[0])
+                loader = VRML_Loader(self.environment, path,
+                                     translation=self.translation,
+                                     transform=transform)
                 self._objects.extend(loader.get_objects())
             elif isinstance(child, basenodes.Transform):
                 # Jumble up transformation matrices, in case they are nested.

@@ -1,7 +1,9 @@
 import unittest
+from ..bench.Method_Coverage import covers
 from ..trajectory.Servo import Interval
 
-class TestServo(unittest.TestCase):
+@covers(Interval)
+class TestTrajectoryServoInterval(unittest.TestCase):
     def test_init(self):
         # Both minimum and maximum must be provided.
         with self.assertRaises(ValueError):
