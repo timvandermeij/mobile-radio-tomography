@@ -21,8 +21,10 @@ class TestReconstructionDumpBuffer(SettingsTestCase):
         self.assertEqual(self.dump_buffer.origin, (0, 0))
         self.assertEqual(self.dump_buffer.size, (10, 10))
 
+    def test_count(self):
         self.assertEqual(self.dump_buffer.count(), 2)
 
+    def test_get(self):
         # The calibration RSSI value for the link must be subtracted
         # from the originally measured RSSI value.
         first_packet, first_calibrated_rssi = self.dump_buffer.get()

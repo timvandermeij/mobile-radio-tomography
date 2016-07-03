@@ -27,6 +27,10 @@ class TestCoreImportManager(unittest.TestCase):
         self._import_patcher.stop()
 
     def test_initialization(self):
+        self.assertEqual(self.import_manager._package, self.package)
+        self.assertEqual(self.import_manager._unloaded_modules, {})
+
+    def test_package(self):
         self.assertEqual(self.import_manager.package, self.package)
 
     def test_load(self):

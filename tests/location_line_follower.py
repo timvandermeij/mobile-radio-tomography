@@ -1,4 +1,5 @@
 from mock import call, patch, MagicMock
+from ..bench.Method_Coverage import covers
 from ..core.Threadable import Threadable
 from ..core.Thread_Manager import Thread_Manager
 from ..location.Line_Follower import Line_Follower, Line_Follower_State, Line_Follower_Direction
@@ -14,7 +15,8 @@ class TestLocationLineFollower(ThreadableTestCase):
         self.mock_callback = MagicMock()
         self.thread_manager = Thread_Manager()
         self.line_follower = Line_Follower(self.location, self.direction,
-                                           self.mock_callback, self.thread_manager)
+                                           self.mock_callback,
+                                           self.thread_manager)
 
     def test_initialization(self):
         # Test initialization of line follower with a local variable rather 
@@ -41,15 +43,18 @@ class TestLocationLineFollower(ThreadableTestCase):
         self.assertEqual(line_follower._state, Line_Follower_State.AT_LINE)
         self.assertFalse(line_follower._running)
 
-    def test_interface(self):
-        with patch('thread.start_new_thread') as thread_mock:
-            self.line_follower.activate()
-            thread_mock.assert_called_once_with(self.line_follower._loop, ())
+    @patch('thread.start_new_thread')
+    @covers(["activate", "deactivate"])
+    def test_thread(self, thread_mock):
+        self.line_follower.activate()
+        thread_mock.assert_called_once_with(self.line_follower._loop, ())
 
         self.assertTrue(self.line_follower._running)
         self.line_follower.deactivate()
         self.assertFalse(self.line_follower._running)
 
+    @covers(["enable", "disable", "read"])
+    def test_interface(self):
         with self.assertRaises(NotImplementedError):
             self.line_follower.enable()
         with self.assertRaises(NotImplementedError):

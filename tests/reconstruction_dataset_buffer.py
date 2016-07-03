@@ -37,13 +37,16 @@ class TestReconstructionDatasetBuffer(SettingsTestCase):
         self.dataset_buffer = Dataset_Buffer(settings)
 
     def test_initialization(self):
-        self.assertEqual(self.dataset_buffer.number_of_sensors, len(self.positions))
+        self.assertEqual(self.dataset_buffer.number_of_sensors,
+                         len(self.positions))
         self.assertEqual(self.dataset_buffer.origin, (0, 0))
         self.assertEqual(self.dataset_buffer.size, self.size)
 
+    def test_count(self):
         # One data point is ignored because a sensor cannot send to itself.
         self.assertEqual(self.dataset_buffer.count(), len(self.positions) - 1)
 
+    def test_get(self):
         for index in range(len(self.positions)):
             if index == self.sensor_id:
                 continue
@@ -60,7 +63,8 @@ class TestReconstructionDatasetBuffer(SettingsTestCase):
                 "to_valid": True,
                 "rssi": self.rssi[index]
             })
-            self.assertEqual(calibrated_rssi, self.rssi[index] - self.calibration[index])
+            self.assertEqual(calibrated_rssi,
+                             self.rssi[index] - self.calibration[index])
 
         self.assertEqual(self.dataset_buffer.get(), None)
         self.assertEqual(self.dataset_buffer.count(), 0)

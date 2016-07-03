@@ -30,7 +30,7 @@ class TestLocationLineFollowerArduino(ThreadableTestCase, SettingsTestCase,
         )
 
     def test_initialization(self):
-        # The settings argument must be `Arguments` or `Settings`
+        # The settings argument must be `Arguments` or `Settings`.
         with self.assertRaises(TypeError):
             Line_Follower_Arduino(
                 self.location, self.direction, self.mock_callback,
@@ -45,20 +45,25 @@ class TestLocationLineFollowerArduino(ThreadableTestCase, SettingsTestCase,
             )
 
         # `Arguments` is accepted (like `Settings` in `setUp`).
-        Line_Follower_Arduino(
+        line_follower = Line_Follower_Arduino(
             self.location, self.direction, self.mock_callback, self.arguments,
             self.thread_manager, usb_manager=self.usb_manager, delay=0
         )
 
-    def test_interface(self):
-        # Verify that the serial connection is set
-        self.assertIsInstance(self.line_follower._serial_connection,
+        # Verify that the serial connection is set.
+        self.assertIsInstance(line_follower._serial_connection,
                               serial.Serial)
-        self.assertEqual(self.line_follower._serial_connection,
-                         self.line_follower.get_serial_connection())
 
-        # Enable and disable do not influence anything.
+    def test_get_serial_connection(self):
+        self.assertEqual(self.line_follower.get_serial_connection(),
+                         self.line_follower._serial_connection)
+
+    def test_enable(self):
+        # `enable` does not influence anything.
         self.line_follower.enable()
+
+    def test_disable(self):
+        # `disable` does not influence anything.
         self.line_follower.disable()
 
     def mock_read(self):

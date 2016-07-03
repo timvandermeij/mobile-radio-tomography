@@ -8,10 +8,6 @@ class TestReconstructionSnapToBoundary(unittest.TestCase):
         height = 4
         self.snapper = Snap_To_Boundary(origin, width, height)
 
-    def test_same_point(self):
-        # Equal start and end points are rejected.
-        self.assertIsNone(self.snapper.execute([2, 6], [2, 6]))
-
     def test_is_outside(self):
         # Start point inside the network are rejected.
         self.assertFalse(self.snapper.is_outside(Point(1, 3)))
@@ -28,28 +24,6 @@ class TestReconstructionSnapToBoundary(unittest.TestCase):
 
         # Both start and end point outside the network are fine.
         self.assertIsNotNone(self.snapper.execute([-1, 5], [5, 3]))
-
-    def test_is_intersecting(self):
-        # Lines that do not intersect any boundary are rejected.
-        self.assertIsNone(self.snapper.execute([2, 0], [5, 2]))
-
-        # Lines that intersect at least one boundary are fine.
-        self.assertIsNotNone(self.snapper.execute([2, 1], [5, 3]))
-
-        # Lines that touch a boundary are fine.
-        self.assertIsNotNone(self.snapper.execute([3, 1], [5, 3]))
-
-        # Horizontal and vertical lines do not cause a division by zero error.
-        self.assertIsNone(self.snapper.execute([-1, 7], [5, 7]))
-        self.assertIsNone(self.snapper.execute([5, 1], [5, 7]))
-
-    def test_is_on_boundary(self):
-        # Points that are already on a boundary remain the same.
-        expected = [Point(2, 6), Point(2, 2)]
-        self.assertEqual(self.snapper.execute([2, 6], [2, 2]), expected)
-
-        expected = [Point(0, 3), Point(4, 3)]
-        self.assertEqual(self.snapper.execute([0, 3], [4, 3]), expected)
 
     def test_execute(self):
         # Left and right boundary, decreasing line (negative delta y).
@@ -75,6 +49,32 @@ class TestReconstructionSnapToBoundary(unittest.TestCase):
         # Vertical lines are handled properly.
         expected = [Point(2, 2), Point(2, 6)]
         self.assertEqual(self.snapper.execute([2, 1], [2, 7]), expected)
+
+    def test_execute_same_point(self):
+        # Equal start and end points are rejected.
+        self.assertIsNone(self.snapper.execute([2, 6], [2, 6]))
+
+    def test_execute_is_intersecting(self):
+        # Lines that do not intersect any boundary are rejected.
+        self.assertIsNone(self.snapper.execute([2, 0], [5, 2]))
+
+        # Lines that intersect at least one boundary are fine.
+        self.assertIsNotNone(self.snapper.execute([2, 1], [5, 3]))
+
+        # Lines that touch a boundary are fine.
+        self.assertIsNotNone(self.snapper.execute([3, 1], [5, 3]))
+
+        # Horizontal and vertical lines do not cause a division by zero error.
+        self.assertIsNone(self.snapper.execute([-1, 7], [5, 7]))
+        self.assertIsNone(self.snapper.execute([5, 1], [5, 7]))
+
+    def test_execute_is_on_boundary(self):
+        # Points that are already on a boundary remain the same.
+        expected = [Point(2, 6), Point(2, 2)]
+        self.assertEqual(self.snapper.execute([2, 6], [2, 2]), expected)
+
+        expected = [Point(0, 3), Point(4, 3)]
+        self.assertEqual(self.snapper.execute([0, 3], [4, 3]), expected)
 
     def test_execute_snap_inside(self):
         self.snapper._snap_inside = True

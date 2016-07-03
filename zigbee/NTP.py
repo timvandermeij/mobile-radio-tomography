@@ -2,6 +2,7 @@ import os
 import subprocess
 import time
 from Packet import Packet
+from RF_Sensor import RF_Sensor
 
 class NTP(object):
     def __init__(self, sensor):
@@ -9,6 +10,9 @@ class NTP(object):
         Initialize the NTP object. This object takes care of performing
         the NTP (network time protocol) algorithm.
         """
+
+        if not isinstance(sensor, RF_Sensor):
+            raise TypeError("`sensor` must be an `RF_Sensor` object")
 
         self._sensor = sensor
 

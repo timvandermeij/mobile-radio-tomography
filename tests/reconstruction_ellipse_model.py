@@ -24,11 +24,11 @@ class TestReconstructionEllipseModel(ModelTestCase):
         self.assertEqual(self.model.type, "reconstruction_ellipse_model")
 
     def test_assign(self):
-        length, source_distances, destination_distances = \
-            super(TestReconstructionEllipseModel, self).test_assign()
+        length, source_distances, destination_distances = self.get_assign_data()
 
         # The assigned weights must form an ellipse.
-        weights = self.model.assign(length, source_distances, destination_distances)
+        weights = self.model.assign(length, source_distances,
+                                    destination_distances)
 
         factor = 1.0 / np.sqrt(length)
         expected = np.array([
