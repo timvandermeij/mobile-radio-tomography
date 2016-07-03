@@ -279,17 +279,21 @@ class Method_Coverage(object):
         if test_class not in self._classes:
             self._classes[test_class] = self._convert_test(test)
 
-        if self._classes[test_class] is None:
+        data = self._classes[test_class]
+        if data is None:
             return
 
         target_methods = self._convert_test_method(test, test_method)
-        for target_method in target_methods:
-            if target_method not in self._classes[test_class]["methods"]:
+        for method in target_methods:
+            # Check whether the method actually exists in the actual class. 
+            # Allow testing protected methods, which only contribute to the 
+            # coverage report if they are tested.
+            if method in data["methods"] or method in data["protected_methods"]:
+                data["methods"][method] = True
+            else:
                 msg = "Test method '{}' covers nonexistent method '{}'"
                 self._add_warning(self._get_test_class_name(test_class),
-                                  msg.format(test_method, target_method))
-            else:
-                self._classes[test_class]["methods"][target_method] = True
+                                  msg.format(test_method, method))
 
     def _convert_test(self, test):
         """
@@ -314,22 +318,31 @@ class Method_Coverage(object):
         # inherited methods from superclasses.
         target_methods = {}
         target_properties = []
+        protected_methods = set()
         for method, attribute in target_class.__dict__.iteritems():
             # Filter internal methods and non-methods such as class variables. 
             if method.startswith('__') and method != "__init__":
                 continue
+            elif method.startswith('_'):
+                # Protected methods are separated from the normal methods.
+                protected_methods.add(method)
+                continue
 
             if isinstance(attribute, property):
+                # Properties are considered normal methods as well as being 
+                # tested by interface tests.
                 target_properties.append(method)
             elif not isinstance(attribute, (classmethod, types.FunctionType)):
                 continue
 
+            # Track the method (or property). It is initially not covered.
             target_methods[method] = False
 
         return {
             "module": target_module,
             "class": target_class,
             "methods": target_methods,
+            "protected_methods": protected_methods,
             "properties": target_properties
         }
 
