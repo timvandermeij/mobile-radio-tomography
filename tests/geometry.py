@@ -135,6 +135,13 @@ class TestGeometry(LocationTestCase):
         with self.assertRaises(TypeError):
             self.geometry.equalize(self.global_location, self.local_location)
 
+    def test_equals(self):
+        loc = LocationLocal(1.0, 2.0, -3.0)
+        self.assertTrue(self.geometry.equals(loc, loc))
+        # Integer coordinates are still equal to floats.
+        self.assertTrue(self.geometry.equals(loc, LocationLocal(1.0, 2, -3.0)))
+        self.assertFalse(self.geometry.equals(loc, LocationLocal(1, 2, -3.14)))
+
     def test_make_location(self):
         # Base geometry creates local locations with inverted down component.
         loc = LocationLocal(1.0, 2.0, -3.0)

@@ -46,12 +46,14 @@ class Geometry(object):
 
     def equalize(self, location1, location2):
         """
-        Ensure that two location objects are of the same class.
+        Ensure that the two `Location` objects `location1` and `location2` are
+        of the same class.
 
-        The base class only accepts `LocationLocal` objects.
-        Extending classes can support `LocationGlobal` and
-        `LocationGlobalRelative` classes and use this method to ensure that two
-        objects are comparable.
+        The base class only accepts `LocationLocal` and `Locations` objects.
+        Other types cause this method to raise a `TypeError`. Extending classes
+        can support `LocationGlobal` and `LocationGlobalRelative` classes.
+
+        Use this method to ensure that two objects are comparable.
 
         Returns the converted location objects.
         """
@@ -60,6 +62,22 @@ class Geometry(object):
         location2 = self.get_location_local(location2)
 
         return location1, location2
+
+    def equals(self, location1, location2):
+        """
+        Check whether the two `Location` objects `location1` and `location2`
+        describe the same location.
+
+        If the two objects cannot be cast to comparable types, then this method
+        raises a `TypeError`. Otherwise, it returns a boolean whether the
+        locations have the same coordinates.
+        """
+
+        location1, location2 = self.equalize(location1, location2)
+        if self.get_coordinates(location1) == self.get_coordinates(location2):
+            return True
+
+        return False
 
     def make_location(self, lat, lon, alt=0.0):
         """

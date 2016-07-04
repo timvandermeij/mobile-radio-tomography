@@ -1,9 +1,11 @@
 import json
 import os
+from collections import OrderedDict
 from PyQt4 import QtGui
 from Control_Panel_RF_Sensor_Sender import Control_Panel_RF_Sensor_Sender
 from Control_Panel_View import Control_Panel_View
 from Control_Panel_Waypoints_Widgets import WaypointsTableWidget
+from ..geometry.Geometry import Geometry
 from ..zigbee.Packet import Packet
 
 class Control_Panel_Waypoints_View(Control_Panel_View):
@@ -15,16 +17,25 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
         self._vehicle_labels = []
         self._tables = []
+
+        # Column labels for the table widget.
         self._column_labels = [
             "north", "east", "altitude", "wait for vehicle", "wait count"
         ]
+
         # Default values that are used when exporting/importing tables.
         # We initially require data for the north/east column, but the altitude 
         # and wait ID can be left out.
         self._column_defaults = (None, None, 0.0, 0, 1)
 
+        # Internal field names that can be used for indicing.
+        fields = ["north", "east", "alt", "wait_id", "wait_count"]
+        self._fields = OrderedDict(zip(fields, range(len(self._column_labels))))
+
         self._listWidget = None
         self._stackedLayout = None
+
+        self._geometry = Geometry()
 
     def load(self, data):
         self._listWidget = QtGui.QListWidget()
@@ -70,6 +81,10 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         import_button.clicked.connect(self._import)
         export_button = QtGui.QPushButton("Export")
         export_button.clicked.connect(self._export)
+        compress_button = QtGui.QPushButton("Compress")
+        compress_button.clicked.connect(self._compress)
+        uncompress_button = QtGui.QPushButton("Uncompress")
+        uncompress_button.clicked.connect(self._uncompress)
         send_button = QtGui.QPushButton("Send")
         send_button.clicked.connect(self._send)
 
@@ -83,6 +98,9 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         hbox_buttons.addStretch(1)
         hbox_buttons.addWidget(import_button)
         hbox_buttons.addWidget(export_button)
+        hbox_buttons.addStretch(1)
+        hbox_buttons.addWidget(compress_button)
+        hbox_buttons.addWidget(uncompress_button)
         hbox_buttons.addStretch(1)
         hbox_buttons.addWidget(send_button)
 
@@ -154,6 +172,167 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             type_cast = float
 
         return type_cast(text)
+
+    def _get_wait_id(self, vehicle, waypoint):
+        """
+        Retrieve the vehicle sensor ID to wait for at a specific waypoint.
+
+        The given `vehicle` is the sensor ID of the vehicle that will receive
+        the waypoint. `waypoint` is a list of formatted row data. If it contains
+        a wait ID, then it is returned. If the wait ID is the default, i.e.,
+        synchronize with all vehicles if synchronization is enabled, and there
+        are only two vehicles, then return the ID of the other sensor.
+        Otherwise, `0` is returned.
+        """
+
+        wait_id = waypoint[self._fields["wait_id"]]
+        number_of_sensors = self._controller.rf_sensor.number_of_sensors
+        if number_of_sensors == 2:
+            if wait_id == self._column_defaults[self._fields["wait_id"]]:
+                return (vehicle + 1) % number_of_sensors + 1
+
+        return wait_id
+
+    def _make_location(self, waypoint):
+        """
+        Convert a formatted waypoint list `waypoint` into a `Location` object.
+
+        Returns the `LocationLocal` object.
+        """
+
+        return self._geometry.make_location(*waypoint[0:3])
+
+    def _uncompress_waypoint(self, data, row):
+        """
+        Given a list of formatted waypoint dictionaries `data`, convert the
+        waypoint row `row` into a full range of waypoints.
+
+        If the waypoint data has a "wait_count" greater than one, then the
+        waypoint is transformed into a range between the previous waypoint and
+        the current waypoint. If there is no previous waypoint, then we assume
+        that the we wait "wait_count" number of times at the current waypoint.
+
+        Returns the list of resulting `LocationLocal` objects, with the same
+        length as the "wait_count".
+        """
+
+        count = data[row][self._fields["wait_count"]]
+        current_loc = self._make_location(data[row])
+        if row < 1:
+            return [current_loc] * count
+
+        previous_loc = self._make_location(data[row-1])
+        return self._geometry.get_location_range(previous_loc, current_loc,
+                                                 count=count)
+
+    def _compress_waypoints(self, vehicle, data):
+        """
+        Compress the given formatted list of waypoints `data` that was retrieved
+        from the table for the given vehicle ID `vehicle`.
+
+        This method attempts to find subsequent waypoints that match with
+        a range generated from the previous waypoint and the last waypoint in
+        the sequence found. The longest sequence is matched and replaced with
+        a single waypoint that holds a "wait_count" to generate the same range.
+
+        Waypoints that are already "compressed" are accounted for, i.e., they
+        are uncompressed using their wait count during the range matching.
+
+        The first and last waypoints of the table are mostly retained. The first
+        waypoint needs to be retained because we either do not know how to
+        generate it from a range starting from the home location which is not
+        available at this point, or the waypoint describes the home location.
+        However, if the second waypoint is the same as the first (and so on),
+        then these are compressed into one waypoint with correct "wait_count".
+        The last waypoint cannot be the start of a range, although it can be
+        the end of a compressed range, in which case its wait count is updated.
+        """
+
+        row = 0
+        while row < len(data) - 1:
+            # The "previous" location upon which we may be able to create 
+            # a range of subsequent waypoints.
+            start_location = self._make_location(data[max(0, row-1)])
+
+            # The wait ID of the first waypoint in the sequence of waypoints.
+            wait_id = self._get_wait_id(vehicle, data[row])
+
+            # The last row number that is a part of the range thus far.
+            end = row
+
+            # The range of locations from the sequence of waypoints thus far.
+            L = self._uncompress_waypoint(data, row)
+
+            # The length of the range of locations thus far, which could become 
+            # the "wait_count" of the compressed range.
+            wait_count = len(L)
+            for range_row in range(row + 1, len(data)):
+                # If the second row has a different vehicle wait ID, then the 
+                # range ends before it.
+                if wait_id != self._get_wait_id(vehicle, data[range_row]):
+                    break
+
+                # Add the locations of the next waypoint to the range, so that 
+                # we can determine whether we can create this range using just 
+                # one waypoint.
+                L.extend(self._uncompress_waypoint(data, range_row))
+
+                # If we start at the first waypoint, then only check whether 
+                # all locations are equal to the this location. If so, then we 
+                # can safely compress it into that waypoint. Otherwise, a range 
+                # has no starting location, so we cannot make different ranges.
+                if row == 0:
+                    if all(self._geometry.equals(start_location, a) for a in L):
+                        end = range_row
+                        wait_count = len(L)
+                        continue
+
+                    break
+
+                # Create the range of locations that would be generated if we 
+                # only had the last waypoint, and the previous one before the 
+                # range started.
+                R = self._geometry.get_location_range(start_location, L[-1],
+                                                      count=len(L))
+
+                # Check if the current "explicit" range is the same as 
+                # generated range. If it is, then the generated range is still 
+                # valid and we could replace those waypoints with only one.
+                if any(not self._geometry.equals(a, b) for a, b in zip(L, R)):
+                    break
+
+                end = range_row
+                wait_count = len(L)
+
+            if end != row:
+                # We found a range with more than one waypoint, so replace it 
+                # with the last waypoint in the range. Update its "wait_count" 
+                # based on the length of the actual range.
+                new_waypoint = list(data[end])
+                new_waypoint[self._fields["wait_count"]] = wait_count
+                data[row:end+1] = [tuple(new_waypoint)]
+
+            row += 1
+
+    def _uncompress_waypoints(self, vehicle, data):
+        """
+        Uncompress the given formatted list of waypoints `data` that was
+        retrieved from the table for the given vehicle ID `vehicle`.
+
+        This replaces each waypoint that has a "wait_count" with the
+        corresponding range of locations from the previous waypoint to that
+        waypoint. It also fills default "wait_id" fields if we only have two
+        sensor vehicles.
+        """
+
+        row = 0
+        while row < len(data):
+            locations = self._uncompress_waypoint(data, row)
+            wait_id = self._get_wait_id(vehicle, data[row])
+            data[row:row+1] = [
+                [loc.north, loc.east, loc.down, wait_id, 1] for loc in locations
+            ]
+            row += len(locations)
 
     def _export_waypoints(self, repeat=True, errors=True):
         """
@@ -310,6 +489,48 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             QtGui.QMessageBox.critical(self._controller.central_widget,
                                        "File error", message)
 
+    def _compress(self):
+        """
+        Compress the waypoints in the tables in any way possible.
+        """
+
+        try:
+            waypoints = self._export_waypoints()[0]
+        except ValueError as e:
+            QtGui.QMessageBox.critical(self._controller.central_widget,
+                                       "Waypoint incorrect", e.message)
+            return
+
+        for vehicle, data in waypoints.iteritems():
+            self._compress_waypoints(vehicle + 1, data)
+
+        try:
+            self._import_waypoints(waypoints, from_json=False)
+        except ValueError as e:
+            QtGui.QMessageBox.critical(self._controller.central_widget,
+                                       "Waypoint incorrect", e.message)
+
+    def _uncompress(self):
+        """
+        Inflate the waypoints in the tables in every way possible.
+        """
+
+        try:
+            waypoints = self._export_waypoints()[0]
+        except ValueError as e:
+            QtGui.QMessageBox.critical(self._controller.central_widget,
+                                       "Waypoint incorrect", e.message)
+            return
+
+        for vehicle, data in waypoints.iteritems():
+            self._uncompress_waypoints(vehicle + 1, data)
+
+        try:
+            self._import_waypoints(waypoints, from_json=False)
+        except ValueError as e:
+            QtGui.QMessageBox.critical(self._controller.central_widget,
+                                       "Waypoint incorrect", e.message)
+
     def _send(self):
         """
         Send the waypoints from all tables to the corresponding vehicles.
@@ -351,11 +572,11 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
         packet = Packet()
         packet.set("specification", "waypoint_add")
-        packet.set("latitude", waypoint[0])
-        packet.set("longitude", waypoint[1])
-        packet.set("altitude", waypoint[2])
-        packet.set("wait_id", int(waypoint[3]))
-        packet.set("wait_count", int(waypoint[4]))
+        packet.set("latitude", waypoint[self._fields["north"]])
+        packet.set("longitude", waypoint[self._fields["east"]])
+        packet.set("altitude", waypoint[self._fields["alt"]])
+        packet.set("wait_id", int(waypoint[self._fields["wait_id"]]))
+        packet.set("wait_count", int(waypoint[self._fields["wait_count"]]))
         packet.set("index", index)
         packet.set("to_id", vehicle)
 
