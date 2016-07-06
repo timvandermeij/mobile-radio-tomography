@@ -24,17 +24,18 @@ class TestReconstructionLineModel(ModelTestCase):
         self.assertEqual(self.model.type, "reconstruction_line_model")
 
     def test_assign(self):
-        length, source_distances, destination_distances = \
-            super(TestReconstructionLineModel, self).test_assign()
+        length, source_distances, destination_distances = self.get_assign_data()
 
-        # The assigned weights must form a line. Note that this is the most difficult
-        # case to determine which pixels are intersected because the distances from
-        # the pixel centers to the endpoints are the largest when the line is
-        # perfectly diagonal. Our algorithm finds that not only the pixels that are
-        # strictly on the diagonal are intersected, but also some pixels very close
-        # to them. Technically their corners are indeed intersected, but opinions may
-        # differ on whether or not those pixels should be considered intersected.
-        weights = self.model.assign(length, source_distances, destination_distances)
+        # The assigned weights must form a line. Note that this is the most 
+        # difficult case to determine which pixels are intersected because the 
+        # distances from the pixel centers to the endpoints are the largest 
+        # when the line is perfectly diagonal. Our algorithm finds that not 
+        # only the pixels that are strictly on the diagonal are intersected, 
+        # but also some pixels very close to them. Technically their corners 
+        # are indeed intersected, but opinions may differ on whether or not 
+        # those pixels should be considered intersected.
+        weights = self.model.assign(length, source_distances,
+                                    destination_distances)
         expected = np.array([
             1, 1, 0, 0,
             1, 1, 1, 0,

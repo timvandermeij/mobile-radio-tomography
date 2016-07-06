@@ -1,16 +1,17 @@
 import numpy as np
 from dronekit import LocationLocal
+from ..bench.Method_Coverage import covers
 from ..location.AStar import AStar
 from ..trajectory.Memory_Map import Memory_Map
 from environment import EnvironmentTestCase
 
-class TestAStar(EnvironmentTestCase):
+class TestLocationAStar(EnvironmentTestCase):
     def setUp(self):
         self.register_arguments([
             "--vehicle-class", "Mock_Vehicle", "--geometry-class", "Geometry"
         ], use_infrared_sensor=False)
 
-        super(TestAStar, self).setUp()
+        super(TestLocationAStar, self).setUp()
 
         self.size = 10
         self.resolution = 5
@@ -45,14 +46,15 @@ class TestAStar(EnvironmentTestCase):
         self.assertEqual(path, [])
         self.assertEqual(dist, np.inf)
 
-class TestAStarGrid(EnvironmentTestCase):
+@covers(AStar)
+class TestLocationAStarGrid(EnvironmentTestCase):
     def setUp(self):
         self.register_arguments([
             "--vehicle-class", "Mock_Vehicle",
             "--geometry-class", "Geometry_Grid"
         ], use_infrared_sensor=False)
 
-        super(TestAStarGrid, self).setUp()
+        super(TestLocationAStarGrid, self).setUp()
 
         self.size = 10
         self.resolution = 1

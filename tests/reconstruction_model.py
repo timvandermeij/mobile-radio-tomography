@@ -11,13 +11,13 @@ from ..settings.Arguments import Arguments
 
 class ModelTestCase(unittest.TestCase):
     """
-    Test case for the signal disruption model classes. It provides an
-    example for testing weight assignment.
+    Test case for the signal disruption model classes. It provides
+    example data for testing weight assignment.
     """
 
-    def test_assign(self):
+    def get_assign_data(self):
         """
-        Classes that inherit this test case class must extend this method.
+        Generate data for testing the `assign` method of `Model` classes.
         """
 
         def distance(x, y):

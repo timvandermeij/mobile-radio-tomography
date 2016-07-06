@@ -16,6 +16,7 @@ class TestDistanceSensor(EnvironmentTestCase):
         self.assertEqual(self.distance_sensor.id, 0)
         self.assertEqual(self.distance_sensor.angle, 45.0)
 
+    def test_get_distance(self):
         with self.assertRaises(NotImplementedError):
             self.distance_sensor.get_distance()
 

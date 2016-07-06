@@ -17,7 +17,7 @@ class TestZigBeeSettingsReceiver(EnvironmentTestCase):
         self.rf_sensor = self.environment.get_rf_sensor()
         self.settings_receiver = self.environment._settings_receiver
 
-    def test_setup(self):
+    def test_initialization(self):
         self.assertEqual(self.settings_receiver._environment, self.environment)
         self.assertEqual(self.settings_receiver._arguments, self.arguments)
         self.assertEqual(self.settings_receiver._rf_sensor, self.rf_sensor)

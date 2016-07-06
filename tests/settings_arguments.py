@@ -6,6 +6,7 @@ from argparse import Action, ArgumentParser
 from mock import patch, MagicMock
 
 # Package imports
+from ..bench.Method_Coverage import covers
 from ..settings import Arguments, Settings
 from settings import SettingsTestCase
 
@@ -13,9 +14,9 @@ class MockModule(object):
     def __dir__(self):
         return ['g', 'h', 'i', 'j']
 
-class TestArguments(SettingsTestCase):
+class TestSettingsArguments(SettingsTestCase):
     def setUp(self):
-        super(TestArguments, self).setUp()
+        super(TestSettingsArguments, self).setUp()
         self.defaults_file = "tests/settings/defaults.json"
         self.positional_args = [
             {
@@ -45,7 +46,7 @@ class TestArguments(SettingsTestCase):
         self.assertIsInstance(arguments.parser, ArgumentParser)
         self.assertEqual(arguments.groups, {})
 
-    def test_default_settings(self):
+    def test_initialization_default_settings(self):
         arguments = Arguments("tests/settings/invalid.json", [
             "tests/settings/settings.json"
         ], defaults_file=self.defaults_file)
@@ -56,7 +57,7 @@ class TestArguments(SettingsTestCase):
         self.assertIsInstance(settings, Settings)
         self.assertEqual(settings.get("bar"), 2)
 
-    def test_settings(self):
+    def test_get_settings(self):
         arguments = Arguments("tests/settings/settings.json", [
             '--bar', '5', '--no-baz', '--long-name', 'my_text',
             '--items', '4', '5', '--other'
@@ -91,6 +92,9 @@ class TestArguments(SettingsTestCase):
         self.assertRegexpMatches(output.getvalue(), "--help")
         self.assertRegexpMatches(output.getvalue(), r"Foo component \(foo\)")
 
+    @covers("get_positional_args")
+    @covers("get_positional_actions")
+    @covers("get_positional_value")
     def test_positional(self):
         arguments = Arguments("tests/settings/settings.json", ["3", "abc"],
                               positionals=self.positional_args,
@@ -107,6 +111,7 @@ class TestArguments(SettingsTestCase):
         self.assertEqual(arguments.get_positional_value("second"), "abc")
         self.assertIsNone(arguments.get_positional_value("third"))
 
+    @covers("_handle_positionals")
     def test_positional_required(self):
         # Buffer help output so it doesn't mess up the test output.
         output = StringIO()
@@ -117,8 +122,10 @@ class TestArguments(SettingsTestCase):
                               positionals=self.positional_args,
                               defaults_file=self.defaults_file)
 
-        self.assertRegexpMatches(output.getvalue(), "Positional argument 'first' is required")
+        self.assertRegexpMatches(output.getvalue(),
+                                 "Positional argument 'first' is required")
 
+    @covers("_handle_positionals")
     def test_positional_error_help(self):
         # Buffer help output so it doesn't mess up the test output.
         output = StringIO()
@@ -130,9 +137,12 @@ class TestArguments(SettingsTestCase):
                               positionals=self.positional_args,
                               defaults_file=self.defaults_file)
 
-        self.assertRegexpMatches(output.getvalue(), "could not convert string to float: aah")
+        # The output contains the original error as well as the help message.
+        self.assertRegexpMatches(output.getvalue(),
+                                 "could not convert string to float: aah")
         self.assertRegexpMatches(output.getvalue(), "--help")
 
+    @covers("check_help")
     def test_arguments_after_help(self):
         arguments = Arguments("tests/settings/settings.json", ['--no-baz'],
                               defaults_file=self.defaults_file)
@@ -155,6 +165,7 @@ class TestArguments(SettingsTestCase):
         child = arguments.get_settings("child")
         self.assertTrue(child.get("baz"))
 
+    @covers("check_help")
     def test_required_settings(self):
         arguments = Arguments("tests/settings/settings.json", ['--long-name'],
                               defaults_file=self.defaults_file)
@@ -172,6 +183,7 @@ class TestArguments(SettingsTestCase):
 
         self.assertRegexpMatches(output.getvalue(), "expected one argument")
 
+    @covers("check_help")
     def test_required_error(self):
         arguments = Arguments("tests/settings/settings.json", ['--long-name='],
                               defaults_file=self.defaults_file)
@@ -189,6 +201,7 @@ class TestArguments(SettingsTestCase):
 
         self.assertRegexpMatches(output.getvalue(), "must be nonempty")
 
+    @covers("check_help")
     def test_nonexistent_settings(self):
         arguments = Arguments("tests/settings/settings.json", ['--qux', '42'],
                               defaults_file=self.defaults_file)
@@ -205,6 +218,36 @@ class TestArguments(SettingsTestCase):
 
         self.assertRegexpMatches(output.getvalue(), "unrecognized arguments")
 
+    def test_error(self):
+        arguments = Arguments("tests/settings/settings.json", [],
+                              defaults_file=self.defaults_file)
+
+        # Buffer help output so it doesn't mess up the test output and we can 
+        # actually test whether it prints help.
+        output = StringIO()
+        with patch('sys.stdout', output):
+            with patch('sys.stderr', output):
+                with self.assertRaises(SystemExit):
+                    arguments.error("test message")
+
+        self.assertRegexpMatches(output.getvalue(), "test message")
+
+    def test_error_help(self):
+        arguments = Arguments("tests/settings/settings.json", ["--help"],
+                              defaults_file=self.defaults_file)
+
+        # Buffer help output so it doesn't mess up the test output and we can 
+        # actually test whether it prints help.
+        output = StringIO()
+        with patch('sys.stdout', output):
+            with patch('sys.stderr', output):
+                with self.assertRaises(SystemExit):
+                    arguments.error("test message")
+
+        # The output contains the error message as well as the help message.
+        self.assertRegexpMatches(output.getvalue(), "test message")
+        self.assertRegexpMatches(output.getvalue(), "--help")
+
     def test_get_help(self):
         arguments = Arguments("tests/settings/settings.json", [],
                               defaults_file=self.defaults_file)
@@ -212,6 +255,7 @@ class TestArguments(SettingsTestCase):
         self.assertEqual(arguments.get_help("okey", info), info["help"])
         self.assertEqual(arguments.get_help("long_setting", {}), "Long setting")
 
+    @covers("_get_argument_options")
     def test_choices(self):
         arguments = Arguments("tests/settings/settings.json", ['--select='],
                               defaults_file=self.defaults_file)

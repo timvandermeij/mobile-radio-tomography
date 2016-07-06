@@ -2,6 +2,7 @@ import math
 from dronekit import LocationGlobalRelative
 from mock import call, MagicMock, Mock
 from environment import EnvironmentTestCase
+from ..bench.Method_Coverage import covers
 
 class TestDistanceSensorSimulator(EnvironmentTestCase):
     def setUp(self):
@@ -58,6 +59,10 @@ class TestDistanceSensorSimulator(EnvironmentTestCase):
         self.assertEqual(args[1], index_mocks[0])
         self.assertEqual(args[2], index_mocks[-1])
 
+    @covers("draw_current_edge")
+    @covers("get_current_edge")
+    @covers("_get_object_distance")
+    @covers("_get_face_distance")
     def test_get_distance(self):
         self.environment._load_objects()
 
@@ -89,6 +94,10 @@ class TestDistanceSensorSimulator(EnvironmentTestCase):
         self.assertEqual(self.distance_sensor.get_distance(location=loc), 0.0)
         self.assertIsNone(self.distance_sensor.current_edge)
 
+    @covers("draw_current_edge")
+    @covers("get_current_edge")
+    @covers("_get_object_distance")
+    @covers("_get_circle_distance")
     def test_get_distance_circle(self):
         self.environment._load_objects()
 
@@ -98,6 +107,10 @@ class TestDistanceSensorSimulator(EnvironmentTestCase):
                               LocationGlobalRelative)
         self.check_draw_current_edge_calls()
 
+    @covers("draw_current_edge")
+    @covers("get_current_edge")
+    @covers("_get_object_distance")
+    @covers("_get_plane_distance")
     def test_get_distance_scenefile(self):
         self.environment._load_objects(scenefile="tests/vrml/castle.wrl")
         self.distance_sensor.get_distance()

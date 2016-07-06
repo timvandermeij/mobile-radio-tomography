@@ -29,7 +29,8 @@ class TestControlInfraredSensor(ThreadableTestCase):
 
         self.arguments = Arguments("settings.json", [])
         self.settings = self.arguments.get_settings("infrared_sensor")
-        self.infrared_sensor = Infrared_Sensor(self.settings, self.thread_manager)
+        self.infrared_sensor = Infrared_Sensor(self.settings,
+                                               self.thread_manager)
         self.mock_callback = MagicMock()
 
     def tearDown(self):
@@ -103,10 +104,11 @@ class TestControlInfraredSensor(ThreadableTestCase):
             self.assertEqual(len(args), 1)
             self.assertRegexpMatches(args[0], r"/remotes/.*\.lircd\.conf$")
 
-        # Test whether we check that the configuration file exists
+        # `_configure` checks that the configuration file exists.
+        is_file = lambda f: "/remotes/" in f and f.endswith(".lircd.conf")
         methods = {
             'isdir.return_value': True,
-            'isfile.side_effect': lambda f: "/remotes/" in f and f.endswith(".lircd.conf")
+            'isfile.side_effect': is_file
         }
         with patch('os.path', **methods) as path_mock:
             with self.assertRaisesRegexp(OSError, r".*\.lircrc.* does not exist"):
@@ -144,7 +146,8 @@ class TestControlInfraredSensor(ThreadableTestCase):
     def test_register(self):
         # We must have an existing button.
         with self.assertRaises(KeyError):
-            self.infrared_sensor.register("!nonexistent malformed button!", self.mock_callback)
+            self.infrared_sensor.register("!nonexistent malformed button!",
+                                          self.mock_callback)
 
         # We must have a (normal) callback.
         with self.assertRaises(ValueError):
@@ -152,38 +155,44 @@ class TestControlInfraredSensor(ThreadableTestCase):
 
         # We must have callable functions for all given callbacks.
         with self.assertRaises(ValueError):
-            self.infrared_sensor.register("stop", self.mock_callback, "not a function")
+            self.infrared_sensor.register("stop", self.mock_callback,
+                                          "not a function")
 
-    def test_callbacks(self):
+    def test_handle_lirc_code(self):
         # Test normal event callback.
         self.infrared_sensor.register("start", self.mock_callback)
 
         self.infrared_sensor._handle_lirc_code(None)
-        self.assertFalse(self.mock_callback.called)
+        self.mock_callback.assert_not_called()
         self.infrared_sensor._handle_lirc_code(['start'])
-        self.assertEqual(self.mock_callback.call_count, 1)
+        self.mock_callback.assert_called_once_with()
 
         # Test additional release callback.
         self.mock_callback.reset_mock()
-        mock_callback = MagicMock()
-        mock_release_callback = MagicMock()
+        mock_stop_callback = MagicMock()
+        mock_stop_release_callback = MagicMock()
 
-        self.infrared_sensor.register("stop", mock_callback, mock_release_callback)
+        self.infrared_sensor.register("stop", mock_stop_callback,
+                                      mock_stop_release_callback)
 
         self.infrared_sensor._handle_lirc_code(None)
-        self.assertFalse(mock_callback.called)
-        self.assertFalse(mock_release_callback.called)
+        mock_stop_callback.assert_not_called()
+        mock_stop_release_callback.assert_not_called()
 
         self.infrared_sensor._handle_lirc_code(['stop'])
-        self.assertEqual(mock_callback.call_count, 1)
-        self.assertFalse(mock_release_callback.called)
+        mock_stop_callback.assert_called_once_with()
+        mock_stop_release_callback.assert_not_called()
 
+        # The release callback is called once the stop code is not provided.
+        # The normal callback is not called. Another non-code does not call the 
+        # release callback again.
+        mock_stop_callback.reset_mock()
         self.infrared_sensor._handle_lirc_code(None)
         self.infrared_sensor._handle_lirc_code(None)
-        self.assertEqual(mock_callback.call_count, 1)
-        self.assertEqual(mock_release_callback.call_count, 1)
-        # Start button was not pressed.
-        self.assertFalse(self.mock_callback.called)
+        mock_stop_callback.assert_not_called()
+        mock_stop_release_callback.assert_called_once_with()
+        # Start button was not pressed, so its callback is not called.
+        self.mock_callback.assert_not_called()
 
     @patch('thread.start_new_thread')
     def test_activate(self, thread_mock):

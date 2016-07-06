@@ -1,5 +1,5 @@
 from Environment import Environment
-from VRMLLoader import VRMLLoader
+from VRML_Loader import VRML_Loader
 
 class Environment_Simulator(Environment):
     """
@@ -30,7 +30,7 @@ class Environment_Simulator(Environment):
 
     def _load_objects(self, scenefile=None, translation=None):
         if scenefile is not None:
-            loader = VRMLLoader(self, scenefile, translation)
+            loader = VRML_Loader(self, scenefile, translation)
             self.objects = loader.get_objects()
             return
 

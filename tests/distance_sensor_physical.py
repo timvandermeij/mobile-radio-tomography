@@ -1,5 +1,6 @@
 from mock import call
 from environment import EnvironmentTestCase
+from ..bench.Method_Coverage import covers
 
 class TestDistanceSensorPhysical(EnvironmentTestCase):
     def setUp(self):
@@ -29,6 +30,7 @@ class TestDistanceSensorPhysical(EnvironmentTestCase):
         self.distance_sensor.gpio.output.assert_called_once_with(
             self.settings.get("trigger_pin"), False)
 
+    @covers("get_distance")
     def test_elapsed_time_triggers(self):
         # Configure the RPi.GPIO.input function to return a specific sequence 
         # for the echo pin values, to test that the echo pin is checked the 
@@ -48,6 +50,7 @@ class TestDistanceSensorPhysical(EnvironmentTestCase):
             call(self.settings.get("echo_pin"))
         ] * 4)
 
+    @covers("_convert_elapsed_time_to_distance")
     def test_elapsed_time_to_distance_conversion(self):
         elapsed_time = 5.153064012527466
         distance_meters = (elapsed_time * self.settings.get("speed_of_sound")) / 2

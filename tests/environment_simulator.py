@@ -22,6 +22,8 @@ class TestEnvironmentSimulator(EnvironmentTestCase):
         translation = self.environment.get_location(1, 2, 3)
         actual, expected = self.environment.geometry.equalize(home, translation)
         self.assertEqual(actual, expected)
+
+    def test_get_objects(self):
         self.assertNotEqual(self.environment.get_objects(), [])
 
     def test_set_location_check(self):

@@ -1,6 +1,7 @@
 import math
 from dronekit import LocationLocal, LocationGlobal
 from mock import patch, MagicMock, PropertyMock
+from ..bench.Method_Coverage import covers
 from ..core.Import_Manager import Import_Manager
 from ..core.Thread_Manager import Thread_Manager
 from ..core.USB_Manager import USB_Manager
@@ -99,9 +100,10 @@ class TestEnvironment(EnvironmentTestCase):
         super(TestEnvironment, self).setUp()
 
         self.servos = []
-        for pin in (6, 7):
+        for pin, value in [(6, 45), (7, 90)]:
             methods = {
-                "get_pin.return_value": pin
+                "get_pin.return_value": pin,
+                "get_value.return_value": value
             }
             self.servos.append(MagicMock(spec=Servo, **methods))
 
@@ -148,9 +150,17 @@ class TestEnvironment(EnvironmentTestCase):
                                                 usb_manager=usb_manager,
                                                 simulated=True)
 
-        # Base class does not provide simulated objects or distance sensors.
+    @covers(["get_objects", "get_distance_sensors"])
+    def test_base_interface(self):
+        geometry = Geometry_Spherical()
+        import_manager = Import_Manager()
+        thread_manager = Thread_Manager()
+        usb_manager = USB_Manager()
+        vehicle = Mock_Vehicle(self.arguments, geometry, import_manager,
+                               thread_manager, usb_manager)
         environment = Environment(vehicle, geometry, self.arguments,
                                   import_manager, thread_manager, usb_manager)
+        # Base class does not provide simulated objects or distance sensors.
         self.assertEqual(environment.get_objects(), [])
         with self.assertRaises(NotImplementedError):
             environment.get_distance_sensors()
@@ -165,6 +175,11 @@ class TestEnvironment(EnvironmentTestCase):
         self.assertEqual(self.environment.arguments, self.arguments)
         self.assertTrue(self.environment.settings.get("infrared_sensor"))
 
+    @covers([
+        "get_vehicle", "get_geometry", "get_arguments", "get_import_manager",
+        "get_thread_manager", "get_usb_manager", "get_distance_sensors",
+        "get_rf_sensor", "get_infrared_sensor", "get_servos"
+    ])
     def test_interface(self):
         self.assertEqual(self.environment.get_vehicle(),
                          self.environment.vehicle)
@@ -190,6 +205,7 @@ class TestEnvironment(EnvironmentTestCase):
 
         self.assertIsInstance(self.environment.get_rf_sensor(), RF_Sensor)
         self.assertIsNotNone(self.environment.get_infrared_sensor())
+        self.assertEqual(self.environment.get_servos(), self.servos)
 
     def test_on_servos(self):
         pwms = {
@@ -208,6 +224,7 @@ class TestEnvironment(EnvironmentTestCase):
                                           "home_location", loc)
         self.assertEqual(self.environment.geometry.home_location, loc)
 
+    @covers(["add_packet_action", "receive_packet"])
     def test_packet_action(self):
         # Callback must be callable
         with self.assertRaises(TypeError):
@@ -238,6 +255,7 @@ class TestEnvironment(EnvironmentTestCase):
         self.environment.receive_packet(packet)
         mock_callback.assert_not_called()
 
+    @covers(["get_location", "get_raw_location"])
     def test_location(self):
         location = self.environment.vehicle.location.global_relative_frame
         self.assertEqual(location, self.environment.get_location())
@@ -254,7 +272,10 @@ class TestEnvironment(EnvironmentTestCase):
             self.assertEqual(raw_location, (loc.north, loc.east))
             self.assertEqual(waypoint_index, 0)
 
-    def test_location_valid(self):
+    @covers([
+        "location_valid", "is_measurement_valid", "invalidate_measurement"
+    ])
+    def test_valid(self):
         rf_sensor = self.environment.get_rf_sensor()
 
         self.assertEqual(self.environment._valid_measurements, {})
@@ -278,7 +299,31 @@ class TestEnvironment(EnvironmentTestCase):
         self.assertTrue(self.environment.location_valid(other_valid=True, other_id=rf_sensor.id + 1, other_index=0))
         self.assertTrue(self.environment.is_measurement_valid())
 
+    def test_get_distance(self):
+        loc = LocationLocal(12.0, 5.0, 0.0)
+        # 12**2 + 5**2 = 144 + 25 which is 13 squared.
+        self.assertEqual(self.environment.get_distance(loc), 13.0)
+
+    def test_get_yaw(self):
+        vehicle = self.environment.vehicle
+        vehicle.attitude = MockAttitude(0.0, 0.25*math.pi, 0.0, vehicle)
+        self.assertEqual(self.environment.get_yaw(), 0.25*math.pi)
+
+    def test_get_sensor_yaw(self):
+        vehicle = self.environment.vehicle
+        vehicle.attitude = MockAttitude(0.0, 0.5*math.pi, 0.0, vehicle)
+        self.assertEqual(self.environment.get_sensor_yaw(), 0.75*math.pi)
+        self.assertEqual(self.environment.get_sensor_yaw(id=1), math.pi)
+        # A sensor ID outside the scope of the number of servos means that we 
+        # receive the vehicle's yaw.
+        self.assertEqual(self.environment.get_sensor_yaw(id=6), 0.5*math.pi)
+
     def test_get_angle(self):
         vehicle = self.environment.vehicle
         vehicle.attitude = MockAttitude(0.0, 0.5*math.pi, 0.0, vehicle)
         self.assertEqual(self.environment.get_angle(), 0.0)
+
+    def test_get_pitch(self):
+        vehicle = self.environment.vehicle
+        vehicle.attitude = MockAttitude(0.75*math.pi, 0.0, 0.0, vehicle)
+        self.assertEqual(self.environment.get_pitch(), 0.75*math.pi)

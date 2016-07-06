@@ -15,7 +15,16 @@ class SettingsTestCase(unittest.TestCase):
         Settings.settings_files = {}
 
 class TestSettings(SettingsTestCase):
-    def test_missing_file(self):
+    def test_get_settings(self):
+        data = Settings.get_settings("tests/settings/settings.json")
+        self.assertIsInstance(data, dict)
+        self.assertIn("tests/settings/settings.json", Settings.settings_files)
+        self.assertEqual(Settings.get_settings("tests/settings/settings.json"),
+                         data)
+
+        self.assertEqual(Settings.get_settings("tests/settings/empty.json"), {})
+
+    def test_init_missing_file(self):
         with self.assertRaises(IOError):
             Settings("tests/settings/invalid.json", "foo")
 
@@ -23,7 +32,7 @@ class TestSettings(SettingsTestCase):
             Settings("tests/settings/settings.json", "foo",
                      defaults_file="tests/settings/invalid.json")
 
-    def test_missing_component(self):
+    def test_init_missing_component(self):
         with self.assertRaises(KeyError):
             Settings("tests/settings/settings.json", "invalid",
                      defaults_file="tests/settings/defaults.json")
@@ -33,21 +42,26 @@ class TestSettings(SettingsTestCase):
                             defaults_file="tests/settings/defaults.json")
         self.assertEqual(settings.name, "Foo component")
 
-    def test_existing_key(self):
+    def test_component_name(self):
+        settings = Settings("tests/settings/settings.json", "foo",
+                            defaults_file="tests/settings/defaults.json")
+        self.assertEqual(settings.component_name, "foo")
+
+    def test_get_existing_key(self):
         settings = Settings("tests/settings/empty.json", "foo",
                             defaults_file="tests/settings/defaults.json")
         self.assertEqual(settings.get("bar"), 2)
         self.assertEqual(settings.get("baz"), True)
         self.assertEqual(settings.get("long_name"), "some_text")
 
-    def test_missing_key(self):
+    def test_get_missing_key(self):
         settings = Settings("tests/settings/empty.json", "foo",
                             defaults_file="tests/settings/defaults.json")
         # The exception mentions the missing setting and the component.
         with self.assertRaisesRegexp(KeyError, "'qux'.*'foo'"):
             settings.get("qux")
 
-    def test_missing_parent_key(self):
+    def test_get_missing_parent_key(self):
         settings = Settings("tests/settings/empty.json", "child",
                             defaults_file="tests/settings/defaults.json")
         # The exception mentions the current component rather than the parent.
@@ -158,21 +172,21 @@ class TestSettings(SettingsTestCase):
         self.assertEqual(parent_settings.get("baz"), True)
         self.assertEqual(child_settings.get("baz"), False)
 
-    def test_nonexistent_set(self):
+    def test_set_nonexistent(self):
         settings = Settings("tests/settings/settings.json", "foo",
                             defaults_file="tests/settings/defaults.json")
         # The exception mentions the missing setting and the component.
         with self.assertRaisesRegexp(KeyError, "'new'.*'foo'"):
             settings.set("new", "added")
 
-    def test_nonexistent_parent_set(self):
+    def test_set_nonexistent_parent(self):
         settings = Settings("tests/settings/settings.json", "child",
                             defaults_file="tests/settings/defaults.json")
         # The exception mentions the current component rather than the parent.
         with self.assertRaisesRegexp(KeyError, "'new'.*'child'"):
             settings.set("new", "added")
 
-    def test_empty_set(self):
+    def test_set_empty(self):
         settings = Settings("tests/settings/settings.json", "foo",
                             defaults_file="tests/settings/defaults.json")
         with self.assertRaisesRegexp(ValueError, "nonempty"):
@@ -181,7 +195,7 @@ class TestSettings(SettingsTestCase):
         # Non-required settings can be set to empty value.
         settings.set("select", "")
 
-    def test_min_max_set(self):
+    def test_set_min_max(self):
         settings = Settings("tests/settings/settings.json", "foo",
                             defaults_file="tests/settings/defaults.json")
         with self.assertRaisesRegexp(ValueError, "at least 1"):
@@ -189,7 +203,7 @@ class TestSettings(SettingsTestCase):
         with self.assertRaisesRegexp(ValueError, "at most 42"):
             settings.set("bar", 100)
 
-    def test_format_set(self):
+    def test_set_format(self):
         settings = Settings("tests/settings/settings.json", "child",
                             defaults_file="tests/settings/defaults.json")
         settings.set("test", "empty")
@@ -205,3 +219,52 @@ class TestSettings(SettingsTestCase):
         self.assertEqual(settings.get("setters"), "defaults")
         with self.assertRaisesRegexp(ValueError, "match the format"):
             settings.set("setters", "tests/settings.py")
+
+    def test_check_format(self):
+        settings = Settings("tests/settings/settings.json", "child",
+                            defaults_file="tests/settings/defaults.json")
+        data = dict(settings.get_info())
+        self.assertEqual(settings.check_format("test", data["test"], "empty"),
+                         "tests/settings/empty.json")
+
+        full_name = "tests/settings/defaults.json"
+        self.assertEqual(settings.check_format("test", data["test"], full_name),
+                         full_name)
+
+        with self.assertRaisesRegexp(ValueError, "existing file"):
+            settings.check_format("test", data["test"], "invalid")
+
+        info = data["setters"]
+        actual = settings.check_format("setters", info,
+                                       "tests/settings/empty.json")
+        self.assertEqual(actual, "empty")
+
+        self.assertEqual(settings.check_format("setters", info, "defaults"),
+                         "defaults")
+
+        with self.assertRaisesRegexp(ValueError, "match the format"):
+            settings.check_format("setters", info, "tests/settings.py")
+
+    def test_make_format_regex(self):
+        settings = Settings("tests/settings/settings.json", "child",
+                            defaults_file="tests/settings/defaults.json")
+        self.assertEqual(settings.make_format_regex("tests/settings/{}.json"),
+                         r"tests\/settings\/(.*)\.json")
+
+    def test_format_file(self):
+        settings = Settings("tests/settings/settings.json", "child",
+                            defaults_file="tests/settings/defaults.json")
+        expected = ("defaults", "tests/settings/defaults.json")
+
+        # The file can be formatted based on either the short or full name.
+        actual = settings.format_file("tests/settings/{}.json", expected[0])
+        self.assertEqual(actual, expected)
+
+        actual = settings.format_file("tests/settings/{}.json", expected[1])
+        self.assertEqual(actual, expected)
+
+        other = "tests/settings.py"
+        self.assertEqual(settings.format_file("tests/settings/{}.json", other),
+                         (None, other))
+        self.assertEqual(settings.format_file("tests/settings/{}.json", "!no!"),
+                         ("!no!", None))

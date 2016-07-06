@@ -27,27 +27,27 @@ class Settings(object):
         if not os.path.isfile(file_name):
             raise IOError("File '{}' does not exist.".format(file_name))
 
-        self.component_name = component_name
+        self._component_name = component_name
 
         # Read the default settings and the overrides.
         defaults = self.__class__.get_settings(defaults_file)
         settings = self.__class__.get_settings(file_name)
-        if self.component_name not in defaults:
-            raise KeyError("Component '{}' not found.".format(self.component_name))
+        if self._component_name not in defaults:
+            raise KeyError("Component '{}' not found.".format(self._component_name))
 
         # Fetch information related to the current component from the default 
         # settings, and set the current values of each setting from the 
         # overrides or the defaults.
-        self.settings = defaults[self.component_name]["settings"]
-        self.name = defaults[self.component_name]["name"]
+        self.settings = defaults[self._component_name]["settings"]
+        self._name = defaults[self._component_name]["name"]
         for key, data in self.settings.iteritems():
             if key in settings:
                 data["value"] = settings[key]
             else:
                 data["value"] = data["default"]
 
-        if "parent" in defaults[self.component_name]:
-            parent = defaults[self.component_name]["parent"]
+        if "parent" in defaults[self._component_name]:
+            parent = defaults[self._component_name]["parent"]
             if arguments is not None:
                 self.parent = arguments.get_settings(parent)
             else:
@@ -55,6 +55,24 @@ class Settings(object):
                                        defaults_file=defaults_file)
         else:
             self.parent = None
+
+    @property
+    def name(self):
+        """
+        Retrieve the read-only descriptive name of the settings component.
+
+        Use `component_name` to retrieve the internal name.
+        """
+
+        return self._name
+
+    @property
+    def component_name(self):
+        """
+        Retrieve the read-only internal name of the settings component.
+        """
+
+        return self._component_name
 
     def get_all(self):
         """
@@ -96,7 +114,7 @@ class Settings(object):
                 except KeyError:
                     pass
 
-            raise KeyError("Setting '{}' for component '{}' not found.".format(key, self.component_name))
+            raise KeyError("Setting '{}' for component '{}' not found.".format(key, self._component_name))
 
         return self.settings[key]["value"]
 
@@ -109,7 +127,7 @@ class Settings(object):
                 except KeyError:
                     pass
 
-            raise KeyError("Setting '{}' for component '{}' not found.".format(key, self.component_name))
+            raise KeyError("Setting '{}' for component '{}' not found.".format(key, self._component_name))
 
         data = self.settings[key]
 
@@ -117,9 +135,9 @@ class Settings(object):
 
         # Numerical type-specific: check minimum and maximum value constraint
         if "min" in data and value < data["min"]:
-            raise ValueError("Setting '{}' for component '{}' must be at least {}, not {}".format(key, self.component_name, data["min"], value))
+            raise ValueError("Setting '{}' for component '{}' must be at least {}, not {}".format(key, self._component_name, data["min"], value))
         if "max" in data and value > data["max"]:
-            raise ValueError("Setting '{}' for component '{}' must be at most {}, not {}".format(key, self.component_name, data["max"], value))
+            raise ValueError("Setting '{}' for component '{}' must be at most {}, not {}".format(key, self._component_name, data["max"], value))
 
         data["value"] = value
 
@@ -149,7 +167,7 @@ class Settings(object):
         # evaluates to false according to its type)
         required = "required" in data and data["required"]
         if required and not value:
-            raise ValueError("Setting '{}' for component '{}' must be nonempty, not '{}'".format(key, self.component_name, value))
+            raise ValueError("Setting '{}' for component '{}' must be nonempty, not '{}'".format(key, self._component_name, value))
 
         # File type: If we have a formatter and have a file name, we can do 
         # multiple things:
@@ -168,10 +186,10 @@ class Settings(object):
 
             short_value, full_value = self.format_file(data["format"], value)
             if required and short_value is None:
-                raise ValueError("Setting '{}' for component '{}' must match the format '{}', value '{}' does not".format(key, self.component_name, data["format"].format("*"), value))
+                raise ValueError("Setting '{}' for component '{}' must match the format '{}', value '{}' does not".format(key, self._component_name, data["format"].format("*"), value))
 
             if full_value is None:
-                raise ValueError("Setting '{}' for component '{}' must be given an existing file, not '{}'".format(key, self.component_name, value))
+                raise ValueError("Setting '{}' for component '{}' must be given an existing file, not '{}'".format(key, self._component_name, value))
 
             return full_value if full_name else short_value
 

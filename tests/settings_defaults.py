@@ -1,5 +1,6 @@
 import json
 import unittest
+from ..bench.Method_Coverage import covers
 
 class Type_Checker(object):
     def __init__(self, setting, key, *types):
@@ -27,7 +28,8 @@ class Type_Checker(object):
         else:
             type_format = "one of {}".format(self._types)
 
-        return "the '{}' must be {}, not '{}'".format(self._key, type_format, self._setting[self._key])
+        msg = "the '{}' must be {}, not '{}'"
+        return msg.format(self._key, type_format, self._setting[self._key])
 
     def __repr__(self):
         """
@@ -36,7 +38,15 @@ class Type_Checker(object):
 
         return "{} in {}".format(self._setting[self._key], self._types)
 
+@covers(None)
 class TestSettingsDefaults(unittest.TestCase):
+    """
+    Test case that checks whether the settings information in the components of
+    `settings/defaults.json` is valid and consistent.
+
+    The test case thus does not cover any specific class.
+    """
+
     def _is_sequence_type(self, setting):
         return Type_Checker(setting, "type", "list", "tuple")
 
@@ -62,7 +72,8 @@ class TestSettingsDefaults(unittest.TestCase):
         msg = "Setting '{}' in component '{}' must have a '{}' key"
         self.assertIn(subkey, setting, msg.format(key, component, subkey))
 
-    def assert_match_type_keys(self, component, key, setting, type_check, *subkeys, **options):
+    def assert_match_type_keys(self, component, key, setting, type_check,
+                               *subkeys, **options):
         """
         Check whether a setting with name `key` and information registration
         `setting`, which was retrieved from the component with name `component`,
@@ -88,13 +99,14 @@ class TestSettingsDefaults(unittest.TestCase):
         if any(subkey in setting for subkey in subkeys):
             type_checker = type_check(setting)
 
-            msg = "Setting '{}' in component '{}' has {}, thus {}"
+            msg = "Setting '{}' in component '{}' has {subkeys}, thus {reason}"
+            kw = {"reason": str(type_checker)}
             if len(subkeys) == 1:
-                subkeys_format = "a key '{}'".format(subkeys[0])
+                kw["subkeys"] = "a key '{}'".format(subkeys[0])
             else:
-                subkeys_format = "one or more keys from {}".format(subkeys)
+                kw["subkeys"] = "one or more keys from {}".format(subkeys)
 
-            self.assertTrue(type_checker, msg.format(key, component, subkeys_format, type_checker))
+            self.assertTrue(type_checker, msg=msg.format(key, component, **kw))
 
     def _check_setting(self, component, key, setting, subinfo=False):
         """
@@ -143,14 +155,16 @@ class TestSettingsDefaults(unittest.TestCase):
             components = json.load(defaults_file)
 
         for component in components:
-            self.assertIn("name", components[component],
-                          "Component '{}' must have a 'name' key".format(component))
-            self.assertIn("settings", components[component],
-                          "Component '{}' must have a 'settings' key".format(component))
+            msg = "Component '{}' must have a '{}' key"
+            for key in ("name", "settings"):
+                self.assertIn(key, components[component],
+                              msg=msg.format(component, key))
+
             if "parent" in components[component]:
                 parent = components[component]["parent"]
+                parent_msg = "Component '{}' has a parent '{}' that must exist"
                 self.assertIn(parent, components,
-                              "Component '{}' has a parent '{}' that must exist".format(component, parent))
+                              msg=parent_msg.format(component, parent))
 
             settings = components[component]["settings"]
             for key in settings:
