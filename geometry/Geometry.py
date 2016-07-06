@@ -5,10 +5,10 @@ from dronekit import Locations, LocationLocal
 
 class Geometry(object):
     """
-    Geometry utility functions
+    Geometry utility methods.
 
-    This is a class with functions that calculate distances, locations or 
-    angles based on specific input.
+    This is a class with methods that calculate distances, locations or angles
+    based on specific input.
 
     Note that some methods assume certain properties of the earth's surface, 
     such as it being spherical or being flat. Depending on these assumptions, 
@@ -16,7 +16,13 @@ class Geometry(object):
     subclasses make different assumptions about the geometry.
     Note that (`y`,`x`) = (`lat`,`lon`) = (`N`,`E`).
 
-    The base class does uses meters as the base unit for coordinates.
+    The base class does use meters as the base unit for coordinates, and works
+    only with `LocationLocal` objects and the local frame of `Locations` objects
+    from the `dronekit` library. The third coordinate in `LocationLocal` is
+    calculated downward from the origin altitude, although in some methods we
+    convert this to an upward altitude coordinate for consistency with the two
+    other location objects.
+
     Use `Geometry_Spherical` for geographic coordinates on a spherical earth.
     """
 
@@ -40,12 +46,14 @@ class Geometry(object):
 
     def equalize(self, location1, location2):
         """
-        Ensure that two location objects are of the same class.
+        Ensure that the two `Location` objects `location1` and `location2` are
+        of the same class.
 
-        The base class only accepts `LocationLocal` objects.
-        Extending classes can support `LocationGlobal` and
-        `LocationGlobalRelative` classes and use this method to ensure that two
-        objects are comparable.
+        The base class only accepts `LocationLocal` and `Locations` objects.
+        Other types cause this method to raise a `TypeError`. Extending classes
+        can support `LocationGlobal` and `LocationGlobalRelative` classes.
+
+        Use this method to ensure that two objects are comparable.
 
         Returns the converted location objects.
         """
@@ -54,6 +62,43 @@ class Geometry(object):
         location2 = self.get_location_local(location2)
 
         return location1, location2
+
+    def equals(self, location1, location2):
+        """
+        Check whether the two `Location` objects `location1` and `location2`
+        describe the same location.
+
+        If the two objects cannot be cast to comparable types, then this method
+        raises a `TypeError`. Otherwise, it returns a boolean whether the
+        locations have the same coordinates.
+        """
+
+        location1, location2 = self.equalize(location1, location2)
+        return self.get_coordinates(location1) == self.get_coordinates(location2)
+
+    def make_location(self, lat, lon, alt=0.0):
+        """
+        Create a location object based on user-specified coordinates `lat`,
+        `lon` and `alt`. These may or may not actually correspond to the
+        latitude, longitude and altitude coordinates, but to some similar
+        geometric coordinate system reference frame. The returned location
+        object is most appropriate to this geometry.
+
+        This should only be used if we want to have a location that is valid
+        in this geometry, when we did not have a location object to begin with.
+        """
+
+        return LocationLocal(lat, lon, -alt)
+
+    def get_coordinates(self, location):
+        """
+        Retrieve the coordinates from the given `location`.
+
+        The location's coordinates are returned as a tuple.
+        """
+
+        location = self.get_location_local(location)
+        return location.north, location.east, -location.down
 
     def bearing_to_angle(self, bearing):
         """
@@ -89,6 +134,17 @@ class Geometry(object):
             return location
 
         raise TypeError("Base geometry can handle only local coordinates")
+
+    def get_location_frame(self, location):
+        """
+        Retrieve the most appropriate location frame from a `Locations` object
+        `location`, and return the corresponding location object
+        """
+
+        if not isinstance(location, Locations):
+            raise TypeError("`location` must be a `Locations` object")
+
+        return location.local_frame
 
     def get_location_meters(self, original_location, north, east, alt=0):
         """
@@ -135,6 +191,34 @@ class Geometry(object):
         location1, location2 = self.equalize(location1, location2)
         diff = self._diff_location(location1, location2)
         return diff.north, diff.east, -diff.down
+
+    def get_location_range(self, start_location, end_location, count=1):
+        """
+        Create a somewhat evenly-spaced range of locations between a starting
+        location `start_location` and ending location `end_location`, with
+        exactly `count` locations in the resulting range.
+
+        The range always contains the endpoint `location1` and never contains
+        `location2`. Certain geometries may bound the locations to specific
+        points, or otherwise affect the locations (but not the range length).
+        """
+
+        start_location = self.get_location_local(start_location)
+        end_location = self.get_location_local(end_location)
+        coord_pairs = [
+            (start_location.north, end_location.north),
+            (start_location.east, end_location.east),
+            (start_location.down, end_location.down)
+        ]
+
+        ranges = []
+        for start_coord, end_coord in coord_pairs:
+            ranges.append(self._get_range(start_coord, end_coord, count))
+
+        return [LocationLocal(*coords) for coords in zip(*ranges)]
+
+    def _get_range(self, start_coord, end_coord, count):
+        return np.linspace(start_coord, end_coord, num=count+1)[1:]
 
     def get_location_angle(self, location, distance, yaw, pitch=0):
         """
@@ -449,7 +533,7 @@ class Geometry(object):
 
         return abs(dot) > self.EPSILON
 
-    def get_intersection(self, face, cp, location, u, dot):
+    def _get_intersection(self, face, cp, location, u, dot):
         """
         Finish calculating the intersection point of a line `u` from a given
         `location` and a plane `face`.
@@ -556,8 +640,8 @@ class Geometry(object):
             return (None, None)
 
         # Calculate the intersection point
-        factor, loc_point = self.get_intersection(face, cp, location1, u,
-                                                  nu_dot)
+        factor, loc_point = self._get_intersection(face, cp, location1, u,
+                                                   nu_dot)
 
         if not self.point_inside_plane(face, cp, loc_point, verbose=verbose):
             # The intersection point is not actually inside the polygon, but 

@@ -1,8 +1,9 @@
 import math
-from dronekit import LocationLocal, LocationGlobal, VehicleMode
+from dronekit import LocationLocal, LocationGlobal, LocationGlobalRelative, VehicleMode
 from mock import patch, MagicMock
 from ..core.Threadable import Threadable
 from ..core.WiringPi import WiringPi
+from ..geometry.Geometry_Spherical import Geometry_Spherical
 from ..location.Line_Follower import Line_Follower_Direction, Line_Follower_State
 from ..location.Line_Follower_Arduino import Line_Follower_Arduino
 from ..trajectory.Servo import Servo, Interval
@@ -49,11 +50,15 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
     def test_home_location(self):
         self.vehicle.home_location = LocationLocal(1.0, 2.0, 4.0)
         self.assertEqual(self.vehicle._home_location, (1, 2))
+        self.assertEqual(self.vehicle.home_location,
+                         LocationLocal(1.0, 2.0, 0.0))
 
     def test_home_location_global(self):
-        with patch('sys.stdout'):
+        with patch.object(self.vehicle, "_geometry", new=Geometry_Spherical()):
             self.vehicle.home_location = LocationGlobal(3.0, 6.0, 1.2)
             self.assertEqual(self.vehicle._home_location, (3, 6))
+            self.assertEqual(self.vehicle.home_location,
+                             LocationGlobalRelative(3.0, 6.0, 0.0))
 
             self.vehicle.add_waypoint(LocationGlobal(4.0, 8.0, 6.4))
             self.assertEqual(self.vehicle._waypoints, [(4, 8)])

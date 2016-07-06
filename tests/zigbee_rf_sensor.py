@@ -15,25 +15,46 @@ from ..zigbee.Packet import Packet
 from ..zigbee.RF_Sensor import RF_Sensor, DisabledException
 from ..zigbee.TDMA_Scheduler import TDMA_Scheduler
 from settings import SettingsTestCase
+from zigbee_packet import ZigBeePacketTestCase
 
-class TestZigBeeRFSensor(SettingsTestCase):
+class ZigBeeRFSensorTestCase(SettingsTestCase, ZigBeePacketTestCase):
+    """
+    Test case base class that provides the necessities to create one of the
+    `RF_Sensor` types of objects.
+    """
+
     def setUp(self):
-        super(TestZigBeeRFSensor, self).setUp()
+        super(ZigBeeRFSensorTestCase, self).setUp()
 
         self.arguments = Arguments("settings.json", ["--rf-sensor-id", "1"])
-        self.settings = self.arguments.get_settings("zigbee_base")
 
         self.thread_manager = Thread_Manager()
         self.location_callback = MagicMock(return_value=((0, 0), 0))
         self.receive_callback = MagicMock()
         self.valid_callback = MagicMock(return_value=True)
 
+    def _create_sensor(self, sensor_type, **kwargs):
+        """
+        Create the RF sensor object. The `sensor_type` is a class that is either
+        `RF_Sensor` or a subclass thereof. Additional keyword arguments are
+        passed through to the object initialization.
+
+        The resulting `RF_Sensor` object is returned.
+        """
+
+        return sensor_type(self.arguments, self.thread_manager,
+                           self.location_callback, self.receive_callback,
+                           self.valid_callback, **kwargs)
+
+class TestZigBeeRFSensor(ZigBeeRFSensorTestCase):
+    def setUp(self):
+        super(TestZigBeeRFSensor, self).setUp()
+
+        self.settings = self.arguments.get_settings("zigbee_base")
+
         type_mock = PropertyMock(return_value="zigbee_base")
         with patch.object(RF_Sensor, "type", new_callable=type_mock):
-            self.rf_sensor = RF_Sensor(self.arguments, self.thread_manager,
-                                       self.location_callback,
-                                       self.receive_callback,
-                                       self.valid_callback)
+            self.rf_sensor = self._create_sensor(RF_Sensor)
 
     def test_initialization(self):
         # Providing an uncallable callback raises an exception.
@@ -140,8 +161,6 @@ class TestZigBeeRFSensor(SettingsTestCase):
         self.assertEqual(self.rf_sensor._started, False)
 
     def test_enqueue(self):
-        packet = Packet()
-
         # Providing a packet that is not a `Packet` object raises an exception.
         with self.assertRaises(TypeError):
             self.rf_sensor.enqueue({
@@ -150,14 +169,14 @@ class TestZigBeeRFSensor(SettingsTestCase):
 
         # Providing a private packet raises an exception.
         with self.assertRaises(ValueError):
-            packet.set("specification", "rssi_broadcast")
-            self.rf_sensor.enqueue(packet)
+            self.packet.set("specification", "rssi_broadcast")
+            self.rf_sensor.enqueue(self.packet)
 
         # Packets that do not have a destination must be broadcasted.
         # We subtract one because we do not send to ourself.
-        packet.set("specification", "waypoint_clear")
-        packet.set("to_id", 2)
-        self.rf_sensor.enqueue(packet)
+        self.packet.set("specification", "waypoint_clear")
+        self.packet.set("to_id", 2)
+        self.rf_sensor.enqueue(self.packet)
 
         self.assertEqual(self.rf_sensor._queue.qsize(),
                          self.rf_sensor.number_of_sensors - 1)
@@ -176,11 +195,11 @@ class TestZigBeeRFSensor(SettingsTestCase):
         self.assertEqual(self.rf_sensor._queue.qsize(), 0)
 
         # Packets that do contain a destination must be enqueued directly.
-        self.rf_sensor.enqueue(packet, to=2)
+        self.rf_sensor.enqueue(self.packet, to=2)
 
         self.assertEqual(self.rf_sensor._queue.qsize(), 1)
         self.assertEqual(self.rf_sensor._queue.get(), {
-            "packet": packet,
+            "packet": self.packet,
             "to": 2
         })
         self.assertEqual(self.rf_sensor._queue.qsize(), 0)
@@ -267,10 +286,9 @@ class TestZigBeeRFSensor(SettingsTestCase):
             self.assertEqual(self.rf_sensor._packets, [])
 
     def test_send_custom_packets(self):
-        packet = Packet()
-        packet.set("specification", "waypoint_clear")
-        packet.set("to_id", 2)
-        self.rf_sensor.enqueue(packet, to=2)
+        self.packet.set("specification", "waypoint_clear")
+        self.packet.set("to_id", 2)
+        self.rf_sensor.enqueue(self.packet, to=2)
 
         with patch.object(RF_Sensor, "_send_tx_frame") as send_tx_frame_mock:
             self.rf_sensor._send_custom_packets()
@@ -287,23 +305,22 @@ class TestZigBeeRFSensor(SettingsTestCase):
     def test_send_tx_frame(self):
         # Having a closed connection raises an exception.
         with self.assertRaises(DisabledException):
-            self.rf_sensor._send_tx_frame(Packet(), to=2)
+            self.rf_sensor._send_tx_frame(self.packet, to=2)
 
-        self.rf_sensor._connection = MagicMock()
+        with patch.object(self.rf_sensor, "_connection"):
+            # Providing an invalid packet raises an exception.
+            with self.assertRaises(TypeError):
+                self.rf_sensor._send_tx_frame(None, to=2)
 
-        # Providing an invalid packet raises an exception.
-        with self.assertRaises(TypeError):
-            self.rf_sensor._send_tx_frame(None, to=2)
-
-        # Providing an invalid destination raises an exception.
-        with self.assertRaises(TypeError):
-            self.rf_sensor._send_tx_frame(Packet())
+            # Providing an invalid destination raises an exception.
+            with self.assertRaises(TypeError):
+                self.rf_sensor._send_tx_frame(self.packet)
 
     def test_receive(self):
         # Verify that the interface requires subclasses to implement
         # the `_receive` method.
         with self.assertRaises(NotImplementedError):
-            self.rf_sensor._receive(packet=Packet())
+            self.rf_sensor._receive(packet=self.packet)
 
     def test_create_rssi_broadcast_packet(self):
         packet = self.rf_sensor._create_rssi_broadcast_packet()

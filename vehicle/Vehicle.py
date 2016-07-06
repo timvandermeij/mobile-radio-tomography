@@ -73,16 +73,23 @@ class Vehicle(Threadable):
         """
         Retrieve the home location object.
 
-        This property returns a fresh `Location` object.
-        Depending on the vehicle, the frame of the location may differ.
+        This property returns a fresh `Location` object. The location type can
+        depend on the vehicle type and the vehicle's geometry.
         """
 
-        return None
+        raise NotImplementedError("Subclasses must implement `home_location` property")
 
     @home_location.setter
     def home_location(self, position):
         """
         Change the home location to another `Location` object.
+
+        The location `position` need not be a `LocationGlobal` object, but exact
+        handling of other types may depend on the vehicle type and the vehicle's
+        geometry.
+
+        An updated location also results in a notification to the attribute
+        listeners with a fresh `Location` object.
         """
 
         self._home_location = copy.copy(position)
@@ -285,8 +292,9 @@ class Vehicle(Threadable):
         """
         Retrieve the current location of the vehicle.
 
-        This property returns the location as a `Locations` object or one of
-        the `LocationGlobal`, `LocalGlobalRelative` or `LocationLocal` objects.
+        This property returns the location as a `Locations` object with any
+        number of valid frames, or one of the `LocationLocal`,
+        `LocationGlobalRelative` or `LocationGlobal` objects.
         """
 
         raise NotImplementedError("Subclasses must implement `location` property")

@@ -1,20 +1,23 @@
-from dronekit import LocationLocal, LocationGlobalRelative, Command
+from dronekit import LocationLocal, Command
 from pymavlink import mavutil
 from Vehicle import Vehicle
-from ..geometry.Geometry_Spherical import Geometry_Spherical
 
 class MAVLink_Vehicle(Vehicle):
     """
     A vehicle that supports some parts of the MAVLink protocol, e.g.,
     mission command sequences or other command message parsing.
 
-    This class assumes the following properties and methods exist:
+    In addition to the interface enforced by `Vehicle`, this class requires that
+    the following properties and methods exist with semantics:
     - `commands`: A `CommandSequence`-like object, as described in
       http://python.dronekit.io/automodule.html#dronekit.CommandSequence
     - `flush`: A method that might perform backend changes for update_mission,
       but can also be a no-op if no backend changes are necessary in this case.
+    - `location`: A read-only property, that returns the current location of
+      the vehicle as a `Locations` object. Other types are not allowed, although
+      the returned `Locations` may have frames with invalid locations.
 
-    Also, all abstract methods from `Vehicle` must also be implemented.
+    Of course, all abstract methods from `Vehicle` must also be implemented.
     """
 
     @property
@@ -83,10 +86,7 @@ class MAVLink_Vehicle(Vehicle):
         lat = mission_item.x
         lon = mission_item.y
         alt = mission_item.z
-        if isinstance(self._geometry, Geometry_Spherical):
-            return LocationGlobalRelative(lat, lon, alt)
-
-        return LocationLocal(lat, lon, -alt)
+        return self._geometry.make_location(lat, lon, alt)
 
     def get_next_waypoint(self):
         return self.commands.next
@@ -101,7 +101,5 @@ class MAVLink_Vehicle(Vehicle):
         return self.commands.count
 
     def is_current_location_valid(self):
-        if isinstance(self._geometry, Geometry_Spherical):
-            return self.is_location_valid(self.location.global_relative_frame)
-
-        return self.is_location_valid(self.location.local_frame)
+        location = self._geometry.get_location_frame(self.location)
+        return self.is_location_valid(location)

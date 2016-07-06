@@ -25,6 +25,32 @@ class WaypointsTableWidget(QtGui.QTableWidget):
         verticalHeader.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         verticalHeader.customContextMenuRequested.connect(self._make_menu)
 
+    def get_row_data(self, row):
+        """
+        Retrieve the cell data from the given row number `row`.
+
+        The cell data is returned as a list, where each value is either `None`,
+        indicating that the cell was not filled, a boolean for cells with
+        a check role, or the string value for other cells.
+
+        Additionally, a boolean is returned indicating whether the row was
+        completely empty, i.e., not filled or altered.
+        """
+
+        empty = True
+        data = []
+        for col in range(len(self._column_defaults)):
+            item = self.item(row, col)
+            # Handle unaltered column cells (no item widget) and empty columns 
+            # (text contents equals to empty string)
+            if item is None or item.text() == "":
+                data.append(None)
+            else:
+                data.append(item.text())
+                empty = False
+
+        return data, empty
+
     def removeRows(self):
         """
         Remove all the rows in the table.

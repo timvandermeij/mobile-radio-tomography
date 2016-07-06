@@ -135,6 +135,10 @@
             "format": "B"
         },
         {
+            "name": "wait_count",
+            "format": "i"
+        },
+        {
             "name": "index",
             "format": "i"
         },

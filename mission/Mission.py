@@ -1,9 +1,8 @@
 import math
 import sys
 import time
-from dronekit import LocationGlobal, VehicleMode
+from dronekit import VehicleMode
 from ..trajectory.Memory_Map import Memory_Map
-from ..geometry.Geometry_Spherical import Geometry_Spherical
 
 class Mission(object):
     """
@@ -128,8 +127,12 @@ class Mission(object):
         home_location = self.vehicle.home_location
         if home_location is not None:
             print("Home location: {}".format(home_location))
-            if isinstance(home_location, LocationGlobal) and isinstance(self.geometry, Geometry_Spherical):
+            try:
                 self.geometry.set_home_location(home_location)
+            except TypeError:
+                # The geometry does not accept the home location type, so let's 
+                # not provide a new home location at all.
+                pass
 
     def get_waypoints(self):
         """

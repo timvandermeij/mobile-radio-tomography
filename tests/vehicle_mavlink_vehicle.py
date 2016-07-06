@@ -1,4 +1,4 @@
-from dronekit import Command, LocationLocal, LocationGlobalRelative
+from dronekit import Command, Locations, LocationLocal, LocationGlobalRelative
 from pymavlink import mavutil
 from mock import patch, Mock, PropertyMock
 from ..geometry.Geometry_Spherical import Geometry_Spherical
@@ -102,7 +102,7 @@ class TestVehicleMockVehicle(VehicleTestCase):
         self.assertEqual(self.vehicle.get_waypoint(),
                          LocationLocal(3.4, 2.3, -1.2))
 
-        with patch.object(self.vehicle, "_geometry", spec=Geometry_Spherical):
+        with patch.object(self.vehicle, "_geometry", new=Geometry_Spherical()):
             self.assertEqual(self.vehicle.get_waypoint(),
                              LocationGlobalRelative(3.4, 2.3, 1.2))
 
@@ -120,21 +120,25 @@ class TestVehicleMockVehicle(VehicleTestCase):
         commands_mock.return_value.configure_mock(count=2)
         self.assertEqual(self.vehicle.count_waypoints(), 2)
 
-    def test_is_current_location_valid(self):
-        with patch.object(MAVLink_Vehicle, "location", new_callable=PropertyMock) as location_mock:
-            loc = LocationLocal(1, 2, 3)
-            location_mock.return_value.configure_mock(local_frame=loc)
+    @patch.object(MAVLink_Vehicle, "location", new_callable=PropertyMock)
+    def test_is_current_location_valid(self, location_mock):
+        loc = LocationLocal(1, 2, 3)
+        location_mock.return_value.configure_mock(__class__=Locations,
+                                                  local_frame=loc)
+        self.assertTrue(self.vehicle.is_current_location_valid())
+
+        loc = LocationLocal(None, 2, 3)
+        location_mock.return_value.configure_mock(__class__=Locations,
+                                                  local_frame=loc)
+        self.assertFalse(self.vehicle.is_current_location_valid())
+
+        with patch.object(self.vehicle, "_geometry", new=Geometry_Spherical()):
+            loc = LocationGlobalRelative(4, 5, 6)
+            location_mock.return_value.configure_mock(__class__=Locations,
+                                                      global_relative_frame=loc)
             self.assertTrue(self.vehicle.is_current_location_valid())
 
-            loc = LocationLocal(None, 2, 3)
-            location_mock.return_value.configure_mock(local_frame=loc)
+            loc = LocationGlobalRelative(6.7, 8.9, None)
+            location_mock.return_value.configure_mock(__class__=Locations,
+                                                      global_relative_frame=loc)
             self.assertFalse(self.vehicle.is_current_location_valid())
-
-            with patch.object(self.vehicle, "_geometry", spec=Geometry_Spherical):
-                loc = LocationGlobalRelative(4, 5, 6)
-                location_mock.return_value.configure_mock(global_relative_frame=loc)
-                self.assertTrue(self.vehicle.is_current_location_valid())
-
-                loc = LocationGlobalRelative(6.7, 8.9, None)
-                location_mock.return_value.configure_mock(global_relative_frame=loc)
-                self.assertFalse(self.vehicle.is_current_location_valid())

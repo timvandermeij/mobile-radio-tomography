@@ -42,7 +42,7 @@ class TestMissionAuto(EnvironmentTestCase):
 
         loc = LocationGlobalRelative(4.3, 2.1, 0.0)
         new_loc = LocationGlobalRelative(4.3, 2.1, self.settings.get("altitude"))
-        with patch.object(self.mission, "geometry", spec=Geometry_Spherical):
+        with patch.object(self.mission, "geometry", new=Geometry_Spherical()):
             self.assertEqual(self.mission._convert_waypoint(loc), new_loc)
 
     def test_display(self):
