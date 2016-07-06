@@ -28,7 +28,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         # and wait ID can be left out.
         self._column_defaults = (None, None, 0.0, 0, 1)
 
-        # Internal field names that can be used for indicing.
+        # Internal field names that can be used for indexing.
         fields = ["north", "east", "alt", "wait_id", "wait_count"]
         self._fields = OrderedDict(zip(fields, range(len(self._column_labels))))
 

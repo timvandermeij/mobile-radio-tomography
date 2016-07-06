@@ -56,7 +56,7 @@ class Mission_RF_Sensor(Mission_Auto):
 
     def add_commands(self):
         # Commands are added when they arrive, not in here.
-        pass
+        raise RuntimeError("RF sensor mission does not add commands")
 
     def _send_ack(self):
         """

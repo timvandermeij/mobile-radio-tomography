@@ -11,6 +11,7 @@ import numpy as np
 from dronekit import LocationGlobal, LocationGlobalRelative, LocationLocal, Locations
 
 # Package imports
+from ..bench.Method_Coverage import covers
 from ..geometry.Geometry import Geometry
 
 class LocationTestCase(unittest.TestCase):
@@ -120,7 +121,7 @@ class TestGeometry(LocationTestCase):
             self.geometry.set_home_location(self.global_location)
 
     def test_equalize(self):
-        # Local locations are kept intanct.
+        # Local locations are kept intact.
         loc1 = LocationLocal(1.0, 2.0, 3.0)
         loc2 = LocationLocal(4.5, 6.7, -8.9)
         new_loc1, new_loc2 = self.geometry.equalize(loc1, loc2)
@@ -219,7 +220,7 @@ class TestGeometry(LocationTestCase):
         self.assertAlmostEqual(self.geometry.get_distance_meters(loc, loc2),
                                5.0, delta=self.dist_delta)
 
-    def test_diff_location(self):
+    def test_diff_location_meters(self):
         loc = LocationLocal(5.4, 3.2, -1.0)
         # 3 * 3 + 4 * 4 = 9 + 16 = 25 which is 5 squared.
         loc2 = self.geometry.get_location_meters(loc, 3.0, 4.0, 5.0)
@@ -411,6 +412,18 @@ class TestGeometry(LocationTestCase):
         self.assertEqual(edges[1], (locations[1], locations[2]))
         self.assertEqual(edges[2], (locations[2], locations[0]))
 
+    def test_get_projected_location(self):
+        location = LocationLocal(1.0, 2.0, -3.0)
+        self.assertEqual(self.geometry.get_projected_location(location, 0),
+                         LocationLocal(2.0, 3.0, 0.0))
+        self.assertEqual(self.geometry.get_projected_location(location, 1),
+                         LocationLocal(1.0, 3.0, 0.0))
+        self.assertEqual(self.geometry.get_projected_location(location, 2),
+                         location)
+
+    @covers([
+        "get_plane_intersection", "get_plane_vector", "point_inside_plane"
+    ])
     def test_get_plane_distance(self):
         home = self._make_relative_location(0.0, 0.0, 0.0)
         cases = [

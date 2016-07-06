@@ -28,8 +28,8 @@ class ZigBeePacketTestCase(unittest.TestCase):
         self.setting_add_message = "\n\x00\x00\x00\x00\x03bar\x01i" + \
                                    "*\x00\x00\x00\x01"
         self.setting_add_list_message = "\n\x01\x00\x00\x00\x05items" + \
-                                    "\x00\x11x\x9c\x8b6\xd4Q0\xd2Q0" + \
-                                    "\x8e\x05\x00\t\x85\x01\xe7\x01"
+                                        "\x00\x11x\x9c\x8b6\xd4Q0\xd2Q0" + \
+                                        "\x8e\x05\x00\t\x85\x01\xe7\x01"
 
 class TestZigBeePacket(ZigBeePacketTestCase):
     def test_initialization(self):

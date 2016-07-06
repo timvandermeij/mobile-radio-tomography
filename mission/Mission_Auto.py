@@ -17,7 +17,11 @@ class Mission_Auto(Mission):
         self._required_waypoint_sensors = []
 
     def arm_and_takeoff(self):
-        self.add_commands()
+        try:
+            self.add_commands()
+        except RuntimeError:
+            pass
+
         super(Mission_Auto, self).arm_and_takeoff()
 
     def get_waypoints(self):

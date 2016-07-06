@@ -43,8 +43,17 @@ class TestMissionRFSensor(EnvironmentTestCase):
         self.assertFalse(self.mission.waypoints_complete)
         self.assertEqual(self.mission.next_index, 0)
 
+    def test_get_points(self):
         # An RF sensor mission has no predetermined AUTO points.
         self.assertEqual(self.mission.get_points(), [])
+
+    def test_add_commands(self):
+        with self.assertRaises(RuntimeError):
+            self.mission.add_commands()
+
+    def test_arm_and_takeoff(self):
+        with patch('sys.stdout'):
+            self.mission.setup()
 
         # Starting arming checks will wait until waypoints are complete.
         with patch('time.sleep', side_effect=RuntimeError('sleep')):
@@ -74,7 +83,7 @@ class TestMissionRFSensor(EnvironmentTestCase):
         with patch('sys.stdout'):
             self.environment.receive_packet(packet)
 
-    def test_clear(self):
+    def test_clear_waypoints(self):
         with patch('sys.stdout'):
             self.mission.setup()
 
@@ -103,7 +112,7 @@ class TestMissionRFSensor(EnvironmentTestCase):
         self.assertEqual(self.mission.next_index, 0)
         self.assertEqual(self.vehicle._waypoints, [])
 
-    def test_add(self):
+    def test_add_waypoint(self):
         with patch('sys.stdout'):
             self.mission.setup()
 
@@ -128,7 +137,7 @@ class TestMissionRFSensor(EnvironmentTestCase):
         self.assertEqual(self.mission.next_index, 1)
         self.assertEqual(self.vehicle._waypoints, [(1, 4), None])
 
-    def test_add_wait_count(self):
+    def test_add_waypoint_wait_count(self):
         with patch('sys.stdout'):
             self.mission.setup()
 
@@ -150,7 +159,7 @@ class TestMissionRFSensor(EnvironmentTestCase):
             (0, 1), None, (0, 2), None, (0, 3), None, (0, 4), None
         ])
 
-    def test_add_wrong_index(self):
+    def test_add_waypoint_wrong_index(self):
         with patch('sys.stdout'):
             self.mission.setup()
 
@@ -170,7 +179,7 @@ class TestMissionRFSensor(EnvironmentTestCase):
         self.assertEqual(self.mission.next_index, 0)
         self.assertEqual(self.vehicle._waypoints, [])
 
-    def test_done(self):
+    def test_complete_waypoints(self):
         with patch('sys.stdout'):
             self.mission.setup()
 
@@ -196,7 +205,7 @@ class TestMissionRFSensor(EnvironmentTestCase):
             (1, 0), None, (2, 0), None, (3, 0), None, (4, 0), None
         ])
 
-    def test_move(self):
+    def test_interface_mission(self):
         with patch('sys.stdout'):
             self.mission.setup()
 

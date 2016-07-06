@@ -16,7 +16,7 @@ class Geometry(object):
     subclasses make different assumptions about the geometry.
     Note that (`y`,`x`) = (`lat`,`lon`) = (`N`,`E`).
 
-    The base class does uses meters as the base unit for coordinates, and works
+    The base class does use meters as the base unit for coordinates, and works
     only with `LocationLocal` objects and the local frame of `Locations` objects
     from the `dronekit` library. The third coordinate in `LocationLocal` is
     calculated downward from the origin altitude, although in some methods we
@@ -74,17 +74,14 @@ class Geometry(object):
         """
 
         location1, location2 = self.equalize(location1, location2)
-        if self.get_coordinates(location1) == self.get_coordinates(location2):
-            return True
-
-        return False
+        return self.get_coordinates(location1) == self.get_coordinates(location2)
 
     def make_location(self, lat, lon, alt=0.0):
         """
         Create a location object based on user-specified coordinates `lat`,
         `lon` and `alt`. These may or may not actually correspond to the
         latitude, longitude and altitude coordinates, but to some similar
-        geometric coordinate system reference frame. The return location
+        geometric coordinate system reference frame. The returned location
         object is most appropriate to this geometry.
 
         This should only be used if we want to have a location that is valid
@@ -536,7 +533,7 @@ class Geometry(object):
 
         return abs(dot) > self.EPSILON
 
-    def get_intersection(self, face, cp, location, u, dot):
+    def _get_intersection(self, face, cp, location, u, dot):
         """
         Finish calculating the intersection point of a line `u` from a given
         `location` and a plane `face`.
@@ -643,8 +640,8 @@ class Geometry(object):
             return (None, None)
 
         # Calculate the intersection point
-        factor, loc_point = self.get_intersection(face, cp, location1, u,
-                                                  nu_dot)
+        factor, loc_point = self._get_intersection(face, cp, location1, u,
+                                                   nu_dot)
 
         if not self.point_inside_plane(face, cp, loc_point, verbose=verbose):
             # The intersection point is not actually inside the polygon, but 
