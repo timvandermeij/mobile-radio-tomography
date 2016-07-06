@@ -15,10 +15,11 @@ from ..zigbee.RF_Sensor import DisabledException
 from ..zigbee.RF_Sensor_Physical_Texas_Instruments import RF_Sensor_Physical_Texas_Instruments
 from ..zigbee.RF_Sensor_Physical_Texas_Instruments import CC2530_Packet, Raspberry_Pi_GPIO_Pin_Mode
 from ..zigbee.TDMA_Scheduler import TDMA_Scheduler
+from core_wiringpi import WiringPiTestCase
 from core_usb_manager import USBManagerTestCase
 from settings import SettingsTestCase
 
-class TestZigBeeRFSensorPhysicalTexasInstruments(SettingsTestCase, USBManagerTestCase):
+class TestZigBeeRFSensorPhysicalTexasInstruments(SettingsTestCase, USBManagerTestCase, WiringPiTestCase):
     def setUp(self):
         super(TestZigBeeRFSensorPhysicalTexasInstruments, self).setUp()
 

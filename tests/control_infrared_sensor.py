@@ -192,7 +192,7 @@ class TestControlInfraredSensor(ThreadableTestCase):
         mock_stop_callback.assert_not_called()
         mock_stop_release_callback.assert_called_once_with()
         # Start button was not pressed, so its callback is not called.
-        self.assertFalse(self.mock_callback.called)
+        self.mock_callback.assert_not_called()
 
     @patch('thread.start_new_thread')
     def test_activate(self, thread_mock):

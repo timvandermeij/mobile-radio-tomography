@@ -73,7 +73,7 @@ def covers(target):
 
     def decorator(subject):
         # `subject` is the test class or test function that is being decorated, 
-        # which `target` is the actual class or method name that is covered by 
+        # while `target` is the actual class or method name that is covered by 
         # this test.
         # Note: At this point we cannot deduce which class a test function 
         # belongs to, because the class is not yet fully instantiated. However, 
@@ -124,7 +124,7 @@ class Method_Coverage(object):
         self._method_prefix = settings.get("test_method_prefix")
         # Method names for tests that cover an `__init__`  method
         self._init_test_methods = settings.get("init_test_methods")
-        # Method name for tests that cover all properties of a class.
+        # Method names for tests that cover all properties of a class.
         self._interface_test_methods = settings.get("interface_test_methods")
 
         # Dictionary of actual classes. This doubles as a lookup cache for test 
@@ -177,9 +177,9 @@ class Method_Coverage(object):
         }
 
         with patch.dict('sys.modules', modules):
-            self._iter_tests(tests)
+            self._handle_tests(tests)
 
-    def _iter_tests(self, suite):
+    def _handle_tests(self, suite):
         """
         Loop through all the tests in a `unittest.TestSuite` object `suite`.
 
@@ -189,7 +189,7 @@ class Method_Coverage(object):
 
         for test in suite:
             if isinstance(test, unittest.TestSuite):
-                self._iter_tests(test)
+                self._handle_tests(test)
             elif isinstance(test, unittest.TestCase):
                 self._handle_test(test)
 
@@ -423,11 +423,11 @@ class Method_Coverage(object):
 
         target_module = None
         target_length = 0
-        for module_length in range(len(target_class_parts)):
+        for module_length in range(1, len(target_class_parts) + 1):
             # Make a module from the first few parts. Check if we can load this 
             # module; if so, then it is likely the module in which the actual 
             # class could exist.
-            module = ''.join(target_class_parts[:module_length+1]).lower()
+            module = ''.join(target_class_parts[:module_length]).lower()
             try:
                 self._import_manager.load(module)
             except ImportError:
@@ -453,7 +453,7 @@ class Method_Coverage(object):
         """
 
         target_class = None
-        for class_length in range(target_length + 2):
+        for class_length in range(target_length + 1):
             # Make a class name from the last few parts. We try to create 
             # a class using the module name (or a part of it) or without the 
             # inferred module name parts, but we never leave any part unused.
