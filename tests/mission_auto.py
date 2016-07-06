@@ -52,7 +52,7 @@ class TestMissionAuto(EnvironmentTestCase):
 
                 # The method must wait for a period of time before checking the
                 # mission's commands to ensure that output is displayed cleanly.
-                sleep_mock.assert_called_once_with(self.settings.get("mission_delay"))
+                sleep_mock.assert_any_call(self.settings.get("mission_delay"))
                 check_mission_mock.assert_called_once_with()
 
     def test_step(self):

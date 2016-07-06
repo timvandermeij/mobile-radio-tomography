@@ -87,7 +87,7 @@ class TestMission(EnvironmentTestCase):
                     # appropriate calls.
                     self.mission.arm_and_takeoff()
                     armed_mock.assert_has_calls([call(True), call(), call()])
-                    sleep_mock.assert_called_once_with(1)
+                    sleep_mock.assert_any_call(1)
                     self.assertEqual(vehicle_mock.speed, self.mission.speed)
 
             alt = self.settings.get("altitude")

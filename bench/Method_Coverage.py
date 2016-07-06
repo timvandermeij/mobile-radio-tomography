@@ -478,6 +478,25 @@ class Method_Coverage(object):
         except ImportError:
             return None
 
+    def _get_function(self, class_type, method):
+        """
+        Return the function that the given `method` in the class `class_type`
+        wraps around to make it a class or instance method.
+
+        Returns the original function as well as whether the method is defined
+        in that class or in fact inherited.
+        """
+
+        if method in class_type.__dict__:
+            return class_type.__dict__[method], True
+
+        try:
+            parent_method = getattr(super(class_type, class_type), method)
+        except AttributeError:
+            return None, False
+
+        return parent_method.__func__, False
+
     def _convert_test_method(self, test, test_method):
         """
         Handle a test method with the name `test_method` in test case `test`.
@@ -489,11 +508,19 @@ class Method_Coverage(object):
         """
 
         target_methods = []
-        test_function = _unwrap(test.__class__.__dict__[test_method])
+        test_class = test.__class__.__name__
+
+        function, overloaded = self._get_function(test.__class__, test_method)
+        if function is None:
+            msg = "Test method '{}' does not actually exist"
+            self._add_warning(self._get_test_class_name(test_class),
+                              msg.format(test_method))
+            return []
+
+        test_function = _unwrap(function)
         if test_function in _function_coverage:
             target_methods = _function_coverage[test_function]
 
-        test_class = test.__class__.__name__
         target_class = self._classes[test_class]["class"]
         methods = target_class.__dict__
 
@@ -526,7 +553,7 @@ class Method_Coverage(object):
 
         if target_method is not None:
             target_methods.append(target_method)
-        if not target_methods:
+        elif not target_methods and overloaded:
             msg = "Could not infer method from test function '{}'"
             self._add_warning(self._get_test_class_name(test_class),
                               msg.format(test_method))
