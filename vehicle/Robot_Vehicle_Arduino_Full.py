@@ -71,6 +71,18 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
 
         raise ValueError("Invalid direction: {}".format(direction))
 
+    def _get_next_location(self):
+        if self._direction == Line_Follower_Direction.UP:
+            return (self._location[0] + 1, self._location[1])
+        if self._direction == Line_Follower_Direction.RIGHT:
+            return (self._location[0], self._location[1] + 1)
+        if self._direction == Line_Follower_Direction.DOWN:
+            return (self._location[0] - 1, self._location[1])
+        if self._direction == Line_Follower_Direction.LEFT:
+            return (self._location[0], self._location[1] - 1)
+
+        raise ValueError("Invalid direction: {}".format(self._direction))
+
     def _check_state(self):
         self._check_intersection()
 
@@ -89,6 +101,8 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
                         self._direction = self._get_direction(parts[1])
                     elif parts[0] == "ACKG": # "GOTO" acknowledgement
                         self._state = Robot_State("move")
+                    elif parts[0] == "PASS":
+                        self._location = self._get_next_location()
                 except IndexError:
                     # Ignore incomplete messages.
                     time.sleep(self._loop_delay)
