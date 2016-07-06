@@ -83,6 +83,8 @@ class Robot_Vehicle(Vehicle):
 
         self._servo_pins = set()
 
+        self.notify_attribute_listeners("home_location", self.home_location)
+
     def setup(self):
         super(Robot_Vehicle, self).setup()
 

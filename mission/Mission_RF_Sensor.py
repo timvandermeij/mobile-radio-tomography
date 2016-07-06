@@ -17,6 +17,8 @@ class Mission_RF_Sensor(Mission_Auto):
         self._rf_sensor = self.environment.get_rf_sensor()
 
     def arm_and_takeoff(self):
+        self.check_mission()
+
         # Wait until all the waypoints have been received before arming.
         while not self._waypoints_complete:
             time.sleep(1)

@@ -55,10 +55,10 @@ class TestMissionRFSensor(EnvironmentTestCase):
         with patch('sys.stdout'):
             self.mission.setup()
 
-        # Starting arming checks will wait until waypoints are complete.
-        with patch('time.sleep', side_effect=RuntimeError('sleep')):
-            with self.assertRaises(RuntimeError):
-                self.mission.arm_and_takeoff()
+            # Starting arming checks will wait until waypoints are complete.
+            with patch('time.sleep', side_effect=RuntimeError('sleep')):
+                with self.assertRaises(RuntimeError):
+                    self.mission.arm_and_takeoff()
 
     def _send_waypoint_add(self, index, latitude, longitude, altitude=0.0,
                            wait_id=0, wait_count=1, id_offset=0):
