@@ -146,9 +146,14 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
         for i, col in enumerate(self._column_labels):
             if data[i] is None:
-                # If a table cell is empty, use the previous waypoint's 
-                # coordinates for the current waypoint.
-                data[i] = previous[i] if repeat else self._column_defaults[i]
+                # If a table cell is empty, then either use the previous 
+                # waypoint's coordinates for the current waypoint if `repeat` 
+                # is enabled and the column default is a value which evaluates 
+                # to `False`. Otherwise, we just use the column default.
+                if repeat and not self._column_defaults[i]:
+                    data[i] = previous[i]
+                else:
+                    data[i] = self._column_defaults[i]
             else:
                 try:
                     data[i] = self._cast_cell(i, data[i])
