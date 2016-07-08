@@ -3,8 +3,12 @@ from PyQt4 import QtCore, QtGui
 
 # matplotlib imports
 import matplotlib
-matplotlib.use("Qt4Agg")
-import matplotlib.pyplot as plt
+try:
+    matplotlib.use("Qt4Agg")
+except ValueError as e:
+    raise ImportError("Could not load matplotlib backend: {}".format(e.message))
+finally:
+    import matplotlib.pyplot as plt
 
 class Control_Panel_View_Name(object):
     LOADING = 0
