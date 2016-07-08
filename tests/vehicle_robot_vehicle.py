@@ -1,6 +1,7 @@
 import math
 from dronekit import LocationLocal, LocationGlobal, LocationGlobalRelative, VehicleMode
 from mock import patch, MagicMock
+from ..bench.Method_Coverage import covers
 from ..core.Threadable import Threadable
 from ..core.WiringPi import WiringPi
 from ..geometry.Geometry_Spherical import Geometry_Spherical
@@ -20,7 +21,8 @@ class RobotVehicleTestCase(VehicleTestCase, WiringPiTestCase):
         super(RobotVehicleTestCase, self).setUp()
 
         if self._setup_line_follower_mock.called:
-            self.vehicle._line_follower = MagicMock()
+            self._line_follower = MagicMock()
+            self.vehicle._line_follower = self._line_follower
 
     def tearDown(self):
         super(RobotVehicleTestCase, self).tearDown()
@@ -34,7 +36,7 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
         ], vehicle_class="Robot_Vehicle")
         super(TestVehicleRobotVehicle, self).setUp()
 
-    def test_init(self):
+    def test_initialization(self):
         self.assertEqual(self.vehicle.arguments, self.arguments)
         self.assertEqual(self.vehicle._home_location, (0, 0))
         self.assertEqual(self.vehicle._direction, Line_Follower_Direction.UP)
@@ -44,10 +46,13 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
                                                                self.thread_manager,
                                                                self.usb_manager)
 
-        self.assertFalse(self.vehicle.use_simulation)
+    def test_set_speeds(self):
         with self.assertRaises(NotImplementedError):
             self.vehicle.set_speeds(0.1, 0.2,
                                     left_forward=False, right_forward=True)
+
+    def test_use_simulation(self):
+        self.assertFalse(self.vehicle.use_simulation)
 
     def test_home_location(self):
         self.vehicle.home_location = LocationLocal(1.0, 2.0, 4.0)
@@ -94,11 +99,50 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
         self._line_follower_patcher.start()
 
     @patch('thread.start_new_thread')
-    def test_loop(self, thread_mock):
+    def test_activate(self, thread_mock):
+        # Activating arms the vehicle and starts the threads.
         self.vehicle.activate()
         self.assertTrue(self.vehicle.armed)
-        self.vehicle._line_follower.activate.assert_called_once_with()
+        self._line_follower.activate.assert_called_once_with()
         thread_mock.assert_called_once_with(self.vehicle._state_loop, ())
+
+        self._line_follower.activate.reset_mock()
+        thread_mock.reset_mock()
+
+        # Activating a vehicle when it is armed does not activate it again.
+        self.vehicle.activate()
+        self._line_follower.activate.assert_not_called()
+        thread_mock.assert_not_called()
+
+    @patch('thread.start_new_thread')
+    def test_deactivate(self, thread_mock):
+        self.vehicle.activate()
+        self.vehicle.deactivate()
+        self._line_follower.deactivate.assert_called_once_with()
+        self.assertFalse(self.vehicle.armed)
+
+        # Deactivating a vehicle when it is not armed does not do anything.
+        self._line_follower.deactivate.reset_mock()
+        self.vehicle.deactivate()
+        self._line_follower.deactivate.assert_not_called()
+
+    @patch('thread.start_new_thread')
+    def test_mode(self, thread_mock):
+        self.vehicle.activate()
+        self.vehicle.mode = VehicleMode("GUIDED")
+        self.assertEqual(self.vehicle.mode.name, "GUIDED")
+
+        self.vehicle.mode = VehicleMode("RTL")
+        self.assertEqual(self.vehicle.mode.name, "RTL")
+        self.assertEqual(self.vehicle._waypoints, [(0, 0)])
+
+        self.vehicle.mode = VehicleMode("HALT")
+        self.assertEqual(self.vehicle.mode.name, "HALT")
+        self.assertFalse(self.vehicle.armed)
+
+    @patch('thread.start_new_thread')
+    def test_state_loop(self, thread_mock):
+        self.vehicle.activate()
 
         with patch.object(Threadable, 'interrupt') as interrupt_mock:
             with patch.object(Robot_Vehicle, '_check_state') as state_mock:
@@ -117,9 +161,10 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
                 interrupt_mock.assert_not_called()
 
                 self.assertFalse(self.vehicle.armed)
-                self.vehicle._line_follower.deactivate.assert_called_once_with()
+                self._line_follower.deactivate.assert_called_once_with()
 
     @patch.object(Robot_Vehicle, 'set_speeds')
+    @covers("is_current_location_valid")
     def test_check_state_default(self, set_speeds_mock):
         self.vehicle.mode = VehicleMode("GUIDED")
         self.vehicle.speed = 0.3
@@ -132,6 +177,7 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
         self.assertEqual(self.vehicle.attitude.yaw, 0.0)
 
     @patch.object(Robot_Vehicle, 'set_speeds')
+    @covers(["is_current_location_valid", "line_follower_callback", "location"])
     def test_check_state_diverge(self, set_speeds_mock):
         self.vehicle.mode = VehicleMode("GUIDED")
         self.vehicle.speed = 0.3
@@ -185,6 +231,7 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
         set_speeds_mock.assert_called_once_with(0, 0)
 
     @patch.object(Robot_Vehicle, 'set_speeds')
+    @covers(["is_current_location_valid", "line_follower_callback"])
     def test_check_state_turn(self, set_speeds_mock):
         self.vehicle.mode = VehicleMode("GUIDED")
         self.vehicle.speed = 0.3
@@ -195,8 +242,10 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
         self.vehicle.simple_goto(new_waypoint)
         self.vehicle._check_state()
         self.assertEqual(self.vehicle._state.name, "rotate")
-        self.assertEqual(self.vehicle._state.current_direction, Line_Follower_Direction.UP)
-        self.assertEqual(self.vehicle._state.target_direction, Line_Follower_Direction.RIGHT)
+        self.assertEqual(self.vehicle._state.current_direction,
+                         Line_Follower_Direction.UP)
+        self.assertEqual(self.vehicle._state.target_direction,
+                         Line_Follower_Direction.RIGHT)
         self.assertEqual(self.vehicle._state.rotate_direction, 1)
         set_speeds_mock.assert_called_once_with(0.2, 0.2,
                                                 left_forward=True,
@@ -204,16 +253,20 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
         self.assertFalse(self.vehicle.is_current_location_valid())
         self.assertEqual(self.vehicle.attitude.yaw, 0.0)
 
-        # Finish turning at an intersection
+        # Finish turning at an intersection. When the line follower detects 
+        # that we are diverging during rotation at the same side as the 
+        # rotation direction, then it means we detected another line.
         set_speeds_mock.reset_mock()
         self.vehicle.line_follower_callback("diverged", "right")
-        self.vehicle._line_follower.set_state.assert_called_with(Line_Follower_State.AT_INTERSECTION)
-        self.assertEqual(self.vehicle._state.current_direction, Line_Follower_Direction.RIGHT)
+        current_state = Line_Follower_State.AT_INTERSECTION
+        direction = Line_Follower_Direction.RIGHT
+        self._line_follower.set_state.assert_called_with(current_state)
+        self.assertEqual(self.vehicle._state.current_direction, direction)
         self.vehicle._check_state()
         self.assertEqual(self.vehicle._state.name, "intersection")
         set_speeds_mock.assert_called_once_with(0, 0)
-        self.assertEqual(self.vehicle._direction, Line_Follower_Direction.RIGHT)
-        self.vehicle._line_follower.set_direction.assert_called_once_with(Line_Follower_Direction.RIGHT)
+        self.assertEqual(self.vehicle._direction, direction)
+        self._line_follower.set_direction.assert_called_once_with(direction)
         self.assertEqual(self.vehicle.attitude.yaw, 0.5 * math.pi)
 
         # Moving to next intersection
@@ -242,6 +295,62 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
         self.assertEqual(self.vehicle._waypoints, [(0, 0)])
         self.vehicle.mode = VehicleMode("HALT")
         self.assertFalse(self.vehicle.armed)
+
+    def test_add_waypoint(self):
+        self.vehicle.add_waypoint(LocationLocal(4.0, 5.0, 0.0))
+        self.assertEqual(self.vehicle._waypoints, [(4, 5)])
+
+    def test_add_wait(self):
+        self.vehicle.add_wait()
+        self.assertEqual(self.vehicle._waypoints, [None])
+        self.assertTrue(self.vehicle._is_waypoint(0))
+        self.assertEqual(self.vehicle.count_waypoints(), 1)
+        self.assertIsNone(self.vehicle.get_waypoint())
+
+    def test_is_wait(self):
+        self.vehicle.add_waypoint(LocationLocal(4.0, 5.0, 0.0))
+        self.vehicle.set_next_waypoint()
+        self.assertFalse(self.vehicle.is_wait())
+
+        self.vehicle.add_wait()
+        self.vehicle.set_next_waypoint()
+        self.assertTrue(self.vehicle.is_wait())
+
+    def test_clear_waypoints(self):
+        self.vehicle.add_waypoint(LocationLocal(4.0, 5.0, 0.0))
+        self.vehicle.add_wait()
+        self.vehicle.clear_waypoints()
+        self.assertEqual(self.vehicle._waypoints, [])
+
+    def test_get_waypoint(self):
+        loc = LocationLocal(4.0, 5.0, 0.0)
+        self.vehicle.add_waypoint(loc)
+        self.vehicle.set_next_waypoint()
+        self.assertTrue(self.vehicle._is_waypoint(0))
+        self.assertEqual(self.vehicle.get_waypoint(), loc)
+        self.assertEqual(self.vehicle.get_waypoint(0), loc)
+        self.assertIsNone(self.vehicle.get_waypoint(1))
+
+    def test_count_waypoints(self):
+        self.vehicle.add_waypoint(LocationLocal(4.0, 5.0, 0.0))
+        self.vehicle.add_wait()
+        self.assertEqual(self.vehicle.count_waypoints(), 2)
+
+    def test_get_next_waypoint(self):
+        self.vehicle.set_next_waypoint()
+        self.assertEqual(self.vehicle.get_next_waypoint(), 0)
+        self.vehicle.set_next_waypoint()
+        self.assertEqual(self.vehicle.get_next_waypoint(), 1)
+
+    def test_set_next_waypoint(self):
+        self.vehicle.set_next_waypoint()
+        self.assertEqual(self.vehicle._current_waypoint, 0)
+        self.vehicle.set_next_waypoint(waypoint=2)
+        self.assertEqual(self.vehicle._current_waypoint, 2)
+
+    def test_simple_goto(self):
+        self.vehicle.simple_goto(LocationLocal(5.0, 6.0, 0.0))
+        self.assertEqual(self.vehicle._waypoints, [(5, 6)])
 
     def test_speed(self):
         self.vehicle.speed = 0.2
@@ -276,8 +385,24 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
         self.vehicle.velocity = [0, 0.5, 0]
         self.assertEqual(self.vehicle.speed, 0.5)
 
-    @patch.object(Robot_Vehicle, '_set_direction')
-    def test_yaw(self, direction_mock):
+    @patch.object(Robot_Vehicle, "_set_direction")
+    def test_attitude(self, direction_mock):
+        expected_yaws = {
+            Line_Follower_Direction.UP: 0.0,
+            Line_Follower_Direction.RIGHT: 0.5 * math.pi,
+            Line_Follower_Direction.DOWN: math.pi,
+            Line_Follower_Direction.LEFT: 1.5 * math.pi
+        }
+        for direction, yaw in expected_yaws.iteritems():
+            self.vehicle._direction = direction
+            self.assertEqual(self.vehicle.attitude.yaw, yaw)
+
+        with self.assertRaises(ValueError):
+            self.vehicle._direction = -1
+            dummy = self.vehicle.attitude.yaw
+
+    @patch.object(Robot_Vehicle, "_set_direction")
+    def test_set_yaw(self, direction_mock):
         expected_yaws = {
             Line_Follower_Direction.UP: 0.0,
             Line_Follower_Direction.RIGHT: 0.5 * math.pi,
@@ -288,13 +413,6 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
             direction_mock.reset_mock()
             self.vehicle.set_yaw(yaw)
             direction_mock.assert_called_once_with(direction, 1)
-
-            self.vehicle._direction = direction
-            self.assertEqual(self.vehicle.attitude.yaw, yaw)
-
-        with self.assertRaises(ValueError):
-            self.vehicle._direction = -1
-            dummy = self.vehicle.attitude.yaw
 
         # Handle extra arguments for `relative` and `direction`.
         direction_mock.reset_mock()
@@ -308,21 +426,36 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
         self.vehicle.set_yaw(1.5 * math.pi)
         direction_mock.assert_not_called()
 
-    @patch.object(Robot_Vehicle, 'set_rotate')
-    def test_direction(self, rotate_mock):
-        self.vehicle._direction = Line_Follower_Direction.UP
-        self.vehicle._set_direction(Line_Follower_Direction.UP)
+    @patch.object(Robot_Vehicle, "set_rotate")
+    def test_set_direction(self, set_rotate_mock):
+        current_direction = Line_Follower_Direction.UP
+        target_direction = Line_Follower_Direction.LEFT
+        expected_state = Line_Follower_State.AT_INTERSECTION
+
+        self.vehicle._direction = current_direction
+        self.vehicle._set_direction(current_direction)
         self.assertEqual(self.vehicle._state.name, "intersection")
-        rotate_mock.assert_not_called()
+        set_rotate_mock.assert_not_called()
 
-        self.vehicle._set_direction(Line_Follower_Direction.LEFT)
+        self.vehicle._set_direction(target_direction)
         self.assertEqual(self.vehicle._state.name, "rotate")
-        self.assertEqual(self.vehicle._state.current_direction, Line_Follower_Direction.UP)
-        self.assertEqual(self.vehicle._state.target_direction, Line_Follower_Direction.LEFT)
+        self.assertEqual(self.vehicle._state.current_direction, current_direction)
+        self.assertEqual(self.vehicle._state.target_direction, target_direction)
         self.assertEqual(self.vehicle._state.rotate_direction, -1)
-        self.vehicle._line_follower.set_state.assert_called_once_with(Line_Follower_State.AT_INTERSECTION)
-        rotate_mock.assert_called_once_with(-1)
+        self._line_follower.set_state.assert_called_once_with(expected_state)
+        set_rotate_mock.assert_called_once_with(-1)
 
+    @patch.object(Robot_Vehicle, "set_speeds")
+    def test_set_rotate(self, set_speeds_mock):
+        self.vehicle.set_rotate(1)
+        set_speeds_mock.assert_called_once_with(0.2, 0.2, left_forward=True,
+                                                right_forward=False)
+
+        set_speeds_mock.reset_mock()
+        self.vehicle.set_rotate(-1)
+        set_speeds_mock.assert_called_once_with(0.2, 0.2, left_forward=False,
+                                                right_forward=True)
+        
     def test_next_direction(self):
         self.vehicle._direction = Line_Follower_Direction.UP
         expected_directions = {

@@ -23,6 +23,12 @@ class TestVehicleRobotVehicleArduino(RobotVehicleTestCase):
         self.assertEqual(self.vehicle._current_speed, (0, 0, True, True))
 
     def test_setup(self):
+        with patch.object(self.vehicle, "_serial_connection") as serial_mock:
+            self.vehicle.setup()
+
+            serial_mock.reset_output_buffer.assert_called_once_with()
+
+    def test_use_simulation(self):
         self.vehicle.setup()
 
         # Simulation is disabled when we have a working (patched) RPi.GPIO.
