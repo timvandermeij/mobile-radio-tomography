@@ -89,33 +89,35 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
     def _serial_loop(self):
         try:
             while self._armed:
-                line = self._serial_connection.readline()
-                parts = line.lstrip('\0').rstrip().split(' ')
-
-                try:
-                    if parts[0] == "LOCA": # At grid intersection location
-                        self._location = (int(parts[1]), int(parts[2]))
-                        self._direction = self._get_direction(parts[3])
-                        self._state = Robot_State("intersection")
-                    elif parts[0] == "GDIR": # Direction update
-                        self._direction = self._get_direction(parts[1])
-                    elif parts[0] == "ACKG": # "GOTO" acknowledgement
-                        self._state = Robot_State("move")
-                    elif parts[0] == "PASS":
-                        self._location = self._get_next_location()
-                except IndexError:
-                    # Ignore incomplete messages.
-                    time.sleep(self._loop_delay)
-                    continue
-
-                print("Arduino: {}".format(' '.join(parts)))
+                self._read_serial_message()
                 time.sleep(self._loop_delay)
         except:
             super(Robot_Vehicle_Arduino_Full, self).interrupt()
 
+    def _read_serial_message(self):
+        line = self._serial_connection.readline()
+        parts = line.lstrip('\0').rstrip().split(' ')
+
+        try:
+            if parts[0] == "LOCA": # At grid intersection location
+                self._location = (int(parts[1]), int(parts[2]))
+                self._direction = self._get_direction(parts[3])
+                self._state = Robot_State("intersection")
+            elif parts[0] == "GDIR": # Direction update
+                self._direction = self._get_direction(parts[1])
+            elif parts[0] == "ACKG": # "GOTO" acknowledgement
+                self._state = Robot_State("move")
+            elif parts[0] == "PASS":
+                self._location = self._get_next_location()
+        except IndexError:
+            # Ignore incomplete messages.
+            return
+
+        print("Arduino: {}".format(' '.join(parts)))
+
     def _set_direction(self, target_direction, rotate_direction=0):
         # Format a "set direction" command
-        zumo_direction = self._get_zumo_direction(self._direction)
+        zumo_direction = self._get_zumo_direction(target_direction)
         self._serial_connection.write("DIRS {} {}\n".format(zumo_direction, rotate_direction))
 
     def _goto_waypoint(self, next_waypoint):

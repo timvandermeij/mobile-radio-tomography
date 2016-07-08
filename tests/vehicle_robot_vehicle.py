@@ -18,7 +18,9 @@ class RobotVehicleTestCase(VehicleTestCase, WiringPiTestCase):
         self._setup_line_follower_mock = self._line_follower_patcher.start()
 
         super(RobotVehicleTestCase, self).setUp()
-        self.vehicle._line_follower = MagicMock()
+
+        if self._setup_line_follower_mock.called:
+            self.vehicle._line_follower = MagicMock()
 
     def tearDown(self):
         super(RobotVehicleTestCase, self).tearDown()

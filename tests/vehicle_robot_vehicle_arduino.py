@@ -30,12 +30,14 @@ class TestVehicleRobotVehicleArduino(RobotVehicleTestCase):
         # simulation.
         self.assertFalse(self.vehicle.use_simulation)
 
-    def test_activate(self):
+    @patch("thread.start_new_thread")
+    def test_activate(self, thread_mock):
         with patch.object(Threadable, "activate"):
             self.vehicle.activate()
             # Reset signal is turned off on the DTR line.
             self.assertFalse(self.vehicle._serial_connection.dtr)
             self.assertEqual(self._ttl_device.readline(), "START\n")
+            thread_mock.assert_any_call(self.vehicle._state_loop, ())
 
     def test_deactivate(self):
         with patch.object(Threadable, "deactivate"):
