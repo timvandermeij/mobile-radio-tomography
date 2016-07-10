@@ -137,7 +137,7 @@ class Total_Variation_Reconstructor(Reconstructor):
         formula used for this method.
         """
 
-        return sum(np.sqrt((self._D * x) ** 2 + self._beta ** 2))
+        return np.sum(np.sqrt((self._D * x) ** 2 + self._beta ** 2))
 
     def _calculate_total_variation_gradient(self, A, b, x):
         """
