@@ -590,7 +590,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
     def _loop(self):
         """
-        Execute the reconstruction loop.
+        Prepare the reconstruction loop by handling stopping and repeating.
         """
 
         # Stop if the stop button has been pressed.
@@ -601,12 +601,26 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
             return
 
+        self._execute()
+
+        QtCore.QTimer.singleShot(self._pause_time, self._loop)
+
+    def _execute(self):
+        """
+        Execute the reconstruction loop by handling incoming packets.
+        """
+
         # If no packets are available yet, wait for them to arrive.
         if self._buffer.count() == 0:
-            QtCore.QTimer.singleShot(self._pause_time, self._loop)
             return
 
-        packet, calibrated_rssi = self._buffer.get()
+        try:
+            packet, calibrated_rssi = self._buffer.get()
+        except (TypeError, KeyError):
+            # The buffer returned `None` or a calibration value is not
+            # available, so ignore this packet.
+            self._controller.thread_manager.log("control_panel_reconstruction_view")
+            return
 
         # Update the graph, table and stream recorder (if applicable) with the packet.
         self._graph.update(packet)
@@ -616,7 +630,6 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
         # Only use packets with valid source and destination locations.
         if not packet.get("from_valid") or not packet.get("to_valid"):
-            QtCore.QTimer.singleShot(self._pause_time, self._loop)
             return
 
         # We attempt to reconstruct an image when the coordinator successfully
@@ -628,8 +641,6 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
                 self._chunk_count = 0
 
                 thread.start_new_thread(self._render, ())
-
-        QtCore.QTimer.singleShot(self._pause_time, self._loop)
 
     def _render(self):
         """

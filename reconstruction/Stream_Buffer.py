@@ -61,6 +61,10 @@ class Stream_Buffer(Buffer):
 
         source = (packet.get("from_latitude"), packet.get("from_longitude"))
         destination = (packet.get("to_latitude"), packet.get("to_longitude"))
-        calibrated_rssi = packet.get("rssi") - self._calibration[(source, destination)]
+        rssi = packet.get("rssi")
 
-        return (packet, calibrated_rssi)
+        link = (source, destination)
+        if link not in self._calibration:
+            raise KeyError("Link {} not in calibration file".format(link))
+
+        return (packet, rssi - self._calibration[link])

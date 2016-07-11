@@ -14,6 +14,9 @@ class TestReconstructionStreamBuffer(SettingsTestCase):
         self.settings = arguments.get_settings("reconstruction_stream")
         self.mock_sensor = MagicMock(number_of_sensors=42)
 
+        self.stream_buffer = Stream_Buffer(self.settings)
+        self.stream_buffer.register_rf_sensor(self.mock_sensor)
+
         self.packet = Packet()
         self.packet.set("specification", "rssi_ground_station")
         self.packet.set("sensor_id", 1)
@@ -40,7 +43,7 @@ class TestReconstructionStreamBuffer(SettingsTestCase):
         # calibration must be provided.
         self.settings.set("stream_calibrate", False)
         with self.assertRaises(ValueError):
-            stream_buffer = Stream_Buffer(self.settings)
+            Stream_Buffer(self.settings)
 
         # A full path is allowed, and dump files also work.
         self.settings.set("stream_calibration_file", "tests/reconstruction/dump.json")
@@ -51,24 +54,18 @@ class TestReconstructionStreamBuffer(SettingsTestCase):
     def test_register_rf_sensor(self):
         # Stream buffers only know their number of sensors once an RF sensor is 
         # registered. This also registers the buffer in the RF sensor.
-        stream_buffer = Stream_Buffer(self.settings)
-        stream_buffer.register_rf_sensor(self.mock_sensor)
-
-        self.assertEqual(stream_buffer.number_of_sensors, 42)
-        self.assertEqual(self.mock_sensor.buffer, stream_buffer)
+        self.assertEqual(self.stream_buffer.number_of_sensors, 42)
+        self.assertEqual(self.mock_sensor.buffer, self.stream_buffer)
 
     def test_get(self):
-        stream_buffer = Stream_Buffer(self.settings)
-        stream_buffer.register_rf_sensor(self.mock_sensor)
-
         # When the queue is empty, None should be returned.
-        self.assertEqual(stream_buffer.get(), None)
+        self.assertEqual(self.stream_buffer.get(), None)
 
         # If calibration mode is enabled, the original packet and RSSI value 
         # must be fetched.
-        stream_buffer.put(self.packet)
+        self.stream_buffer.put(self.packet)
 
-        buffer_packet, buffer_calibrated_rssi = stream_buffer.get()
+        buffer_packet, buffer_calibrated_rssi = self.stream_buffer.get()
         self.assertEqual(buffer_packet.get_all(), {
             "specification": "rssi_ground_station",
             "sensor_id": 1,
@@ -105,3 +102,17 @@ class TestReconstructionStreamBuffer(SettingsTestCase):
             "rssi": -38
         })
         self.assertEqual(buffer_calibrated_rssi, -38 - -34)
+
+    def test_get_missing_calibration(self):
+        # When a calibration value is missing, a `KeyError` must be raised.
+        self.settings.set("stream_calibrate", False)
+        self.settings.set("stream_calibration_file",
+                          "tests/reconstruction/stream_empty.json")
+        stream_buffer = Stream_Buffer(self.settings)
+        stream_buffer.register_rf_sensor(self.mock_sensor)
+        stream_buffer.put(self.packet)
+
+        stream_buffer._calibration = []
+
+        with self.assertRaises(KeyError):
+            stream_buffer.get()

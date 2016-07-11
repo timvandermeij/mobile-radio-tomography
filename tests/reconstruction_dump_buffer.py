@@ -58,6 +58,13 @@ class TestReconstructionDumpBuffer(SettingsTestCase):
         self.assertEqual(self.dump_buffer.get(), None)
         self.assertEqual(self.dump_buffer.count(), 0)
 
+    def test_get_missing_calibration(self):
+        # When a calibration value is missing, a `KeyError` must be raised.
+        self.dump_buffer._calibration = []
+
+        with self.assertRaises(KeyError):
+            self.dump_buffer.get()
+
     def test_put(self):
         # Verify that only lists can be put in the buffer.
         with self.assertRaises(ValueError):
