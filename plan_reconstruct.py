@@ -6,9 +6,13 @@ import json
 
 # matplotlib imports
 import matplotlib
-# Make it possible to run matplotlib in displayless (console-only) mode
-matplotlib.use('Agg' if 'DISPLAY' not in os.environ or os.environ['DISPLAY'] == '' else matplotlib.get_backend())
-import matplotlib.pyplot as plt
+try:
+    # Make it possible to run matplotlib in displayless (console-only) mode
+    matplotlib.use('Agg' if 'DISPLAY' not in os.environ or os.environ['DISPLAY'] == '' else matplotlib.get_backend())
+except ValueError as e:
+    raise ImportError("Could not load matplotlib backend: {}".format(e.message))
+finally:
+    import matplotlib.pyplot as plt
 
 # Package imports
 from __init__ import __package__

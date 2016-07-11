@@ -4,10 +4,15 @@ import pyqtgraph as pg
 
 # matplotlib imports
 import matplotlib
-matplotlib.use("Qt4Agg")
+try:
+    matplotlib.use("Qt4Agg")
+except ValueError as e:
+    raise ImportError("Could not load matplotlib backend: {}".format(e.message))
+finally:
+    import matplotlib.pyplot as plt
+
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.lines import Line2D
-import matplotlib.pyplot as plt
 
 # Package imports
 from Control_Panel_View import Control_Panel_View, Control_Panel_View_Name

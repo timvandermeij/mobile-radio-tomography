@@ -189,8 +189,10 @@ class RF_Sensor_Physical_XBee(RF_Sensor_Physical):
 
             self._send_tx_frame(packet, to_id)
 
-        # Send collected packets to the ground station.
-        for frame_id in self._packets.keys():
+        # Send collected packets to the ground station. Only send completed 
+        # packets, and remove them after sending. We have to iterate over 
+        # a copy to avoid changing the dictionary during iteration.
+        for frame_id in self._packets.copy():
             packet = self._packets[frame_id]
             if packet.get("rssi") is None:
                 continue
