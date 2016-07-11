@@ -114,7 +114,16 @@ class Mission_Auto(Mission):
         # AUTO missions usually do not need to perform a step.
         pass
 
-    def check_waypoint(self):
+    def check_wait(self):
+        """
+        Handle wait waypoints in the mission.
+
+        Returns `False` if the current waypoint should still be handled by
+        `check_waypoint`, i.e., if it is not a wait point or if we have
+        finished waiting at that point. In the latter case, the vehicle's
+        waypoint is updated and the measurements are invalidated.
+        """
+
         if self.vehicle.is_wait():
             if self._rf_sensor_synchronization and self.environment.is_measurement_valid():
                 # The vehicle is waiting for measurements to become valid, and 
@@ -133,6 +142,12 @@ class Mission_Auto(Mission):
                 self.environment.invalidate_measurement(required_sensors)
             else:
                 return True
+
+        return False
+
+    def check_waypoint(self):
+        if self.check_wait():
+            return True
 
         next_waypoint = self.vehicle.get_next_waypoint()
         distance = self.distance_to_current_waypoint()

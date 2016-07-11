@@ -17,12 +17,14 @@ class TestVehicleMockVehicle(VehicleTestCase):
         def listener(vehicle, name, msg):
             self._message_listener_mock(vehicle, name, msg)
 
+    def test_flush(self):
+        # The `flush` method does not do anything.
+        self.vehicle.flush()
+
     def test_interface_mode(self):
         # Test that the mode-related properties work as expected.
         self.assertTrue(self.vehicle.use_simulation)
-        self.assertIsInstance(self.vehicle.commands, CommandSequence)
         self.assertFalse(self.vehicle.armed)
-        self.vehicle.flush()
         with patch.object(Mock_Vehicle, "update_location") as update_mock:
             update_mock.reset_mock()
             self.assertEqual(self.vehicle.mode.name, "SIMULATED")
@@ -30,8 +32,9 @@ class TestVehicleMockVehicle(VehicleTestCase):
             self.assertEqual(self.vehicle.mode.name, "TEST")
             update_mock.assert_called_once_with()
 
-            self.assertTrue(self.vehicle.check_arming())
-            self.assertEqual(self.vehicle.mode.name, "GUIDED")
+    def test_check_arming(self):
+        self.assertTrue(self.vehicle.check_arming())
+        self.assertEqual(self.vehicle.mode.name, "GUIDED")
 
     def test_interface_speed(self):
         # Test that the speed-related properties work as expected.
@@ -46,7 +49,7 @@ class TestVehicleMockVehicle(VehicleTestCase):
             self.assertEqual(self.vehicle.airspeed, 0.0)
             self.assertEqual(self.vehicle.groundspeed, 0.0)
 
-    def test_interface_attitude(self):
+    def test_attitude(self):
         # Test that the attitude-related properties work as expected.
         with patch.object(Mock_Vehicle, "update_location") as update_mock:
             attitude = self.vehicle.attitude
@@ -85,7 +88,7 @@ class TestVehicleMockVehicle(VehicleTestCase):
             self.assertFalse(new_attitude == (0.1, 0.2, 0.3))
             self.assertTrue(new_attitude == MockAttitude(0.1, 0.2, 0.3))
 
-    def test_interface_location(self):
+    def test_location(self):
         # Test that the location property works as expected.
         with patch.object(Mock_Vehicle, "update_location") as update_mock:
             location = self.vehicle.location
@@ -107,20 +110,39 @@ class TestVehicleMockVehicle(VehicleTestCase):
             msg = GlobalMessage(1.0 * 1e7, 2.0 * 1e7, -3.0 * 1000, -3.0 * 1000)
             self._message_listener_mock.assert_called_once_with(self.vehicle, 'GLOBAL_POSITION_INT', msg)
 
-            # Setting a location via a distance update works similarly.
-            self.vehicle.set_location(3.4, 5.6, 8.7)
-            self.assertEqual(self.vehicle.location.global_relative_frame,
-                             LocationGlobalRelative(3.4, 5.6, 8.7))
-            self.assertEqual(self.vehicle.location.local_frame,
-                             LocationLocal(3.4, 5.6, -8.7))
-
             # Recursive location setting is detected.
             listener = lambda vehicle, attribute, value: vehicle.set_location(9.9, 8.8, 7.7)
             self.vehicle.add_attribute_listener('location', listener)
             with self.assertRaises(RuntimeError):
                 self.vehicle.location = LocationGlobal(5.0, 4.0, -2.0)
 
-    def test_interface_home_location(self):
+    def test_set_location(self):
+        # Setting a location via a distance update works similar to the 
+        # location setter.
+        self.vehicle.set_location(3.4, 5.6, 8.7)
+        self.assertEqual(self.vehicle.location.global_relative_frame,
+                         LocationGlobalRelative(3.4, 5.6, 8.7))
+        self.assertEqual(self.vehicle.location.local_frame,
+                         LocationLocal(3.4, 5.6, -8.7))
+
+    def test_notify_message_listeners(self):
+        self.vehicle.notify_message_listeners("FOO", "Hello world!")
+        self._message_listener_mock.assert_called_once_with(self.vehicle, "FOO",
+                                                            "Hello world!")
+
+    def test_on_message(self):
+        bar_message_listener_mock = MagicMock()
+        @self.vehicle.on_message("BAR")
+        def listener(vehicle, name, msg):
+            bar_message_listener_mock(vehicle, name, msg)
+
+        self.vehicle.notify_message_listeners("BAR", [1, 2, 3])
+        bar_message_listener_mock.assert_called_once_with(self.vehicle, "BAR",
+                                                          [1, 2, 3])
+        self._message_listener_mock.assert_called_once_with(self.vehicle, "BAR",
+                                                            [1, 2, 3])
+
+    def test_home_location(self):
         # Test that the home location property works as expected.
 
         # Normal geometry and spherical geometry have different home location 
@@ -160,8 +182,8 @@ class TestVehicleMockVehicle(VehicleTestCase):
         self.vehicle.set_servo(servo_mock, 1000)
         servo_mock.set_current_pwm.assert_called_once_with(1000)
 
-    def test_interface_simple(self):
-        # Check that the simple_takeoff and simple_goto methods work.
+    def test_simple_takeoff(self):
+        # Check that the simple_takeoff method works.
         self.vehicle.armed = True
         with patch.object(Mock_Vehicle, "set_target_location") as target_mock:
             # Taking off does not occur when the vehicle is not in guided mode.
@@ -172,15 +194,20 @@ class TestVehicleMockVehicle(VehicleTestCase):
             self.vehicle.simple_takeoff(1.1)
             target_mock.assert_called_once_with(alt=1.1, takeoff=True)
 
+    def test_simple_goto(self):
+        # Check that the simple_goto method works.
+        self.vehicle.armed = True
+        with patch.object(Mock_Vehicle, "set_target_location") as target_mock:
             target_mock.reset_mock()
             loc = LocationLocal(1.2, 3.4, -4.5)
             self.vehicle.simple_goto(loc)
             target_mock.assert_called_once_with(location=loc)
 
-    def test_command_sequence(self):
+    def test_commands(self):
         # Test that the command sequence is correct as needed by the 
         # MAVLink_Vehicle interface.
         commands = self.vehicle.commands
+        self.assertIsInstance(commands, CommandSequence)
 
         # The required methods exist but do not influence anything.
         commands.download()
@@ -296,6 +323,8 @@ class TestVehicleMockVehicle(VehicleTestCase):
             self.assertEqual(self.vehicle._target_attitude._yaw,
                              geometry_mock.angle_to_bearing.return_value)
 
+    def test_clear_target_location(self):
+        self.vehicle.set_target_location(alt=6.5, takeoff=True)
         self.vehicle.clear_target_location()
         self.assertIsNone(self.vehicle._target_location)
 

@@ -187,6 +187,11 @@ class Vehicle(Threadable):
     def is_wait(self):
         """
         Check if the current waypoint is a wait command added via `add_wait`.
+
+        If the `Vehicle` does not support waypoints, or if the given `waypoint`
+        index number is incorrect, or the waypoint itself is invalid, e.g., it
+        was retrieved from a non-wait command, then the method must return
+        `False`.
         """
         
         raise NotImplementedError("Subclasses must implement `is_wait()`")
@@ -199,9 +204,10 @@ class Vehicle(Threadable):
         If `waypoint` is `-1`, then return the waypoint that the vehicle should
         reach "next" in the mission.
 
-        If the Vehicle does not support waypoints, or if the given `waypoint`
-        index number is incorrect, or if the waypoint itself is invalid, this
-        method can return `None`.
+        If the `Vehicle` does not support waypoints, or if the given `waypoint`
+        index number is incorrect, then this method must return `None`. If the
+        waypoint itself is invalid, e.g., it was retrieved from a non-waypoint
+        command, then the method may return `None` or some other value.
         """
 
         raise NotImplementedError("Subclasses must implement `get_waypoint(waypoint)`")

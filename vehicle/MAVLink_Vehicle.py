@@ -68,7 +68,11 @@ class MAVLink_Vehicle(Vehicle):
         self.commands.add(cmd)
 
     def is_wait(self):
-        mission_item = self.commands[self.commands.next]
+        try:
+            mission_item = self.commands[self.commands.next]
+        except IndexError:
+            return False
+
         return mission_item.command == mavutil.mavlink.MAV_CMD_NAV_LOITER_UNLIM
 
     def get_waypoint(self, waypoint=-1):
@@ -79,7 +83,11 @@ class MAVLink_Vehicle(Vehicle):
         if waypoint == -1:
             waypoint = self.commands.next
 
-        mission_item = self.commands[waypoint]
+        try:
+            mission_item = self.commands[waypoint]
+        except IndexError:
+            return None
+
         if mission_item.command != mavutil.mavlink.MAV_CMD_NAV_WAYPOINT:
             return None
 

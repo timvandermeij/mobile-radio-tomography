@@ -44,17 +44,18 @@ class Test_Run(object):
             # packages, and exclude the test bench, test runner and tests 
             # themselves from code coverage.
             path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            include_path = "{}/*".format(path)
             excluded_patterns = ["test.py", "bench/*", "tests/*"]
             excluded_paths = [
                 "{}/{}".format(path, pattern) for pattern in excluded_patterns
             ]
-            self._code_coverage = coverage.Coverage(include="{}/*".format(path),
-                                                    omit=excluded_paths)
+            self._statement_coverage = coverage.Coverage(include=include_path,
+                                                         omit=excluded_paths)
 
             self._method_coverage = Method_Coverage(self._arguments,
                                                     self._import_manager)
         else:
-            self._code_coverage = None
+            self._statement_coverage = None
             self._method_coverage = None
 
     def is_passed(self):
@@ -81,12 +82,12 @@ class Test_Run(object):
         for module in self._preimported_modules:
             self._import_manager.unload(module, relative=True)
 
+        if self._statement_coverage is not None:
+            # Enable statement coverage around loading and running tests.
+            self._statement_coverage.start()
+
         pattern = self._settings.get("pattern")
         verbosity = self._settings.get("verbosity")
-
-        if self._code_coverage is not None:
-            # Enable code coverage around the loading and running of tests.
-            self._code_coverage.start()
 
         tests = self._loader.discover("tests", pattern=pattern,
                                       top_level_dir="..")
@@ -97,8 +98,8 @@ class Test_Run(object):
 
         result = runner.run(tests)
 
-        if self._code_coverage is not None:
-            self._code_coverage.stop()
+        if self._statement_coverage is not None:
+            self._statement_coverage.stop()
 
         # Reload the Import_Manager so that the Method_Coverage can safely use 
         # it again to load modules.
@@ -109,31 +110,54 @@ class Test_Run(object):
         if not result.wasSuccessful():
             self._failed = True
 
-    def execute_code_coverage_report(self):
+    def execute_statement_coverage_report(self):
         """
-        Create a code coverage report if coverage is enabled and all tests
-        have succeeded. Returns the report text if so, otherwise `None`.
+        Create a statement coverage report if coverage is enabled. We
+        automatically disable coverage if we do not run all tests or a test has
+        failed. The test run also fails if the statement coverage is not 100%.
+
+        This method returns the report text if coverage is enabled, otherwise
+        it returns `None`.
         """
 
-        if self._failed or self._code_coverage is None:
+        if self._statement_coverage is None:
+            return None
+
+        if self._failed or not self._settings.is_default("pattern"):
             return None
 
         report = StringIO()
-        self._code_coverage.report(file=report,
-                                   show_missing=True, skip_covered=True)
+        percentage = self._statement_coverage.report(file=report,
+                                                     show_missing=True,
+                                                     skip_covered=True)
+
+        if percentage < 100:
+            self._failed = True
 
         return report.getvalue()
 
     def execute_method_coverage_report(self):
         """
-        Create a method coverage report if coverage is enabled and all tests
-        have succeeded. Returns the report text if so, otherwise `None`.
+        Create a method coverage report if coverage is enabled. We automatically
+        disable coverage if we do not run all tests or a test has failed.
+        The test run also fails if the method coverage is not 100%.
+
+        This method returns the report text if coverage is enabled, otherwise
+        it returns `None`.
         """
 
-        if self._failed or self._method_coverage is None:
+        if self._method_coverage is None:
             return None
 
-        return self._method_coverage.get_results()
+        if self._failed or not self._settings.is_default("pattern"):
+            return None
+
+        output, percentage = self._method_coverage.get_results()
+
+        if percentage < 100:
+            self._failed = True
+
+        return output
 
     def _get_travis_environment(self, name):
         """

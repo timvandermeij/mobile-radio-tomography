@@ -1,18 +1,22 @@
 from dronekit import Command, Locations, LocationLocal, LocationGlobalRelative
 from pymavlink import mavutil
 from mock import patch, Mock, PropertyMock
+from ..bench.Method_Coverage import covers
 from ..geometry.Geometry_Spherical import Geometry_Spherical
 from ..vehicle.MAVLink_Vehicle import MAVLink_Vehicle
 from vehicle import VehicleTestCase
 
-class TestVehicleMockVehicle(VehicleTestCase):
+@covers(MAVLink_Vehicle)
+class TestVehicleMAVLinkVehicle(VehicleTestCase):
     def setUp(self):
         self.set_arguments([], vehicle_class="MAVLink_Vehicle")
-        super(TestVehicleMockVehicle, self).setUp()
+        super(TestVehicleMAVLinkVehicle, self).setUp()
 
-    def test_interface(self):
+    def test_commands(self):
         with self.assertRaises(NotImplementedError):
             dummy = self.vehicle.commands
+
+    def test_flush(self):
         with self.assertRaises(NotImplementedError):
             self.vehicle.flush()
 
@@ -65,6 +69,11 @@ class TestVehicleMockVehicle(VehicleTestCase):
 
     @patch.object(MAVLink_Vehicle, "commands", new_callable=PropertyMock)
     def test_is_wait(self, commands_mock):
+        commands_mock.return_value.configure_mock(
+            __getitem__=Mock(side_effect=IndexError)
+        )
+        self.assertFalse(self.vehicle.is_wait())
+
         cmd = Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
                       mavutil.mavlink.MAV_CMD_NAV_LOITER_UNLIM, 0, 0, 0, 0, 0,
                       0, 0, 0, 0)
@@ -83,6 +92,11 @@ class TestVehicleMockVehicle(VehicleTestCase):
 
     @patch.object(MAVLink_Vehicle, "commands", new_callable=PropertyMock)
     def test_get_waypoint(self, commands_mock):
+        commands_mock.return_value.configure_mock(
+            __getitem__=Mock(side_effect=IndexError)
+        )
+        self.assertIsNone(self.vehicle.get_waypoint(waypoint=0))
+
         cmd = Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
                       mavutil.mavlink.MAV_CMD_NAV_LOITER_UNLIM, 0, 0, 0, 0, 0,
                       0, 0, 0, 0)
@@ -107,7 +121,8 @@ class TestVehicleMockVehicle(VehicleTestCase):
                              LocationGlobalRelative(3.4, 2.3, 1.2))
 
     @patch.object(MAVLink_Vehicle, "commands", new_callable=PropertyMock)
-    def test_command_waypoints(self, commands_mock):
+    @covers(["get_next_waypoint", "set_next_waypoint", "count_waypoints"])
+    def test_commands_waypoints(self, commands_mock):
         next_mock = PropertyMock(return_value=1)
         type(commands_mock.return_value).next = next_mock
         self.assertEqual(self.vehicle.get_next_waypoint(), 1)
