@@ -10,7 +10,7 @@ class TDMA_Scheduler(object):
         if isinstance(arguments, Arguments):
             self._settings = arguments.get_settings("zigbee_tdma_scheduler")
         else:
-            raise TypeError("'settings' must be an instance of Arguments")
+            raise TypeError("'arguments' must be an instance of Arguments")
 
         self._number_of_sensors = self._settings.get("number_of_sensors")
         self._sweep_delay = self._settings.get("sweep_delay")

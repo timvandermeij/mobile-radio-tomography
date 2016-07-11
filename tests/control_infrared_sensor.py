@@ -29,7 +29,7 @@ class TestControlInfraredSensor(ThreadableTestCase):
 
         self.arguments = Arguments("settings.json", [])
         self.settings = self.arguments.get_settings("infrared_sensor")
-        self.infrared_sensor = Infrared_Sensor(self.settings,
+        self.infrared_sensor = Infrared_Sensor(self.arguments,
                                                self.thread_manager)
         self.mock_callback = MagicMock()
 
@@ -45,19 +45,15 @@ class TestControlInfraredSensor(ThreadableTestCase):
         self._pylirc_patcher.stop()
 
     def test_initialization(self):
-        # Test initialization of infrared sensor with a local import and 
-        # a local thread manager rather than the ones already created at setUp.
         from ..control.Infrared_Sensor import Infrared_Sensor
-        thread_manager = Thread_Manager()
 
-        # Test whether we can pass Arguments to the infrared sensor.
-        with patch.object(Infrared_Sensor, '_configure'):
-            infrared_sensor = Infrared_Sensor(self.arguments, thread_manager)
-            self.assertEqual(infrared_sensor._settings, self.settings)
+        # Verify that only `Arguments` objects can be used to initialize.
+        with self.assertRaises(TypeError):
+            Infrared_Sensor(self.settings, self.thread_manager)
+        with self.assertRaises(TypeError):
+            Infrared_Sensor(None, self.thread_manager)
 
-        # Test whether other types for arguments and settings are rejected.
-        with self.assertRaises(ValueError):
-            Infrared_Sensor(None, thread_manager)
+        self.assertEqual(self.infrared_sensor._settings, self.settings)
 
     def test_configure(self):
         # Test initialization of infrared sensor with a local import and 
@@ -73,7 +69,7 @@ class TestControlInfraredSensor(ThreadableTestCase):
         }
         with patch('os.path', **methods) as path_mock:
             with self.assertRaisesRegexp(OSError, "not installed"):
-                Infrared_Sensor(self.settings, thread_manager)
+                Infrared_Sensor(self.arguments, thread_manager)
 
             path_mock.isdir.assert_called_once_with("/etc/lirc")
 
@@ -84,7 +80,7 @@ class TestControlInfraredSensor(ThreadableTestCase):
             'isfile.return_value': True
         }
         with patch('os.path', **methods) as path_mock:
-            Infrared_Sensor(self.settings, thread_manager)
+            Infrared_Sensor(self.arguments, thread_manager)
             self.assertEqual(path_mock.isfile.call_count, 1)
             args = path_mock.isfile.call_args[0]
             self.assertEqual(len(args), 1)
@@ -97,7 +93,7 @@ class TestControlInfraredSensor(ThreadableTestCase):
         }
         with patch('os.path', **methods) as path_mock:
             with self.assertRaisesRegexp(OSError, r".*\.lircd\.conf.* does not exist"):
-                Infrared_Sensor(self.settings, thread_manager)
+                Infrared_Sensor(self.arguments, thread_manager)
 
             self.assertEqual(path_mock.isfile.call_count, 2)
             args = path_mock.isfile.call_args[0]
@@ -112,7 +108,7 @@ class TestControlInfraredSensor(ThreadableTestCase):
         }
         with patch('os.path', **methods) as path_mock:
             with self.assertRaisesRegexp(OSError, r".*\.lircrc.* does not exist"):
-                Infrared_Sensor(self.settings, thread_manager)
+                Infrared_Sensor(self.arguments, thread_manager)
 
             self.assertEqual(path_mock.isfile.call_count, 3)
             args = path_mock.isfile.call_args[0]
@@ -133,7 +129,7 @@ class TestControlInfraredSensor(ThreadableTestCase):
         }
         with patch('os.path', **methods):
             with patch('shutil.copyfile') as copy_mock:
-                Infrared_Sensor(self.settings, thread_manager)
+                Infrared_Sensor(self.arguments, thread_manager)
                 self.assertEqual(copy_mock.call_count, 1)
                 args = copy_mock.call_args[0]
                 self.assertRegexpMatches(args[0], r"/remotes/.*\.lircd\.conf$")
@@ -141,7 +137,7 @@ class TestControlInfraredSensor(ThreadableTestCase):
 
             with patch('shutil.copyfile', side_effect=IOError):
                 with self.assertRaisesRegexp(OSError, "not writable"):
-                    Infrared_Sensor(self.settings, thread_manager)
+                    Infrared_Sensor(self.arguments, thread_manager)
 
     def test_register(self):
         # We must have an existing button.

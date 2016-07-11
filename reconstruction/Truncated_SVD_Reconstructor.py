@@ -1,22 +1,26 @@
 import numpy as np
 import scipy.sparse.linalg
 from Reconstructor import Reconstructor
-from ..settings import Arguments, Settings
 
 class Truncated_SVD_Reconstructor(Reconstructor):
-    def __init__(self, settings):
+    def __init__(self, arguments):
         """
         Initialize the truncated SVD reconstructor object.
         """
 
-        super(Truncated_SVD_Reconstructor, self).__init__(settings)
+        super(Truncated_SVD_Reconstructor, self).__init__(arguments)
 
-        if isinstance(settings, Arguments):
-            settings = settings.get_settings("reconstruction_truncated_svd_reconstructor")
-        elif not isinstance(settings, Settings):
-            raise ValueError("'settings' must be an instance of Settings or Arguments")
+        self._singular_values = self._settings.get("singular_values")
 
-        self._singular_values = settings.get("singular_values")
+    @property
+    def type(self):
+        """
+        Get the type of the reconstructor.
+
+        The type is equal to the name of the settings group.
+        """
+
+        return "reconstruction_truncated_svd_reconstructor"
 
     def execute(self, weight_matrix, rssi, buffer=None):
         """

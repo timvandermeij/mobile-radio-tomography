@@ -1,11 +1,11 @@
 from serial import SerialException
 from Line_Follower import Line_Follower
 from ..core.USB_Manager import USB_Manager
-from ..settings import Arguments, Settings
+from ..settings import Arguments
 
 class Line_Follower_Arduino(Line_Follower):
-    def __init__(self, location, direction, callback, settings, thread_manager,
-                 usb_manager=None, delay=0):
+    def __init__(self, location, direction, callback, arguments,
+                 thread_manager, usb_manager=None, delay=0):
         """
         Initialize the line follower object for the Arduino.
         """
@@ -13,10 +13,10 @@ class Line_Follower_Arduino(Line_Follower):
         super(Line_Follower_Arduino, self).__init__(location, direction, callback,
                                                     thread_manager, delay)
 
-        if isinstance(settings, Arguments):
-            settings = settings.get_settings("line_follower_arduino")
-        elif not isinstance(settings, Settings):
-            raise TypeError("'settings' must be an instance of Settings or Arguments")
+        if isinstance(arguments, Arguments):
+            settings = arguments.get_settings("line_follower_arduino")
+        else:
+            raise TypeError("'arguments' must be an instance of Arguments")
 
         if not isinstance(usb_manager, USB_Manager):
             raise TypeError("'usb_manager' must be provided to the Arduino line follower")

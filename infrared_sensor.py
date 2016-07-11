@@ -13,11 +13,10 @@ def stop_callback():
 
 def main(argv):
     thread_manager = Thread_Manager()
-
     arguments = Arguments("settings.json", argv) 
-    settings = arguments.get_settings("infrared_sensor")
+
     try:
-        infrared_sensor = Infrared_Sensor(settings, thread_manager)
+        infrared_sensor = Infrared_Sensor(arguments, thread_manager)
     except OSError as e:
         arguments.error("Could not configure infrared sensor: {}".format(e))
 

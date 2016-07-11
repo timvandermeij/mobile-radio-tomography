@@ -29,21 +29,26 @@ class TestLocationLineFollowerRaspberryPi(ThreadableTestCase, SettingsTestCase,
         self.mock_callback = MagicMock()
         self.thread_manager = Thread_Manager()
         self.line_follower = Line_Follower_Raspberry_Pi(
-            self.location, self.direction, self.mock_callback, self.settings,
+            self.location, self.direction, self.mock_callback, self.arguments,
             self.thread_manager, delay=0
         )
 
     def test_initialization(self):
         from ..location.Line_Follower_Raspberry_Pi import Line_Follower_Raspberry_Pi
 
-        # The settings argument must be `Arguments` or `Settings`
+        # Verify that only `Arguments` objects can be used to initialize.
+        with self.assertRaises(TypeError):
+            Line_Follower_Raspberry_Pi(
+                self.location, self.direction, self.mock_callback,
+                self.settings, self.thread_manager, delay=0
+            )
+
         with self.assertRaises(TypeError):
             Line_Follower_Raspberry_Pi(
                 self.location, self.direction, self.mock_callback,
                 None, self.thread_manager, delay=0
             )
 
-        # `Arguments` is accepted (like `Settings` in `setUp`).
         self.rpi_gpio_mock.GPIO.setwarnings.reset_mock()
         self.rpi_gpio_mock.GPIO.setmode.reset_mock()
         line_follower = Line_Follower_Raspberry_Pi(
@@ -65,7 +70,7 @@ class TestLocationLineFollowerRaspberryPi(ThreadableTestCase, SettingsTestCase,
         with self.assertRaises(ValueError):
             Line_Follower_Raspberry_Pi(
                 self.location, self.direction, self.mock_callback,
-                self.settings, self.thread_manager, delay=0
+                self.arguments, self.thread_manager, delay=0
             )
 
     def test_enable(self):

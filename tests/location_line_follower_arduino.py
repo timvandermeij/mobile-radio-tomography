@@ -25,12 +25,19 @@ class TestLocationLineFollowerArduino(ThreadableTestCase, SettingsTestCase,
         self.thread_manager = Thread_Manager()
         self.usb_manager.index()
         self.line_follower = Line_Follower_Arduino(
-            self.location, self.direction, self.mock_callback, self.settings,
+            self.location, self.direction, self.mock_callback, self.arguments,
             self.thread_manager, usb_manager=self.usb_manager, delay=0
         )
 
     def test_initialization(self):
-        # The settings argument must be `Arguments` or `Settings`.
+        # Verify that only `Arguments` objects can be used to initialize.
+        with self.assertRaises(TypeError):
+            Line_Follower_Arduino(
+                self.location, self.direction, self.mock_callback,
+                self.settings, self.thread_manager, usb_manager=self.usb_manager,
+                delay=0
+            )
+
         with self.assertRaises(TypeError):
             Line_Follower_Arduino(
                 self.location, self.direction, self.mock_callback,
@@ -41,7 +48,7 @@ class TestLocationLineFollowerArduino(ThreadableTestCase, SettingsTestCase,
         with self.assertRaisesRegexp(TypeError, "'usb_manager' must be provided"):
             Line_Follower_Arduino(
                 self.location, self.direction, self.mock_callback,
-                self.settings, self.thread_manager, usb_manager=None, delay=0
+                self.arguments, self.thread_manager, usb_manager=None, delay=0
             )
 
         # `Arguments` is accepted (like `Settings` in `setUp`).

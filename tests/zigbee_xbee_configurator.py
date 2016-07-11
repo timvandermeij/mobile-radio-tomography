@@ -1,5 +1,5 @@
 import serial
-from mock import patch, MagicMock
+from mock import MagicMock
 from ..core.USB_Manager import USB_Device_Baud_Rate
 from ..zigbee.XBee_Configurator import XBee_Configurator, XBee_Response_Status
 from ..settings import Arguments
@@ -10,22 +10,23 @@ class TestZigBeeXBeeConfigurator(USBManagerTestCase, SettingsTestCase):
     def setUp(self):
         super(TestZigBeeXBeeConfigurator, self).setUp()
 
-        self.arguments = Arguments("settings.json", ["--port", self._xbee_port])
+        self.arguments = Arguments("settings.json", [
+            "--port", self._xbee_port, "--startup-delay", "0"
+        ])
         self.settings = self.arguments.get_settings("xbee_configurator")
 
         self.usb_manager.index()
-        with patch("time.sleep"):
-            self.configurator = XBee_Configurator(self.settings,
-                                                  self.usb_manager)
+        self.configurator = XBee_Configurator(self.arguments, self.usb_manager)
 
         # Mock the sensor as we cannot test with the actual hardware.
         self.configurator._sensor = MagicMock()
 
     def test_initialization(self):
-        # Verify that only `Settings` and `Arguments` objects can be used to initialize.
+        # Verify that only `Arguments` objects can be used to initialize.
         XBee_Configurator(self.arguments, self.usb_manager)
-        XBee_Configurator(self.settings, self.usb_manager)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
+            XBee_Configurator(self.settings, self.usb_manager)
+        with self.assertRaises(TypeError):
             XBee_Configurator(None, self.usb_manager)
 
         self.assertIsInstance(self.configurator._serial_connection, serial.Serial)

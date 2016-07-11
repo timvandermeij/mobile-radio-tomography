@@ -1,27 +1,26 @@
 import time
 from xbee import ZigBee
-from ..settings import Arguments, Settings
+from ..settings import Arguments
 
 class XBee_Response_Status(object):
     OK = "\x00"
 
 class XBee_Configurator(object):
-    def __init__(self, settings, usb_manager):
+    def __init__(self, arguments, usb_manager):
         """
         Initialize the XBee configurator.
         """
 
-        if isinstance(settings, Arguments):
-            self.settings = settings.get_settings("xbee_configurator")
-        elif isinstance(settings, Settings):
-            self.settings = settings
+        if isinstance(arguments, Arguments):
+            self._settings = arguments.get_settings("xbee_configurator")
         else:
-            raise ValueError("'settings' must be an instance of Settings or Arguments")
+            raise TypeError("'arguments' must be an instance of Arguments")
 
         self._usb_manager = usb_manager
         self._serial_connection = self._usb_manager.get_xbee_device()
         self._sensor = ZigBee(self._serial_connection)
-        time.sleep(self.settings.get("startup_delay"))
+
+        time.sleep(self._settings.get("startup_delay"))
 
     def _encode_value(self, value):
         """

@@ -10,22 +10,21 @@ import pylirc
 
 # Package imports
 from ..core.Threadable import Threadable
-from ..settings import Arguments, Settings
+from ..settings import Arguments
 
 class Infrared_Sensor(Threadable):
-    def __init__(self, settings, thread_manager):
+    def __init__(self, arguments, thread_manager):
         """
         Initialize the infrared sensor object.
         """
 
         super(Infrared_Sensor, self).__init__("infrared_sensor", thread_manager)
 
-        if isinstance(settings, Arguments):
-            settings = settings.get_settings("infrared_sensor")
-        elif not isinstance(settings, Settings):
-            raise ValueError("'settings' must be an instance of Settings or Arguments")
+        if isinstance(arguments, Arguments):
+            self._settings = arguments.get_settings("infrared_sensor")
+        else:
+            raise TypeError("'arguments' must be an instance of Arguments")
 
-        self._settings = settings
         self._remote = self._settings.get("remote")
         self._program = self._settings.get("program")
         self._buttons = self._settings.get("buttons")

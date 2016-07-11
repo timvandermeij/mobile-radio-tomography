@@ -2,12 +2,22 @@ import numpy as np
 from Reconstructor import Reconstructor
 
 class SVD_Reconstructor(Reconstructor):
-    def __init__(self, settings):
+    def __init__(self, arguments):
         """
         Initialize the SVD reconstructor object.
         """
 
-        super(SVD_Reconstructor, self).__init__(settings)
+        super(SVD_Reconstructor, self).__init__(arguments)
+
+    @property
+    def type(self):
+        """
+        Get the type of the reconstructor.
+
+        The type is equal to the name of the settings group.
+        """
+
+        return "reconstruction_svd_reconstructor"
 
     def execute(self, weight_matrix, rssi, buffer=None):
         """

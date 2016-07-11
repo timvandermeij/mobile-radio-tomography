@@ -8,28 +8,32 @@ import scipy.optimize
 
 # Package imports
 from Reconstructor import Reconstructor
-from ..settings import Arguments, Settings
 
 class Total_Variation_Reconstructor(Reconstructor):
-    def __init__(self, settings):
+    def __init__(self, arguments):
         """
         Initialize the total variation reconstructor object.
         """
 
-        super(Total_Variation_Reconstructor, self).__init__(settings)
+        super(Total_Variation_Reconstructor, self).__init__(arguments)
 
-        if isinstance(settings, Arguments):
-            settings = settings.get_settings("reconstruction_total_variation_reconstructor")
-        elif not isinstance(settings, Settings):
-            raise ValueError("'settings' must be an instance of Settings or Arguments")
-
-        self._alpha = settings.get("alpha")
-        self._beta = settings.get("beta")
-        self._solver_method = settings.get("solver_method")
-        self._solver_iterations = settings.get("solver_iterations")
+        self._alpha = self._settings.get("alpha")
+        self._beta = self._settings.get("beta")
+        self._solver_method = self._settings.get("solver_method")
+        self._solver_iterations = self._settings.get("solver_iterations")
 
         self._D = None
         self._guess = None
+
+    @property
+    def type(self):
+        """
+        Get the type of the reconstructor.
+
+        The type is equal to the name of the settings group.
+        """
+
+        return "reconstruction_total_variation_reconstructor"
 
     def execute(self, weight_matrix, rssi, buffer=None):
         """
@@ -133,7 +137,7 @@ class Total_Variation_Reconstructor(Reconstructor):
         formula used for this method.
         """
 
-        return sum(np.sqrt((self._D * x) ** 2 + self._beta ** 2))
+        return np.sum(np.sqrt((self._D * x) ** 2 + self._beta ** 2))
 
     def _calculate_total_variation_gradient(self, A, b, x):
         """

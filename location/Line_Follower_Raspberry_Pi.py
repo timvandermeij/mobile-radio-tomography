@@ -1,10 +1,10 @@
 import time
 import RPi.GPIO
 from Line_Follower import Line_Follower
-from ..settings import Arguments, Settings
+from ..settings import Arguments
 
 class Line_Follower_Raspberry_Pi(Line_Follower):
-    def __init__(self, location, direction, callback, settings,
+    def __init__(self, location, direction, callback, arguments,
                  thread_manager, delay=0, **kwargs):
         """
         Initialize the line follower object for the Raspberry Pi. Note that the
@@ -18,10 +18,10 @@ class Line_Follower_Raspberry_Pi(Line_Follower):
                                                          thread_manager,
                                                          delay=delay)
 
-        if isinstance(settings, Arguments):
-            settings = settings.get_settings("line_follower_raspberry_pi")
-        elif not isinstance(settings, Settings):
-            raise TypeError("'settings' must be an instance of Settings or Arguments")
+        if isinstance(arguments, Arguments):
+            settings = arguments.get_settings("line_follower_raspberry_pi")
+        else:
+            raise TypeError("'arguments' must be an instance of Arguments")
 
         self._sensors = settings.get("led_pins")
         if len(self._sensors) != 6:
