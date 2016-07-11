@@ -21,6 +21,8 @@ class Robot_Vehicle_Arduino(Robot_Vehicle):
 
         self.settings = arguments.get_settings("vehicle_robot_arduino")
 
+        self._activate_delay = self.settings.get("activate_delay")
+
         # PWM range for both motors (minimum and maximum values)
         self._speed_pwms = self.settings.get("motor_speed_pwms")
         # Speed range for both motors in m/s
@@ -53,7 +55,7 @@ class Robot_Vehicle_Arduino(Robot_Vehicle):
         # through. We add more time for it to reset and start the serial 
         # connection, since that may take some time.
         self._serial_connection.dtr = False
-        time.sleep(1.0)
+        time.sleep(self._activate_delay)
 
         # Let the Arduino know that the serial connection is established and we 
         # want to arm the vehicle.

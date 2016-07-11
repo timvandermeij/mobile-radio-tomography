@@ -9,7 +9,8 @@ class TestVehicleRobotVehicleArduinoFull(RobotVehicleTestCase):
     def setUp(self):
         self.set_arguments([
             "--motor-speed-pwms", "0", "2000", "--motor-speeds", "-0.6", "0.6",
-            "--home-location", "3", "4", "--home-direction", "2"
+            "--home-location", "3", "4", "--home-direction", "2",
+            "--activate-delay", "0"
         ], vehicle_class="Robot_Vehicle_Arduino_Full")
         self.set_rpi_patch()
         super(TestVehicleRobotVehicleArduinoFull, self).setUp()

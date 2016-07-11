@@ -7,7 +7,8 @@ from vehicle_robot_vehicle import RobotVehicleTestCase
 class TestVehicleRobotVehicleArduino(RobotVehicleTestCase):
     def setUp(self):
         self.set_arguments([
-            "--motor-speed-pwms", "0", "2000", "--motor-speeds", "-0.6", "0.6"
+            "--motor-speed-pwms", "0", "2000", "--motor-speeds", "-0.6", "0.6",
+            "--activate-delay", "0"
         ], vehicle_class="Robot_Vehicle_Arduino")
         self.set_rpi_patch()
         super(TestVehicleRobotVehicleArduino, self).setUp()
