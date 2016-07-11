@@ -61,7 +61,7 @@ class USBManagerTestCase(unittest.TestCase):
         self._xbee_port = os.ttyname(slave_xbee)
 
         master_ttl, slave_ttl = self._get_virtual_pty()
-        self._ttl_device = os.fdopen(master_ttl)
+        self._ttl_device = os.fdopen(master_ttl, 'w+')
         self._ttl_port = os.ttyname(slave_ttl)
 
         slave_cc2530 = self._get_virtual_pty()[1]

@@ -7,7 +7,8 @@ from vehicle_robot_vehicle import RobotVehicleTestCase
 class TestVehicleRobotVehicleArduino(RobotVehicleTestCase):
     def setUp(self):
         self.set_arguments([
-            "--motor-speed-pwms", "0", "2000", "--motor-speeds", "-0.6", "0.6"
+            "--motor-speed-pwms", "0", "2000", "--motor-speeds", "-0.6", "0.6",
+            "--activate-delay", "0"
         ], vehicle_class="Robot_Vehicle_Arduino")
         self.set_rpi_patch()
         super(TestVehicleRobotVehicleArduino, self).setUp()
@@ -23,6 +24,12 @@ class TestVehicleRobotVehicleArduino(RobotVehicleTestCase):
         self.assertEqual(self.vehicle._current_speed, (0, 0, True, True))
 
     def test_setup(self):
+        with patch.object(self.vehicle, "_serial_connection") as serial_mock:
+            self.vehicle.setup()
+
+            serial_mock.reset_output_buffer.assert_called_once_with()
+
+    def test_use_simulation(self):
         self.vehicle.setup()
 
         # Simulation is disabled when we have a working (patched) RPi.GPIO.
@@ -30,12 +37,14 @@ class TestVehicleRobotVehicleArduino(RobotVehicleTestCase):
         # simulation.
         self.assertFalse(self.vehicle.use_simulation)
 
-    def test_activate(self):
+    @patch("thread.start_new_thread")
+    def test_activate(self, thread_mock):
         with patch.object(Threadable, "activate"):
             self.vehicle.activate()
             # Reset signal is turned off on the DTR line.
             self.assertFalse(self.vehicle._serial_connection.dtr)
             self.assertEqual(self._ttl_device.readline(), "START\n")
+            thread_mock.assert_any_call(self.vehicle._state_loop, ())
 
     def test_deactivate(self):
         with patch.object(Threadable, "deactivate"):

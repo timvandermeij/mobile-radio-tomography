@@ -597,6 +597,11 @@
     "vehicle_robot_arduino": {
         "name": "Robot vehicle connected through an Arduino with a serial connection",
         "settings": {
+            "activate_delay": {
+                "help": "Number of seconds to wait for the Arduino to restart during activation",
+                "type": "float",
+                "default": 1.0
+            },
             "motor_speed_pwms": {
                 "help": "PWM range for both motors (minimum and maximum values)",
                 "type": "tuple",

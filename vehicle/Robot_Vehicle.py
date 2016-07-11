@@ -75,10 +75,15 @@ class Robot_Vehicle(Vehicle):
         self._waypoints = []
         self._current_waypoint = -1
 
-        # Current state of the robot. Possible states are:
-        # - intersection: The robot is standing still at an intersection.
-        # - rotate: The robot is rotating at an intersection. See
-        #   Robot_State_Rotate
+        # Current state of the robot. Possible states include:
+        # - "intersection": The robot is standing still at an intersection.
+        # - "rotate": The robot is rotating at an intersection. See
+        #   `Robot_State_Rotate` for additional fields.
+        # - "move": The robot is moving toward a specific waypoint and not
+        #   rotating. This state may be interrupted by an "intersection" state, 
+        #   which causes the `_check_state` loop determine whether it has 
+        #   reached the waypoint or that it should continue moving.
+        # Subclasses may add more internal states for additional functionality.
         self._state = Robot_State("intersection")
 
         self._servo_pins = set()
@@ -181,10 +186,12 @@ class Robot_Vehicle(Vehicle):
                 # back to the line.
                 speed = self._move_speed
                 speed_difference = direction * self._diverged_speed * speed
-                self.set_speeds(speed + speed_difference, speed - speed_difference)
+                self.set_speeds(speed + speed_difference,
+                                speed - speed_difference)
                 self._last_diverged_time = time.time()
 
-    def set_speeds(self, left_speed, right_speed, left_forward=True, right_forward=True):
+    def set_speeds(self, left_speed, right_speed, left_forward=True,
+                   right_forward=True):
         raise NotImplementedError("Subclasses must implement `set_speeds` method")
 
     @property
