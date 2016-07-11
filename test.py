@@ -17,10 +17,10 @@ def main(argv):
     print("> Executing unit tests")
     test_run.execute_unit_tests()
 
-    code_coverage_report = test_run.execute_code_coverage_report()
-    if code_coverage_report is not None:
-        print("> Executing code coverage")
-        print(code_coverage_report)
+    statement_coverage_report = test_run.execute_statement_coverage_report()
+    if statement_coverage_report is not None:
+        print("> Executing statement coverage")
+        print(statement_coverage_report)
 
     method_coverage_report = test_run.execute_method_coverage_report()
     if method_coverage_report is not None:

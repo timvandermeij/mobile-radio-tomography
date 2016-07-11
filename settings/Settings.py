@@ -118,6 +118,18 @@ class Settings(object):
 
         return self.settings[key]["value"]
 
+    def is_default(self, key):
+        if key not in self.settings:
+            if self.parent is not None:
+                try:
+                    return self.parent.is_default(key)
+                except KeyError:
+                    pass
+
+            raise KeyError("Setting '{}' for component '{}' not found.".format(key, self._component_name))
+
+        return self.settings[key]["value"] == self.settings[key]["default"]
+
     def set(self, key, value):
         if key not in self.settings:
             if self.parent is not None:

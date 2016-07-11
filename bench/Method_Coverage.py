@@ -207,8 +207,11 @@ class Method_Coverage(object):
         """
         Format the results of the method coverage.
 
-        The returned string contains warnings found during the test class
-        inference process, the coverage statistics and untested methods.
+        This method returns a tuple. The first returned value is a string which
+        contains warnings found during the test class inference process, the
+        coverage statistics and untested methods. The second returned value is
+        a float, indicating the percentage of methods covered. The percentage
+        is between 0 and 100, inclusive.
         """
 
         out = ""
@@ -258,11 +261,13 @@ class Method_Coverage(object):
                 out += "Missed methods: {}\n".format(', '.join(missing_methods))
 
         if total_methods > 0:
+            percentage = total_covered / float(total_methods)
             total_format = "\nTotal method coverage: {}/{} ({:.0%})\n"
-            out += total_format.format(total_covered, total_methods,
-                                       total_covered / float(total_methods))
+            out += total_format.format(total_covered, total_methods, percentage)
+        else:
+            percentage = 0.0
 
-        return out
+        return out, percentage * 100
 
     def _handle_test(self, test):
         """

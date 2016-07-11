@@ -141,6 +141,41 @@ class TestSettings(SettingsTestCase):
 
         self.assertEqual(expected, {})
 
+    def test_is_default(self):
+        settings = Settings("tests/settings/settings.json", "foo",
+                            defaults_file="tests/settings/defaults.json")
+
+        self.assertTrue(settings.is_default("bar"))
+        settings.set("bar", 3)
+        self.assertFalse(settings.is_default("bar"))
+
+    def test_is_default_parent(self):
+        parent_settings = Settings("tests/settings/empty.json", "foo",
+                                   defaults_file="tests/settings/defaults.json")
+        child_settings = Settings("tests/settings/empty.json", "child",
+                                  defaults_file="tests/settings/defaults.json")
+        child_settings.set("bar", 3)
+        self.assertFalse(parent_settings.is_default("bar"))
+        self.assertFalse(child_settings.is_default("bar"))
+
+        child_settings.set("baz", True)
+        self.assertTrue(parent_settings.is_default("baz"))
+        self.assertFalse(child_settings.is_default("baz"))
+
+    def test_is_default_nonexistent(self):
+        settings = Settings("tests/settings/settings.json", "foo",
+                            defaults_file="tests/settings/defaults.json")
+        # The exception mentions the missing setting and the component.
+        with self.assertRaisesRegexp(KeyError, "'new'.*'foo'"):
+            settings.is_default("new")
+
+    def test_is_default_nonexistent_parent(self):
+        settings = Settings("tests/settings/settings.json", "child",
+                            defaults_file="tests/settings/defaults.json")
+        # The exception mentions the current component rather than the parent.
+        with self.assertRaisesRegexp(KeyError, "'new'.*'child'"):
+            settings.is_default("new")
+
     def test_keys(self):
         settings = Settings("tests/settings/settings.json", "foo",
                             defaults_file="tests/settings/defaults.json")
