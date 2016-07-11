@@ -40,11 +40,40 @@ class TestMission(EnvironmentTestCase):
         mission = Mission.create(self.environment, self.arguments)
         self.assertIsInstance(mission, Mission_Calibrate)
 
+    def test_setup(self):
+        self.assertEqual(self.mission.size, self.settings.get("space_size"))
+        self.assertEqual(self.mission.resolution, self.settings.get("resolution"))
+        self.assertEqual(self.mission.padding, self.settings.get("padding"))
+        self.assertEqual(self.mission.altitude, self.settings.get("altitude"))
+        self.assertEqual(self.mission.speed, self.settings.get("speed"))
+        self.assertEqual(self.mission.closeness, self.settings.get("closeness"))
+        self.assertEqual(self.mission.farness, self.settings.get("farness"))
+        self.assertIsInstance(self.mission.memory_map, Memory_Map)
+
+    def test_distance_to_current_waypoint(self):
+        self.assertIsNone(self.mission.distance_to_current_waypoint())
+
+    def test_distance_to_current_waypoint_spherical(self):
+        with patch.object(self.environment, "geometry", new=Geometry_Spherical()):
+            # 3 * 3 + 4 * 4 = 9 + 16 = 25 which is 5 squared.
+            home_loc = LocationGlobal(0.0, 0.0, 0.0)
+            loc = self.mission.geometry.get_location_meters(home_loc, 3.0, 4.0)
+            self.vehicle.add_waypoint(loc)
+            self.assertAlmostEqual(self.mission.distance_to_current_waypoint(),
+                                   5.0, delta=0.02)
+
     def test_display(self):
         # Verify that the interface requires subclasses to implement
         # the `display()` method.
         with self.assertRaises(NotImplementedError):
             self.mission.display()
+
+    def test_clear_mission(self):
+        with patch.object(self.mission, "vehicle", spec=Mock_Vehicle) as vehicle_mock:
+            with patch("sys.stdout"):
+                self.mission.clear_mission()
+                vehicle_mock.clear_waypoints.assert_called_once_with()
+                vehicle_mock.update_mission.assert_called_once_with()
 
     def test_check_mission(self):
         config = {
@@ -175,6 +204,7 @@ class TestMission(EnvironmentTestCase):
     def test_get_memory_map(self):
         # The return value must be a `Memory_Map` object.
         self.assertIsInstance(self.mission.get_memory_map(), Memory_Map)
+        self.assertEqual(self.mission.get_memory_map(), self.mission.memory_map)
 
     def test_send_global_velocity(self):
         # The vehicle's velocity must be set as a list.

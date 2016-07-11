@@ -76,9 +76,18 @@ class TestMissionCalibrate(EnvironmentTestCase):
         self.assertEqual(self.mission.round_number, 16)
 
         self.assertEqual(len(self.mission.waypoints), 16 * 14) # (4**2)*(4*4-2)
-        self.assertEqual(len(self.mission.get_points()), 16 * 14)
 
         self.assertEqual(self.mission.waypoints[0:wplen], [(0, 1)]*wplen)
         self.assertEqual(self.mission.waypoints[wplen:wplen*2],
                          [(0, 0)] + self.first_waypoints[:-1])
         self.assertEqual(self.mission.waypoints[wplen*2:wplen*3], [(0, 3)]*wplen)
+
+    def test_get_points(self):
+        with patch('sys.stdout'):
+            self.mission.setup()
+
+        points = self.mission.get_points()
+        self.assertEqual(len(self.mission.get_points()), 16 * 14)
+        wplen = len(self.first_waypoints)
+        for point, waypoint in zip(points[0:wplen], self.first_waypoints):
+            self.assertEqual(point, LocationLocal(waypoint[0], waypoint[1], 0.0))

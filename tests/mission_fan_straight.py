@@ -80,8 +80,17 @@ class TestMissionFanStraight(EnvironmentTestCase):
             (0, 2), (0, 2), (0, 2), (0, 2)
         ])
 
+    def test_get_points(self):
+        with patch('sys.stdout'):
+            self.mission.setup()
+
+        points = self.mission.get_points()
+        self.assertEqual(len(points), len(self.first_waypoints))
+        for point, waypoint in zip(points, self.first_waypoints):
+            self.assertEqual(point, LocationLocal(waypoint[0], waypoint[1], 0.0))
+
     @patch.object(Robot_Vehicle, "_state_loop")
-    def test_mission(self, state_loop_mock):
+    def test_check_waypoint(self, state_loop_mock):
         with patch('sys.stdout'):
             self.mission.setup()
             self.mission.arm_and_takeoff()

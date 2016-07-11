@@ -69,6 +69,11 @@ class TestVehicleMAVLinkVehicle(VehicleTestCase):
 
     @patch.object(MAVLink_Vehicle, "commands", new_callable=PropertyMock)
     def test_is_wait(self, commands_mock):
+        commands_mock.return_value.configure_mock(
+            __getitem__=Mock(side_effect=IndexError)
+        )
+        self.assertFalse(self.vehicle.is_wait())
+
         cmd = Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
                       mavutil.mavlink.MAV_CMD_NAV_LOITER_UNLIM, 0, 0, 0, 0, 0,
                       0, 0, 0, 0)
@@ -87,6 +92,11 @@ class TestVehicleMAVLinkVehicle(VehicleTestCase):
 
     @patch.object(MAVLink_Vehicle, "commands", new_callable=PropertyMock)
     def test_get_waypoint(self, commands_mock):
+        commands_mock.return_value.configure_mock(
+            __getitem__=Mock(side_effect=IndexError)
+        )
+        self.assertIsNone(self.vehicle.get_waypoint(waypoint=0))
+
         cmd = Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
                       mavutil.mavlink.MAV_CMD_NAV_LOITER_UNLIM, 0, 0, 0, 0, 0,
                       0, 0, 0, 0)
