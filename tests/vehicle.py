@@ -1,5 +1,6 @@
-from mock import MagicMock
+from mock import patch, MagicMock, PropertyMock
 from dronekit import LocationLocal, LocationGlobal, LocationGlobalRelative, VehicleMode
+from ..bench.Method_Coverage import covers
 from ..core.Import_Manager import Import_Manager
 from ..core.Thread_Manager import Thread_Manager
 from ..geometry.Geometry import Geometry
@@ -50,6 +51,14 @@ class TestVehicle(VehicleTestCase):
         self.set_arguments(vehicle_class="Vehicle")
         super(TestVehicle, self).setUp()
 
+        self._location_valid_cases = [
+            (LocationGlobal(1.0, 2.3, 4.2), True),
+            (LocationGlobal(None, 2.3, 4.2), False),
+            (LocationGlobal(1.0, 2.3, None), False),
+            (LocationLocal(5.0, 4.0, 3.0), True),
+            (LocationLocal(None, 4.0, 3.0), False)
+        ]
+
     def test_create(self):
         # Vehicle.create must return a Vehicle object.
         self.assertIsInstance(self.vehicle, Vehicle)
@@ -61,6 +70,12 @@ class TestVehicle(VehicleTestCase):
         self.assertTrue(hasattr(self.vehicle, "_servos"))
         self.assertTrue(hasattr(self.vehicle, "_attribute_listeners"))
 
+    @covers([
+        "setup", "update_mission", "add_takeoff", "add_waypoint",
+        "clear_waypoints", "add_wait", "is_wait", "get_waypoint",
+        "get_next_waypoint", "set_next_waypoint", "count_waypoints",
+        "check_arming", "simple_takeoff", "simple_goto", "set_yaw", "set_servo"
+    ])
     def test_interface(self):
         dummy = None
         with self.assertRaises(NotImplementedError):
@@ -111,6 +126,11 @@ class TestVehicle(VehicleTestCase):
             self.vehicle.set_servo(7, 1000)
 
     def test_home_location(self):
+        new_location = LocationGlobal(1.0, 2.0, 3.0)
+        self.vehicle.home_location = new_location
+        self.assertEqual(self.vehicle._home_location, new_location)
+
+    def test_add_attribute_listener(self):
         mock_callback = MagicMock()
         self.vehicle.add_attribute_listener("home_location", mock_callback)
         self.assertEqual(self.vehicle._attribute_listeners["home_location"],
@@ -119,19 +139,38 @@ class TestVehicle(VehicleTestCase):
         self.vehicle.home_location = new_location
         self.assertEqual(self.vehicle._home_location, new_location)
 
-        # Test if the listener is called with the correct arguments
+        # Test if the listener is called with the correct arguments.
         self.assertEqual(mock_callback.call_count, 1)
         call_args = mock_callback.call_args[0]
         self.assertEqual(call_args[0], self.vehicle)
         self.assertEqual(call_args[1], "home_location")
         self.assertEqual(call_args[2], new_location)
 
+    def test_remove_attribute_listener(self):
+        mock_callback = MagicMock()
+        self.vehicle.add_attribute_listener("home_location", mock_callback)
+
+        # The listener must already have been registered.
         with self.assertRaises(ValueError):
             self.vehicle.remove_attribute_listener("home_location", lambda: 99)
+
+        # Removing an existing listener works.
         self.vehicle.remove_attribute_listener("home_location", mock_callback)
         self.assertNotIn("home_location", self.vehicle._attribute_listeners)
+
+        self.vehicle.home_location = LocationGlobal(5.0, 6.0, 7.0)
+        mock_callback.assert_not_called()
+
+        # The attribute must already have registered listeners.
         with self.assertRaises(KeyError):
             self.vehicle.remove_attribute_listener("xyz", mock_callback)
+
+    def test_notify_attribute_listeners(self):
+        mock_callback = MagicMock()
+        self.vehicle.add_attribute_listener("foo", mock_callback)
+
+        self.vehicle.notify_attribute_listeners("foo", "Hello!")
+        mock_callback.assert_called_once_with(self.vehicle, "foo", "Hello!")
 
     def test_mode(self):
         self.vehicle.mode = VehicleMode("GUIDED")
@@ -145,21 +184,22 @@ class TestVehicle(VehicleTestCase):
         self.assertFalse(self.vehicle.armed)
         self.assertEqual(self.vehicle.armed, self.vehicle._armed)
 
-    def test_location_valid(self):
-        cases = [
-            (LocationGlobal(1.0, 2.3, 4.2), True),
-            (LocationGlobal(None, 2.3, 4.2), False),
-            (LocationGlobal(1.0, 2.3, None), False),
-            (LocationLocal(5.0, 4.0, 3.0), True),
-            (LocationLocal(None, 4.0, 3.0), False)
-        ]
-        for location, expected in cases:
+    def test_is_location_valid(self):
+        for location, expected in self._location_valid_cases:
             neg = "" if expected else " not"
             self.assertEqual(self.vehicle.is_location_valid(location), expected,
                              msg="{} must{} be valid".format(location, neg))
 
         with self.assertRaises(TypeError):
             self.vehicle.is_location_valid((1, 2, 3))
+
+    @patch.object(Vehicle, "location", new_callable=PropertyMock)
+    def test_is_current_location_valid(self, location_mock):
+        for location, expected in self._location_valid_cases: 
+            neg = "" if expected else " not"
+            location_mock.configure_mock(return_value=location)
+            self.assertEqual(self.vehicle.is_current_location_valid(), expected,
+                             msg="{} must{} be valid".format(location, neg))
 
     def test_set_servos(self):
         mock_callback = MagicMock()
