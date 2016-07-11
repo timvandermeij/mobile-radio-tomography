@@ -111,6 +111,8 @@ class TestMissionRFSensor(EnvironmentTestCase):
 
         self.assertEqual(self.mission.next_index, 0)
         self.assertEqual(self.vehicle._waypoints, [])
+        self.assertIsNone(self.mission._point)
+        self.assertFalse(self.mission._waypoints_complete)
 
     def test_add_waypoint(self):
         with patch('sys.stdout'):

@@ -89,6 +89,8 @@ class Mission_RF_Sensor(Mission_Auto):
         # Add a takeoff command for flying vehicles that use it.
         self.add_takeoff()
         self._next_index = 0
+        self._waypoints_complete = False
+        self._point = None
         self._send_ack()
 
     def _add_waypoint(self, packet):
