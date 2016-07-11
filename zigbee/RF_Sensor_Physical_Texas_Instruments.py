@@ -208,9 +208,11 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
         if rssi is None:
             raise TypeError("RSSI value must be provided")
 
+        specification = packet.get("specification")
+
         if self._id == 0:
             # Handle a ping/pong packet.
-            if packet.get("specification") == "ping_pong":
+            if specification == "ping_pong":
                 self._discovery_callback({
                     "id": packet.get("sensor_id"),
                     "address": str(packet.get("sensor_id"))
@@ -218,7 +220,7 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
                 return
 
         # Respond to a ping/pong request.
-        if packet.get("specification") == "ping_pong":
+        if specification == "ping_pong":
             self._send_tx_frame(packet, 0)
             return
 
