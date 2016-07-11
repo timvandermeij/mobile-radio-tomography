@@ -96,7 +96,9 @@ class Control_Panel_RF_Sensor_Sender(object):
         self._controller.rf_sensor.enqueue(packet, to=vehicle)
 
         self._set_label(vehicle, "Sending {} #{}: {}".format(self._name, index+1, data))
-        self._timers[vehicle].start()
+
+        if vehicle in self._timers:
+            self._timers[vehicle].start()
 
     def _receive_ack(self, packet):
         vehicle = packet.get("sensor_id")
@@ -150,9 +152,13 @@ class Control_Panel_RF_Sensor_Sender(object):
         for timer in self._timers.values():
             timer.stop()
 
+        self._timers = {}
+
         if self._progress is not None:
             self._progress.cancel()
             self._progress.deleteLater()
+
+        self._progress = None
 
         if message is not None:
             QtGui.QMessageBox.critical(self._controller.central_widget,

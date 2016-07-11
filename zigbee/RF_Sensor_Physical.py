@@ -78,24 +78,27 @@ class RF_Sensor_Physical(RF_Sensor):
             self._receive_callback(packet)
             return False
 
+        specification = packet.get("specification")
+        error_message = "Received packet is of unexpected type '{}', expected '{}'"
+
         # Handle an NTP synchronization packet.
-        if packet.get("specification") == "ntp":
+        if specification == "ntp":
             self._ntp.process(packet)
             return False
 
         if self._id == 0:
             # Handle an RSSI ground station packet.
-            if packet.get("specification") == "rssi_ground_station":
+            if specification == "rssi_ground_station":
                 if self._buffer is not None:
                     self._buffer.put(packet)
 
                 return False
 
-            raise ValueError("Received packet is not an RSSI ground station packet")
+            raise ValueError(error_message.format(specification, "rssi_ground_station"))
 
         # Handle an RSSI broadcast packet.
-        if packet.get("specification") != "rssi_broadcast":
-            raise ValueError("Received packet is not an RSSI broadcast packet")
+        if specification != "rssi_broadcast":
+            raise ValueError(error_message.format(specification, "rssi_broadcast"))
 
         return True
 

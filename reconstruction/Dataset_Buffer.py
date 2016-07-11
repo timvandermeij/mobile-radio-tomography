@@ -89,9 +89,11 @@ class Dataset_Buffer(Buffer):
         packet.set("to_valid", True)
         packet.set("rssi", rssi)
 
-        calibrated_rssi = rssi - self._calibration[(source, destination)]
+        link = (source, destination)
+        if link not in self._calibration:
+            raise KeyError("Link {} not in calibration file".format(link))
 
-        return (packet, calibrated_rssi)
+        return (packet, rssi - self._calibration[link])
 
     def put(self, packet):
         """
