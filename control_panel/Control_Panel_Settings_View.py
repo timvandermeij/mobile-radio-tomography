@@ -19,7 +19,6 @@ class Control_Panel_Settings_View(Control_Panel_View):
 
         self._components = []
         self._widgets = []
-        self._containers = []
         self._best_matches = {}
         self._new_settings = {}
 
@@ -29,34 +28,44 @@ class Control_Panel_Settings_View(Control_Panel_View):
     def show(self):
         self._add_menu_bar()
 
-        defaults = Settings.get_settings(Settings.DEFAULTS_FILE)
-        self._components = sorted(defaults.iterkeys(),
-                                  key=lambda k: defaults[k]["name"])
-
-        self._widgets = [None for c in self._components]
-
         self._listWidget = QtGui.QListWidget()
-        self._listWidget.addItems([defaults[c]["name"] for c in self._components])
-        self._listWidget.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Expanding)
-        self._listWidget.setCurrentRow(0)
-
         self._stackedLayout = QtGui.QStackedLayout()
-
-        self._containers = []
-        for c in self._components:
-            container = QtGui.QScrollArea()
-            container.setWidgetResizable(True)
-            self._stackedLayout.addWidget(container)
-            self._containers.append(container)
-
-        self._listWidget.currentRowChanged.connect(self._stackedLayout.setCurrentIndex)
-        self._stackedLayout.currentChanged.connect(self._current_changed)
-        self._current_changed(self._stackedLayout.currentIndex())
 
         # Create the layout and add the widgets.
         hbox_stacks = QtGui.QHBoxLayout()
         hbox_stacks.addWidget(self._listWidget)
         hbox_stacks.addLayout(self._stackedLayout)
+
+        hbox_buttons = QtGui.QHBoxLayout()
+
+        vbox = QtGui.QVBoxLayout(self._controller.central_widget)
+        vbox.addLayout(hbox_stacks)
+        vbox.addLayout(hbox_buttons)
+
+        defaults = Settings.get_settings(Settings.DEFAULTS_FILE)
+        self._components = sorted(defaults.iterkeys(),
+                                  key=lambda k: defaults[k]["name"])
+
+        self._listWidget.addItems([defaults[c]["name"] for c in self._components])
+        self._listWidget.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Expanding)
+        self._listWidget.setCurrentRow(0)
+
+        self._widgets = []
+        for component in self._components:
+            container = QtGui.QScrollArea()
+            container.setWidgetResizable(True)
+            self._stackedLayout.addWidget(container)
+
+            widget = SettingsWidget(self._controller.arguments, component,
+                                    container)
+            widget.parentClicked.connect(self._goto_parent)
+            container.setWidget(widget)
+
+            self._widgets.append(widget)
+
+        self._listWidget.currentRowChanged.connect(self._stackedLayout.setCurrentIndex)
+        self._stackedLayout.currentChanged.connect(self._current_changed)
+        self._current_changed(self._stackedLayout.currentIndex())
 
         filterInput = QLineEditClear()
         filterInput.setPlaceholderText("Search...")
@@ -67,23 +76,11 @@ class Control_Panel_Settings_View(Control_Panel_View):
         saveButton = QtGui.QPushButton("Save")
         saveButton.clicked.connect(self._save)
 
-        hbox_buttons = QtGui.QHBoxLayout()
         hbox_buttons.addWidget(filterInput)
         hbox_buttons.addStretch(1)
         hbox_buttons.addWidget(saveButton)
 
-        vbox = QtGui.QVBoxLayout(self._controller.central_widget)
-        vbox.addLayout(hbox_stacks)
-        vbox.addLayout(hbox_buttons)
-
     def _current_changed(self, index):
-        # Lazily load the stacked widget.
-        if self._widgets[index] is None:
-            self._widgets[index] = SettingsWidget(self._controller.arguments,
-                                                  self._components[index])
-            self._widgets[index].parentClicked.connect(self._goto_parent)
-            self._containers[index].setWidget(self._widgets[index])
-
         self._scroll_to_match()
 
     def _goto_parent(self, parent):
