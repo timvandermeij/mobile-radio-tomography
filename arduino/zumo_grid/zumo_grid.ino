@@ -47,6 +47,10 @@
 // to overshoot the segment to find out any of these things.
 #define OVERSHOOT(line_thickness)(((INCHES_TO_ZUNITS * (line_thickness)) / SPEED))
 
+// Factor to determine how many units of line thickness we should advance.
+#define OVERSHOOT_FACTOR_WHITESPACE 1.25
+#define OVERSHOOT_FACTOR_INTERSECTION 2.0
+
 // Baud rate of the serial interface
 #define BAUD_RATE 9600
 
@@ -363,10 +367,10 @@ void zumo_goto(int row, int col) {
   softSerial.print("\n");
 }
 
-void advance() {
+void advance(float factor) {
     // Advance passed intersection
     motors.setSpeeds(SPEED, SPEED);
-    delay(OVERSHOOT(LINE_THICKNESS * 2.0));
+    delay(OVERSHOOT(LINE_THICKNESS * factor));
     motors.setSpeeds(0,0);
 }
 
@@ -378,7 +382,7 @@ void goto_dir(char dir, int count) {
   turn_to(dir);
   for (int i = 0; i < count; i++) {
     followSegment();
-    advance();
+    advance(OVERSHOOT_FACTOR_INTERSECTION);
     softSerial.print("PASS ");
     softSerial.print(i);
     softSerial.print("\n");
@@ -484,9 +488,7 @@ void turn_to(char dir) {
 
 // Turns according to the parameter dir, which should be
 // 'L' (left), 'R' (right), 'S' (straight), or 'B' (back).
-void turn(char dir)
-{
-
+void turn(char dir) {
   // count and last_status help
   // keep track of how much further
   // the Zumo needs to turn.
@@ -495,8 +497,7 @@ void turn(char dir)
   unsigned int sensors[6];
 
   // dir tests for which direction to turn
-  switch (dir)
-  {
+  switch (dir) {
     // Since we are using the sensors to coordinate turns instead of timing
     // the turns, we can treat a left turn the same as a direction reversal:
     // they differ only in whether the zumo will turn 90 degrees or 180 degrees
@@ -510,8 +511,7 @@ void turn(char dir)
 
       // This while loop monitors line position
       // until the turn is complete.
-      while (count < 2)
-      {
+      while (count < 2) {
         reflectanceSensors.readLine(sensors);
 
         // Increment count whenever the state of the sensor changes
@@ -530,8 +530,7 @@ void turn(char dir)
 
       // This while loop monitors line position
       // until the turn is complete.
-      while (count < 2)
-      {
+      while (count < 2) {
         reflectanceSensors.readLine(sensors);
         count += ABOVE_LINE(sensors[4]) ^ last_status;
         last_status = ABOVE_LINE(sensors[4]);
@@ -546,16 +545,15 @@ void turn(char dir)
 }
 
 
-void followSegment()
-{
+void followSegment() {
   unsigned int position;
   unsigned int sensors[6];
   int offset_from_center;
   int power_difference;
   bool following = true;
+  bool advanced = false;
 
-  while (following)
-  {
+  while (following) {
     // Get the position of the line.
     position = reflectanceSensors.readLine(sensors);
 
@@ -571,21 +569,17 @@ void followSegment()
 
     // Compute the actual motor settings.  We never set either motor
     // to a negative value.
-    if (power_difference > SPEED)
-    {
+    if (power_difference > SPEED) {
       power_difference = SPEED;
     }
-    else if (power_difference < -SPEED)
-    {
+    else if (power_difference < -SPEED) {
       power_difference = -SPEED;
     }
 
-    if (power_difference < 0)
-    {
+    if (power_difference < 0) {
       motors.setSpeeds(SPEED + power_difference, SPEED);
     }
-    else
-    {
+    else {
       motors.setSpeeds(SPEED, SPEED - power_difference);
     }
 
@@ -596,14 +590,19 @@ void followSegment()
 
     if (!ABOVE_LINE(sensors[0]) && !ABOVE_LINE(sensors[1]) &&
         !ABOVE_LINE(sensors[2]) && !ABOVE_LINE(sensors[3]) &&
-        !ABOVE_LINE(sensors[4]) && !ABOVE_LINE(sensors[5]))
-    {
+        !ABOVE_LINE(sensors[4]) && !ABOVE_LINE(sensors[5])) {
       // There is no line visible ahead, and we didn't see any
-      // intersection.  Must be a dead end.
-      following = false;
+      // intersection. Try to advance in case it is a glitchy
+      // surface, but if we tried that already then stop.
+      if (!advanced) {
+        advance(OVERSHOOT_FACTOR_WHITESPACE);
+        advanced = true;
+      }
+      else {
+        following = false;
+      }
     }
-    else if (ABOVE_LINE(sensors[0]) || ABOVE_LINE(sensors[5]))
-    {
+    else if (ABOVE_LINE(sensors[0]) || ABOVE_LINE(sensors[5])) {
       // Found an intersection.
       following = false;
     }
