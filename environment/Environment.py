@@ -288,9 +288,11 @@ class Environment(object):
 
         location_valid = self.vehicle.is_current_location_valid()
 
-        if self._rf_sensor is not None and location_valid:
-            self._valid_measurements[self._rf_sensor.id] = self.vehicle.get_next_waypoint()
-        if other_id is not None and other_valid:
+        if other_id is None:
+            if self._rf_sensor is not None and location_valid:
+                index = self.vehicle.get_next_waypoint()
+                self._valid_measurements[self._rf_sensor.id] = index
+        elif other_valid:
             self._valid_measurements[other_id] = other_index
 
         return location_valid

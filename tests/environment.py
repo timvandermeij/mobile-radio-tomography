@@ -294,6 +294,7 @@ class TestEnvironment(EnvironmentTestCase):
 
         # Requiring a specific set of sensors
         self.environment.invalidate_measurement(required_sensors=[rf_sensor.id + 1])
+        self.assertTrue(self.environment.location_valid())
         self.assertFalse(self.environment.is_measurement_valid())
 
         self.assertTrue(self.environment.location_valid(other_valid=True, other_id=rf_sensor.id + 1, other_index=0))

@@ -121,7 +121,11 @@ class TestMissionFanStraight(EnvironmentTestCase):
         self.vehicle._check_state()
         self.assertEqual(self.vehicle._current_waypoint, 1)
         self.assertEqual(self.vehicle.get_waypoint(), None)
-        self.assertTrue(self.environment.location_valid(other_valid=True, other_id=self.rf_sensor.id + 1,
+
+        other_id = self.rf_sensor.id + 1
+        self.assertTrue(self.environment.location_valid())
+        self.assertTrue(self.environment.location_valid(other_valid=True,
+                                                        other_id=other_id,
                                                         other_index=1))
 
         with patch('sys.stdout'):
