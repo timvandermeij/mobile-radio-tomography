@@ -277,27 +277,57 @@ class TestEnvironment(EnvironmentTestCase):
     ])
     def test_valid(self):
         rf_sensor = self.environment.get_rf_sensor()
+        other_id = rf_sensor.id + 1
 
         self.assertEqual(self.environment._valid_measurements, {})
-        self.assertEqual(self.environment._required_sensors, set(range(1, rf_sensor.number_of_sensors + 1)))
+        self.assertEqual(self.environment._required_sensors,
+                         set(range(1, rf_sensor.number_of_sensors + 1)))
 
         self.assertTrue(self.environment.location_valid())
         self.assertFalse(self.environment.is_measurement_valid())
-        self.assertEqual(self.environment._valid_measurements, {rf_sensor.id: 0})
+        self.assertEqual(self.environment._valid_measurements,
+                         {rf_sensor.id: 0})
 
-        self.assertTrue(self.environment.location_valid(other_valid=True, other_id=rf_sensor.id + 1, other_index=0))
+        self.assertTrue(self.environment.location_valid(other_valid=True,
+                                                        other_id=other_id,
+                                                        other_index=0))
         self.assertFalse(self.environment.is_measurement_valid())
-        self.assertEqual(self.environment._valid_measurements, {rf_sensor.id: 0, rf_sensor.id + 1: 0})
+        self.assertEqual(self.environment._valid_measurements,
+                         {rf_sensor.id: 0, other_id: 0})
 
-        self.assertTrue(self.environment.location_valid(other_valid=True, other_id=rf_sensor.id + 2, other_index=0))
+        self.assertTrue(self.environment.location_valid(other_valid=True,
+                                                        other_id=other_id + 1,
+                                                        other_index=0))
         self.assertTrue(self.environment.is_measurement_valid())
 
         # Requiring a specific set of sensors
-        self.environment.invalidate_measurement(required_sensors=[rf_sensor.id + 1])
+        self.environment.invalidate_measurement(required_sensors=[other_id])
         self.assertTrue(self.environment.location_valid())
         self.assertFalse(self.environment.is_measurement_valid())
 
-        self.assertTrue(self.environment.location_valid(other_valid=True, other_id=rf_sensor.id + 1, other_index=0))
+        self.assertTrue(self.environment.location_valid(other_valid=True,
+                                                        other_id=other_id,
+                                                        other_index=0))
+        self.assertTrue(self.environment.is_measurement_valid())
+
+        # Check that receiving valid measurements in other orders works as 
+        # expected, i.e., it waits a full sweep.
+        self.environment.invalidate_measurement()
+        self.assertTrue(self.environment.location_valid(other_valid=True,
+                                                        other_id=other_id,
+                                                        other_index=0))
+        self.assertTrue(self.environment.location_valid(other_valid=True,
+                                                        other_id=other_id + 1,
+                                                        other_index=0))
+
+        self.assertFalse(self.environment.is_measurement_valid())
+
+        self.assertTrue(self.environment.location_valid())
+        self.assertFalse(self.environment.is_measurement_valid())
+
+        self.assertTrue(self.environment.location_valid(other_valid=True,
+                                                        other_id=other_id,
+                                                        other_index=0))
         self.assertTrue(self.environment.is_measurement_valid())
 
     def test_get_distance(self):
