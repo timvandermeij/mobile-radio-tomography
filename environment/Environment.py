@@ -108,6 +108,10 @@ class Environment(object):
         self._rf_sensor = None
         self._packet_callbacks = {}
         self._setup_rf_sensor()
+
+        self._valid_measurements = {}
+        self._is_measurement_valid = False
+        self._required_sensors = set()
         self.invalidate_measurement()
 
         self._settings_receiver = Settings_Receiver(self)
@@ -287,11 +291,25 @@ class Environment(object):
         """
 
         location_valid = self.vehicle.is_current_location_valid()
+        index = self.vehicle.get_next_waypoint()
 
-        if self._rf_sensor is not None and location_valid:
-            self._valid_measurements[self._rf_sensor.id] = self.vehicle.get_next_waypoint()
-        if other_id is not None and other_valid:
+        if other_id is None:
+            # We are going to send an RSSI broadcast packet, so we update 
+            # whether the current vehicle's location is valid.
+            if self._rf_sensor is not None and location_valid:
+                self._valid_measurements[self._rf_sensor.id] = index
+        elif other_valid:
+            # We are going to send a ground station packet, so we update 
+            # whether the other vehicle's location is valid, and check whether 
+            # all measurements will now be valid.
             self._valid_measurements[other_id] = other_index
+
+            if not self._is_valid(self._rf_sensor.id, index):
+                self._is_measurement_valid = False
+            else:
+                self._is_measurement_valid = all(
+                    self._is_valid(id, index) for id in self._required_sensors
+                )
 
         return location_valid
 
@@ -309,11 +327,7 @@ class Environment(object):
         other RF sensor's sent location were valid.
         """
 
-        index = self.vehicle.get_next_waypoint()
-        if not self._is_valid(self._rf_sensor.id, index):
-            return False
-
-        return all(self._is_valid(id, index) for id in self._required_sensors)
+        return self._is_measurement_valid
 
     def invalidate_measurement(self, required_sensors=None):
         """
@@ -328,6 +342,7 @@ class Environment(object):
         """
 
         self._valid_measurements = {}
+        self._is_measurement_valid = False
 
         if self._rf_sensor is None:
             self._required_sensors = set()

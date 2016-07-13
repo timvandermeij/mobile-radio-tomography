@@ -246,6 +246,7 @@ class TestMissionRFSensor(EnvironmentTestCase):
         self.assertTrue(self.vehicle.is_wait())
 
         other_id = self.rf_sensor.id + 1
+        self.assertTrue(self.environment.location_valid())
         self.assertTrue(self.environment.location_valid(other_valid=True,
                                                         other_id=other_id,
                                                         other_index=1))

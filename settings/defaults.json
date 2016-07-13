@@ -331,7 +331,7 @@
                 "help": "Time in seconds to wait at a waypoint to perform synchronized measurements",
                 "type": "float",
                 "min": 0.0,
-                "default": 0.5
+                "default": 0.0
             },
             "rf_sensor_synchronization": {
                 "help": "Whether to wait for measurements to be complete at waypoints",
@@ -347,7 +347,7 @@
                 "help": "Delay in seconds to wait before monitoring again",
                 "type": "float",
                 "min": 0.0,
-                "default": 0.5
+                "default": 0.3
             },
             "plot": {
                 "help": "Whether to display an interactive plot of the memory map (requires matplotlib)",
@@ -688,7 +688,7 @@
                 "length": 2,
                 "subtype": "int",
                 "min": 1,
-                "default": [10, 10]
+                "default": [20, 20]
             },
             "network_padding": {
                 "help": "Number of full cells for each dimension and on every side where the vehicles are allowed to drive around the network",
@@ -846,7 +846,7 @@
                 "length": 2,
                 "subtype": "int",
                 "min": 1,
-                "default": [9, 9]
+                "default": [19, 19]
             },
             "stream_network_origin": {
                 "help": "The distance of the network from the origin",
