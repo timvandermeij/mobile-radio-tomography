@@ -8,7 +8,9 @@ class TestZigBeeTDMAScheduler(SettingsTestCase):
     def setUp(self):
         self.id = 2
 
-        self.arguments = Arguments("settings.json", ["--number-of-sensors", "8"])
+        self.arguments = Arguments("settings.json", [
+            "--number-of-sensors", "8", "--sweep-delay", "0.3"
+        ])
         self.settings = self.arguments.get_settings("zigbee_tdma_scheduler")
 
         self.scheduler = TDMA_Scheduler(self.id, self.arguments)
@@ -16,6 +18,7 @@ class TestZigBeeTDMAScheduler(SettingsTestCase):
         self.number_of_sensors = self.settings.get("number_of_sensors")
         self.sweep_delay = self.settings.get("sweep_delay")
         self.slot_time = float(self.sweep_delay) / self.number_of_sensors
+        self.time_delta = 1e-5
 
     def test_initialization(self):
         # Verify that only `Arguments` objects can be used to initialize.
@@ -52,7 +55,8 @@ class TestZigBeeTDMAScheduler(SettingsTestCase):
 
         expected = time.time() + ((float(self.id) / self.number_of_sensors) *
                                   self.sweep_delay)
-        self.assertAlmostEqual(self.scheduler.timestamp, expected, delta=0.1)
+        self.assertAlmostEqual(self.scheduler.timestamp, expected,
+                               delta=self.time_delta)
 
         # Any subsequent calls to the method should just increase the timestamp
         # (which might have been updated in the meantime by the `synchronize`
@@ -60,7 +64,8 @@ class TestZigBeeTDMAScheduler(SettingsTestCase):
         self.scheduler.update()
 
         expected += self.sweep_delay
-        self.assertAlmostEqual(self.scheduler.timestamp, expected, delta=0.1)
+        self.assertAlmostEqual(self.scheduler.timestamp, expected,
+                               delta=self.time_delta)
 
     def test_synchronize(self):
         # If the received packet is from a sensor with a lower ID than the
@@ -82,7 +87,8 @@ class TestZigBeeTDMAScheduler(SettingsTestCase):
         self.scheduler.synchronize(packet)
 
         expected = packet.get("timestamp") + ((self.id - packet.get("sensor_id")) * self.slot_time)
-        self.assertEqual(self.scheduler.timestamp, expected)
+        self.assertAlmostEqual(self.scheduler.timestamp, expected,
+                               delta=self.time_delta)
 
         # If the received packet is from a sensor with a higher ID than the
         # current sensor, then the next timestamp for the current sensor must
@@ -101,14 +107,16 @@ class TestZigBeeTDMAScheduler(SettingsTestCase):
 
         round_complete = (self.number_of_sensors - packet.get("sensor_id") + 1) * self.slot_time
         expected = packet.get("timestamp") + round_complete + ((self.id - 1) * self.slot_time)
-        self.assertEqual(self.scheduler.timestamp, expected)
+        self.assertAlmostEqual(self.scheduler.timestamp, expected,
+                               delta=self.time_delta)
 
         # Only future timestamp must be accepted.
         packet.set("timestamp", 0)
 
         self.scheduler.synchronize(packet)
 
-        self.assertEqual(self.scheduler.timestamp, expected)
+        self.assertAlmostEqual(self.scheduler.timestamp, expected,
+                               delta=self.time_delta)
 
     def test_shift(self):
         # The schedule must be shited by the provided number of seconds.
