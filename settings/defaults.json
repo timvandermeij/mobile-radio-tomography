@@ -308,7 +308,7 @@
                 "help": "Size in meters of one dimension of the part of the space that the vehicle is allowed to be in",
                 "type": "float",
                 "min": 0.0,
-                "default": 10.0
+                "default": 20.0
             },
             "resolution": {
                 "help": "The number of entries in the memory map per meter in one dimension",
@@ -325,7 +325,7 @@
                 "help": "Mission class to use for the mission",
                 "type": "class",
                 "module": "mission",
-                "default": "Mission_Fan"
+                "default": "Mission_RF_Sensor"
             },
             "measurement_delay": {
                 "help": "Time in seconds to wait at a waypoint to perform synchronized measurements",
@@ -798,7 +798,7 @@
                 "format": "assets/dataset_{}.csv",
                 "full_name": true,
                 "required": false,
-                "default": "empty"
+                "default": "assets/dataset_empty.csv"
             },
             "dataset_file": {
                 "help": "Filename part to use for dataset reconstruction",
@@ -807,7 +807,7 @@
                 "format": "assets/dataset_{}.csv",
                 "full_name": true,
                 "required": false,
-                "default": "one_person_moving_square"
+                "default": "assets/dataset_one_person_moving_square.csv"
             }
         }
     },
@@ -822,7 +822,7 @@
                 "format": "assets/dump_{}.json",
                 "full_name": true,
                 "required": false,
-                "default": "empty"
+                "default": "assets/dump_empty.json"
             },
             "dump_file": {
                 "help": "Filename part to use for dump reconstruction",
@@ -831,7 +831,7 @@
                 "format": "assets/dump_{}.json",
                 "full_name": true,
                 "required": false,
-                "default": "static_manual"
+                "default": "assets/dump_static_manual.json"
             }
         }
     },
@@ -1147,7 +1147,7 @@
                 "help": "Delay in seconds for each sweep",
                 "type": "float",
                 "min": 0.0,
-                "default": 0.4
+                "default": 0.3
             }
         }
     },
