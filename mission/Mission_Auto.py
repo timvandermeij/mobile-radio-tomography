@@ -128,9 +128,8 @@ class Mission_Auto(Mission):
             if self._rf_sensor_synchronization and self.environment.is_measurement_valid():
                 # The vehicle is waiting for measurements to become valid, and 
                 # they have, so go to the next waypoint. We do not need to give 
-                # an explicit waypoint here since the vehicle never changes the 
-                # waypoint in between here anyway.
-                time.sleep(self.settings.get("measurement_delay"))
+                # an explicit waypoint here, unlike in `check_waypoint`, since 
+                # the vehicle never changes the waypoint in between this code.
                 print("Measurements are valid, continuing to next waypoint")
                 self.vehicle.set_next_waypoint()
                 index = self.vehicle.get_next_waypoint() / 2

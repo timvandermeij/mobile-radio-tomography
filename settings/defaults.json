@@ -327,12 +327,6 @@
                 "module": "mission",
                 "default": "Mission_RF_Sensor"
             },
-            "measurement_delay": {
-                "help": "Time in seconds to wait at a waypoint to perform synchronized measurements",
-                "type": "float",
-                "min": 0.0,
-                "default": 0.0
-            },
             "rf_sensor_synchronization": {
                 "help": "Whether to wait for measurements to be complete at waypoints",
                 "type": "bool",
