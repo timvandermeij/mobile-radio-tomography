@@ -2,6 +2,7 @@
 matplotlib
 NumPy
 scipy
+enum34
 
 # Control panel
 PyQtGraph

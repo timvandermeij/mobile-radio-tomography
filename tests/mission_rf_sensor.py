@@ -1,7 +1,9 @@
 from mock import patch
 from dronekit import LocationLocal
+from ..environment.Environment import Environment
 from ..mission.Mission_RF_Sensor import Mission_RF_Sensor
 from ..vehicle.Robot_Vehicle import Robot_State
+from ..waypoint.Waypoint import Waypoint_Type
 from ..zigbee.Packet import Packet
 from ..zigbee.RF_Sensor import RF_Sensor
 from environment import EnvironmentTestCase
@@ -43,6 +45,14 @@ class TestMissionRFSensor(EnvironmentTestCase):
         self.assertFalse(self.mission.waypoints_complete)
         self.assertEqual(self.mission.next_index, 0)
 
+    @patch.object(Environment, "get_rf_sensor", return_value=None)
+    def test_setup_no_rf_sensor(self, get_rf_sensor_mock):
+        with self.assertRaises(ValueError):
+            with patch('sys.stdout'):
+                self.mission.setup()
+
+        get_rf_sensor_mock.assert_called_once_with()
+
     def test_get_points(self):
         # An RF sensor mission has no predetermined AUTO points.
         self.assertEqual(self.mission.get_points(), [])
@@ -68,6 +78,7 @@ class TestMissionRFSensor(EnvironmentTestCase):
         packet.set("latitude", latitude)
         packet.set("longitude", longitude)
         packet.set("altitude", altitude)
+        packet.set("type", int(Waypoint_Type.WAIT))
         packet.set("wait_id", wait_id)
         packet.set("wait_count", wait_count)
         packet.set("to_id", self.rf_sensor.id + id_offset)

@@ -1,5 +1,6 @@
 import time
 from Mission_Auto import Mission_Auto
+from ..waypoint.Waypoint import Waypoint, Waypoint_Type
 from ..zigbee.Packet import Packet
 
 class Mission_RF_Sensor(Mission_Auto):
@@ -15,6 +16,8 @@ class Mission_RF_Sensor(Mission_Auto):
         self._point = None
 
         self._rf_sensor = self.environment.get_rf_sensor()
+        if self._rf_sensor is None:
+            raise ValueError("An RF sensor must be enabled for `Mission_RF_Sensor`")
 
     def arm_and_takeoff(self):
         self.check_mission()
@@ -113,21 +116,25 @@ class Mission_RF_Sensor(Mission_Auto):
             self._send_ack()
             return
 
-        if self._point is None:
-            self._point = self.geometry.home_location
-
         latitude = packet.get("latitude")
         longitude = packet.get("longitude")
         altitude = packet.get("altitude")
+        waypoint_type = Waypoint_Type(packet.get("type"))
         wait_id = packet.get("wait_id")
         wait_count = packet.get("wait_count")
-        required_sensors = [wait_id] if wait_id > 0 else None
 
-        # Create location waypoints based on the intermediate wait count and 
-        # the geometry's range. `add_waypoint` handles any further conversions.
+        # Create location waypoints based on the type and additional data. 
+        # `add_waypoint` handles any further conversions of the provided 
+        # waypoints from the `Waypoint` object.
         location = self.geometry.make_location(latitude, longitude, altitude)
-        for point in self.geometry.get_location_range(self._point, location,
-                                                      count=wait_count):
+        waypoint = Waypoint.create(self.environment.get_import_manager(),
+                                   waypoint_type, self._rf_sensor.id,
+                                   self.geometry, location,
+                                   previous_location=self._point,
+                                   wait_id=wait_id, wait_count=wait_count)
+
+        required_sensors = waypoint.get_required_sensors()
+        for point in waypoint.get_points():
             self.add_waypoint(point, required_sensors)
 
         self._next_index += 1

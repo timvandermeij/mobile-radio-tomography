@@ -50,6 +50,7 @@ go. The packages are sorted by purpose as follows:
     * matplotlib
     * NumPy
     * scipy
+    * enum34
 * Control panel:
     * PyQtGraph
     * markdown

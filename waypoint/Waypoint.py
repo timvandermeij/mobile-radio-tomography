@@ -12,7 +12,8 @@ class Waypoint(object):
     """
 
     @classmethod
-    def create(cls, import_manager, waypoint_type, vehicle_id, location, **kwargs):
+    def create(cls, import_manager, waypoint_type, vehicle_id, geometry,
+               location, **kwargs):
         """
         Create a `Waypoint` object.
 
@@ -26,9 +27,9 @@ class Waypoint(object):
         waypoint_class = import_manager.load_class(waypoint_class_name,
                                                    relative_module="waypoint")
 
-        return waypoint_class(vehicle_id, location, **kwargs)
+        return waypoint_class(vehicle_id, geometry, location, **kwargs)
 
-    def __init__(self, vehicle_id, location, **kwargs):
+    def __init__(self, vehicle_id, geometry, location, **kwargs):
         """
         Create a waypoint object. The `vehicle_id` is an integer identifier for
         the vehicle who should run the mission in which the waypoints are added.
@@ -41,6 +42,7 @@ class Waypoint(object):
         """
 
         self._vehicle_id = vehicle_id
+        self._geometry = geometry
         self._location = location
 
     @property
@@ -79,3 +81,13 @@ class Waypoint(object):
         """
 
         raise NotImplementedError("Subclasses must implement `get_points`")
+
+    def get_required_sensors(self):
+        """
+        Retrieve the list of required sensors that we should wait for when we
+        go to the requested waypoints. Returns `None` if the waypoint requires
+        all sensors (at least when this is enabled), and raises a `RuntimeError`
+        if waiting is not supported by this waypoint.
+        """
+
+        raise RuntimeError("Waypoint does not support waiting for required sensors")
