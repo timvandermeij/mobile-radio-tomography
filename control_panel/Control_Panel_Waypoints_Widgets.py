@@ -1,23 +1,68 @@
 from functools import partial
 from PyQt4 import QtCore, QtGui
+from ..waypoint.Waypoint import Waypoint_Type
+
+class WaypointTypeWidget(QtGui.QComboBox):
+    """
+    A table cell widget that makes it possible to select a certain waypoint type
+    for the waypoint data associated with that row.
+    """
+
+    def __init__(self, table, row, col, default, *a, **kw):
+        super(WaypointTypeWidget, self).__init__(*a, **kw)
+
+        self._table = table
+        self._row = row
+        self._col = col
+
+        self.addItems([item.name.lower() for item in iter(Waypoint_Type)])
+
+        self.currentIndexChanged[int].connect(self._update_row_type)
+        self.setCurrentIndex(default - 1)
+
+    def _update_row_type(self, index):
+        if index + 1 != Waypoint_Type.WAIT:
+            flagger = lambda f: f & ~QtCore.Qt.ItemIsEditable & ~QtCore.Qt.ItemIsSelectable & ~QtCore.Qt.ItemIsEnabled
+            color = QtGui.QColor("#e8e8e8")
+        else:
+            flagger = lambda f: f | QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled
+            color = QtGui.QBrush()
+
+        for i in range(1, 3):
+            item = self._table.item(self._row, self._col + i)
+            if item is None:
+                item = QtGui.QTableWidgetItem()
+                self._table.setItem(self._row, self._col + i, item)
+
+            item.setFlags(flagger(item.flags()))
+            item.setBackground(color)
+
+    def get_value(self):
+        return self.currentIndex() + 1
+
+    def set_value(self, index):
+        self.setCurrentIndex(index - 1)
 
 class WaypointsTableWidget(QtGui.QTableWidget):
-    def __init__(self, column_labels, column_defaults, *a, **kw):
+    """
+    A table widget with specialized rows for supplying waypoint data.
+    """
+
+    def __init__(self, columns, *a, **kw):
         super(WaypointsTableWidget, self).__init__(*a, **kw)
 
-        # We assume that `len(column_labels) == len(column_defaults)`, and that 
-        # the defaults are `None` for columns without defaults and something 
-        # else for columns with defaults. The column without defaults must be 
-        # the first columns in the table, otherwise the tab ordering does not 
-        # match the characteristics of the columns.
-        self._column_defaults = column_defaults
+        # We assume that the defaults are `None` for columns without defaults 
+        # and something else for columns with defaults. The column without 
+        # defaults must be the first columns in the table, otherwise the tab 
+        # ordering does not match the characteristics of the columns.
+        self._columns = columns
 
-        self.setRowCount(1)
-        self.setColumnCount(len(column_labels))
-        self.setHorizontalHeaderLabels(column_labels)
+        self.setColumnCount(len(columns))
+        self.setHorizontalHeaderLabels([column["label"] for column in columns])
+        self.insertRow(0)
 
         horizontalHeader = self.horizontalHeader()
-        for i in range(len(column_labels)):
+        for i in range(len(columns)):
             horizontalHeader.setResizeMode(i, QtGui.QHeaderView.Stretch)
 
         # Create the context menu for the rows in the table.
@@ -39,11 +84,18 @@ class WaypointsTableWidget(QtGui.QTableWidget):
 
         empty = True
         data = []
-        for col in range(len(self._column_defaults)):
+        for col, column in enumerate(self._columns):
+            if "widget" in column:
+                widget = self.cellWidget(row, col)
+                data.append(widget.get_value())
+                continue
+
             item = self.item(row, col)
-            # Handle unaltered column cells (no item widget) and empty columns 
-            # (text contents equals to empty string)
+            # Handle unaltered column cells (no item widget), empty columns 
+            # (text contents equals to empty string) and disabled cells.
             if item is None or item.text() == "":
+                data.append(None)
+            elif not (item.flags() & QtCore.Qt.ItemIsEnabled):
                 data.append(None)
             else:
                 data.append(item.text())
@@ -51,20 +103,54 @@ class WaypointsTableWidget(QtGui.QTableWidget):
 
         return data, empty
 
+    def insert_data_row(self, row, data):
+        """
+        Set the cell data for the given `row` from a list `data`.
+
+        The given `row` must be a row index number where the row should be
+        inserted at. If the `data` is not long enough, i.e., it does not provide
+        a value for required columns, then a `ValueError` is raised.
+        """
+
+        self.insertRow(row)
+
+        for col, column in enumerate(self._columns):
+            if col >= len(data):
+                if column["default"] is None:
+                    # Data is required for this column, but it is not provided.
+                    raise ValueError("Row #{} has missing information for column '{}'".format(row + 1, column["label"]))
+
+                break
+
+            if "widget" in column:
+                widget = self.cellWidget(row, col)
+                widget.set_value(data[col])
+            elif data[col] != column["default"]:
+                item = str(data[col])
+                self.setItem(row, col, QtGui.QTableWidgetItem(item))
+
+    def insertRow(self, row):
+        super(WaypointsTableWidget, self).insertRow(row)
+
+        for col, column in enumerate(self._columns):
+            if "widget" in column:
+                widget = column["widget"](self, row, col, column["default"])
+                self.setCellWidget(row, col, widget)
+
     def removeRows(self):
         """
         Remove all the rows in the table.
         """
 
-        for row in reversed(range(self.rowCount())):
-            self.removeRow(row)
+        self.setRowCount(0)
 
     def _get_tab_index(self, next):
         """
         Determine the `QModelIndex` belonging to the next or previous item.
 
-        The waypoints table has a special tab order that follows the columns
-        without defaults first, and only then goes to columns with defaults.
+        The waypoints table has a special tab order that skips the columns
+        with defaults that are equal to `0`, i.e., not `None` or some other
+        nonzero value. It also skips cells that cannot be selected.
 
         If `next` is `True`, then we want to receive an index for the first
         logical item after the current item, otherwise we want the index for
@@ -78,31 +164,23 @@ class WaypointsTableWidget(QtGui.QTableWidget):
 
         endRow = self.rowCount() - 1
         endCol = self.columnCount() - 1
-        if self._column_defaults[col] is not None:
-            # Navigate down/up in columns with defaults, and otherwise jump to 
-            # the beginning/end of the next row or the table start/end
-            if next:
-                options = [(row+1, col), (0, col+1), (0, 0)]
-            else:
-                options = [(row-1, col), (endRow, col-1), (endRow, endCol)]
+        if next:
+            options = [(row, j) for j in range(col+1, endCol+1)]
+            options.extend([(row+1, 0), (0, 0)])
         else:
-            # Navigate right/left in columns without defaults, but skip columns 
-            # with defaults, by going to the first/last column without defaults 
-            # of the next/previous row if one would go to such column with 
-            # defaults. If no such row exists anymore, go to the first/last 
-            # column with defaults on the first/last row.
-            lastCol = max(enumerate(self._column_defaults), key=lambda x: x[0] if x[1] is None else 0)[0]
-            if next:
-                options = [(row+1, 0), (0, col+1), (0, 0)]
-                if col != lastCol:
-                    options[0:0] = [(row, col+1)]
-            else:
-                options = [(row, col-1), (row-1, lastCol), (endRow, endCol)]
+            options = [(row, j) for j in range(col-1, -1, -1)]
+            options.extend([(row-1, j) for j in range(endCol, -1, -1)])
+            options.append((endRow, endCol))
 
         for newRow, newCol in options:
             index = currentIndex.sibling(newRow, newCol)
             if index.isValid():
-                return index
+                if self._columns[newCol]["default"] == 0:
+                    continue
+
+                item = self.itemFromIndex(index)
+                if item is None or item.flags() & QtCore.Qt.ItemIsSelectable:
+                    return index
 
         # Return an invalid model index if no valid next index is found.
         return QtCore.QModelIndex()
@@ -120,6 +198,7 @@ class WaypointsTableWidget(QtGui.QTableWidget):
             index = self._get_tab_index(next)
             if index.isValid():
                 self.setCurrentIndex(index)
+                self.editItem(self.itemFromIndex(index))
                 return True
 
             return False
