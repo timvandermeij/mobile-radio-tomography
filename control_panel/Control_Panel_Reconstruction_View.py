@@ -113,12 +113,13 @@ class Graph(object):
         self._graph_curves = []
 
 class Table(object):
-    def __init__(self):
+    def __init__(self, settings):
         """
         Initialize the table object.
         """
 
         self._table = None
+        self._limit = settings.get("reconstruction_table_limit")
 
     def create(self):
         """
@@ -146,6 +147,10 @@ class Table(object):
         """
         Update the table with information in `packet`.
         """
+
+        # Limit the table to a fixed number of rows.
+        if self._table.rowCount() >= self._limit:
+            self._table.removeRow(0)
 
         # Collect and format the data.
         vehicle = str(packet.get("sensor_id"))
@@ -382,7 +387,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
         # Create the graph and table.
         self._graph = Graph(self._settings)
-        self._table = Table()
+        self._table = Table(self._settings)
 
         # Create the tab widget.
         tabs = QtGui.QTabWidget()
@@ -630,6 +635,15 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
         # Only use packets with valid source and destination locations.
         if not packet.get("from_valid") or not packet.get("to_valid"):
+            return
+
+        # Skip rendering when we are calibrating to reduce CPU usage and because
+        # the rendered images are not meaningful.
+        panel_id = self._panels.currentIndex()
+        source_form = self._source_forms[panel_id]
+        settings = source_form.get_settings()
+
+        if isinstance(self._buffer, Stream_Buffer) and settings.get("stream_calibrate"):
             return
 
         # We attempt to reconstruct an image when the coordinator successfully

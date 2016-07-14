@@ -70,6 +70,12 @@
                 "type": "float",
                 "min": 0.0,
                 "default": 0.02
+            },
+            "reconstruction_table_limit": {
+                "help": "Maximum number of rows in the measurements table",
+                "type": "int",
+                "min": 1,
+                "default": 1000
             }
         }
     },
