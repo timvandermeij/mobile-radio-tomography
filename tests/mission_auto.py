@@ -17,8 +17,7 @@ class TestMissionAuto(EnvironmentTestCase):
     def setUp(self):
         self.register_arguments([
             "--vehicle-class", "Mock_Vehicle", "--geometry-class", "Geometry",
-            "--rf-sensor-synchronization", "--measurement-delay", "0",
-            "--closeness", "1"
+            "--rf-sensor-synchronization", "--closeness", "1"
         ], use_infrared_sensor=False)
 
         super(TestMissionAuto, self).setUp()

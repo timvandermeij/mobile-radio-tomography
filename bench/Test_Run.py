@@ -6,7 +6,6 @@ from StringIO import StringIO
 
 # Unit test imports
 import unittest
-from mock import patch
 
 # Additional test report imports
 import coverage
@@ -69,12 +68,6 @@ class Test_Run(object):
         """
         Execute the unit tests.
         """
-
-        # Import pymavlink.mavutil with a patched output in order to suppress 
-        # the debugging print that occurs while importing it. This makes later 
-        # imports skip this debug print.
-        with patch('sys.stdout'):
-            self._import_manager.load("pymavlink.mavutil", relative=False)
 
         # Discard the module cache for the package modules imported in the test 
         # runner. This ensures that they are reimported in the tests, which 
