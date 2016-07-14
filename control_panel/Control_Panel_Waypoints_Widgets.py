@@ -70,6 +70,46 @@ class WaypointsTableWidget(QtGui.QTableWidget):
         verticalHeader.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         verticalHeader.customContextMenuRequested.connect(self._make_menu)
 
+        self.itemChanged.connect(self._item_changed)
+
+    def _item_changed(self, item):
+        """
+        Checks whether the given `item`, a `QTableWidgetItem`, is still valid.
+        """
+
+        col = self.column(item)
+        text = item.text()
+        valid = True
+
+        if text != "":
+            try:
+                value = self.cast_cell(col, item.text())
+            except ValueError:
+                valid = False
+
+            if valid and "min" in self._columns[col]:
+                valid = value >= self._columns[col]["min"]
+
+        if not valid:
+            item.setBackground(QtGui.QColor("#FA6969"))
+        elif item.flags() & QtCore.Qt.ItemIsEnabled:
+            item.setBackground(QtGui.QBrush())
+
+    def cast_cell(self, col, text):
+        """
+        Change the value `text` from a cell in column `col` to correct type.
+
+        Returns the casted value. Raises a `ValueError` if the text cannot be
+        casted to the appropriate value.
+        """
+
+        if self._columns[col]["default"] is not None:
+            type_cast = type(self._columns[col]["default"])
+        else:
+            type_cast = float
+
+        return type_cast(text)
+
     def get_row_data(self, row):
         """
         Retrieve the cell data from the given row number `row`.

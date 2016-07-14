@@ -61,11 +61,13 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
                 "field": "wait_id",
                 "label": "wait for vehicle",
                 "default": 0,
+                "min": 0
             },
             {
                 "field": "wait_count",
                 "label": "wait count",
-                "default": 1
+                "default": 1,
+                "min": 1
             }
         ]
 
@@ -206,6 +208,9 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
                 except ValueError:
                     if errors:
                         raise ValueError("Invalid value for vehicle {}, row #{}, column '{}': '{}'".format(vehicle, row + 1, column["label"], data[i]))
+
+            if errors and "min" in column and data[i] < column["min"]:
+                raise ValueError("Invalid value for vehicle {}, row #{}, column '{}': {} must be at least {}".format(vehicle, row + 1, column["label"], data[i], column["min"]))
 
         return data
 
