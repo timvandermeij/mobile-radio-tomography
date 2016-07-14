@@ -1,6 +1,11 @@
 from Waypoint import Waypoint, Waypoint_Type
 
 class Waypoint_Wait(Waypoint):
+    """
+    A waypoint that waits at specific intervals between the previous location
+    before this waypoint and the waypoint location.
+    """
+
     def __init__(self, vehicle_id, geometry, location, previous_location=None,
                  wait_id=0, wait_count=1, **kwargs):
         super(Waypoint_Wait, self).__init__(vehicle_id, geometry, location)

@@ -70,18 +70,27 @@ class TestMissionRFSensor(EnvironmentTestCase):
                 with self.assertRaises(RuntimeError):
                     self.mission.arm_and_takeoff()
 
-    def _send_waypoint_add(self, index, latitude, longitude, altitude=0.0,
-                           wait_id=0, wait_count=1, id_offset=0):
+    def _send_waypoint_add(self, index, latitude, longitude, **kwargs):
+        # The default values of the fields.
+        fields = {
+            "altitude": 0.0,
+            "type": Waypoint_Type.WAIT,
+            "wait_id": 0,
+            "wait_count": 1,
+            "id_offset": 0
+        }
+        fields.update(kwargs)
+
         packet = Packet()
         packet.set("specification", "waypoint_add")
         packet.set("index", index)
         packet.set("latitude", latitude)
         packet.set("longitude", longitude)
-        packet.set("altitude", altitude)
-        packet.set("type", int(Waypoint_Type.WAIT))
-        packet.set("wait_id", wait_id)
-        packet.set("wait_count", wait_count)
-        packet.set("to_id", self.rf_sensor.id + id_offset)
+        packet.set("altitude", fields["altitude"])
+        packet.set("type", int(fields["type"]))
+        packet.set("wait_id", fields["wait_id"])
+        packet.set("wait_count", fields["wait_count"])
+        packet.set("to_id", self.rf_sensor.id + fields["id_offset"])
 
         with patch('sys.stdout'):
             self.environment.receive_packet(packet)
@@ -197,7 +206,7 @@ class TestMissionRFSensor(EnvironmentTestCase):
             self.mission.setup()
 
         self._send_waypoint_add(0, 1.0, 0.0)
-        self._send_waypoint_add(1, 2.0, 0.0)
+        self._send_waypoint_add(1, 2.0, 0.0, type=Waypoint_Type.PASS)
         self._send_waypoint_add(2, 3.0, 0.0)
         self._send_waypoint_add(3, 4.0, 0.0)
 
@@ -215,7 +224,7 @@ class TestMissionRFSensor(EnvironmentTestCase):
 
         self.assertTrue(self.mission.waypoints_complete)
         self.assertEqual(self.vehicle._waypoints, [
-            (1, 0), None, (2, 0), None, (3, 0), None, (4, 0), None
+            (1, 0), None, (2, 0), (3, 0), None, (4, 0), None
         ])
 
     def test_interface_mission(self):

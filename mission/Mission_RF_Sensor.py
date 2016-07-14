@@ -133,9 +133,19 @@ class Mission_RF_Sensor(Mission_Auto):
                                    previous_location=self._point,
                                    wait_id=wait_id, wait_count=wait_count)
 
-        required_sensors = waypoint.get_required_sensors()
+        # Retrieve the required sensors. A return value `None` actually means 
+        # we want to wait for all other sensors, while an exception means we do 
+        # not support waiting for this waypoint.
+        try:
+            wait = True
+            required_sensors = waypoint.get_required_sensors()
+        except RuntimeError:
+            wait = False
+            required_sensors = None
+
         for point in waypoint.get_points():
-            self.add_waypoint(point, required_sensors)
+            self.add_waypoint(point, wait=wait,
+                              required_sensors=required_sensors)
 
         self._next_index += 1
         self._point = location
