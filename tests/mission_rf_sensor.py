@@ -157,7 +157,20 @@ class TestMissionRFSensor(EnvironmentTestCase):
         self.assertEqual(kwargs, {"to": 0})
 
         self.assertEqual(self.mission.next_index, 1)
+        self.assertEqual(self.mission._point, LocationLocal(1.0, 4.0, 0.0))
         self.assertEqual(self.vehicle._waypoints, [(1, 4), None])
+
+    def test_add_waypoint_home(self):
+        with patch('sys.stdout'):
+            self.mission.setup()
+
+        home_location = LocationLocal(5.0, 15.0, 0.0)
+        self.enqueue_mock.reset_mock()
+        self._send_waypoint_add(0, 5.0, 15.0, type=Waypoint_Type.HOME)
+        self.assertEqual(self.mission.next_index, 1)
+        self.assertEqual(self.vehicle.home_location, home_location)
+        self.assertEqual(self.mission._point, home_location)
+        self.assertEqual(self.vehicle._waypoints, [])
 
     def test_add_waypoint_wait_count(self):
         with patch('sys.stdout'):

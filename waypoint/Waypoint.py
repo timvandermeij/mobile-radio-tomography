@@ -1,4 +1,5 @@
 from enum import IntEnum
+from ..vehicle.Vehicle import Vehicle
 
 class Waypoint_Type(IntEnum):
     HOME = 1
@@ -91,3 +92,15 @@ class Waypoint(object):
         """
 
         raise RuntimeError("Waypoint does not support waiting for required sensors")
+
+    def update_vehicle(self, vehicle):
+        """
+        Update the state of the given `vehicle`, a `Vehicle` object.
+
+        The waypoint need not add itself to the vehicle's waypoint commands;
+        we assume that this has already done. If any additional state changes
+        are necessary, then we can do them here.
+        """
+
+        if not isinstance(vehicle, Vehicle):
+            raise TypeError("`vehicle` must be a `Vehicle` object")

@@ -204,7 +204,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
                     data[i] = column["default"]
             else:
                 try:
-                    data[i] = self._cast_cell(i, data[i])
+                    data[i] = table.cast_cell(i, data[i])
                 except ValueError:
                     if errors:
                         raise ValueError("Invalid value for vehicle {}, row #{}, column '{}': '{}'".format(vehicle, row + 1, column["label"], data[i]))
@@ -212,22 +212,10 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             if errors and "min" in column and data[i] < column["min"]:
                 raise ValueError("Invalid value for vehicle {}, row #{}, column '{}': {} must be at least {}".format(vehicle, row + 1, column["label"], data[i], column["min"]))
 
+        if errors and row > 0 and data[self._fields["type"]] == Waypoint_Type.HOME:
+            raise ValueError("Waypoint type for vehicle {}, row #{} may not be 'home'.".format(vehicle, row + 1))
+
         return data
-
-    def _cast_cell(self, col, text):
-        """
-        Change the text from a cell in column `col` to correct type.
-
-        Returns the casted value. Raises a `ValueError` if the text cannot be
-        casted to the appropriate value.
-        """
-
-        if self._columns[col]["default"] is not None:
-            type_cast = type(self._columns[col]["default"])
-        else:
-            type_cast = float
-
-        return type_cast(text)
 
     def _get_wait_id(self, vehicle, waypoint):
         """

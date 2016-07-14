@@ -8,14 +8,13 @@ class WaypointTypeWidget(QtGui.QComboBox):
     for the waypoint data associated with that row.
     """
 
-    def __init__(self, table, row, col, default, *a, **kw):
+    def __init__(self, table, item, default, *a, **kw):
         super(WaypointTypeWidget, self).__init__(*a, **kw)
 
         self._table = table
-        self._row = row
-        self._col = col
+        self._item = item
 
-        self.addItems([item.name.lower() for item in iter(Waypoint_Type)])
+        self.addItems([type.name.lower() for type in iter(Waypoint_Type)])
 
         self.currentIndexChanged[int].connect(self._update_row_type)
         self.setCurrentIndex(default - 1)
@@ -28,12 +27,10 @@ class WaypointTypeWidget(QtGui.QComboBox):
             flagger = lambda f: f | QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled
             color = QtGui.QBrush()
 
+        row = self._table.row(self._item)
+        col = self._table.column(self._item)
         for i in range(1, 3):
-            item = self._table.item(self._row, self._col + i)
-            if item is None:
-                item = QtGui.QTableWidgetItem()
-                self._table.setItem(self._row, self._col + i, item)
-
+            item = self._table.get_item(row, col + i)
             item.setFlags(flagger(item.flags()))
             item.setBackground(color)
 
@@ -169,12 +166,29 @@ class WaypointsTableWidget(QtGui.QTableWidget):
                 item = str(data[col])
                 self.setItem(row, col, QtGui.QTableWidgetItem(item))
 
+    def get_item(self, row, col):
+        """
+        Retrieve the item for the given `row` and column `col`.
+
+        If no item has been set for this cell yet, then it is created and the
+        new `QTableWidgetItem` is returned. This is unlike `item`, which returns
+        `None` if the item is not yet created due to lazy loading.
+        """
+
+        item = self.item(row, col)
+        if item is None:
+            item = QtGui.QTableWidgetItem()
+            self.setItem(row, col, item)
+
+        return item
+
     def insertRow(self, row):
         super(WaypointsTableWidget, self).insertRow(row)
 
         for col, column in enumerate(self._columns):
             if "widget" in column:
-                widget = column["widget"](self, row, col, column["default"])
+                item = self.get_item(row, col)
+                widget = column["widget"](self, item, column["default"])
                 self.setCellWidget(row, col, widget)
 
     def removeRows(self):

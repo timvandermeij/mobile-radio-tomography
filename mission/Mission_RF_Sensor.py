@@ -147,6 +147,8 @@ class Mission_RF_Sensor(Mission_Auto):
             self.add_waypoint(point, wait=wait,
                               required_sensors=required_sensors)
 
+        waypoint.update_vehicle(self.vehicle)
+
         self._next_index += 1
         self._point = location
         self._send_ack()

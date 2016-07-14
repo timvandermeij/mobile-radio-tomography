@@ -1,7 +1,8 @@
 from dronekit import LocationLocal
-from mock import patch
+from mock import patch, MagicMock
 from ..core.Import_Manager import Import_Manager
 from ..geometry.Geometry import Geometry
+from ..vehicle.Vehicle import Vehicle
 from ..waypoint.Waypoint import Waypoint, Waypoint_Type
 from geometry import LocationTestCase
 
@@ -47,3 +48,10 @@ class TestWaypoint(LocationTestCase):
     def test_get_required_sensors(self):
         with self.assertRaises(RuntimeError):
             self.waypoint.get_required_sensors()
+
+    def test_update_vehicle(self):
+        # The `vehicle` parameter must be a vehicle.
+        with self.assertRaises(TypeError):
+            self.waypoint.update_vehicle(self.geometry)
+
+        self.waypoint.update_vehicle(MagicMock(spec_set=Vehicle))
