@@ -198,7 +198,11 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
         packet.unserialize(data)
 
         self._other_packet_received = True
-        self._process(packet, rssi=rssi)
+        try:
+            self._process(packet, rssi=rssi)
+        except ValueError:
+            # Any errors must be logged, but must not crash the process.
+            self._thread_manager.log(self.type)
 
     def _process(self, packet, rssi=None, **kwargs):
         """

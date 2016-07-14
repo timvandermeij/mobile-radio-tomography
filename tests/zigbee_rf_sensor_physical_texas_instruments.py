@@ -7,6 +7,7 @@ import time
 from mock import call, patch, MagicMock
 
 # Package imports
+from ..core.Thread_Manager import Thread_Manager
 from ..core.WiringPi import WiringPi
 from ..zigbee.Packet import Packet
 from ..zigbee.RF_Sensor import DisabledException
@@ -187,6 +188,16 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(ZigBeeRFSensorTestCase, USBMana
                 "to_id": 2
             })
             self.assertEqual(keyword_arguments["rssi"], 42)
+
+            # Any errors must be logged, but must not crash the process.
+            connection_mock.in_waiting = len(serialized_packet)
+            connection_mock.read.configure_mock(return_value=serialized_packet)
+
+            with patch.object(self.rf_sensor, "_process", side_effect=ValueError):
+                with patch.object(Thread_Manager, "log") as log_mock:
+                    self.rf_sensor._receive()
+
+                    log_mock.assert_called_once_with(self.rf_sensor.type)
 
     @patch.object(RF_Sensor_Physical_Texas_Instruments, "_process_rssi_broadcast_packet")
     def test_process(self, process_rssi_broadcast_packet_mock):
