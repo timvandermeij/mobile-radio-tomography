@@ -645,6 +645,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         packet.set("latitude", waypoint[self._fields["north"]])
         packet.set("longitude", waypoint[self._fields["east"]])
         packet.set("altitude", waypoint[self._fields["alt"]])
+        packet.set("type", int(waypoint[self._fields["type"]]))
         packet.set("wait_id", int(waypoint[self._fields["wait_id"]]))
         packet.set("wait_count", int(waypoint[self._fields["wait_count"]]))
         packet.set("index", index)
