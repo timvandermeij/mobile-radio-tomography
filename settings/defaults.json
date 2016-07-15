@@ -1084,6 +1084,12 @@
                 "max": 255,
                 "default": 80
             },
+            "polling_delay": {
+                "help": "Delay in seconds before attempting to shift the schedule when the sensor does not receive anything",
+                "type": "float",
+                "min": 0.0,
+                "default": 2.0
+            },
             "reset_delay": {
                 "help": "Delay in seconds before changing the reset pulse",
                 "type": "float",

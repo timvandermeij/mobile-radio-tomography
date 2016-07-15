@@ -31,9 +31,10 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(ZigBeeRFSensorTestCase, USBMana
     def test_initialization(self):
         self.assertEqual(self.rf_sensor._address, str(self.rf_sensor.id))
         self.assertTrue(self.rf_sensor._joined)
-        self.assertFalse(self.rf_sensor._other_packet_received)
+        self.assertEqual(self.rf_sensor._polling_time, 0.0)
 
         self.assertEqual(self.rf_sensor._packet_length, self.settings.get("packet_length"))
+        self.assertEqual(self.rf_sensor._polling_delay, self.settings.get("polling_delay"))
         self.assertEqual(self.rf_sensor._reset_delay, self.settings.get("reset_delay"))
         self.assertEqual(self.rf_sensor._shift_minimum, self.settings.get("shift_minimum"))
         self.assertEqual(self.rf_sensor._shift_maximum, self.settings.get("shift_maximum"))
@@ -60,7 +61,8 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(ZigBeeRFSensorTestCase, USBMana
         # station packets. Make sure that the schedule will try to shift again 
         # when the measurements start.
         self.rf_sensor.start()
-        self.assertFalse(self.rf_sensor._other_packet_received)
+        self.assertNotEqual(self.rf_sensor._polling_time, 0.0)
+        self.assertNotEqual(self.rf_sensor._scheduler.timestamp, 0.0)
 
     @patch.object(RF_Sensor_Physical_Texas_Instruments, "_send_tx_frame")
     def test_discover(self, send_tx_frame_mock):
@@ -143,6 +145,7 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(ZigBeeRFSensorTestCase, USBMana
                     receive_mock.assert_called_once_with()
                     self.assertEqual(shift_mock.call_count, 1)
                     self.assertEqual(update_mock.call_count, 1)
+                    self.assertNotEqual(self.rf_sensor._polling_time, 0.0)
 
         # Regular updates must be handled.
         self.rf_sensor._started = False
@@ -185,7 +188,7 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(ZigBeeRFSensorTestCase, USBMana
 
             self.rf_sensor._receive()
 
-            self.assertTrue(self.rf_sensor._other_packet_received)
+            self.assertNotEqual(self.rf_sensor._polling_time, 0.0)
 
             arguments = process_mock.call_args[0]
             keyword_arguments = process_mock.call_args[1]
