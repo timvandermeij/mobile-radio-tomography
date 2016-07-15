@@ -55,6 +55,13 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(ZigBeeRFSensorTestCase, USBMana
                 self.rf_sensor.activate()
                 synchronize_mock.assert_called_once_with()
 
+    def test_start(self):
+        # The sensor must be started for sending RSSI broadcast/ground
+        # station packets. Make sure that the schedule will try to shift again 
+        # when the measurements start.
+        self.rf_sensor.start()
+        self.assertFalse(self.rf_sensor._other_packet_received)
+
     @patch.object(RF_Sensor_Physical_Texas_Instruments, "_send_tx_frame")
     def test_discover(self, send_tx_frame_mock):
         self.rf_sensor.discover(MagicMock())

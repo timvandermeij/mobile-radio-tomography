@@ -89,6 +89,11 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
         if not originally_activated:
             self._synchronize()
 
+    def start(self):
+        super(RF_Sensor_Physical_Texas_Instruments, self).start()
+
+        self._other_packet_received = False
+
     def discover(self, callback):
         """
         Discover all RF sensors in the network. The `callback` function is
