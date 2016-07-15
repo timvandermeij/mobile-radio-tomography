@@ -140,6 +140,44 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
         self.assertEqual(self.vehicle.mode.name, "HALT")
         self.assertFalse(self.vehicle.armed)
 
+        self.vehicle.mode = VehicleMode("AUTO")
+        self.assertEqual(self.vehicle.mode.name, "AUTO")
+        self.assertTrue(self.vehicle.armed)
+
+    @patch('thread.start_new_thread')
+    def test_pause(self, thread_mock):
+        self.vehicle.activate()
+        self.vehicle.mode = VehicleMode("AUTO")
+
+        self.vehicle.pause()
+        self.assertEqual(self.vehicle.mode.name, "HALT")
+        self.assertFalse(self.vehicle.armed)
+
+        self.vehicle.mode = VehicleMode("GUIDED")
+        self.assertEqual(self.vehicle.mode.name, "GUIDED")
+        self.assertTrue(self.vehicle.armed)
+
+    @patch('thread.start_new_thread')
+    def test_unpause(self, thread_mock):
+        self.vehicle.activate()
+        self.vehicle.mode = VehicleMode("AUTO")
+
+        self.vehicle.pause()
+        self.vehicle.unpause()
+
+        self.assertEqual(self.vehicle.mode.name, "AUTO")
+        self.assertTrue(self.vehicle.armed)
+
+        # Changing the mode unpauses automatically.
+        self.vehicle.pause()
+        self.vehicle.mode = VehicleMode("GUIDED")
+        self.assertEqual(self.vehicle.mode.name, "GUIDED")
+        self.assertTrue(self.vehicle.armed)
+
+        # We cannot unpause a vehicle twice.
+        with self.assertRaises(RuntimeError):
+            self.vehicle.unpause()
+
     @patch('thread.start_new_thread')
     def test_state_loop(self, thread_mock):
         self.vehicle.activate()
@@ -279,7 +317,7 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
         set_speeds_mock.assert_called_once_with(0.3, 0.3)
 
     @patch('thread.start_new_thread')
-    def test_armed_mode(self, thread_mock):
+    def test_armed(self, thread_mock):
         self.assertFalse(self.vehicle.armed)
 
         self.vehicle.armed = True
@@ -288,12 +326,7 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
         # The thread is only started once.
         self.assertEqual(thread_mock.call_count, 1)
 
-        self.vehicle.mode = VehicleMode("GUIDED")
-        self.assertEqual(self.vehicle.mode.name, "GUIDED")
-        self.vehicle.mode = VehicleMode("RTL")
-        self.assertEqual(self.vehicle.mode.name, "RTL")
-        self.assertEqual(self.vehicle._waypoints, [(0, 0)])
-        self.vehicle.mode = VehicleMode("HALT")
+        self.vehicle.armed = False
         self.assertFalse(self.vehicle.armed)
 
     def test_add_waypoint(self):

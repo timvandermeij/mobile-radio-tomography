@@ -24,6 +24,7 @@ class Monitor(object):
 
         self.memory_map = None
         self.plot = None
+        self._paused = False
 
     def get_delay(self):
         return self.step_delay
@@ -51,6 +52,9 @@ class Monitor(object):
 
         Returns `Fase` if the loop should be halted.
         """
+
+        if self._paused:
+            return True
 
         # Put our current location on the map for visualization. Of course, 
         # this location is also "safe" since we are flying there.
@@ -109,6 +113,18 @@ class Monitor(object):
 
         if self.rf_sensor is not None:
             self.rf_sensor.start()
+
+    def pause(self):
+        if self._paused:
+            self.start()
+
+            self._paused = False
+        else:
+            self.environment.get_vehicle().pause()
+            if self.rf_sensor is not None:
+                self.rf_sensor.stop()
+
+            self._paused = True
 
     def stop(self):
         self.mission.stop()

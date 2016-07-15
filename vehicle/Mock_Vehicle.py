@@ -395,7 +395,7 @@ class Mock_Vehicle(MAVLink_Vehicle):
         to speed or target locations immediately.
         """
 
-        if not self._takeoff or not self.armed:
+        if not self._takeoff or not self.armed or self._mode.name == "PAUSE":
             return
 
         diff, new_time = self._get_delta_time()
@@ -574,6 +574,9 @@ class Mock_Vehicle(MAVLink_Vehicle):
         self.mode = VehicleMode("GUIDED")
 
         return True
+
+    def pause(self):
+        self.mode = VehicleMode("PAUSE")
 
     def simple_takeoff(self, altitude):
         self.commands.takeoff(altitude)

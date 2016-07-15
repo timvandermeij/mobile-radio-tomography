@@ -22,6 +22,7 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
 
     def activate(self):
         super(Robot_Vehicle_Arduino_Full, self).activate()
+
         self._update_home_location()
         thread.start_new_thread(self._serial_loop, ())
 
@@ -29,6 +30,18 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
         # Send a DTR signal to turn off the Arduino. See the activate method.
         self._serial_connection.dtr = True
         self._serial_connection.close()
+
+    def pause(self):
+        super(Robot_Vehicle_Arduino_Full, self).pause()
+
+        self._serial_connection.write("\x03")
+        self._serial_connection.flush()
+
+    def unpause(self):
+        super(Robot_Vehicle_Arduino_Full, self).unpause()
+
+        self._serial_connection.write("CONT\n")
+        self._serial_connection.flush()
 
     def _update_home_location(self):
         # Format a "home location" command

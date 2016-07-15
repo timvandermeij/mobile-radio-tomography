@@ -46,7 +46,7 @@ class Robot_Vehicle_Arduino(Robot_Vehicle):
 
     def activate(self):
         super(Robot_Vehicle_Arduino, self).activate()
-        
+
         # Send a DTR signal to turn on the Arduino via the RESET line. 
         # According to a forum post at 
         # http://forum.arduino.cc/index.php?topic=38981.msg287027#msg287027 and 
@@ -69,7 +69,15 @@ class Robot_Vehicle_Arduino(Robot_Vehicle):
 
     def deactivate(self):
         self._reset()
+
         super(Robot_Vehicle_Arduino, self).deactivate()
+
+    def pause(self):
+        super(Robot_Vehicle_Arduino, self).pause()
+
+        # If we are just halting, then only turn off the motors, not the 
+        # connection.
+        self.set_speeds(0, 0)
 
     def _format_speeds(self, left_speed, right_speed, left_forward, right_forward):
         output = ""

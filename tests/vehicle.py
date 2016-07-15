@@ -71,7 +71,7 @@ class TestVehicle(VehicleTestCase):
         self.assertTrue(hasattr(self.vehicle, "_attribute_listeners"))
 
     @covers([
-        "setup", "update_mission", "add_takeoff", "add_waypoint",
+        "setup", "pause", "update_mission", "add_takeoff", "add_waypoint",
         "clear_waypoints", "add_wait", "is_wait", "get_waypoint",
         "get_next_waypoint", "set_next_waypoint", "count_waypoints",
         "check_arming", "simple_takeoff", "simple_goto", "set_yaw", "set_servo"
@@ -84,6 +84,10 @@ class TestVehicle(VehicleTestCase):
             dummy = self.vehicle.home_location
 
         self.vehicle.setup()
+
+        with self.assertRaises(NotImplementedError):
+            self.vehicle.pause()
+
         self.vehicle.update_mission()
 
         self.assertFalse(self.vehicle.add_takeoff(42))
