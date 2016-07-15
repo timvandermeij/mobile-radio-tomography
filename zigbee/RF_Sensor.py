@@ -186,8 +186,9 @@ class RF_Sensor(Threadable):
         Classes that inherit this base class may extend this method.
         """
 
-        self._started = True
+        self._scheduler.update()
         self._packets = []
+        self._started = True
 
     def stop(self):
         """
@@ -195,6 +196,10 @@ class RF_Sensor(Threadable):
         """
 
         self._started = False
+
+        # Reset the scheduler timestamp so that it updates correctly in case we 
+        # restart the sensor measurements.
+        self._scheduler.timestamp = 0
 
     def enqueue(self, packet, to=None):
         """

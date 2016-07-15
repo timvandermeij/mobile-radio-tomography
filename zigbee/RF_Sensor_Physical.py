@@ -110,8 +110,9 @@ class RF_Sensor_Physical(RF_Sensor):
         Classes that inherit this base class must extend this method.
         """
 
-        # Synchronize the scheduler using the timestamp in the packet.
-        self._scheduler.synchronize(packet)
+        if self._started:
+            # Synchronize the scheduler using the timestamp in the packet.
+            self._scheduler.synchronize(packet)
 
         # Create the packet for the ground station.
         return self._create_rssi_ground_station_packet(packet)

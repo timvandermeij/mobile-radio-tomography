@@ -43,6 +43,20 @@ class TDMA_Scheduler(object):
 
         return self._timestamp
 
+    @timestamp.setter
+    def timestamp(self, value):
+        """
+        Change the timestamp at which the sensor is allowed to send packets.
+
+        If this is set to `0`, then the sensor is allowed to send packets, and
+        the timestamp is corrected the next time the scheduler is updated.
+        This value can be of use when the measurements are paused for a longer
+        time, and we need to send at least one packet again to get back on
+        schedule after restarting.
+        """
+
+        self._timestamp = value
+
     def update(self):
         """
         Update the timestamp for sending packets.

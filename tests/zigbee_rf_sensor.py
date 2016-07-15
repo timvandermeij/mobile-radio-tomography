@@ -150,15 +150,23 @@ class TestZigBeeRFSensor(ZigBeeRFSensorTestCase):
 
     def test_start(self):
         # The sensor must be started for sending RSSI broadcast/ground
-        # station packets.
+        # station packets. Make sure that the schedule will try to shift again 
+        # when the measurements start.
         self.rf_sensor.start()
         self.assertTrue(self.rf_sensor._started)
         self.assertEqual(self.rf_sensor._packets, [])
+        self.assertNotEqual(self.rf_sensor._scheduler.timestamp, 0.0)
 
     def test_stop(self):
-        # The sensor must be stopped for sending custom packets.
+        # Pertent we start the RF sensor so that we know that `stop` functions.
+        self.rf_sensor.start()
+
+        # The sensor must be stopped for sending custom packets. Make sure that 
+        # the scheduler timestamp is reset, so that it updates correctly in 
+        # case we restart the sensor measurements.
         self.rf_sensor.stop()
         self.assertEqual(self.rf_sensor._started, False)
+        self.assertEqual(self.rf_sensor._scheduler.timestamp, 0.0)
 
     def test_enqueue(self):
         # Providing a packet that is not a `Packet` object raises an exception.

@@ -105,6 +105,8 @@ class TestZigBeeRFSensorSimulator(ZigBeeRFSensorTestCase):
                                                            address)
 
     def test_receive(self):
+        self.rf_sensor.start()
+
         # Not providing a packet raises an exception.
         with self.assertRaises(TypeError):
             self.rf_sensor._receive()
