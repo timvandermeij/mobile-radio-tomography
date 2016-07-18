@@ -1,5 +1,6 @@
 import itertools
 import numpy as np
+from ..waypoint.Waypoint import Waypoint_Type
 
 class Greedy_Assignment(object):
     """
@@ -54,9 +55,12 @@ class Greedy_Assignment(object):
             # The coordinates of the next position for the given vehicle.
             new_position = list(positions[closest_pair, i, :])
 
-            # Create an assignment containing the full position and the other 
+            # The assigned waypoint containing the full position and the other 
             # vehicle's wait ID.
-            assignment[vehicle].append(new_position + [0, other_vehicle])
+            waypoint = new_position + [0, Waypoint_Type.WAIT, other_vehicle, 1]
+
+            # Create the assignment and track the new position.
+            assignment[vehicle].append(waypoint)
             current_positions[vehicle-1] = new_position
 
     def assign(self, positions_pairs):
