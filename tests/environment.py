@@ -257,17 +257,20 @@ class TestEnvironment(EnvironmentTestCase):
 
     @covers(["get_location", "get_raw_location"])
     def test_location(self):
+        vehicle = self.environment.vehicle
+        self.assertEqual(self.environment.location, vehicle.location)
+
         location = self.environment.vehicle.location.global_relative_frame
         self.assertEqual(location, self.environment.get_location())
 
         # Raw location provides the correct return value corresponding to the 
-        # real location
+        # real location.
         raw_location, waypoint_index = self.environment.get_raw_location()
         self.assertEqual(raw_location, (location.lat, location.lon))
         self.assertEqual(waypoint_index, 0)
 
         loc = LocationLocal(1.2, 3.4, -5.6)
-        with patch.object(Environment, "get_location", return_value=loc):
+        with patch.object(vehicle, "_locations", new=loc):
             raw_location, waypoint_index = self.environment.get_raw_location()
             self.assertEqual(raw_location, (loc.north, loc.east))
             self.assertEqual(waypoint_index, 0)

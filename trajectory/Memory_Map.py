@@ -1,4 +1,5 @@
 import numpy as np
+from ..environment.Location_Proxy import Location_Proxy
 
 class Memory_Map(object):
     """
@@ -6,15 +7,20 @@ class Memory_Map(object):
     of influence of known objects using measurements from a distance sensor.
     """
 
-    def __init__(self, environment, memory_size, resolution=1, altitude=0.0):
+    def __init__(self, proxy, memory_size, resolution=1, altitude=0.0):
         """
         Create a memory map with a given number of meters per dimension
         `memory_size`, number of entries per meter `resolution`
         at the operating altitude `altitude` in meters.
+
+        The `proxy` is a `Location_Proxy` object such as an `Environment`.
         """
 
-        self.environment = environment
-        self.geometry = self.environment.get_geometry()
+        if not isinstance(proxy, Location_Proxy):
+            raise TypeError("`proxy` must be a `Location_Proxy` such as an `Environment`")
+
+        self.proxy = proxy
+        self.geometry = self.proxy.geometry
 
         # The number of entries per dimension
         self.size = int(memory_size * resolution)
@@ -27,8 +33,8 @@ class Memory_Map(object):
         # matrix in both dimensions, respectively. The bounds are based off 
         # from the current vehicle location.
         offset = memory_size/2
-        self.bl = self.environment.get_location(-offset, -offset, self.altitude)
-        self.tr = self.environment.get_location(offset, offset, self.altitude)
+        self.bl = self.proxy.get_location(-offset, -offset, self.altitude)
+        self.tr = self.proxy.get_location(offset, offset, self.altitude)
 
         dlat, dlon = self.geometry.diff_location_meters(self.bl, self.tr)[:2]
         self.dlat = dlat
@@ -182,7 +188,7 @@ class Memory_Map(object):
 
         # Estimate the location of the point based on the distance from the 
         # distance sensor as well as our own angle.
-        location = self.environment.get_location()
+        location = self.proxy.get_location()
         loc = self.geometry.get_location_angle(location, sensor_distance, angle)
         idx = self.get_index(loc)
 

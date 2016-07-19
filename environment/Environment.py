@@ -1,10 +1,8 @@
 # Core imports
 import math
 
-# Library imports
-from dronekit import LocationLocal
-
 # Package imports
+from Location_Proxy import Location_Proxy
 from ..core.Import_Manager import Import_Manager
 from ..core.Thread_Manager import Thread_Manager
 from ..core.USB_Manager import USB_Manager
@@ -12,9 +10,10 @@ from ..trajectory.Servo import Servo
 from ..vehicle.Vehicle import Vehicle
 from ..zigbee.Settings_Receiver import Settings_Receiver
 
-class Environment(object):
+class Environment(Location_Proxy):
     """
-    Environment class for interfacing the vehicle with various sensors and positioning information.
+    Environment class for interfacing the vehicle with various sensors and
+    positioning information.
     """
 
     # The distance sensor class name, i.e., "Distance_Sensor_Physical" or 
@@ -86,8 +85,9 @@ class Environment(object):
 
     def __init__(self, vehicle, geometry, arguments,
                  import_manager, thread_manager, usb_manager):
+        super(Environment, self).__init__(geometry)
+
         self.vehicle = vehicle
-        self.geometry = geometry
 
         self.arguments = arguments
         self.settings = self.arguments.get_settings("environment")
@@ -132,7 +132,7 @@ class Environment(object):
                 servo.set_current_pwm(servo_pwms[pin])
 
     def on_home_location(self, vehicle, attribute, home_location):
-        self.geometry.set_home_location(home_location)
+        self._geometry.set_home_location(home_location)
 
     def _setup_rf_sensor(self):
         rf_sensor_class = self.settings.get("rf_sensor_class")
@@ -149,7 +149,7 @@ class Environment(object):
         return self.vehicle
 
     def get_geometry(self):
-        return self.geometry
+        return self._geometry
 
     def get_arguments(self):
         return self.arguments
@@ -252,27 +252,22 @@ class Environment(object):
 
         return []
 
-    def get_location(self, north=0, east=0, alt=0):
-        """
-        Retrieve the location of the vehicle, or a point relative to the location of the vehicle given in meters.
-        """
-
-        return self.geometry.get_location_meters(self.vehicle.location, north, east, alt)
+    @property
+    def location(self):
+        return self.vehicle.location
 
     def get_raw_location(self):
         """
         Callback method for the location callback of the `RF_Sensor`.
 
-        The returned values are a tuple of vehicle coordinates, and the current
-        waypoint index.
+        The returned values are a tuple of coordinate values for the current
+        location of the vehicle (excluding the altitude component), and the
+        current waypoint index.
         """
 
-        location = self.get_location()
+        coords = self.geometry.get_coordinates(self.vehicle.location)[:2]
         waypoint_index = self.vehicle.get_next_waypoint()
-        if isinstance(location, LocationLocal):
-            return (location.north, location.east), waypoint_index
-
-        return (location.lat, location.lon), waypoint_index
+        return coords, waypoint_index
 
     def location_valid(self, other_valid=None, other_id=None, other_index=None):
         """
@@ -353,13 +348,6 @@ class Environment(object):
 
         self._required_sensors = set(required_sensors)
 
-    def get_distance(self, location):
-        """
-        Get the distance to the `location` from the vehicle's location.
-        """
-
-        return self.geometry.get_distance_meters(self.vehicle.location, location)
-
     def get_yaw(self):
         """
         Get the yaw bearing of the vehicle.
@@ -393,7 +381,7 @@ class Environment(object):
         the angle in radians.
         """
 
-        return self.geometry.bearing_to_angle(self.get_yaw())
+        return self._geometry.bearing_to_angle(self.get_yaw())
 
     def get_pitch(self):
         """

@@ -5,7 +5,12 @@ import sys
 # Library imports
 import numpy as np
 
+# Unit test imports
+from mock import MagicMock, PropertyMock
+
 # Package imports
+from ..environment.Location_Proxy import Location_Proxy
+from ..geometry.Geometry import Geometry
 from ..trajectory.Memory_Map import Memory_Map
 from environment import EnvironmentTestCase
 
@@ -32,15 +37,32 @@ class TestTrajectoryMemoryMap(EnvironmentTestCase):
         self.memory_map.set(self.in_bounds, 1)
         self.environment.get_vehicle().set_location(0.0, 0.0, self.alt)
 
-    def test_init(self):
+    def test_initialization(self):
         memory_map = Memory_Map(self.environment, self.size,
                                 self.resolution, self.alt)
         half = self.size/2
+        self.assertIsInstance(memory_map.geometry, Geometry)
         self.assertEqual(memory_map.resolution, self.resolution)
         self.assertEqual(memory_map.bl,
                          self.environment.get_location(-half, -half, self.alt))
         self.assertEqual(memory_map.tr,
                          self.environment.get_location(half, half, self.alt))
+
+        # The first argument must be a `Location_Proxy`, such as `Environment`.
+        geometry_config = {
+            "spec_set": Geometry,
+            "diff_location_meters.return_value": (1, 2, 3)
+        }
+        geometry_mock = MagicMock(**geometry_config)
+        proxy_config = {
+            "spec_set": Location_Proxy,
+            "geometry": geometry_mock
+        }
+        proxy_mock = MagicMock(**proxy_config)
+        Memory_Map(proxy_mock, self.size, self.resolution, self.alt)
+
+        with self.assertRaises(TypeError):
+            Memory_Map(None, self.size, self.resolution, self.alt)
 
     def test_get_resolution(self):
         self.assertEqual(self.memory_map.get_resolution(), self.resolution)
