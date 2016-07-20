@@ -272,6 +272,7 @@ class Reconstruction_Plan(Problem):
 
         # Import the settings for the planning problem.
         self.arguments = arguments
+        self.arguments.get_settings("reconstruction").set("model_class", "Ellipse_Model")
         self.settings = self.arguments.get_settings("planning_problem")
         self.N = self.settings.get("number_of_measurements")
         self.network_size = self.settings.get("network_size")
@@ -321,7 +322,7 @@ class Reconstruction_Plan(Problem):
         """
 
         return Weight_Matrix(self.arguments, self.padding, self.size,
-                             snap_inside=True)
+                             snap_inside=True, number_of_links=self.N)
 
     def format_steps(self, steps):
         # Convert a list of step sizes that has the same number of elements as 

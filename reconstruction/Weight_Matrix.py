@@ -7,9 +7,21 @@ from ..core.Import_Manager import Import_Manager
 from ..settings import Arguments
 
 class Weight_Matrix(object):
-    def __init__(self, arguments, origin, size, snap_inside=False):
+    def __init__(self, arguments, origin, size, snap_inside=False,
+                 number_of_links=0):
         """
         Initialize the weight matrix object.
+
+        The `arguments` is an `Arguments` object. The `origin` is a tuple of two
+        coordinates in `(x, y)` form of the bottom left point of the network.
+        `size` is a tuple of the same form, containing the width and height of
+        the network.
+
+        If `snap_inside` is `True`, then sensor locations inside the network are
+        allowed, but snapped to the network boundary. Otherwise, they are
+        silently excluded. If `number_of_links` is not `0`, then the weight
+        matrix is prefilled with this number of rows, which may be useful in
+        contexts where we know the number of measurements beforehand.
         """
 
         if isinstance(arguments, Arguments):
@@ -29,6 +41,8 @@ class Weight_Matrix(object):
         self._matrix = None
         self._origin = origin
         self._width, self._height = size
+
+        self._number_of_links = number_of_links
         self._snapper = Snap_To_Boundary(self._origin, self._width,
                                          self._height, snap_inside=snap_inside)
 
@@ -95,7 +109,12 @@ class Weight_Matrix(object):
         # grid using the Pythagorean theorem. Do this only for new sensors.
         for sensor in new_sensors:
             distance = np.sqrt((self._grid_x - sensor[0]) ** 2 + (self._grid_y - sensor[1]) ** 2)
-            self._distances = np.vstack([self._distances, distance.flatten()])
+            if self._distance_count >= self._number_of_links:
+                self._distances = np.vstack([self._distances, distance.flatten()])
+            else:
+                self._distances[self._distance_count, :] = distance.flatten()
+
+            self._distance_count += 1
 
         # Update the weight matrix by adding a row for the new link. We use the
         # Pythagorean theorem for calculation of the link's length. The weight matrix
@@ -112,7 +131,12 @@ class Weight_Matrix(object):
 
         row = self._model.assign(length, self._distances[source_index],
                                  self._distances[destination_index])
-        self._matrix = np.vstack([self._matrix, row])
+        if self._link_count >= self._number_of_links:
+            self._matrix = np.vstack([self._matrix, row])
+        else:
+            self._matrix[self._link_count, :] = row
+
+        self._link_count += 1
 
         return snapped_points
 
@@ -136,6 +160,8 @@ class Weight_Matrix(object):
         Reset the weight matrix object to its default state.
         """
 
-        self._matrix = np.empty((0, self._width * self._height))
-        self._distances = np.empty((0, self._width * self._height))
+        self._link_count = 0
+        self._distance_count = 0
+        self._matrix = np.empty((self._number_of_links, self._width * self._height))
+        self._distances = np.empty((self._number_of_links, self._width * self._height))
         self._sensors = {}
