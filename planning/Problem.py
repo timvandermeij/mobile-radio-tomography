@@ -419,6 +419,8 @@ class Reconstruction_Plan(Problem):
             if self.delta_rate < 1.0:
                 distance = self.assigner.assign(positions)[1]
                 self.travel_distance = float(distance)
+                if self.travel_distance == np.inf:
+                    feasible = False
             else:
                 self.travel_distance = 0.0
 

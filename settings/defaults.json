@@ -633,6 +633,24 @@
     "planning": {
         "name": "Base trajectory planning",
         "settings": {
+            "network_size": {
+                "help": "Dimensions of the total space wherein the network lies, in number of grid cells, including the padding. First dimension is north, second is east.",
+                "short": "Network size",
+                "type": "tuple",
+                "length": 2,
+                "subtype": "int",
+                "min": 1,
+                "default": [20, 20]
+            },
+            "network_padding": {
+                "help": "Number of full cells for each dimension and on every side where the vehicles are allowed to drive around the network. First dimension is north, second is east.",
+                "short": "Padding",
+                "type": "tuple",
+                "length": 2,
+                "subtype": "int",
+                "min": 0,
+                "default": [0, 0]
+            },
             "algorithm_class": {
                 "help": "The evolutionary algorithm to use for the planning problem. It can be given with dashes instead of underscores and with lowercase letters.",
                 "short": "Algorithm",
@@ -685,6 +703,7 @@
     },
     "planning_problem": {
         "name": "Reconstruction trajectory planning problem",
+        "parent": "planning",
         "settings": {
             "number_of_measurements": {
                 "help": "Maximum number of measurements to perform",
@@ -692,24 +711,6 @@
                 "type": "int",
                 "min": 1,
                 "default": 100
-            },
-            "network_size": {
-                "help": "Dimensions of the total space wherein the network lies, in number of grid cells",
-                "short": "Network size",
-                "type": "tuple",
-                "length": 2,
-                "subtype": "int",
-                "min": 1,
-                "default": [20, 20]
-            },
-            "network_padding": {
-                "help": "Number of full cells for each dimension and on every side where the vehicles are allowed to drive around the network",
-                "short": "Padding",
-                "type": "tuple",
-                "length": 2,
-                "subtype": "int",
-                "min": 0,
-                "default": [0, 0]
             },
             "unsnappable_rate": {
                 "help": "Ratio of the number of measurements that are allowed to be useless in the reconstruction problem and thus are discarded",
@@ -742,6 +743,18 @@
                     "subtype": "int"
                 },
                 "default": [[0, 0], [0, 19]]
+            }
+        }
+    },
+    "planning_collision_avoidance": {
+        "name": "Planning problem: vehicle collision avoidance",
+        "parent": "planning",
+        "settings": {
+            "collision_avoidance": {
+                "help": "Whether to enable the collision avoidance algorithm",
+                "short": "Collision avoidance",
+                "type": "bool",
+                "default": true
             }
         }
     },
