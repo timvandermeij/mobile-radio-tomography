@@ -6,7 +6,7 @@ import sys
 import numpy as np
 
 # Unit test imports
-from mock import MagicMock, PropertyMock
+from mock import MagicMock
 
 # Package imports
 from ..environment.Location_Proxy import Location_Proxy
@@ -36,6 +36,9 @@ class TestTrajectoryMemoryMap(EnvironmentTestCase):
                                      self.resolution, self.alt)
         self.memory_map.set(self.in_bounds, 1)
         self.environment.get_vehicle().set_location(0.0, 0.0, self.alt)
+
+        self.expected_map = np.zeros((self.res, self.res))
+        self.expected_map[self.in_bounds] = 1
 
     def test_initialization(self):
         memory_map = Memory_Map(self.environment, self.size,
@@ -71,6 +74,9 @@ class TestTrajectoryMemoryMap(EnvironmentTestCase):
         self.assertEqual(self.memory_map.get_size(), self.res)
 
     def test_get_map(self):
+        self.assertTrue(np.array_equal(self.memory_map.get_map(),
+                                       self.expected_map))
+
         memory_map = Memory_Map(self.environment, self.size,
                                 self.resolution, self.alt)
         self.assertIsInstance(memory_map.get_map(), np.ndarray)
@@ -104,13 +110,54 @@ class TestTrajectoryMemoryMap(EnvironmentTestCase):
         self.memory_map.set(self.in_bounds, 0)
         self.assertEqual(self.memory_map.get(self.in_bounds), 0)
 
+    def test_set_location_value(self):
+        with self.assertRaises(KeyError):
+            loc = self.memory_map.get_location(*self.out_bounds)
+            self.memory_map.set_location_value(loc, 1)
+
+        # Setting back to zero works.
+        location = self.memory_map.get_location(*self.in_bounds)
+        self.memory_map.set_location_value(location, 0)
+        self.assertEqual(self.memory_map.get(self.in_bounds), 0)
+
+    def test_set_multi(self):
+        # Setting an empty list of coordinates does not change anything.
+        self.memory_map.set_multi([], 1)
+        self.assertTrue(np.array_equal(self.memory_map.get_map(),
+                                       self.expected_map))
+
+        # Setting multiple coordinates at once works as expected.
+        coords = [(1, 0), (6, 3), (42, 5), (100, 3), (9, 200), (7, 16)]
+        self.memory_map.set_multi(coords, 1)
+        for coord in coords:
+            self.expected_map[coord] = 1
+
+        self.assertTrue(np.array_equal(self.memory_map.get_map(),
+                                       self.expected_map))
+
+        # Some invalid coordinates results in a `KeyError`.
+        with self.assertRaises(KeyError):
+            self.memory_map.set_multi([(7, 6), (501, 0), (0, 99), (-1, -1)], 1)
+
     def test_get(self):
         with self.assertRaises(KeyError):
             self.memory_map.get(self.out_bounds)
 
         self.assertEqual(self.memory_map.get(self.in_bounds), 1)
 
+    def test_get_location_value(self):
+        with self.assertRaises(KeyError):
+            loc = self.memory_map.get_location(*self.out_bounds)
+            self.memory_map.get_location_value(loc)
+
+        location = self.memory_map.get_location(*self.in_bounds)
+        self.assertEqual(self.memory_map.get_location_value(location), 1)
+
     def test_get_nonzero(self):
+        self.assertEqual(len(self.memory_map.get_nonzero()), 1)
+        self.assertIn(self.in_bounds, self.memory_map.get_nonzero())
+
+        self.memory_map.set(self.in_bounds, 2)
         self.assertEqual(len(self.memory_map.get_nonzero()), 1)
         self.assertIn(self.in_bounds, self.memory_map.get_nonzero())
 

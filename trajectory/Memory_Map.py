@@ -31,8 +31,10 @@ class Memory_Map(object):
 
         # The `bl` and `tr` are the first and last points that fit in the 
         # matrix in both dimensions, respectively. The bounds are based off 
-        # from the current vehicle location.
-        offset = memory_size/2
+        # from the current vehicle location, which is assumed to be in the 
+        # center of the area of interest, at ground level, at the moment when 
+        # the Memory_Map is initialized.
+        offset = memory_size/2.0
         self.bl = self.proxy.get_location(-offset, -offset, self.altitude)
         self.tr = self.proxy.get_location(offset, offset, self.altitude)
 
@@ -89,10 +91,7 @@ class Memory_Map(object):
         corresponding to y and x coordinates, respectively.
         """
 
-        if 0 <= i < self.size and 0 <= j < self.size:
-            return True
-
-        return False
+        return 0 <= i < self.size and 0 <= j < self.size
 
     def location_in_bounds(self, loc):
         """
@@ -131,6 +130,51 @@ class Memory_Map(object):
         else:
             raise KeyError("i={} and/or j={} out of bounds ({}).".format(i, j, self.size))
 
+    def get_location_value(self, loc):
+        """
+        Retrieve the memory map value for a given Location `loc`.
+
+        If the location is not within the bounds of the map, this method raises
+        a `KeyError`. Otherwise, the numeric value in the map is returned.
+        """
+
+        return self.get(self.get_index(loc))
+
+    def set_location_value(self, loc, value=0):
+        """
+        Set the memory map value for a given Location `loc` to a numerical
+        `value`.
+
+        If the location is not within the bounds of the map, this method raises
+        a `KeyError`. Otherwise, the value is set at the corresponding index
+        within the map.
+        """
+
+        idx = self.get_index(loc)
+        self.set(idx, value=value)
+
+    def set_multi(self, coords, value=0):
+        """
+        Set the memory map value for multiple coordinates `coords` at once to
+        the same numerical `value`.
+
+        The coordinates are given as a sequence of pairs, e.g., lists or tuples.
+        The coordinates correspond with memory map indexes. If any of the
+        indexes are not within the bounds of the map, this method raises
+        a `KeyError`. Otherwise, the value is set to the appropriate locations
+        within the map.
+        """
+
+        if not coords:
+            return
+
+        mask = zip(*coords)
+
+        try:
+            self.map[mask] = value
+        except IndexError as e:
+            raise KeyError("Some coordinates are invalid: {}".format(e.message))
+
     def get_location(self, i, j):
         """
         Convert an index to a Location object that describes the map location.
@@ -155,12 +199,12 @@ class Memory_Map(object):
         """
         Retrieve the indices of the map where there is an object.
 
-        An object has a value of 1 stored in the map index.
+        An object has a nonzero value stored in the map index.
 
         Returns a list of tuple indices.
         """
 
-        return zip(*np.nonzero(self.map == 1))
+        return zip(*np.nonzero(self.map))
 
     def get_nonzero_array(self):
         """
@@ -169,7 +213,7 @@ class Memory_Map(object):
         Returns a numpy array with 2 columns with one index per row.
         """
 
-        return np.array(np.nonzero(self.map == 1)).T
+        return np.array(np.nonzero(self.map)).T
 
     def get_nonzero_locations(self):
         """
