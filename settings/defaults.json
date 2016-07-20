@@ -631,7 +631,7 @@
         }
     },
     "planning": {
-        "name": "Base trajectory planning",
+        "name": "Planning problem",
         "settings": {
             "network_size": {
                 "help": "Dimensions of the total space wherein the network lies, in number of grid cells, including the padding. First dimension is north, second is east.",
@@ -650,7 +650,13 @@
                 "subtype": "int",
                 "min": 0,
                 "default": [0, 0]
-            },
+            }
+        }
+    },
+    "planning_runner": {
+        "name": "Planning problem: supervisor",
+        "parent": "planning",
+        "settings": {
             "algorithm_class": {
                 "help": "The evolutionary algorithm to use for the planning problem. It can be given with dashes instead of underscores and with lowercase letters.",
                 "short": "Algorithm",
@@ -668,7 +674,7 @@
         }
     },
     "planning_algorithm": {
-        "name": "Evolutionary multiobjective optimization algorithm",
+        "name": "Planning problem: evolutionary multiobjective optimization",
         "settings": {
             "population_size": {
                 "help": "Number of individuals to use during optimization. Afterward, at most this number of nondominated solutions is presented.",
@@ -702,7 +708,7 @@
         }
     },
     "planning_problem": {
-        "name": "Reconstruction trajectory planning problem",
+        "name": "Planning problem: trajectory reconstruction specifications",
         "parent": "planning",
         "settings": {
             "number_of_measurements": {
@@ -731,7 +737,7 @@
         }
     },
     "planning_assignment": {
-        "name": "Planning waypoint assignment problem",
+        "name": "Planning problem: waypoint assignment",
         "settings": {
             "vehicle_home_locations": {
                 "help": "Home location coordinates for the vehicles",

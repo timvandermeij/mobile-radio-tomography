@@ -44,7 +44,7 @@ class SettingsWidget(QtGui.QWidget):
         self._add_settings(self._settings)
 
     def _add_settings(self, settings):
-        for key, info in settings.get_info():
+        for key, info in sorted(settings.get_info(), key=lambda x: x[0]):
             valueWidget = self.make_value_widget(settings, key, info)
 
             self._widgets[key] = self._add_group_box(key, info, valueWidget)
@@ -295,12 +295,12 @@ class SettingsToolbarWidget(SettingsWidget):
         return valueWidget
 
 class SettingsTableWidget(QtGui.QTableWidget, SettingsWidget):
-    def __init__(self, arguments, component, *a, **kw):
+    def __init__(self, arguments, component, include_parent=True, *a, **kw):
         self._rows = {}
         QtGui.QTableWidget.__init__(self, *a, **kw)
         SettingsWidget.__init__(self, arguments, component, *a, **kw)
 
-        if self._settings.parent is not None:
+        if self._settings.parent is not None and include_parent:
             self._add_settings(self._settings.parent)
 
     def _create_layout(self):

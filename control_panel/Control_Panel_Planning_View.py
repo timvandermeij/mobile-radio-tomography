@@ -1,3 +1,7 @@
+# Core imports
+import re
+from functools import partial
+
 # Qt imports
 from PyQt4 import QtCore, QtGui
 import pyqtgraph as pg
@@ -59,6 +63,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._tabWidget = None
 
         self._forms = {}
+        self._settings_container = None
 
         self._timer = None
         self._graph_label = None
@@ -91,21 +96,6 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._listWidget.currentRowChanged.connect(self._stackedLayout.setCurrentIndex)
         self._stackedLayout.currentChanged.connect(self._redraw)
 
-        # Create the settings table toolboxes.
-        self._forms = {}
-        components = ("planning", "planning_assignment", "planning_algorithm",
-                      "planning_problem")
-
-        toolbox = QtGui.QToolBox()
-        for component in components:
-            form = SettingsTableWidget(self._controller.arguments, component)
-
-            title = form.get_title()
-            index = toolbox.addItem(form, title)
-            toolbox.setItemToolTip(index, title)
-
-            self._forms[component] = form
-        
         # Create the sort selector.
         self._sortSelector = QtGui.QComboBox()
         self._sortSelector.currentIndexChanged.connect(self._resort)
@@ -119,15 +109,9 @@ class Control_Panel_Planning_View(Control_Panel_View):
         formLayout.addRow("Sort order:", self._sortSelector)
         formLayout.addRow(self._toggle_button)
 
-        # Create the tab widget.
-        self._tabWidget = QtGui.QTabWidget()
-        self._tabWidget.addTab(toolbox, "Settings")
-        self._tabWidget.addTab(self._listWidget, "Runner state")
-
-        # Initialize more state variables and setup plots for initial display.
-        self._setup()
-
         # Create the layout and add all the widgets and other layouts into it.
+        self._tabWidget = QtGui.QTabWidget()
+
         leftBox = QtGui.QVBoxLayout()
         leftBox.addWidget(self._tabWidget)
         leftBox.addLayout(formLayout)
@@ -147,6 +131,13 @@ class Control_Panel_Planning_View(Control_Panel_View):
         hbox.addStretch(1)
         hbox.addLayout(rightBox)
         hbox.addStretch(1)
+
+        # Initialize more state variables and setup plots for initial display.
+        self._setup()
+
+        # Fill the tab widget.
+        self._tabWidget.addTab(self._settings_container, "Settings")
+        self._tabWidget.addTab(self._listWidget, "Runner state")
 
     def clear(self, layout=None):
         if layout is self._controller.central_widget.layout():
@@ -215,6 +206,8 @@ class Control_Panel_Planning_View(Control_Panel_View):
         # Populate the sort selector with current problem's objectives.
         self._populate_sort_selector()
 
+        self._fill_forms()
+
     def _populate_sort_selector(self):
         # Keep the current index while repopulating.
         currentIndex = self._sortSelector.currentIndex()
@@ -228,6 +221,63 @@ class Control_Panel_Planning_View(Control_Panel_View):
             self._sortSelector.addItem("Objective {} ({})".format(f+1, name))
 
         self._sortSelector.setCurrentIndex(max(0, currentIndex))
+
+    def _fill_forms(self):
+        # Create the settings table widgets.
+        self._forms = {}
+
+        components = (
+            "planning", "planning_runner",
+            "planning_algorithm", "planning_problem",
+            "planning_assignment", "planning_collision_avoidance"
+        )
+        prefix = self._controller.arguments.get_settings("planning").name
+        pattern = r'^{}: ([a-z])'.format(re.escape(prefix))
+
+        self._settings_container = QtGui.QScrollArea()
+        self._settings_container.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        settings_layout = QtGui.QVBoxLayout()
+        width = self._listWidget.sizeHint().width()
+
+        for component in components:
+            form = SettingsTableWidget(self._controller.arguments, component,
+                                       include_parent=False)
+
+            title = form.get_title()
+            short_title = re.sub(pattern, lambda m: m.group(1).upper(),
+                                 form.get_settings().name)
+            settings_group = QtGui.QGroupBox(short_title)
+            settings_group.setToolTip(title)
+            settings_group.setCheckable(True)
+            settings_group.toggled.connect(partial(self._toggle_settings, settings_group, form))
+            settings_group.setStyleSheet("""
+QGroupBox::indicator { width: 0; height: 0 }
+QGroupBox::title {
+    padding: 0 3px;
+    border: 1px outset #aaaaaa;
+    background: #f0f0f0;
+}
+""")
+
+            form.setFixedWidth(width)
+            form_layout = QtGui.QHBoxLayout()
+            form_layout.addWidget(form)
+            form_layout.addStretch(1)
+
+            settings_group.setLayout(form_layout)
+            settings_layout.addWidget(settings_group)
+
+            self._forms[component] = form
+
+        settings_widget = QtGui.QWidget()
+        settings_widget.setLayout(settings_layout)
+
+        self._settings_container.setWidgetResizable(True)
+        self._settings_container.setWidget(settings_widget)
+
+    def _toggle_settings(self, settings_group, form, checked):
+        form.setVisible(checked)
+        settings_group.setFlat(not checked)
 
     def _create_plot(self):
         dpi = plt.rcParams['figure.dpi']
