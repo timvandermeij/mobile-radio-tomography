@@ -751,7 +751,7 @@
                 "length": 2,
                 "subtype": "int",
                 "min": 0,
-                "default": [4, 9]
+                "default": [1, 5]
             },
             "interpolation": {
                 "help": "Pixel interpolation for the reconstruction display",
