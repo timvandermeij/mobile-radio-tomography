@@ -22,7 +22,6 @@ class Total_Variation_Reconstructor(Reconstructor):
         self._solver_method = self._settings.get("solver_method")
         self._solver_iterations = self._settings.get("solver_iterations")
 
-        self._D = None
         self._guess = None
 
     @property
@@ -41,24 +40,18 @@ class Total_Variation_Reconstructor(Reconstructor):
         `A` is the weight matrix and `b` is a column vector of signal strength
         measurements. We solve this equation to obtain `x`, containing the
         intensities for the pixels of the reconstructed image. We smoothen the
-        solution with a difference matrix that approximates the derivative of
-        the intended image. This ensures that there are as few differences as
-        possible between connected pixels.
+        solution by minimizing the gradient. This reduces the number of
+        differences between neighboring pixels.
         """
 
         if buffer is None:
-            raise ValueError("Buffer must be provided to create the difference matrix")
+            raise ValueError("Buffer has not been provided")
 
         A = scipy.sparse.csc_matrix(weight_matrix)
         b = rssi
 
-        # Create the difference matrix for the total variation factor.
-        width, height = buffer.size
-        if self._D is None:
-            self._D = self._create_difference_matrix(width, height)
-
-        # Solve the total variation problem.
         if self._guess is None:
+            width, height = buffer.size
             self._guess = np.zeros(width * height)
 
         options = {
@@ -69,50 +62,6 @@ class Total_Variation_Reconstructor(Reconstructor):
         solution = scipy.optimize.minimize(total_variation, self._guess, options=options,
                                            jac=total_variation_gradient, method=self._solver_method)
         return solution.x
-
-    def _create_difference_matrix(self, width, height):
-        """
-        Create the difference matrix for the total variation factor.
-
-        The difference matrix is the sum of the difference matrices in all four
-        directions: left, right, up and down. These matrices approximate the
-        derivate of the desired image in a certain direction. We use a simple
-        [-1, 1] convolution kernel, as used for the forward and backward
-        difference measures.
-
-        The difference matrix is used to ensure that the desired image is
-        smooth, i.e., that there as as few differences between neighboring
-        pixels as possible. In fact, one can think of the difference matrix
-        as an edge detection operation: edges of the objects are maintained,
-        but noise outside of the edges is suppressed as much as possible.
-        """
-
-        number_of_pixels = width * height
-
-        left_difference_matrix = np.zeros((number_of_pixels, number_of_pixels))
-        right_difference_matrix = np.zeros((number_of_pixels, number_of_pixels))
-        up_difference_matrix = np.zeros((number_of_pixels, number_of_pixels))
-        down_difference_matrix = np.zeros((number_of_pixels, number_of_pixels))
-
-        for x in xrange(width):
-            for y in xrange(height):
-                index = x + y * width
-
-                if x > 0:
-                    left_difference_matrix[index][index - 1] = -1
-                    left_difference_matrix[index][index] = 1
-                if x < width - 1:
-                    right_difference_matrix[index][index] = 1
-                    right_difference_matrix[index][index + 1] = -1
-                if y > 0:
-                    up_difference_matrix[index][index - width] = -1
-                    up_difference_matrix[index][index] = 1
-                if y < height - 1:
-                    down_difference_matrix[index][index] = 1
-                    down_difference_matrix[index][index + width] = -1
-
-        return scipy.sparse.csc_matrix(left_difference_matrix + right_difference_matrix +
-                                       up_difference_matrix + down_difference_matrix)
 
     def _calculate_total_variation(self, A, b, x):
         """
@@ -137,7 +86,7 @@ class Total_Variation_Reconstructor(Reconstructor):
         formula used for this method.
         """
 
-        return np.sum(np.sqrt((self._D * x) ** 2 + self._beta ** 2))
+        return np.sum(np.sqrt(np.gradient(x) ** 2 + self._beta ** 2))
 
     def _calculate_total_variation_gradient(self, A, b, x):
         """
@@ -148,6 +97,6 @@ class Total_Variation_Reconstructor(Reconstructor):
         """
 
         least_squares_derivative = ((A.T * A) * x) - (A.T * b)
-        total_variation_factor_derivative = (self._D * x) / np.sqrt((self._D * x) ** 2 + self._beta ** 2)
+        total_variation_factor_derivative = np.gradient(x) / np.sqrt(np.gradient(x) ** 2 + self._beta ** 2)
 
         return least_squares_derivative + self._alpha * total_variation_factor_derivative
