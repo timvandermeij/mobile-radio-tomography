@@ -73,7 +73,7 @@ class Total_Variation_Reconstructor(Reconstructor):
         formula used for this method.
         """
 
-        return 0.5 * np.linalg.norm((A * x) - b) + self._alpha * self._calculate_factor(x)
+        return np.linalg.norm((A * x) - b) + self._alpha * self._calculate_factor(x)
 
     def _calculate_factor(self, x):
         """
@@ -85,7 +85,7 @@ class Total_Variation_Reconstructor(Reconstructor):
         formula used for this method.
         """
 
-        return np.sum(np.sqrt(np.gradient(x) ** 2 + self._beta ** 2))
+        return np.sum(np.sqrt(np.gradient(x) ** 2 + self._beta))
 
     def _calculate_derivative(self, A, b, x):
         """
@@ -93,6 +93,6 @@ class Total_Variation_Reconstructor(Reconstructor):
         """
 
         least_squares_derivative = ((A.T * A) * x) - (A.T * b)
-        total_variation_factor_derivative = np.gradient(x) / np.sqrt(np.gradient(x) ** 2 + self._beta ** 2)
+        total_variation_factor_derivative = np.gradient(x) / np.sqrt(np.gradient(x) ** 2 + self._beta)
 
         return least_squares_derivative + self._alpha * total_variation_factor_derivative
