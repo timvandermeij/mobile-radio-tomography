@@ -31,6 +31,11 @@ class Geometry(object):
     # meters.
     EPSILON = 0.0001
 
+    # A function that evaluates the norm of the provided coordinate differences 
+    # based on the current geometry. Only north/east/altitude coordinates are 
+    # supported.
+    _norm = lambda self, dx, dy, dz=0: math.sqrt(dx**2 + dy**2 + dz**2)
+
     def __init__(self):
         self.home_location = LocationLocal(0.0, 0.0, 0.0)
 
@@ -175,7 +180,23 @@ class Geometry(object):
 
         location1, location2 = self.equalize(location1, location2)
         diff = self._diff_location(location1, location2)
-        return math.sqrt((diff.north**2) + (diff.east**2) + (diff.down**2))
+        return self._norm(diff.north, diff.east, diff.down)
+
+    @property
+    def norm(self):
+        """
+        Retrieve a lambda function that evaluates the norm of a vector of
+        coordinate differences. The lambda accepts two or three coordinates,
+        which must be north, east and optionally altitude components.
+
+        If this property provides `None`, then it means that the norm cannot
+        be determined directly from these coordinate differences, since the
+        geometry supports other location types than (just) local coordinates
+        that are evenly spread out. In this case, use `get_distance_meters` to
+        calculate the distance norm using Location objects.
+        """
+
+        return self._norm
 
     def _diff_location(self, location1, location2):
         dnorth = location2.north - location1.north

@@ -1,5 +1,4 @@
 import numpy as np
-from ..geometry.Geometry_Grid import Geometry_Grid
 
 class AStar(object):
     """
@@ -27,6 +26,7 @@ class AStar(object):
         """
 
         self._geometry = geometry
+        self._norm = self._geometry.norm
         self._memory_map = memory_map
 
         self._allow_at_bounds = allow_at_bounds
@@ -88,29 +88,39 @@ class AStar(object):
     def assign(self, start, goal, closeness):
         """
         Perform the A* search algorithm to create a list of waypoints that bring
-        the vehicle from the Location `start` to the Location `goal` while not
+        the vehicle from the position `start` to the position `goal` while not
         going through objects or getting closer than `closeness` meters to them.
 
-        When a safe and fast path is found, then it returns the list of
-        Locations that describe path waypoints and the distance cost.
+        If `use_indices` is enabled, then `start` and `goal` are memory map
+        indexes, otherwise they are `Location` objects.
+
+        When a safe and fast path is found, then it returns a tuple. The first
+        value is the list of `Location` objects or memory map indexes, depending
+        on `use_indices`, that describe path waypoints. The second value is the
+        distance cost.
 
         If no such assignment can be found, then an empty list and infinity is
         returned.
         """
 
-        start_idx = self._memory_map.get_index(start)
-        goal_idx = self._memory_map.get_index(goal)
+        if self._use_indices:
+            start_idx = tuple(start)
+            goal_idx = tuple(goal)
+        else:
+            start_idx = self._memory_map.get_index(start)
+            goal_idx = self._memory_map.get_index(goal)
 
-        self._locations[start_idx] = start
-        self._locations[goal_idx] = goal
+            self._locations[start_idx] = start
+            self._locations[goal_idx] = goal
 
         close = self._get_close_map(closeness)
 
         if start_idx == goal_idx:
             # Already at the requested location, simply return it as the 
             # waypoint even if this location is unsafe (since stoppping is 
-            # considered a safe action).
-            return [goal_idx if self._use_indices else goal], 0.0
+            # considered a safe action). Note that `goal == goal_idx` when 
+            # `use_indices` is enabled.
+            return [goal], 0.0
 
         if not self._memory_map.index_in_bounds(*goal_idx) or close[goal_idx]:
             # No safe path to the location since the location is unsafe, due to 
@@ -121,10 +131,9 @@ class AStar(object):
         # outside it, then we can speed up the out of bounds check by 
         # considering these indices as evaluated. Thus they are skipped without 
         # having a memory map call overhead.
+        evaluated = set()
         if self._allow_at_bounds:
-            evaluated = self._out_of_bounds.copy()
-        else:
-            evaluated = set()
+            evaluated.update(self._out_of_bounds)
 
         open_nodes = set([start_idx])
         came_from = {}
@@ -164,9 +173,11 @@ class AStar(object):
                 # current location is close to the memory map bounds, which 
                 # could be considered unsafe. But if we have the possibility to 
                 # move at the boundary, then try the next neighbor instead.
-                if not self._allow_at_bounds:
-                    if not self._memory_map.index_in_bounds(*neighbor_idx):
-                        break
+                # When `allow_at_bounds` is enabled, then this check is already 
+                # performed when checking for evaluated neighbors.
+                if not self._allow_at_bounds and \
+                   not self._memory_map.index_in_bounds(*neighbor_idx):
+                    break
 
                 # Check whether the neighbor index is inside the region of 
                 # influence of any other object.
@@ -223,10 +234,13 @@ class AStar(object):
         return list(reversed(total_path))
 
     def _get_cost(self, start_idx, goal_idx):
-        # For grid geometry, speed up by using our own norm calculation. This 
-        # saves some call and Location object overhead.
-        if isinstance(self._geometry, Geometry_Grid):
-            return abs(start_idx[0] - goal_idx[0] + start_idx[1] - goal_idx[1])
+        # For geometry that support it, speed up by using the norm calculation 
+        # directly for the memory map indices that directly map to evenly 
+        # spread out coordinates. This saves some Location object overhead, as 
+        # well as some geometry internal call overhead.
+        if self._norm:
+            return self._norm(start_idx[0] - goal_idx[0],
+                              start_idx[1] - goal_idx[1])
 
         start = self._get_location(start_idx)
         goal = self._get_location(goal_idx)

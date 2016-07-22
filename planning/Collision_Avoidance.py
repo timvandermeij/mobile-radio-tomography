@@ -138,19 +138,19 @@ class Collision_Avoidance(Location_Proxy):
                 self._update_route(route, 0)
 
         # Determine the conflict-free (and thus safe) path to the waypoint.
-        goal_point = assignment[vehicle][-1][:2]
-        goal_location = self._geometry.make_location(*goal_point)
-        route, distance = self._astar.assign(self.location, goal_location, 1.0)
+        start_index = self._vehicle_routes[self._current_vehicle][-1]
+        goal_index = assignment[vehicle][-1][:2]
+        route, distance = self._astar.assign(start_index, goal_index, 1.0)
 
         # If we could not find a route, then there is no safe route. This is 
         # made known through the distance, which is `np.inf`, but to keep this 
         # method functional, consider the route to go to the next point 
         # immediately.
         if not route:
-            route = [goal_point]
+            route = [goal_index]
             distance = np.inf
 
-        if len(route) > 1 or self.get_distance(goal_location) > 0:
+        if len(route) > 1 or start_index != goal_index:
             # Only add the new route to the old one if we changed our location 
             # due to it. If we stay at the same location, then this would 
             # conflict with our route erasing.

@@ -220,6 +220,12 @@ class TestGeometry(LocationTestCase):
         self.assertAlmostEqual(self.geometry.get_distance_meters(loc, loc2),
                                5.0, delta=self.dist_delta)
 
+    def test_norm(self):
+        # 3 * 3 + 4 * 4 = 9 + 16 = 25 which is 5 squared.
+        self.assertEqual(self.geometry.norm(3.0, 4.0), 5.0)
+        # (-12)**2 + 5**2 = 144 + 25 which is 13 squared.
+        self.assertEqual(self.geometry.norm(0.0, -12.0, 5.0), 13.0)
+
     def test_diff_location_meters(self):
         loc = LocationLocal(5.4, 3.2, -1.0)
         # 3 * 3 + 4 * 4 = 9 + 16 = 25 which is 5 squared.

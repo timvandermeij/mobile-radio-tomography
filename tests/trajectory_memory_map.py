@@ -30,7 +30,8 @@ class TestTrajectoryMemoryMap(EnvironmentTestCase):
 
         self.res = self.size * self.resolution
         self.in_bounds = (self.res - 1, 0)
-        self.out_bounds = (self.res, -1)
+        self.out_bounds = (self.res, 0)
+        self.negative_bounds = (-1, -1)
 
         self.memory_map = Memory_Map(self.environment, self.size,
                                      self.resolution, self.alt)
@@ -94,6 +95,7 @@ class TestTrajectoryMemoryMap(EnvironmentTestCase):
     def test_index_in_bounds(self):
         self.assertTrue(self.memory_map.index_in_bounds(*self.in_bounds))
         self.assertFalse(self.memory_map.index_in_bounds(*self.out_bounds))
+        self.assertFalse(self.memory_map.index_in_bounds(*self.negative_bounds))
 
     def test_location_in_bounds(self):
         current_loc = self.environment.get_location()
@@ -105,6 +107,8 @@ class TestTrajectoryMemoryMap(EnvironmentTestCase):
     def test_set(self):
         with self.assertRaises(KeyError):
             self.memory_map.set(self.out_bounds, 1)
+        with self.assertRaises(KeyError):
+            self.memory_map.set(self.negative_bounds, 1)
 
         # Setting back to zero works.
         self.memory_map.set(self.in_bounds, 0)
@@ -137,11 +141,15 @@ class TestTrajectoryMemoryMap(EnvironmentTestCase):
 
         # Some invalid coordinates results in a `KeyError`.
         with self.assertRaises(KeyError):
-            self.memory_map.set_multi([(7, 6), (501, 0), (0, 99), (-1, -1)], 1)
+            self.memory_map.set_multi([(7, 6), (501, 0), (0, 99), (188, 52)], 1)
+        with self.assertRaises(KeyError):
+            self.memory_map.set_multi([(12, 8), (499, 0), (0, 33), (-1, -1)], 1)
 
     def test_get(self):
         with self.assertRaises(KeyError):
             self.memory_map.get(self.out_bounds)
+        with self.assertRaises(KeyError):
+            self.memory_map.get(self.negative_bounds)
 
         self.assertEqual(self.memory_map.get(self.in_bounds), 1)
 

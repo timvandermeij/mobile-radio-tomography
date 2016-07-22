@@ -8,7 +8,8 @@ from environment import EnvironmentTestCase
 class TestLocationAStar(EnvironmentTestCase):
     def setUp(self):
         self.register_arguments([
-            "--vehicle-class", "Mock_Vehicle", "--geometry-class", "Geometry"
+            "--vehicle-class", "Mock_Vehicle",
+            "--geometry-class", "Geometry_Spherical"
         ], use_infrared_sensor=False)
 
         super(TestLocationAStar, self).setUp()
@@ -98,18 +99,16 @@ class TestLocationAStarGrid(EnvironmentTestCase):
 
     def test_assign_grid(self):
         # Deny access to the entire center of the grid, excepting the boundary.
-        n = self.size
-        m = n/2
-        for i in xrange(1, n-1):
-            for j in xrange(1, n-1):
+        n = self.size - 1
+        closeness = 1/float(self.resolution)
+        for i in xrange(1, n):
+            for j in xrange(1, n):
                 self.memory_map.set((i, j), 1)
 
         # Also enforce going into a certain direction.
-        self.memory_map.set((self.size - 1, 0), 1)
+        self.memory_map.set((n, 0), 1)
 
-        path, dist = self.astar.assign(LocationLocal(-m, -m, self.altitude),
-                                       LocationLocal(m-1, m-1, self.altitude),
-                                       1/float(self.resolution))
+        path, dist = self.astar.assign((0, 0), (n, n), closeness)
 
         # We receive an assignment. The path length is the correct length, 
         # containing even those waypoints that only differ in the same trend as 
@@ -119,8 +118,8 @@ class TestLocationAStarGrid(EnvironmentTestCase):
         for i in range(1, self.size):
             expected_path.append((0, i))
         for i in range(1, self.size):
-            expected_path.append((i, self.size - 1))
+            expected_path.append((i, n))
 
         self.assertEqual(path, expected_path)
         self.assertEqual(len(path), self.size*2 - 2)
-        self.assertEqual(dist, (n-1)*2)
+        self.assertEqual(dist, n*2)

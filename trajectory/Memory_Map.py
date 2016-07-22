@@ -110,10 +110,13 @@ class Memory_Map(object):
         """
 
         i, j = idx
-        if self.index_in_bounds(i, j):
-            return self.map[i, j]
+        if i < 0 or j < 0:
+            raise KeyError("i={} and/or j={} incorrect: must be nonnegative indexes".format(i, j))
 
-        raise KeyError("i={} and/or j={} out of bounds ({}).".format(i, j, self.size))
+        try:
+            return self.map[i, j]
+        except IndexError as e:
+            raise KeyError("i={} and/or j={} incorrect: {}".format(i, j, e.message))
 
     def set(self, idx, value=0):
         """
@@ -125,10 +128,13 @@ class Memory_Map(object):
         """
 
         i, j = idx
-        if self.index_in_bounds(i, j):
+        if i < 0 or j < 0:
+            raise KeyError("i={} and/or j={} incorrect: must be nonnegative indexes".format(i, j))
+
+        try:
             self.map[i, j] = value
-        else:
-            raise KeyError("i={} and/or j={} out of bounds ({}).".format(i, j, self.size))
+        except IndexError as e:
+            raise KeyError("i={} and/or j={} incorrect: {}".format(i, j, e.message))
 
     def get_location_value(self, loc):
         """
@@ -167,6 +173,8 @@ class Memory_Map(object):
 
         if not coords:
             return
+        if any(idx[0] < 0 or idx[1] < 0 for idx in coords):
+            raise KeyError("Some coordinates are invalid: must be nonnegative indexes")
 
         mask = zip(*coords)
 
