@@ -1,5 +1,4 @@
 import numpy as np
-from dronekit import LocationLocal
 from ..bench.Method_Coverage import covers
 from ..location.AStar import AStar
 from ..trajectory.Memory_Map import Memory_Map
@@ -17,25 +16,26 @@ class TestLocationAStar(EnvironmentTestCase):
         self.size = 10
         self.resolution = 5
         self.altitude = 4.0
+        self.geometry = self.environment.geometry
         self.memory_map = Memory_Map(self.environment, self.size,
                                      self.resolution, self.altitude)
-        self.astar = AStar(self.environment.geometry, self.memory_map)
+        self.astar = AStar(self.geometry, self.memory_map)
 
     def test_initialization(self):
-        self.assertEqual(self.astar._geometry, self.environment.geometry)
+        self.assertEqual(self.astar._geometry, self.geometry)
         self.assertEqual(self.astar._memory_map, self.memory_map)
         self.assertEqual(self.astar._resolution, self.resolution)
         self.assertEqual(self.astar._size, self.size * self.resolution)
 
     def test_assign(self):
         # Add some walls to the memory map
-        for i in range(self.resolution * 3, (self.size - 3) * self.resolution):
-            self.memory_map.set((self.resolution * 3, i), 1)
-            self.memory_map.set((i, self.resolution * 3), 1)
+        for i in range(self.resolution * 2, (self.size - 2) * self.resolution):
+            self.memory_map.set((self.resolution * 2, i), 1)
+            self.memory_map.set((i, self.resolution * 2), 1)
 
-        path, dist = self.astar.assign(LocationLocal(-4.6, 4.6, self.altitude),
-                                       LocationLocal(4.6, 4.6, self.altitude),
-                                       1.0)
+        start = self.environment.get_location(-4.6, -4.6, self.altitude)
+        end = self.environment.get_location(4.6, 4.6, self.altitude)
+        path, dist = self.astar.assign(start, end, 1.0)
         self.assertNotEqual(path, [])
         self.assertTrue(0 < dist < np.inf)
 
@@ -45,18 +45,19 @@ class TestLocationAStar(EnvironmentTestCase):
             for j in xrange(1, res):
                 self.memory_map.set((i, j), 1)
 
-        path, dist = self.astar.assign(LocationLocal(0, 0, self.altitude),
-                                       LocationLocal(4.8, 4.8, self.altitude),
-                                       1/float(self.resolution))
+        start = self.environment.get_location(0, 0, self.altitude)
+        end = self.environment.get_location(4, 4, self.altitude)
+        path, dist = self.astar.assign(start, end, 1/float(self.resolution))
         self.assertEqual(path, [])
         self.assertEqual(dist, np.inf)
 
     def test_assign_out_of_bounds(self):
         self.memory_map.set((0, 20), 1)
         self.memory_map.set((20, 0), 1)
-        path, dist = self.astar.assign(LocationLocal(0, 0, self.altitude),
-                                       LocationLocal(5, 5, self.altitude),
-                                       1.0)
+
+        start = self.environment.get_location(0, 0, self.altitude)
+        end = self.environment.get_location(5, 5, self.altitude)
+        path, dist = self.astar.assign(start, end, 1.0)
         self.assertEqual(path, [])
         self.assertEqual(dist, np.inf)
 
@@ -64,18 +65,31 @@ class TestLocationAStar(EnvironmentTestCase):
         for i in range(self.size * self.resolution):
             self.memory_map.set((i, 20), 1)
 
-        path, dist = self.astar.assign(LocationLocal(-4, -4, self.altitude),
-                                       LocationLocal(4, 4, self.altitude),
-                                       1.0)
+        start = self.environment.get_location(-4, -4, self.altitude)
+        end = self.environment.get_location(4, 4, self.altitude)
+        path, dist = self.astar.assign(start, end, 1.0)
         self.assertEqual(path, [])
         self.assertEqual(dist, np.inf)
 
+    def test_assign_leave_area(self):
+        # Add an unsafe area at the starting location as well as some walls.
+        start = self.environment.get_location(-4.6, -4.6, self.altitude)
+        end = self.environment.get_location(4.6, 4.6, self.altitude)
+
+        self.memory_map.set_location_value(start, 1)
+        for i in range(self.resolution * 3, (self.size - 3) * self.resolution):
+            self.memory_map.set((self.resolution * 3, i), 1)
+            self.memory_map.set((i, self.resolution * 3), 1)
+
+        path, dist = self.astar.assign(start, end, 1.0)
+        self.assertNotEqual(path, [])
+        self.assertTrue(0 < dist < np.inf)
+
     def test_assign_equal(self):
-        path, dist = self.astar.assign(LocationLocal(4, 4, self.altitude),
-                                       LocationLocal(4, 4, self.altitude),
-                                       1.0)
+        start = self.environment.get_location(4, 4, self.altitude)
+        path, dist = self.astar.assign(start, start, 1.0)
         self.assertEqual(len(path), 1)
-        self.assertEqual(path[0], LocationLocal(4, 4, self.altitude))
+        self.assertEqual(path[0], start)
         self.assertEqual(dist, 0.0)
 
 @covers(AStar)
