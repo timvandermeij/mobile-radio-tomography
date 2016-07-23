@@ -761,6 +761,14 @@
                 "short": "Collision avoidance",
                 "type": "bool",
                 "default": true
+            },
+            "unsafe_path_cost": {
+                "help": "Additional distance compared to the norm distance when there is no safe path possible to a certain waypoint. This should account for lost distance due to halting and detours. If this is 'inf', then the solution is considered infeasible.",
+                "short": "Unsafe path cost",
+                "type": "float",
+                "inf": true,
+                "min": 0.0,
+                "default": Infinity
             }
         }
     },

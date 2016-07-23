@@ -1,5 +1,7 @@
 import os
+import re
 import string
+from functools import partial
 from PyQt4 import QtCore, QtGui
 from Control_Panel_Widgets import QLineEditValidated, QLineEditToolButton
 
@@ -282,18 +284,6 @@ class SettingsWidget(QtGui.QWidget):
     def _get_short_label(self, key, info):
         return "{}:".format(info["short"] if "short" in info else key)
 
-class SettingsToolbarWidget(SettingsWidget):
-    def isHorizontal(self):
-        return True
-
-    def _add_group_box(self, key, info, valueWidget):
-        labelWidget = QtGui.QLabel(self._get_short_label(key, info))
-        labelWidget.setToolTip(self._arguments.get_help(key, info))
-        self._layout.addWidget(labelWidget)
-        self._layout.addWidget(valueWidget)
-
-        return valueWidget
-
 class SettingsTableWidget(QtGui.QTableWidget, SettingsWidget):
     def __init__(self, arguments, component, include_parent=True, *a, **kw):
         self._rows = {}
@@ -330,11 +320,20 @@ class SettingsTableWidget(QtGui.QTableWidget, SettingsWidget):
         self.verticalHeader().resizeSection(self._rows[key], size)
 
     def _add_group_box(self, key, info, valueWidget):
+        # Format the help message as a tooltip. If it contains multiple 
+        # sentences, then each sentence spans one line.
+        tooltip = self._arguments.get_help(key, info)
+        tooltip = re.sub(r'([^.]+\.)( |$)',
+                         lambda m: "<nobr>{}</nobr>{}".format(m.group(1), "<br>" if m.group(2) else ""),
+                         tooltip)
+
+        # Create the label cell item.
         label = QtGui.QTableWidgetItem(self._get_short_label(key, info))
-        label.setToolTip(self._arguments.get_help(key, info))
+        label.setToolTip(tooltip)
         label.setTextAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
         label.setFlags(label.flags() & ~QtCore.Qt.ItemIsEditable & ~QtCore.Qt.ItemIsSelectable)
 
+        # Create the table row and insert the label and value cells.
         row = self.rowCount()
         self.insertRow(row)
         self.setItem(row, 0, label)
@@ -494,14 +493,7 @@ class TextFormWidget(QLineEditValidated, FormWidget):
         self.editingFinished.connect(self._format)
 
     def get_value(self):
-        text = self.text()
-        validator = self.validator()
-        if validator is not None:
-            state = validator.validate(text, 0)[0]
-            if state != QtGui.QValidator.Acceptable:
-                return self.info["value"]
-
-        return str(text)
+        return str(self.text())
 
     def set_value(self, value):
         self.setText(self.format_value(value))
@@ -513,7 +505,10 @@ class TextFormWidget(QLineEditValidated, FormWidget):
         return str(value) if value is not None else ""
 
     def is_value_allowed(self):
-        return self.hasAcceptableInput()
+        if self.get_validator_state() == QtGui.QValidator.Acceptable:
+            return True
+
+        return self.is_value_default()
 
 class FileFormatValidator(QtGui.QRegExpValidator):
     def __init__(self, form_widget, *a, **kw):
@@ -616,6 +611,9 @@ class NumericFormWidget(TextFormWidget):
                 validator.setBottom(self.info["min"])
             if "max" in self.info:
                 validator.setTop(self.info["max"])
+
+    def add_action(self, action):
+        self._actions.append(action)
 
     def set_formatter(self, formatter):
         self._formatter = formatter
@@ -739,6 +737,21 @@ class FloatFormWidget(NumericSliderFormWidget):
             slider = QtGui.QSlider(QtCore.Qt.Horizontal)
             slider.setRange(0, 100)
             self.set_slider(slider)
+
+        if "inf" in self.info and self.info["inf"]:
+            inf_actions = [
+                ("infinity", "inf", "max"), ("negative infinity", "-inf", "min")
+            ]
+            for name, value, limit in inf_actions:
+                if limit not in self.info:
+                    inf_action = QtGui.QAction("Set to {}".format(name), self)
+                    inf_action.triggered.connect(partial(self._set_inf, value))
+                    self._actions.append(inf_action)
+                    self._valueWidget.add_action(inf_action)
+
+    def _set_inf(self, value):
+        self.set_value(value)
+        self._valueWidget.set_validator_state(QtGui.QValidator.Acceptable)
 
     def format_value(self, value):
         value = "{:f}".format(float(value) if value is not None else 0.0)

@@ -67,7 +67,7 @@ class Greedy_Assignment(object):
             current_positions[vehicle-1] = new_position
 
             self._collision_avoider.update(self._home_locations, assignment,
-                                           vehicle, other_vehicle)
+                                           vehicle, other_vehicle, distance)
             if self._collision_avoider.distance > distance:
                 distance = self._collision_avoider.distance
                 if distance == np.inf:

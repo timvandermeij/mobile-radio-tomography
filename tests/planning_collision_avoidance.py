@@ -77,7 +77,7 @@ class TestPlanningCollisionAvoidance(LocationTestCase, SettingsTestCase):
 
         # Once we have a current vehicle, then we track its location.
         self.collision_avoidance.update(self.home_locations, self.assignment,
-                                        1, 2)
+                                        1, 2, 6)
         self.assertEqual(self.collision_avoidance.location,
                          LocationLocal(5, 1, 0))
 
@@ -87,16 +87,16 @@ class TestPlanningCollisionAvoidance(LocationTestCase, SettingsTestCase):
 
         # Once we have a current vehicle, then we track its distance.
         self.collision_avoidance.update(self.home_locations, self.assignment,
-                                        1, 2)
+                                        1, 2, 6)
         self.assertEqual(self.collision_avoidance.distance, 6)
 
     def test_update(self):
         self.collision_avoidance.update(self.home_locations, self.assignment,
-                                        1, 2)
+                                        1, 2, 6)
 
         self.assignment[2].append([5, 9, 0])
         self.collision_avoidance.update(self.home_locations, self.assignment,
-                                        2, 1)
+                                        2, 1, 14)
         self.assertEqual(self.collision_avoidance.location,
                          LocationLocal(5, 9, 0))
         self.assertEqual(self.collision_avoidance.distance, 6)
@@ -106,7 +106,7 @@ class TestPlanningCollisionAvoidance(LocationTestCase, SettingsTestCase):
         # a collision.
         self.assignment[3].append([0, 5, 0])
         self.collision_avoidance.update(self.home_locations, self.assignment,
-                                        3, 1)
+                                        3, 1, 5)
         self.assertEqual(self.collision_avoidance.location,
                          LocationLocal(0, 5, 0))
         self.assertEqual(self.collision_avoidance.distance, np.inf)
@@ -114,7 +114,7 @@ class TestPlanningCollisionAvoidance(LocationTestCase, SettingsTestCase):
     def test_update_disabled(self):
         self.collision_avoidance._enabled = False
         self.collision_avoidance.update(self.home_locations, self.assignment,
-                                        1, 2)
+                                        1, 2, 6)
 
         # When the collision avoidance algorithm is disabled, then the location 
         # and distance do not update.

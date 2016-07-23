@@ -77,10 +77,12 @@ class QLineEditValidated(QtGui.QLineEdit):
     def __init__(self, *a, **kw):
         QtGui.QLineEdit.__init__(self, *a, **kw)
         self._background_color = ""
+        self._validator_state = None
 
     def setValidator(self, v):
         super(QLineEditValidated, self).setValidator(v)
         validator = self.validator()
+        self._validator_state = None
         if validator is not None:
             self.textChanged.connect(self._validate)
         else:
@@ -105,15 +107,29 @@ class QLineEditValidated(QtGui.QLineEdit):
     def get_background_color(self):
         return self._background_color
 
-    def _validate(self, text):
-        pos = self.cursorPosition()
-        state, newpos = self.validator().validate(text, pos)
+    def get_validator_state(self):
+        if self._validator_state is None:
+            validator = self.validator()
+            if validator is not None:
+                self._validate(self.text())
+            else:
+                self._validator_state = QtGui.QValidator.Acceptable
+
+        return self._validator_state
+
+    def set_validator_state(self, state):
+        self._validator_state = state
         if state != QtGui.QValidator.Acceptable:
             color = "#FA6969"
         else:
             color = "#8BD672"
 
         self.set_background_color(color)
+
+    def _validate(self, text):
+        pos = self.cursorPosition()
+        state, newpos = self.validator().validate(text, pos)
+        self.set_validator_state(state)
 
         if newpos != pos:
             self.setCursorPosition(pos)

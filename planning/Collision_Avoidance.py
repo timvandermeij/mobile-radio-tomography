@@ -21,6 +21,7 @@ class Collision_Avoidance(Location_Proxy):
         self._enabled = self._settings.get("collision_avoidance")
         self._network_size = self._settings.get("network_size")
         self._network_padding = self._settings.get("network_padding")
+        self._unsafe_path_cost = self._settings.get("unsafe_path_cost")
 
         self._vehicles = set()
         self._vehicle_syncs = {}
@@ -91,7 +92,8 @@ class Collision_Avoidance(Location_Proxy):
 
         return self._current_vehicle in self._vehicle_syncs[other_vehicle]
 
-    def update(self, home_locations, assignment, vehicle, other_vehicle):
+    def update(self, home_locations, assignment, vehicle, other_vehicle,
+               norm_distance):
         """
         Update the collision avoidance and find a safe path to a new position.
 
@@ -100,14 +102,17 @@ class Collision_Avoidance(Location_Proxy):
         the vehicle IDs with the currently assigned waypoints. The goal location
         for the current vehicle with ID `vehicle` is already added to the
         assignment, and this waypoint synchronizes by waiting for the vehicle
-        with ID `other_vehicle`.
+        with ID `other_vehicle`. The `norm_distance` is an indication of the
+        distance between the previous waypoint and the newly assigned waypoint.
 
-        The collision avoidance algorithm detects whether the simplest path from
+        The collision avoidance algorithm attempts to find a path from
         the previous waypoint to the current waypoint crosses any concurrent
         paths, including those of vehicles that do not synchronize with the
         current vehicle before this point. It then replaces the current path
-        with another one that is safe, and updates it internal state as well as
-        the vehicle's location and distance.
+        with another the safe one, and updates it internal state as well as
+        the vehicle's location and distance. If there is no safe path, then
+        the distance becomes the `norm_distance` plus the unsafe path cost,
+        which is `np.inf` by default.
         """
 
         if not self._enabled:
@@ -143,12 +148,12 @@ class Collision_Avoidance(Location_Proxy):
         route, distance = self._astar.assign(start_index, goal_index, 1.0)
 
         # If we could not find a route, then there is no safe route. This is 
-        # made known through the distance, which is `np.inf`, but to keep this 
-        # method functional, consider the route to go to the next point 
-        # immediately.
+        # made known through the distance, which becomes the cost of traveling 
+        # an unsafe route, but to keep this method functional, consider the 
+        # route to go to the next point immediately.
         if not route:
             route = [goal_index]
-            distance = np.inf
+            distance = norm_distance + self._unsafe_path_cost
 
         if len(route) > 1 or start_index != goal_index:
             # Only add the new route to the old one if we changed our location 
