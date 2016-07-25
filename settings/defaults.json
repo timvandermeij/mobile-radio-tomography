@@ -915,37 +915,48 @@
             }
         }
     },
-    "reconstruction_total_variation_reconstructor": {
-        "name": "Reconstruction (total variation)",
+    "reconstruction_iterative_reconstructor": {
+        "name": "Reconstruction (iterative reconstructor)",
         "settings": {
             "alpha": {
-                "help": "Factor that determines the importance of a smooth solution",
+                "help": "Importance of the additional factor",
                 "short": "Alpha",
                 "type": "float",
                 "min": 0,
                 "max": 1,
                 "default": 0.4
             },
-            "beta": {
-                "help": "Factor that determines the sharpness of the solution",
-                "short": "Beta",
-                "type": "float",
-                "min": 0,
-                "default": 0.001
-            },
             "solver_method": {
                 "help": "Minimization method to use by the solver",
                 "short": "Solver method",
                 "type": "string",
                 "required": true,
-                "default": "L-BFGS-B"
+                "default": "SLSQP"
             },
             "solver_iterations": {
                 "help": "Maximum number of iterations for the solver",
                 "short": "Solver iterations",
                 "type": "int",
                 "min": 1,
-                "default": 20
+                "default": 1
+            }
+        }
+    },
+    "reconstruction_maximum_entropy_reconstructor": {
+        "name": "Reconstruction (maximum entropy)",
+        "parent": "reconstruction_iterative_reconstructor",
+        "settings": {}
+    },
+    "reconstruction_total_variation_reconstructor": {
+        "name": "Reconstruction (total variation)",
+        "parent": "reconstruction_iterative_reconstructor",
+        "settings": {
+            "beta": {
+                "help": "Factor that determines the sharpness of the solution",
+                "short": "Beta",
+                "type": "float",
+                "min": 0,
+                "default": 0.001
             }
         }
     },
