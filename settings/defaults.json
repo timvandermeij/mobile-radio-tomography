@@ -915,6 +915,34 @@
             }
         }
     },
+    "reconstruction_maximum_entropy_reconstructor": {
+        "name": "Reconstruction (maximum entropy)",
+        "settings": {
+            "entropy_alpha": {
+                "help": "Factor that determines the importance of a solution with minimum entropy",
+                "short": "Alpha",
+                "type": "float",
+                "min": 0,
+                "max": 1,
+                "default": 0.4
+            },
+            "entropy_solver_method": {
+                "help": "Minimization method to use by the solver",
+                "short": "Solver method",
+                "type": "string",
+                "required": true,
+                "default": "SLSQP"
+            },
+            "entropy_solver_iterations": {
+                "help": "Maximum number of iterations for the solver",
+                "short": "Solver iterations",
+                "type": "int",
+                "min": 1,
+                "default": 1
+            }
+        }
+    },
+
     "reconstruction_total_variation_reconstructor": {
         "name": "Reconstruction (total variation)",
         "settings": {

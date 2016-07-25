@@ -2,7 +2,8 @@ from ..settings import Arguments
 
 # pylint: disable=undefined-all-variable
 __all__ = [
-    "SVD_Reconstructor", "Total_Variation_Reconstructor", "Truncated_SVD_Reconstructor"
+    "Maximum_Entropy_Reconstructor", "SVD_Reconstructor",
+    "Total_Variation_Reconstructor", "Truncated_SVD_Reconstructor"
 ]
 
 class Reconstructor(object):
