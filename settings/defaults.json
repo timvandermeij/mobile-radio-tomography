@@ -759,7 +759,7 @@
                 "type": "string",
                 "required": false,
                 "keys": ["matplotlib.image", "AxesImage", "_interpd"],
-                "default": "hamming"
+                "default": "none"
             },
             "chunk_size": {
                 "help": "Number of measurements to obtain before rendering a new image",

@@ -1,4 +1,5 @@
 # Core imports
+import datetime
 import json
 import thread
 import os
@@ -328,6 +329,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
         self._axes = None
         self._canvas = None
+        self._image = None
         self._graph = None
         self._table = None
 
@@ -351,6 +353,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
 
         self._panels = None
         self._toggle_button = None
+        self._snapshot_button = None
 
         self._source_forms = []
 
@@ -424,12 +427,20 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._toggle_button = QtGui.QPushButton(QtGui.QIcon("assets/start.png"), "Start")
         self._toggle_button.clicked.connect(self._toggle)
 
+        # Create the snapshot button.
+        self._snapshot_button = QtGui.QPushButton(QtGui.QIcon("assets/snapshot.png"), "Snapshot")
+        self._snapshot_button.clicked.connect(self._snapshot)
+
         # Create the layout and add the widgets.
+        vbox_left_buttons = QtGui.QHBoxLayout()
+        vbox_left_buttons.addWidget(self._toggle_button)
+        vbox_left_buttons.addWidget(self._snapshot_button)
+
         vbox_left = QtGui.QVBoxLayout()
         vbox_left.addWidget(self._panels)
         vbox_left.addWidget(self._stacked_reconstructor)
         vbox_left.addWidget(self._stacked_model)
-        vbox_left.addWidget(self._toggle_button)
+        vbox_left.addLayout(vbox_left_buttons)
 
         vbox_right = QtGui.QVBoxLayout()
         vbox_right.addWidget(self._canvas)
@@ -460,6 +471,17 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         else:
             self._toggle_button.setIcon(QtGui.QIcon("assets/start.png"))
             self._toggle_button.setText("Start")
+
+    def _snapshot(self):
+        """
+        Snapshot the current reconstructed image.
+        """
+
+        if self._running and self._image is not None:
+            plt.imsave("snapshots/{}.pdf".format(datetime.datetime.now()), self._image, origin="lower")
+        else:
+            message = "Snapshotting is only possible when the reconstruction is started and an image is rendered."
+            QtGui.QMessageBox.critical(self._controller.central_widget, "Snapshot error", message)
 
     def _update_form(self, index):
         """
@@ -560,6 +582,7 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._axes.cla()
         self._axes.axis("off")
         self._canvas.draw()
+        self._image = None
 
         # Execute the reconstruction and visualization.
         self._chunk_count = 0
@@ -671,11 +694,11 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             # by suppressing pixel values that do not correspond to high attenuation.
             pixels = pixels.reshape(self._buffer.size)
             levels = [np.percentile(pixels, self._percentiles[0]), np.percentile(pixels, self._percentiles[1])]
-            image = pg.functions.makeRGBA(pixels, levels=levels, lut=self._cmap)[0]
+            self._image = pg.functions.makeRGBA(pixels, levels=levels, lut=self._cmap)[0]
 
             # Draw the image onto the canvas and apply interpolation.
             self._axes.axis("off")
-            self._axes.imshow(image, origin="lower", interpolation=self._interpolation)
+            self._axes.imshow(self._image, origin="lower", interpolation=self._interpolation)
             self._canvas.draw()
 
             # Delete the image from memory now that it is drawn.
