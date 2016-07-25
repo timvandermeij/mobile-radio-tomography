@@ -17,9 +17,9 @@ class Maximum_Entropy_Reconstructor(Reconstructor):
 
         super(Maximum_Entropy_Reconstructor, self).__init__(arguments)
 
-        self._alpha = self._settings.get("entropy_alpha")
-        self._solver_method = self._settings.get("entropy_solver_method")
-        self._solver_iterations = self._settings.get("entropy_solver_iterations")
+        self._alpha = self._settings.get("alpha")
+        self._solver_method = self._settings.get("solver_method")
+        self._solver_iterations = self._settings.get("solver_iterations")
 
         self._guess = None
 
