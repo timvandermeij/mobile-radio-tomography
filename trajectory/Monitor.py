@@ -20,7 +20,7 @@ class Monitor(object):
         self.sensors = self.environment.get_distance_sensors()
         self.rf_sensor = self.environment.get_rf_sensor()
 
-        self.colors = ["red", "purple", "black"]
+        self.colors = self.settings.get("plot_sensor_colors")
 
         self.memory_map = None
         self.plot = None
@@ -50,7 +50,7 @@ class Monitor(object):
         `add_point` can be a callback function that accepts a Location object
         for a detected point from the distance sensors.
 
-        Returns `Fase` if the loop should be halted.
+        Returns `False` if the loop should be halted.
         """
 
         if self._paused:
@@ -115,6 +115,14 @@ class Monitor(object):
             self.rf_sensor.start()
 
     def pause(self):
+        """
+        Pause or unpause the mission.
+
+        If the mission is currently paused, then this restarts the mission in
+        the correct mode. Otherwise, the vehicle is paused and the RF sensor is
+        put in its passive mode.
+        """
+
         if self._paused:
             self.start()
 

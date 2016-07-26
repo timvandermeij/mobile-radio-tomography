@@ -158,7 +158,8 @@ class TestZigBeeRFSensor(ZigBeeRFSensorTestCase):
         self.assertNotEqual(self.rf_sensor._scheduler.timestamp, 0.0)
 
     def test_stop(self):
-        # Pertent we start the RF sensor so that we know that `stop` functions.
+        # Pretend that we start the RF sensor so that we know that `stop` 
+        # functions.
         self.rf_sensor.start()
 
         # The sensor must be stopped for sending custom packets. Make sure that 

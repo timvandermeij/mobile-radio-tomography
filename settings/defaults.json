@@ -358,6 +358,12 @@
                 "help": "Whether to display a viewer of the current vehicle's sight (requires pyglet and a simulated environment)",
                 "type": "bool",
                 "default": true
+            },
+            "plot_sensor_colors": {
+                "help": "Color names to use for the selected edges by different sensors in the memory map plot during simulation",
+                "type": "list",
+                "subtype": "string",
+                "default": ["red", "purple", "black"]
             }
         }
     },

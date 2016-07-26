@@ -153,10 +153,6 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
         self.assertEqual(self.vehicle.mode.name, "HALT")
         self.assertFalse(self.vehicle.armed)
 
-        self.vehicle.mode = VehicleMode("GUIDED")
-        self.assertEqual(self.vehicle.mode.name, "GUIDED")
-        self.assertTrue(self.vehicle.armed)
-
     @patch('thread.start_new_thread')
     def test_unpause(self, thread_mock):
         self.vehicle.activate()
