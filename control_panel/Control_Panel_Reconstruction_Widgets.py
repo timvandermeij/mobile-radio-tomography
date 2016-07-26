@@ -111,7 +111,7 @@ class Grid(QtGui.QGraphicsView):
 
     def setup(self, buffer):
         """
-        Setup the map grid the size from the buffer.
+        Setup the map grid the size from the `buffer`.
         """
 
         self._width, self._height = buffer.size
@@ -143,7 +143,7 @@ class Grid(QtGui.QGraphicsView):
 
     def _add_link(self, source, target):
         """
-        Add a link to the scene. The link consist of two tuples
+        Add a link to the scene. The link consists of two tuples
         indicating the `source` and `target` sensor locations.
         """
 
@@ -161,7 +161,7 @@ class Grid(QtGui.QGraphicsView):
 
     def update(self, packet):
         """
-        Update the grid with information in `packet`.
+        Update the grid with information in the `packet`.
         """
 
         # Remove existing links if necessary.
@@ -179,14 +179,16 @@ class Grid(QtGui.QGraphicsView):
     def toggle(self, state):
         """
         Toggle whether or not we should clear previous links before
-        adding a new one to the scene.
+        adding a new one to the scene. The `state` indicates if the
+        checkbox in the view has been checked, in which case we must
+        clear the links everytime before adding a new one.
         """
 
         self._clear = (state == QtCore.Qt.Checked)
 
     def clear(self):
         """
-        Clear the grid.
+        Clear the grid. We remove all links, but the grid lines remain.
         """
 
         for link in self._links:
