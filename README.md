@@ -271,18 +271,19 @@ the total time needed for the mission.
 ### Reconstruction view
 
 The reconstruction view converts a dataset, dump or stream of signal strength
-measurements to input for the reconstructor, such as weight matrices and grid
-pixel data. The result of the reconstruction is visualized as a set of
-two-dimensional images. We provide multiple reconstructors:
+measurements to input for the reconstructor, such as a weight matrix. The
+result of the reconstruction is a set of two-dimensional images. We provide
+multiple reconstruction algorithms:
 
-* SVD
-* Total variation
-* Truncated SVD
+* Singular value decomposition
+* Truncated singular value decomposition
+* Total variation minimization
+* Maximum entropy minimization
 
-The settings panels allow you to change the reconstructor and start the 
+The settings panels allow you to change reconstruction settings and start the 
 reconstruction and visualization process. The raw data is shown in a graph and 
-table form. The stream source can also be recorded to a JSON dump format for 
-calibration or analysis.
+a table. The grid view indicates how well the measurements cover the grid cells.
+Streams can be recorded as a JSON dump for calibration or deferred analysis.
 
 ### Waypoints view
 
