@@ -21,7 +21,7 @@ import pyqtgraph as pg
 from PyQt4 import QtGui, QtCore
 
 # Package imports
-from Control_Panel_Reconstruction_Widgets import Graph, Table, Stream_Recorder, Stacked_Settings_Form
+from Control_Panel_Reconstruction_Widgets import Graph, Grid, Table, Stream_Recorder, Stacked_Settings_Form
 from Control_Panel_Settings_Widgets import SettingsTableWidget
 from Control_Panel_View import Control_Panel_View
 from ..core.Import_Manager import Import_Manager
@@ -39,7 +39,10 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._axes = None
         self._canvas = None
         self._image = None
+
         self._graph = None
+        self._grid = None
+        self._grid_checkbox = None
         self._table = None
 
         self._sources = [
@@ -97,19 +100,8 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._axes.axis("off")
         self._canvas = FigureCanvas(figure)
 
-        # Create the graph and table.
-        self._graph = Graph(self._settings)
-        self._table = Table(self._settings)
-
-        # Create the top tabs.
-        top_tabs = QtGui.QTabWidget()
-        top_tabs.addTab(self._canvas, "Image")
-        top_tabs.addTab(QtGui.QWidget(), "Map")
-
-        # Create the bottom tabs.
-        bottom_tabs = QtGui.QTabWidget()
-        bottom_tabs.addTab(self._graph.create(), "Graph")
-        bottom_tabs.addTab(self._table.create(), "Table")
+        # Create the tabs (and corresponding widgets).
+        top_tabs, bottom_tabs = self._create_tabs()
 
         # Create the panels. These are tabs containing the forms for each input 
         # source (dataset, dump and stream). Additionally, there are stacked 
@@ -168,6 +160,39 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         # ensure the first stacked widget is loaded.
         self._panels.currentChanged.connect(self._update_form)
         self._update_form(0)
+
+    def _create_tabs(self):
+        """
+        Create widgets (graph, grid and table) for the view and return
+        the tabs that contain them.
+        """
+
+        # Create the grid.
+        self._grid = Grid(self._settings)
+        self._grid_checkbox = QtGui.QCheckBox("Only show current measurement")
+        self._grid_checkbox.stateChanged.connect(self._grid.toggle)
+
+        grid_layout = QtGui.QVBoxLayout()
+        grid_layout.addWidget(self._grid_checkbox)
+        grid_layout.addWidget(self._grid)
+        grid_widget = QtGui.QWidget()
+        grid_widget.setLayout(grid_layout)
+
+        # Create the graph and table.
+        self._graph = Graph(self._settings)
+        self._table = Table(self._settings)
+
+        # Create the top tabs.
+        top_tabs = QtGui.QTabWidget()
+        top_tabs.addTab(self._canvas, "Image")
+        top_tabs.addTab(grid_widget, "Grid")
+
+        # Create the bottom tabs.
+        bottom_tabs = QtGui.QTabWidget()
+        bottom_tabs.addTab(self._graph.create(), "Graph")
+        bottom_tabs.addTab(self._table.create(), "Table")
+
+        return top_tabs, bottom_tabs
 
     def _toggle(self):
         """
@@ -286,10 +311,12 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         # Create the coordinator.
         self._coordinator = Coordinator(self._controller.arguments, self._buffer)
 
-        # Clear the graph and table and setup the graph.
+        # Clear the widgets.
         self._graph.clear()
         self._graph.setup(self._buffer)
         self._table.clear()
+        self._grid.clear()
+        self._grid.setup(self._buffer)
 
         # Clear the image.
         self._axes.cla()
@@ -363,8 +390,9 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             self._controller.thread_manager.log("control_panel_reconstruction_view")
             return
 
-        # Update the graph, table and stream recorder (if applicable) with the packet.
+        # Update the widgets with the packet.
         self._graph.update(packet)
+        self._grid.update(packet)
         self._table.update(packet)
         if self._stream_recorder is not None:
             self._stream_recorder.update(packet)

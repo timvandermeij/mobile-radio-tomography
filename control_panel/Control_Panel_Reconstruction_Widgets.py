@@ -3,6 +3,7 @@ import json
 import os
 
 # Library imports
+import numpy as np
 import pyqtgraph as pg
 from PyQt4 import QtGui, QtCore
 
@@ -90,6 +91,108 @@ class Graph(object):
 
         self._graph_data = []
         self._graph_curves = []
+
+class Grid(QtGui.QGraphicsView):
+    def __init__(self, settings):
+        """
+        Initialize the grid object.
+        """
+
+        super(Grid, self).__init__()
+
+        self._size = settings.get("reconstruction_grid_size")
+
+        self._clear = False
+        self._links = []
+
+        # Create the scene.
+        self._scene = QtGui.QGraphicsScene()
+        self.setScene(self._scene)
+
+    def setup(self, buffer):
+        """
+        Setup the map grid the size from the buffer.
+        """
+
+        self._width, self._height = buffer.size
+        self._cell_size = self._size / max(self._width, self._height)
+
+        # Clear the scene for (re)drawing the grid.
+        self._scene.clear()
+
+        # Draw the grid.
+        self._draw()
+
+    def _draw(self):
+        """
+        Draw the grid onto the scene.
+        """
+
+        horizontal_coordinates = np.linspace(0, self._height * self._cell_size, self._height + 1)
+        vertical_coordinates = np.linspace(0, self._width * self._cell_size, self._width + 1)
+        horizontal_extend = min(max(vertical_coordinates), self._size)
+        vertical_extend = min(max(horizontal_coordinates), self._size)
+
+        for coordinate in horizontal_coordinates:
+            self._scene.addLine(0, coordinate, horizontal_extend, coordinate,
+                                QtGui.QPen(QtCore.Qt.black))
+
+        for coordinate in vertical_coordinates:
+            self._scene.addLine(coordinate, 0, coordinate, vertical_extend,
+                                QtGui.QPen(QtCore.Qt.black))
+
+    def _add_link(self, source, target):
+        """
+        Add a link to the scene. The link consist of two tuples
+        indicating the `source` and `target` sensor locations.
+        """
+
+        pen = QtGui.QPen(QtCore.Qt.blue, 2, QtCore.Qt.SolidLine)
+        points = []
+
+        for position in [source, target]:
+            x = position[0] * self._cell_size
+            y = (self._height - position[1]) * self._cell_size
+            points.append(x)
+            points.append(y)
+
+        line = self._scene.addLine(*points, pen=pen)
+        self._links.append(line)
+
+    def update(self, packet):
+        """
+        Update the grid with information in `packet`.
+        """
+
+        # Remove existing links if necessary.
+        if self._clear:
+            self.clear()
+
+        # Add the new link if the locations are valid.
+        if not packet.get("from_valid") or not packet.get("to_valid"):
+            return
+
+        source = (packet.get("from_latitude"), packet.get("from_longitude"))
+        target = (packet.get("to_latitude"), packet.get("to_longitude"))
+        self._add_link(source, target)
+
+    def toggle(self, state):
+        """
+        Toggle whether or not we should clear previous links before
+        adding a new one to the scene.
+        """
+
+        self._clear = (state == QtCore.Qt.Checked)
+
+    def clear(self):
+        """
+        Clear the grid.
+        """
+
+        for link in self._links:
+            self._scene.removeItem(link)
+
+        self._links = []
 
 class Table(object):
     def __init__(self, settings):

@@ -64,6 +64,12 @@
                 "min": 5,
                 "default": 20
             },
+            "reconstruction_grid_size": {
+                "help": "Maximum width and height of the grid view in pixels",
+                "type": "int",
+                "min": 100,
+                "default": 350
+            },
             "reconstruction_pause_time": {
                 "help": "Delay in seconds to wait before entering the next reconstruction loop iteration",
                 "short": "Pause time",
