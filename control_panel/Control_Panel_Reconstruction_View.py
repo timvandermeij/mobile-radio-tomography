@@ -101,10 +101,15 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         self._graph = Graph(self._settings)
         self._table = Table(self._settings)
 
-        # Create the tab widget.
-        tabs = QtGui.QTabWidget()
-        tabs.addTab(self._graph.create(), "Graph")
-        tabs.addTab(self._table.create(), "Table")
+        # Create the top tabs.
+        top_tabs = QtGui.QTabWidget()
+        top_tabs.addTab(self._canvas, "Image")
+        top_tabs.addTab(QtGui.QWidget(), "Map")
+
+        # Create the bottom tabs.
+        bottom_tabs = QtGui.QTabWidget()
+        bottom_tabs.addTab(self._graph.create(), "Graph")
+        bottom_tabs.addTab(self._table.create(), "Table")
 
         # Create the panels. These are tabs containing the forms for each input 
         # source (dataset, dump and stream). Additionally, there are stacked 
@@ -152,9 +157,8 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
         vbox_left.addLayout(vbox_left_buttons)
 
         vbox_right = QtGui.QVBoxLayout()
-        vbox_right.addWidget(self._canvas)
-        vbox_right.addStretch(1)
-        vbox_right.addWidget(tabs)
+        vbox_right.addWidget(top_tabs, 2)
+        vbox_right.addWidget(bottom_tabs, 1)
 
         hbox = QtGui.QHBoxLayout(self._controller.central_widget)
         hbox.addLayout(vbox_left)
