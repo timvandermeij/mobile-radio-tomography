@@ -20,6 +20,16 @@ class WaypointTypeWidget(QtGui.QComboBox):
         self.setCurrentIndex(default - 1)
 
     def _update_row_type(self, index):
+        """
+        Update the other cells in the row of this cell widget based on the
+        waypoint type.
+
+        The `index` is the index associated with the selected combo box item,
+        starting from `0`. The two cells next to this cell widget, which are
+        in the "wait ID" and "wait count" columns, are enabled or disabled
+        based on whether the `index` belongs to the wait type waypoint.
+        """
+
         if index + 1 != Waypoint_Type.WAIT:
             flagger = lambda f: f & ~QtCore.Qt.ItemIsEditable & ~QtCore.Qt.ItemIsSelectable & ~QtCore.Qt.ItemIsEnabled
             color = QtGui.QColor("#e8e8e8")
@@ -35,9 +45,25 @@ class WaypointTypeWidget(QtGui.QComboBox):
             item.setBackground(color)
 
     def get_value(self):
+        """
+        Retrieve the current waypoint type value.
+
+        The value is returned as an integer corresponding to the `Waypoint_Type`
+        enumeration.
+        """
+
         return self.currentIndex() + 1
 
     def set_value(self, index):
+        """
+        Alter the current waypoint type.
+
+        The given `index` is a `Waypoint_Type` or comparable integer. The combo
+        box is updated to select the appropriate type, and other cells in this
+        row are enabled or disabled based on whether the `index` belongs to the
+        wait type waypoint.
+        """
+
         self.setCurrentIndex(index - 1)
 
 class WaypointsTableWidget(QtGui.QTableWidget):
@@ -218,6 +244,9 @@ class WaypointsTableWidget(QtGui.QTableWidget):
 
         endRow = self.rowCount() - 1
         endCol = self.columnCount() - 1
+
+        # Try any selectable item in the remainder of the row, or the next or 
+        # previous row's start/end, or the first/last cell of the table.
         if next:
             options = [(row, j) for j in range(col+1, endCol+1)]
             options.extend([(row+1, 0), (0, 0)])
@@ -229,6 +258,8 @@ class WaypointsTableWidget(QtGui.QTableWidget):
         for newRow, newCol in options:
             index = currentIndex.sibling(newRow, newCol)
             if index.isValid():
+                # Skip cells that have a default of `0`, because those cells 
+                # are more "optional" than any of the others.
                 if self._columns[newCol]["default"] == 0:
                     continue
 
@@ -251,6 +282,8 @@ class WaypointsTableWidget(QtGui.QTableWidget):
         if self.tabKeyNavigation():
             index = self._get_tab_index(next)
             if index.isValid():
+                # Focus on the item and enable the editor so that we can easily 
+                # alter the waypoints using only the keyboard.
                 self.setCurrentIndex(index)
                 self.editItem(self.itemFromIndex(index))
                 return True

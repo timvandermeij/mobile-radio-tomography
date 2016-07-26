@@ -35,6 +35,8 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         # - "widget": A cell widget type to fill in the rows. The given type
         #   must be a subclass of `QtWidget`, and it must implement two 
         #   methods: `get_value` and `set_value(data)`.
+        # - "min": The minimum numeric value for the cell. The cell is
+        #   considered invalid if it is lower than this value.
         self._columns = [
             {
                 "field": "north",
