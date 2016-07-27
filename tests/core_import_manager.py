@@ -1,3 +1,4 @@
+import os
 import sys
 import unittest
 from mock import patch, MagicMock, Mock
@@ -7,9 +8,10 @@ class TestCoreImportManager(unittest.TestCase):
     def setUp(self):
         self.import_manager = Import_Manager.Import_Manager()
 
-        # Base package that the import manager uses. Hardcoded here to test 
-        # that the manager's value is the expected value.
-        self.package = "mobile-radio-tomography"
+        # Base package that the import manager uses. We expect it to be equal 
+        # to the base directory name.
+        path = os.path.dirname(os.path.dirname(__file__))
+        self.package = os.path.basename(path)
         self.mock_module = MagicMock(Mock_Class=Mock(), spec=True)
         self.mock_relative_module = MagicMock(Relative=Mock(), spec=True)
         self.mock_global_module = MagicMock()
