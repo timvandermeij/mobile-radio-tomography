@@ -422,6 +422,22 @@ class FloatFormWidget(NumericSliderFormWidget):
 
         return value
 
+    def _is_inf_value(self):
+        value = self.get_value()
+        if value == float("inf") and "max" not in self.info:
+            return True
+        if value == float("-inf") and "min" not in self.info:
+            return True
+
+        return False
+
+    def is_value_allowed(self):
+        if "inf" in self.info and self.info["inf"] and self._is_inf_value():
+            self._valueWidget.set_validator_state(QtGui.QValidator.Acceptable)
+            return True
+
+        return super(FloatFormWidget, self).is_value_allowed()
+
 class ListFormWidget(FormWidget):
     def _get_layout(self):
         if "length" in self.info or self.horizontal:
