@@ -25,7 +25,8 @@ def do_plot(name):
     Finish plotting by saving or showing the plot.
     """
 
-    if matplotlib.get_backend() == 'Agg' or 'SAVE_PATH' in os.environ:
+    backend = matplotlib.get_backend()
+    if backend.lower() == 'agg' or 'SAVE_PATH' in os.environ:
         path = os.environ['SAVE_PATH'] if 'SAVE_PATH' in os.environ else '.'
         filename = "{}/{}".format(path, name)
         plt.savefig(filename)
