@@ -80,7 +80,7 @@ class Problem(object):
         # type, which ones are integer and which ones are reals.
         if len(self.domain) > 2:
             # Draw random binary values.
-            v[self._bool_indices] = np.random.random_integers(0, 1, size=len(self._bool_indices[0]))
+            v[self._bool_indices] = np.random.randint(2, size=len(self._bool_indices[0]))
 
         return v
 
