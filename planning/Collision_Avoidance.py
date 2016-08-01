@@ -128,7 +128,9 @@ class Collision_Avoidance(Location_Proxy):
             self._vehicle_syncs = dict([(i, set([i])) for i in self._vehicles])
 
             for i, home in enumerate(home_locations):
-                self._vehicle_routes[i+1] = [(int(home[0]), int(home[1]))]
+                home = (int(home[0]), int(home[1]))
+                home = tuple(np.clip(home, (0, 0), self._network_size))
+                self._vehicle_routes[i+1] = [home]
                 self._memory_map.set(home, Collision_Type.VEHICLE)
 
         self._current_vehicle = vehicle
