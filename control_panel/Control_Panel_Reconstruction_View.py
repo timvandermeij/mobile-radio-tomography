@@ -435,17 +435,18 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             # by suppressing pixel values that do not correspond to high attenuation.
             pixels = pixels.reshape(self._buffer.size)
             levels = [np.percentile(pixels, self._percentiles[0]), np.percentile(pixels, self._percentiles[1])]
-            self._image = pg.functions.makeRGBA(pixels, levels=levels, lut=self._cmap)[0]
+            image = pg.functions.makeRGBA(pixels, levels=levels, lut=self._cmap)[0]
 
             # Ignore empty images. This may happen after applying the levels
             # when not enough data is present yet.
-            if len(np.unique(self._image)) == 1:
+            if len(np.unique(image)) == 1:
                 return
 
             # Draw the image onto the canvas and apply interpolation.
             self._axes.axis("off")
-            self._axes.imshow(self._image, origin="lower", interpolation=self._interpolation)
+            self._axes.imshow(image, origin="lower", interpolation=self._interpolation)
             self._canvas.draw()
+            self._image = image
 
             # Delete the image from memory now that it is drawn.
             self._axes.cla()
