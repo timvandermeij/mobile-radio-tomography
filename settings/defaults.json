@@ -837,7 +837,7 @@
                 "format": "assets/dump_{}.json",
                 "full_name": true,
                 "required": false,
-                "default": "assets/dump_static_manual.json"
+                "default": "assets/dump_two_persons_standing.json"
             }
         }
     },
