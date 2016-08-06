@@ -437,6 +437,11 @@ class Control_Panel_Reconstruction_View(Control_Panel_View):
             levels = [np.percentile(pixels, self._percentiles[0]), np.percentile(pixels, self._percentiles[1])]
             self._image = pg.functions.makeRGBA(pixels, levels=levels, lut=self._cmap)[0]
 
+            # Ignore empty images. This may happen after applying the levels
+            # when not enough data is present yet.
+            if len(np.unique(self._image)) == 1:
+                return
+
             # Draw the image onto the canvas and apply interpolation.
             self._axes.axis("off")
             self._axes.imshow(self._image, origin="lower", interpolation=self._interpolation)
