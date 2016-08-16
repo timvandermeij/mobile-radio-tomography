@@ -1,4 +1,5 @@
 # Core imports
+import datetime
 import os
 import sys
 import time
@@ -60,6 +61,11 @@ def iteration_callback(algorithm, data):
     cur_time = data["cur_time"]
     speed = t/float(cur_time)
     print("Iteration {} ({} sec, {} it/s)".format(t, cur_time, speed))
+
+    if speed != 0.0:
+        rate = (algorithm.t_max - t) / speed
+        end_time = datetime.datetime.now() + datetime.timedelta(seconds=rate)
+        print("{} seconds remaining, ETA: {}".format(rate, end_time))
 
     Feasible = data["feasible"]
     Objectives = data["objectives"]
