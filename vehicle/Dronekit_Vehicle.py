@@ -104,6 +104,14 @@ class Dronekit_Vehicle(dronekit.Vehicle, MAVLink_Vehicle):
 
         return True
 
+    def pause(self):
+        if self.is_rover:
+            self.mode = dronekit.VehicleMode("HOLD")
+        else:
+            self.mode = dronekit.VehicleMode("LOITER")
+
+        self.flush()
+
     def add_takeoff(self, altitude):
         if self.is_rover:
             return False

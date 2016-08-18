@@ -133,6 +133,20 @@ class Vehicle(Threadable):
 
         self._armed = value
 
+    def pause(self):
+        """
+        Stop the vehicle such that it attempts to remain in place.
+
+        The vehicle should stop any actions fairly quickly upon a pause.
+        Mission objectives such as moving to waypoints are frozen, i.e., they
+        are not actively sought after. The vehicle may be unpaused by changing
+        its vehicle mode to a new mode. The vehicle may automatically disarm
+        itself during its paused state, but this should not endanger itself or
+        make it impossible to continue later on.
+        """
+
+        raise NotImplementedError("Subclasses must implement `pause()`")
+
     def update_mission(self):
         """
         Propagate any updates to mission attributes, such as waypoints and

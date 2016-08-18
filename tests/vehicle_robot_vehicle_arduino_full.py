@@ -27,13 +27,51 @@ class TestVehicleRobotVehicleArduinoFull(RobotVehicleTestCase):
             self.assertEqual(self._ttl_device.readline(), "HOME 3 4 S\n")
             thread_mock.assert_any_call(self.vehicle._serial_loop, ())
 
-    def test_deactivate(self):
-        with patch.object(Threadable, "deactivate"):
-            self.vehicle.deactivate()
-            # Reset signal is at high level on the DTR line, and the connection 
-            # is immediately closed.
-            self.assertTrue(self.vehicle._serial_connection.dtr)
-            self.assertFalse(self.vehicle._serial_connection.isOpen())
+    @patch("thread.start_new_thread")
+    def test_deactivate(self, thread_mock):
+        # Activate the vehicle and ignore the startup commands, since we test 
+        # them in another test.
+        self.vehicle.activate()
+        self._ttl_device.readline()
+        self._ttl_device.readline()
+
+        self.vehicle.deactivate()
+        # Reset signal is at high level on the DTR line, and the connection is 
+        # immediately closed.
+        self.assertTrue(self.vehicle._serial_connection.dtr)
+        self.assertFalse(self.vehicle._serial_connection.isOpen())
+
+    @patch("thread.start_new_thread")
+    def test_pause(self, thread_mock):
+        # Activate the vehicle and ignore the startup commands, since we test 
+        # them in another test.
+        self.vehicle.activate()
+        self._ttl_device.readline()
+        self._ttl_device.readline()
+
+        self.vehicle.pause()
+        # An immediate pause command is sent over the connection, and it is not 
+        # reset nor closed.
+        self.assertEqual(self._ttl_device.read(1), "\x03")
+        self.assertFalse(self.vehicle.armed)
+        self.assertFalse(self.vehicle._serial_connection.dtr)
+        self.assertTrue(self.vehicle._serial_connection.isOpen())
+
+    @patch("thread.start_new_thread")
+    def test_unpause(self, thread_mock):
+        # Activate the vehicle and ignore the startup commands, since we test 
+        # them in another test.
+        self.vehicle.activate()
+        self._ttl_device.readline()
+        self._ttl_device.readline()
+
+        self.vehicle.pause()
+        self._ttl_device.read(1)
+        self.vehicle.unpause()
+        self.assertEqual(self._ttl_device.readline(), "CONT\n")
+
+        with self.assertRaises(RuntimeError):
+            self.vehicle.unpause()
 
     def test_home_location(self):
         loc = LocationLocal(5.0, 6.0, 0.0)

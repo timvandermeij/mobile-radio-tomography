@@ -18,7 +18,7 @@
 // Motor speed when turning. TURN_SPEED should always
 // have a positive value, otherwise the Zumo will turn
 // in the wrong direction.
-#define TURN_SPEED 200
+#define TURN_SPEED 250
 
 // Motor speed when driving straight. SPEED should always
 // have a positive value, otherwise the Zumo will travel in the
@@ -59,6 +59,9 @@
 
 // Sleep delay in ms for each serial check loop
 #define LOOP_DELAY 10
+
+// Sleep delay in ms when the vehicle is halted
+#define HALT_DELAY 500
 
 // Maximum length of a serial input line that we ever receive
 #define SERIAL_INPUT 80
@@ -183,53 +186,100 @@ void setup() {
   buzzer.play("L16 cdegreg4");
 }
 
+bool has_immediate_command() {
+  if (softSerial.available() > 0) {
+    char command = softSerial.peek();
+    return (command == '\a' || command == '\x03');
+  }
+  return false;
+}
+
+void check_immediate_command() {
+  if (has_immediate_command()) {
+    char command = softSerial.read();
+    if (command == '\a') {
+      buzzer.play(">d32>>b32");
+    }
+    else if (command == '\x03') {
+      // Halt the vehicle and ignore all commands
+      // until we receive a "CONT" command.
+      buzzer.play(">b32>>b32>>b32>>b32");
+      motors.setSpeeds(0, 0);
+
+      bool halted = true;
+      while (halted) {
+        while (softSerial.available() == 0) {
+          digitalWrite(LED_PIN, HIGH);
+          delay(HALT_DELAY);
+          digitalWrite(LED_PIN, LOW);
+          delay(HALT_DELAY);
+        }
+        digitalWrite(LED_PIN, HIGH);
+
+        if (has_immediate_command()) {
+          if (softSerial.read() == '\a') {
+            buzzer.play(">d32>>b32");
+          }
+        }
+
+        char command[COMMAND_LENGTH+1];
+        read_string(command, COMMAND_LENGTH);
+        if (strcmp(command, "CONT") == 0) {
+          halted = false;
+        }
+        ignore_input();
+      }
+    }
+  }
+}
+
+void check_command(char command[COMMAND_LENGTH+1]) {
+  read_string(command, COMMAND_LENGTH);
+  if (strcmp(command, "GOTO") == 0) {
+    // Go to specific grid coordinates.
+    // Read two coordinates.
+    goto_row = read_int();
+    goto_col = read_int();
+  }
+  else if (strcmp(command, "DIRS") == 0) {
+    // Change direction
+    safe_read();
+    turn_to(safe_read());
+  }
+  else if (strcmp(command, "HOME") == 0) {
+    // Override current location and direction.
+    // Use for setting home location at start.
+    cur_row = read_int();
+    cur_col = read_int();
+    safe_read();
+    zumo_direction = safe_read();
+
+    softSerial.print("ACKH ");
+    softSerial.print(cur_row);
+    softSerial.print(" ");
+    softSerial.print(cur_col);
+    softSerial.print(" ");
+    softSerial.print(zumo_direction);
+    softSerial.print("\n");
+  }
+  else if (strcmp(command, "SPDS") == 0) {
+    int motor1 = read_int();
+    int motor2 = read_int();
+    motors.setSpeeds(motor1, motor2);
+  }
+}
+
 void loop() {
   // If we have serial input, then parse the message.
+  check_immediate_command();
   if (softSerial.available() > COMMAND_LENGTH) {
     char command[COMMAND_LENGTH+1];
-    read_string(command, COMMAND_LENGTH);
-    if (strcmp(command, "GOTO") == 0)
-    {
-      // Go to specific grid coordinates.
-      // Read two coordinates.
-      goto_row = read_int();
-      goto_col = read_int();
-    }
-    else if (strcmp(command, "DIRS") == 0)
-    {
-      // Change direction
-      safe_read();
-      turn_to(safe_read());
-    }
-    else if (strcmp(command, "HOME") == 0)
-    {
-      // Override current location and direction.
-      // Use for setting home location at start.
-      cur_row = read_int();
-      cur_col = read_int();
-      safe_read();
-      zumo_direction = safe_read();
-
-      softSerial.print("ACKH ");
-      softSerial.print(cur_row);
-      softSerial.print(" ");
-      softSerial.print(cur_col);
-      softSerial.print(" ");
-      softSerial.print(zumo_direction);
-      softSerial.print("\n");
-    }
-    else if (strcmp(command, "SPDS") == 0)
-    {
-      int motor1 = read_int();
-      int motor2 = read_int();
-      motors.setSpeeds(motor1, motor2);
-    }
+    check_command(command);
 
     // Ignore the rest of the line, which might simply be a newline.
     ignore_input();
 
-    if (goto_row >= 0 && goto_col >= 0)
-    {
+    if (goto_row >= 0 && goto_col >= 0) {
       softSerial.print("ACKG ");
       softSerial.print(goto_row);
       softSerial.print(" ");
@@ -554,6 +604,8 @@ void followSegment() {
   bool advanced = false;
 
   while (following) {
+    check_immediate_command();
+
     // Get the position of the line.
     position = reflectanceSensors.readLine(sensors);
 

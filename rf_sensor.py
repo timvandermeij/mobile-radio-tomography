@@ -42,11 +42,22 @@ def main(argv):
 
     try:
         rf_sensor.activate()
-        raw_input("RF sensor has joined the network. Press Enter to continue...")
-        rf_sensor.start()
 
+        print("RF sensor has joined the network.")
         while True:
-            time.sleep(1)
+            if rf_sensor.id == 0:
+                # The ground station does not need to start in order to receive 
+                # measurements, so do not bother giving this possibility.
+                time.sleep(1)
+            else:
+                # Wait for the user to determine when to perform measurements 
+                # and when to stop. Add a newline so that the messages do not 
+                # mess up other output.
+                raw_input("Press Enter to start measurements...\n")
+                rf_sensor.start()
+
+                raw_input("Press Enter to stop measurements...\n")
+                rf_sensor.stop()
     except:
         traceback.print_exc()
         thread_manager.destroy()

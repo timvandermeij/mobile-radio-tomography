@@ -42,6 +42,7 @@ class Setup(object):
         infrared_sensor = self.environment.get_infrared_sensor()
         if infrared_sensor is not None:
             infrared_sensor.register("start", self.enable)
+            infrared_sensor.register("pause", self.monitor.pause)
             infrared_sensor.register("stop", self._infrared_disable)
             infrared_sensor.activate()
         else:

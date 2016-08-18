@@ -92,7 +92,6 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
 
     def start(self):
         self._polling_time = time.time()
-        self._scheduler.update()
 
         super(RF_Sensor_Physical_Texas_Instruments, self).start()
 

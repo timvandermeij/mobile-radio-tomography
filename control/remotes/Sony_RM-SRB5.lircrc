@@ -5,6 +5,12 @@ begin
 end
 
 begin
+    button = cd_pause
+    prog = mobile-radio-tomography
+    config = pause
+end
+
+begin
     button = cd_stop
     prog = mobile-radio-tomography
     config = stop

@@ -101,6 +101,8 @@ class TestZigBeeRFSensorPhysical(ZigBeeRFSensorTestCase):
             self.rf_sensor._process(self.packet)
 
     def test_process_rssi_broadcast_packet(self):
+        self.rf_sensor.start()
+
         timestamp = self.rf_sensor._scheduler.timestamp
 
         packet = self.rf_sensor._create_rssi_broadcast_packet()

@@ -47,10 +47,24 @@ class TestVehicleRobotVehicleArduino(RobotVehicleTestCase):
             thread_mock.assert_any_call(self.vehicle._state_loop, ())
 
     def test_deactivate(self):
-        with patch.object(Threadable, "deactivate"):
-            self.vehicle.deactivate()
-            # Reset signal is at high level on the DTR line.
-            self.assertTrue(self.vehicle._serial_connection.dtr)
+        with patch.object(self.vehicle, "set_speeds") as set_speeds_mock:
+            with patch.object(Threadable, "deactivate"):
+                self.vehicle.deactivate()
+                set_speeds_mock.assert_called_once_with(0, 0)
+                # Reset signal is at high level on the DTR line.
+                self.assertTrue(self.vehicle._serial_connection.dtr)
+
+    def test_pause(self):
+        with patch.object(Threadable, "activate"):
+            self.vehicle.activate()
+
+        with patch.object(self.vehicle, "set_speeds") as set_speeds_mock:
+            with patch.object(Threadable, "deactivate"):
+                self.vehicle.pause()
+                set_speeds_mock.assert_called_once_with(0, 0)
+                # Reset signal is at low level on the DTR line, so not 
+                # resetting in this case.
+                self.assertFalse(self.vehicle._serial_connection.dtr)
 
     @patch.object(serial.Serial, "write")
     def test_set_speeds(self, write_mock):

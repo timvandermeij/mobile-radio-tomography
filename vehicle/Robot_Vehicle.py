@@ -4,7 +4,7 @@ import thread
 import time
 
 # Library imports
-from dronekit import LocationLocal, Attitude
+from dronekit import LocationLocal, Attitude, VehicleMode
 import numpy as np
 
 # Package imports
@@ -85,6 +85,12 @@ class Robot_Vehicle(Vehicle):
         #   reached the waypoint or that it should continue moving.
         # Subclasses may add more internal states for additional functionality.
         self._state = Robot_State("intersection")
+
+        # Whether the vehicle is temporarily halted, i.e., it is set in the 
+        # "HALT" mode. When it is and the mode is changed to something other 
+        # than "HALT", then the vehicle is automatically reactivated.
+        self._halted = False
+        self._old_mode = self._mode
 
         self._servo_pins = set()
 
@@ -215,15 +221,18 @@ class Robot_Vehicle(Vehicle):
     @mode.setter
     def mode(self, value):
         self._mode = value
+        if value.name == "HALT":
+            self.pause()
+        elif self._halted:
+            self.unpause()
+
         if value.name == "RTL":
             self._waypoints = [self._home_location]
             self._current_waypoint = -1
-        elif value.name == "HALT":
-            self.armed = False
 
     @property
     def armed(self):
-        return self._armed
+        return self._armed and not self._halted
 
     @armed.setter
     def armed(self, value):
@@ -251,6 +260,23 @@ class Robot_Vehicle(Vehicle):
             self._armed = False
             if self._line_follower is not None:
                 self._line_follower.deactivate()
+
+    def pause(self):
+        self._old_mode = self._mode
+        self._mode = VehicleMode("HALT")
+        self._halted = True
+
+    def unpause(self):
+        """
+        Unpause the vehicle from its halted mode.
+        """
+
+        if not self._halted:
+            raise RuntimeError("Can only unpause a halted vehicle")
+
+        self._halted = False
+        if self._mode.name == "HALT":
+            self.mode = self._old_mode
 
     def add_waypoint(self, location):
         self._waypoints.append(self._geometry.get_coordinates(location)[:2])
@@ -502,7 +528,7 @@ class Robot_Vehicle(Vehicle):
         return self._direction
 
     def _is_moving(self):
-        return self._armed and self._state.name == "move"
+        return self.armed and self._state.name == "move"
 
     def _at_intersection(self):
         if self._state.name == "intersection":

@@ -328,6 +328,17 @@ class TestVehicleMockVehicle(VehicleTestCase):
         self.vehicle.clear_target_location()
         self.assertIsNone(self.vehicle._target_location)
 
+    def test_pause(self):
+        with patch.object(Mock_Vehicle, "_get_delta_time") as delta_mock:
+            self.vehicle.check_arming()
+            self.vehicle.armed = True
+
+            self.vehicle.pause()
+            self.assertEqual(self.vehicle.mode.name, "PAUSE")
+
+            self.vehicle.update_location()
+            delta_mock.assert_not_called()
+
     def test_update_location_speed(self):
         with patch.object(Mock_Vehicle, "_get_delta_time", return_value=(1.0, 1234567890.123)) as delta_mock:
             self.vehicle.update_location()

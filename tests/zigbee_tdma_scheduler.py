@@ -42,8 +42,11 @@ class TestZigBeeTDMAScheduler(SettingsTestCase):
         self.assertEqual(self.scheduler.id, 1)
 
     def test_timestamp(self):
-        # It must be possible to get the timestamp for sending packets.
+        # It must be possible to get and set the timestamp for sending packets.
         self.assertEqual(self.scheduler.timestamp, 0)
+
+        self.scheduler.timestamp = 12345678.90
+        self.assertEqual(self.scheduler.timestamp, 12345678.90)
 
     def test_update(self):
         # The first time the method is called, the timestamp is based on the
