@@ -3,9 +3,11 @@ import os
 from collections import OrderedDict
 from PyQt4 import QtGui
 from Control_Panel_RF_Sensor_Sender import Control_Panel_RF_Sensor_Sender
+from Control_Panel_Settings_Widgets import SettingsTableWidget
 from Control_Panel_View import Control_Panel_View
 from Control_Panel_Waypoints_Widgets import WaypointsTableWidget, WaypointTypeWidget
 from ..geometry.Geometry import Geometry
+from ..planning.Greedy_Assignment import Greedy_Assignment
 from ..waypoint.Waypoint import Waypoint_Type
 from ..zigbee.Packet import Packet
 
@@ -84,6 +86,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
         self._listWidget = None
         self._stackedLayout = None
+        self._reassign_checkbox = None
 
         self._geometry = Geometry()
 
@@ -127,6 +130,8 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         # Create the buttons for adding new rows and sending the waypoints.
         add_row_button = QtGui.QPushButton("Add row")
         add_row_button.clicked.connect(self._add_row)
+        self._reassign_checkbox = QtGui.QCheckBox("Reassign")
+        self._reassign_checkbox.toggled.connect(self._reassign_settings)
         import_button = QtGui.QPushButton("Import")
         import_button.clicked.connect(self._import)
         export_button = QtGui.QPushButton("Export")
@@ -146,6 +151,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         hbox_buttons = QtGui.QHBoxLayout()
         hbox_buttons.addWidget(add_row_button)
         hbox_buttons.addStretch(1)
+        hbox_buttons.addWidget(self._reassign_checkbox)
         hbox_buttons.addWidget(import_button)
         hbox_buttons.addWidget(export_button)
         hbox_buttons.addStretch(1)
@@ -447,7 +453,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
         return waypoints, total
 
-    def _convert_waypoints(self, waypoints):
+    def _convert_waypoints(self, waypoints, reassign=False):
         """
         Convert an imported object containing waypoints to a dictionary of lists
         of waypoints (tuples) for each vehicle.
@@ -455,17 +461,27 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         If the `waypoints` objects is already such a dictionary, it is left
         intact. If it is a list, then it is assumed that it has lists of sensor
         pairs (lists of lists). This is mostly for compatibility with output
-        from a planning algorithm.
+        from a planning algorithm. If `reassign` is `True`, then the list of
+        sensor pairs is passed through the greedy assignment and the collision
+        avoidance (if enabled) algorithms to generate an assignment that visits
+        closer sensor links first.
 
         If the waypoints could not be converted, then a `ValueError` is raised.
         """
 
         if isinstance(waypoints, list):
             try:
-                waypoints = {
-                    1: [sensor_pairs[0] for sensor_pairs in waypoints],
-                    2: [sensor_pairs[1] for sensor_pairs in waypoints]
-                }
+                if reassign:
+                    assigner = Greedy_Assignment(self._controller.arguments,
+                                                 self._geometry)
+                    waypoints, distance = assigner.assign(waypoints)
+                    if distance == float('inf'):
+                        raise ValueError("Given waypoints could not be reassigned because a collision was detected")
+                else:
+                    waypoints = {
+                        "1": [sensor_pairs[0] for sensor_pairs in waypoints],
+                        "2": [sensor_pairs[1] for sensor_pairs in waypoints]
+                    }
             except IndexError:
                 raise ValueError("JSON list must contain sensor pairs")
         elif not isinstance(waypoints, dict):
@@ -497,6 +513,63 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
                 table.insert_data_row(row, waypoint)
 
+    def _reassign_settings(self, checked):
+        if not checked:
+            return
+
+        forms = {}
+        components = ("planning_assignment", "planning_collision_avoidance")
+        hbox = QtGui.QHBoxLayout()
+        for component in components:
+            form = SettingsTableWidget(self._controller.arguments, component,
+                                       include_parent=True)
+            forms[component] = form
+
+            vbox = QtGui.QVBoxLayout()
+            vbox.addWidget(form)
+
+            group = QtGui.QGroupBox(form.get_title())
+            group.setLayout(vbox)
+
+            hbox.addWidget(group)
+
+        dialog = QtGui.QDialog(self._controller.central_widget)
+        dialog.setWindowTitle("Change assignment settings")
+
+        dialogButtons = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel)
+        dialogButtons.accepted.connect(dialog.accept)
+        dialogButtons.rejected.connect(dialog.reject)
+
+        dialogLayout = QtGui.QVBoxLayout()
+        dialogLayout.addLayout(hbox)
+        dialogLayout.addWidget(dialogButtons)
+
+        dialog.setLayout(dialogLayout)
+
+        # Show the dialog and handle the input.
+        result = dialog.exec_()
+        if result != QtGui.QDialog.Accepted:
+            return
+
+        # Update the settings from the dialog forms.
+        for component, form in forms.iteritems():
+            settings = self._controller.arguments.get_settings(component)
+            try:
+                values, disallowed = form.get_all_values()
+                form.check_disallowed(disallowed)
+            except ValueError as e:
+                QtGui.QMessageBox.critical(self._controller.central_widget,
+                                           "Invalid value", e.message)
+                return
+
+            for key, value in values.iteritems():
+                try:
+                    settings.set(key, value)
+                except ValueError as e:
+                    QtGui.QMessageBox.critical(self._controller.central_widget,
+                                               "Settings error", e.message)
+                    return
+
     def _import(self):
         """
         Import waypoints from a JSON file that was exported from the waypoints
@@ -509,9 +582,13 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         if fn == "":
             return
 
+        reassign = self._reassign_checkbox.isChecked()
+
         try:
             with open(fn, 'r') as import_file:
-                waypoints = self._convert_waypoints(json.load(import_file))
+                data = json.load(import_file)
+
+            waypoints = self._convert_waypoints(data, reassign)
         except IOError as e:
             message = "Could not open file '{}': {}".format(fn, e.strerror)
             QtGui.QMessageBox.critical(self._controller.central_widget,
@@ -523,7 +600,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             return
 
         try:
-            self._import_waypoints(waypoints, from_json=True)
+            self._import_waypoints(waypoints, from_json=not reassign)
         except ValueError as e:
             QtGui.QMessageBox.critical(self._controller.central_widget,
                                        "Waypoint incorrect", e.message)
