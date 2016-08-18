@@ -68,26 +68,30 @@ class Control_Panel_RF_Sensor_Sender(object):
         self._controller.rf_sensor.enqueue(packet, to=vehicle)
 
         self._set_label(vehicle, "Clearing old {}s".format(self._name))
-        self._timers[vehicle].start()
+        if vehicle in self._timers:
+            self._timers[vehicle].start()
 
     def _is_done(self, vehicle):
-        return len(self._data[vehicle]) <= self._indexes[vehicle]
+        # We are only done when the vehicle sends an acknowledgement to the 
+        # done packet, which must have an index that is even further than the 
+        # packet data length.
+        return self._indexes[vehicle] > len(self._data[vehicle])
+
+    def _send_done(self, vehicle):
+        # Enqueue a packet indicating that sending data to this vehicle is 
+        # done.
+        packet = Packet()
+        packet.set("specification", self._done_message)
+        packet.set("to_id", vehicle)
+
+        self._controller.rf_sensor.enqueue(packet, to=vehicle)
+
+        self._set_label(vehicle, "Sending {} done packet".format(self._name))
+
+        if vehicle in self._timers:
+            self._timers[vehicle].start()
 
     def _send_one(self, vehicle):
-        if self._is_done(vehicle):
-            # Enqueue a packet indicating that sending data to this vehicle is 
-            # done.
-            packet = Packet()
-            packet.set("specification", self._done_message)
-            packet.set("to_id", vehicle)
-            self._controller.rf_sensor.enqueue(packet, to=vehicle)
-
-            self._update_value()
-            if all(self._is_done(vehicle) for vehicle in self._indexes):
-                self._progress.accept()
-
-            return
-
         index = self._indexes[vehicle]
         data = self._data[vehicle][index]
 
@@ -111,10 +115,25 @@ class Control_Panel_RF_Sensor_Sender(object):
         self._retry_counts[vehicle] = self._max_retries + 1
 
     def _retry(self, vehicle):
+        # Update the progress value and check if we are done in the retry 
+        # function, which is called after a packet is being sent. Because we 
+        # cannot update GUI parts when we receive the acknowledgement, we need 
+        # to do this here.
+        self._update_value()
+        if all(self._is_done(v) for v in self._indexes):
+            self._progress.accept()
+            return
+
+        if self._is_done(vehicle):
+            return
+
         self._retry_counts[vehicle] -= 1
         if self._retry_counts[vehicle] > 0:
             if self._indexes[vehicle] == -1:
                 self._send_clear(vehicle)
+            elif self._indexes[vehicle] >= len(self._data[vehicle]):
+                # No more indices can be sent, so send a done message.
+                self._send_done(vehicle)
             else:
                 self._send_one(vehicle)
         else:

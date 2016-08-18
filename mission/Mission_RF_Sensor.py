@@ -37,6 +37,12 @@ class Mission_RF_Sensor(Mission_Auto):
 
         self._waypoints_complete = True
 
+        # Send an acknowledgement to the ground station so that it knows that 
+        # we have received a "done" packet. Increment the next index to signify 
+        # this acknowledgement as totally done.
+        self._next_index += 1
+        self._send_ack()
+
     @property
     def waypoints_complete(self):
         """

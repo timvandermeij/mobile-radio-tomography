@@ -231,9 +231,20 @@ class TestMissionRFSensor(EnvironmentTestCase):
         self.enqueue_mock.reset_mock()
         self._send_packet("waypoint_done")
 
-        # We do not send an acknowledgment (and request for next ID) when the 
-        # waypoints are done.
-        self.assertEqual(self.enqueue_mock.call_count, 0)
+        # We send an acknowledgment (with another ID) when the waypoints are 
+        # done.
+        self.assertEqual(self.enqueue_mock.call_count, 1)
+        args, kwargs = self.enqueue_mock.call_args
+        self.assertEqual(len(args), 1)
+        self.assertIsInstance(args[0], Packet)
+        self.assertEqual(args[0].get_all(), {
+            "specification": "waypoint_ack",
+            "next_index": 5,
+            "sensor_id": self.rf_sensor.id
+        })
+        self.assertEqual(kwargs, {"to": 0})
+
+        self.assertEqual(self.mission.next_index, 5)
 
         self.assertTrue(self.mission.waypoints_complete)
         self.assertEqual(self.vehicle._waypoints, [
