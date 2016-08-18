@@ -66,19 +66,20 @@ class Mission_Auto(Mission):
         alt = point.alt if point.alt != 0.0 else self.altitude
         return self.geometry.make_location(point.lat, point.lon, alt)
 
-    def add_waypoint(self, point, required_sensors=None):
+    def add_waypoint(self, point, wait=True, required_sensors=None):
         """
         Add a waypoint location object `point` to the vehicle's mission command
         waypoints.
 
-        If RF sensor synchronization is enabled, also adds a wait command afterward.
-        The option `required_sensors` list determines which sensors ID to wait
-        for in the measurement validation.
+        If RF sensor synchronization is enabled and `wait` is `True`, then this
+        also adds a wait command afterward. `required_sensors` is a list which
+        determines which sensors ID to wait for in the measurement validation.
+        If it is not given, then we assume we have to wait for all sensors.
         """
 
         self.vehicle.add_waypoint(self._convert_waypoint(point))
 
-        if self._rf_sensor_synchronization:
+        if self._rf_sensor_synchronization and wait:
             self.vehicle.add_wait()
             self._required_waypoint_sensors.append(required_sensors)
 

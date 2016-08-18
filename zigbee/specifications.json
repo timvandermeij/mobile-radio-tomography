@@ -131,6 +131,10 @@
             "format": "d"
         },
         {
+            "name": "type",
+            "format": "B"
+        },
+        {
             "name": "wait_id",
             "format": "B"
         },

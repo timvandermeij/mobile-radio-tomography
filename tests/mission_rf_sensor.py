@@ -1,7 +1,9 @@
 from mock import patch
 from dronekit import LocationLocal
+from ..environment.Environment import Environment
 from ..mission.Mission_RF_Sensor import Mission_RF_Sensor
 from ..vehicle.Robot_Vehicle import Robot_State
+from ..waypoint.Waypoint import Waypoint_Type
 from ..zigbee.Packet import Packet
 from ..zigbee.RF_Sensor import RF_Sensor
 from environment import EnvironmentTestCase
@@ -43,6 +45,14 @@ class TestMissionRFSensor(EnvironmentTestCase):
         self.assertFalse(self.mission.waypoints_complete)
         self.assertEqual(self.mission.next_index, 0)
 
+    @patch.object(Environment, "get_rf_sensor", return_value=None)
+    def test_setup_no_rf_sensor(self, get_rf_sensor_mock):
+        with self.assertRaises(ValueError):
+            with patch('sys.stdout'):
+                self.mission.setup()
+
+        get_rf_sensor_mock.assert_called_once_with()
+
     def test_get_points(self):
         # An RF sensor mission has no predetermined AUTO points.
         self.assertEqual(self.mission.get_points(), [])
@@ -60,17 +70,27 @@ class TestMissionRFSensor(EnvironmentTestCase):
                 with self.assertRaises(RuntimeError):
                     self.mission.arm_and_takeoff()
 
-    def _send_waypoint_add(self, index, latitude, longitude, altitude=0.0,
-                           wait_id=0, wait_count=1, id_offset=0):
+    def _send_waypoint_add(self, index, latitude, longitude, **kwargs):
+        # The default values of the fields.
+        fields = {
+            "altitude": 0.0,
+            "type": Waypoint_Type.WAIT,
+            "wait_id": 0,
+            "wait_count": 1,
+            "id_offset": 0
+        }
+        fields.update(kwargs)
+
         packet = Packet()
         packet.set("specification", "waypoint_add")
         packet.set("index", index)
         packet.set("latitude", latitude)
         packet.set("longitude", longitude)
-        packet.set("altitude", altitude)
-        packet.set("wait_id", wait_id)
-        packet.set("wait_count", wait_count)
-        packet.set("to_id", self.rf_sensor.id + id_offset)
+        packet.set("altitude", fields["altitude"])
+        packet.set("type", int(fields["type"]))
+        packet.set("wait_id", fields["wait_id"])
+        packet.set("wait_count", fields["wait_count"])
+        packet.set("to_id", self.rf_sensor.id + fields["id_offset"])
 
         with patch('sys.stdout'):
             self.environment.receive_packet(packet)
@@ -137,7 +157,20 @@ class TestMissionRFSensor(EnvironmentTestCase):
         self.assertEqual(kwargs, {"to": 0})
 
         self.assertEqual(self.mission.next_index, 1)
+        self.assertEqual(self.mission._point, LocationLocal(1.0, 4.0, 0.0))
         self.assertEqual(self.vehicle._waypoints, [(1, 4), None])
+
+    def test_add_waypoint_home(self):
+        with patch('sys.stdout'):
+            self.mission.setup()
+
+        home_location = LocationLocal(5.0, 15.0, 0.0)
+        self.enqueue_mock.reset_mock()
+        self._send_waypoint_add(0, 5.0, 15.0, type=Waypoint_Type.HOME)
+        self.assertEqual(self.mission.next_index, 1)
+        self.assertEqual(self.vehicle.home_location, home_location)
+        self.assertEqual(self.mission._point, home_location)
+        self.assertEqual(self.vehicle._waypoints, [])
 
     def test_add_waypoint_wait_count(self):
         with patch('sys.stdout'):
@@ -186,7 +219,7 @@ class TestMissionRFSensor(EnvironmentTestCase):
             self.mission.setup()
 
         self._send_waypoint_add(0, 1.0, 0.0)
-        self._send_waypoint_add(1, 2.0, 0.0)
+        self._send_waypoint_add(1, 2.0, 0.0, type=Waypoint_Type.PASS)
         self._send_waypoint_add(2, 3.0, 0.0)
         self._send_waypoint_add(3, 4.0, 0.0)
 
@@ -198,13 +231,24 @@ class TestMissionRFSensor(EnvironmentTestCase):
         self.enqueue_mock.reset_mock()
         self._send_packet("waypoint_done")
 
-        # We do not send an acknowledgment (and request for next ID) when the 
-        # waypoints are done.
-        self.assertEqual(self.enqueue_mock.call_count, 0)
+        # We send an acknowledgment (with another ID) when the waypoints are 
+        # done.
+        self.assertEqual(self.enqueue_mock.call_count, 1)
+        args, kwargs = self.enqueue_mock.call_args
+        self.assertEqual(len(args), 1)
+        self.assertIsInstance(args[0], Packet)
+        self.assertEqual(args[0].get_all(), {
+            "specification": "waypoint_ack",
+            "next_index": 5,
+            "sensor_id": self.rf_sensor.id
+        })
+        self.assertEqual(kwargs, {"to": 0})
+
+        self.assertEqual(self.mission.next_index, 5)
 
         self.assertTrue(self.mission.waypoints_complete)
         self.assertEqual(self.vehicle._waypoints, [
-            (1, 0), None, (2, 0), None, (3, 0), None, (4, 0), None
+            (1, 0), None, (2, 0), (3, 0), None, (4, 0), None
         ])
 
     def test_interface_mission(self):

@@ -645,7 +645,7 @@
                 "help": "Whether to use discrete grid cells instead of allowing measurements to happen anywhere",
                 "short": "Discrete",
                 "type": "bool",
-                "default": false
+                "default": true
             }
         }
     },
@@ -741,7 +741,7 @@
                     "length": 2,
                     "subtype": "int"
                 },
-                "default": [[0, 0], [0, 9]]
+                "default": [[0, 0], [0, 19]]
             }
         }
     },

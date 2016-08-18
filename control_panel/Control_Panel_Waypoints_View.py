@@ -4,8 +4,9 @@ from collections import OrderedDict
 from PyQt4 import QtGui
 from Control_Panel_RF_Sensor_Sender import Control_Panel_RF_Sensor_Sender
 from Control_Panel_View import Control_Panel_View
-from Control_Panel_Waypoints_Widgets import WaypointsTableWidget
+from Control_Panel_Waypoints_Widgets import WaypointsTableWidget, WaypointTypeWidget
 from ..geometry.Geometry import Geometry
+from ..waypoint.Waypoint import Waypoint_Type
 from ..zigbee.Packet import Packet
 
 class Control_Panel_Waypoints_View(Control_Panel_View):
@@ -18,19 +19,68 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         self._vehicle_labels = []
         self._tables = []
 
-        # Column labels for the table widget.
-        self._column_labels = [
-            "north", "east", "altitude", "wait for vehicle", "wait count"
+        # Columns in the table widgets. The columns are ordered, and each 
+        # column has the following properties:
+        # - "field": The internal name of the column.
+        # - "label": The label in the table widget's horizontal (top) header.
+        # - "default": The default value when nothing is inserted in the cell
+        #   of some row. When this is `None`, then the column is required, but
+        #   will inherit values from previous rows. The latter is also the case
+        #   for other values that evaluate to `False`, but fall back to the 
+        #   default if no previous data is available. Other defaults are always 
+        #   used as the value if the cell is not filled. The defaults play 
+        #   a large role whenever we import, export or otherwise process the 
+        #   table data.
+        # Additionally, the columns may have the following properties:
+        # - "widget": A cell widget type to fill in the rows. The given type
+        #   must be a subclass of `QtWidget`, and it must implement two 
+        #   methods: `get_value` and `set_value(data)`.
+        # - "min": The minimum numeric value for the cell. The cell is
+        #   considered invalid if it is lower than this value.
+        self._columns = [
+            {
+                "field": "north",
+                "label": "north",
+                "default": None
+            },
+            {
+                "field": "east",
+                "label": "east",
+                "default": None
+            },
+            {
+                "field": "alt",
+                "label": "altitude",
+                "default": 0.0
+            },
+            {
+                "field": "type",
+                "label": "type",
+                "default": int(Waypoint_Type.WAIT),
+                "widget": WaypointTypeWidget
+            },
+            {
+                "field": "wait_id",
+                "label": "wait for vehicle",
+                "default": 0,
+                "min": 0
+            },
+            {
+                "field": "wait_count",
+                "label": "wait count",
+                "default": 1,
+                "min": 1
+            }
         ]
 
-        # Default values that are used when exporting/importing tables.
-        # We initially require data for the north/east column, but the altitude 
-        # and wait ID can be left out.
-        self._column_defaults = (None, None, 0.0, 0, 1)
+        self._column_defaults = tuple(
+            column["default"] for column in self._columns
+        )
 
         # Internal field names that can be used for indexing.
-        fields = ["north", "east", "alt", "wait_id", "wait_count"]
-        self._fields = OrderedDict(zip(fields, range(len(self._column_labels))))
+        self._fields = OrderedDict([
+            (column["field"], i) for i, column in enumerate(self._columns)
+        ])
 
         self._listWidget = None
         self._stackedLayout = None
@@ -46,7 +96,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             self._listWidget.addItem("Waypoints for vehicle {}".format(vehicle))
 
             # Create the table for the vehicle.
-            table = WaypointsTableWidget(self._column_labels, self._column_defaults)
+            table = WaypointsTableWidget(self._columns)
 
             self._tables.append(table)
             self._stackedLayout.addWidget(table)
@@ -144,39 +194,30 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
                 # have missing information.
                 raise ValueError("Missing coordinates for vehicle {}, row #{} and no previous waypoint".format(vehicle, row + 1))
 
-        for i, col in enumerate(self._column_labels):
+        for i, column in enumerate(self._columns):
             if data[i] is None:
                 # If a table cell is empty, then either use the previous 
                 # waypoint's coordinates for the current waypoint if `repeat` 
                 # is enabled and the column default is a value which evaluates 
                 # to `False`. Otherwise, we just use the column default.
-                if repeat and not self._column_defaults[i]:
+                if repeat and not column["default"]:
                     data[i] = previous[i]
                 else:
-                    data[i] = self._column_defaults[i]
+                    data[i] = column["default"]
             else:
                 try:
-                    data[i] = self._cast_cell(i, data[i])
+                    data[i] = table.cast_cell(i, data[i])
                 except ValueError:
                     if errors:
-                        raise ValueError("Invalid value for vehicle {}, row #{}, column '{}': '{}'".format(vehicle, row + 1, col, data[i]))
+                        raise ValueError("Invalid value for vehicle {}, row #{}, column '{}': '{}'".format(vehicle, row + 1, column["label"], data[i]))
+
+            if errors and "min" in column and data[i] < column["min"]:
+                raise ValueError("Invalid value for vehicle {}, row #{}, column '{}': {} must be at least {}".format(vehicle, row + 1, column["label"], data[i], column["min"]))
+
+        if errors and row > 0 and data[self._fields["type"]] == Waypoint_Type.HOME:
+            raise ValueError("Waypoint type for vehicle {}, row #{} may not be 'home'.".format(vehicle, row + 1))
 
         return data
-
-    def _cast_cell(self, col, text):
-        """
-        Change the text from a cell in column `col` to correct type.
-
-        Returns the casted value. Raises a `ValueError` if the text cannot be
-        casted to the appropriate value.
-        """
-
-        if self._column_defaults[col] is not None:
-            type_cast = type(self._column_defaults[col])
-        else:
-            type_cast = float
-
-        return type_cast(text)
 
     def _get_wait_id(self, vehicle, waypoint):
         """
@@ -190,10 +231,14 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         Otherwise, `0` is returned.
         """
 
+        default = self._columns[self._fields["wait_id"]]["default"]
+        if waypoint[self._fields["type"]] != Waypoint_Type.WAIT:
+            return default
+
         wait_id = waypoint[self._fields["wait_id"]]
         number_of_sensors = self._controller.rf_sensor.number_of_sensors
         if number_of_sensors == 2:
-            if wait_id == self._column_defaults[self._fields["wait_id"]]:
+            if wait_id == default:
                 return (vehicle + 1) % number_of_sensors + 1
 
         return wait_id
@@ -272,6 +317,11 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             # the "wait_count" of the compressed range.
             wait_count = len(L)
             for range_row in range(row + 1, len(data)):
+                # If the waypoint type is not "wait", then it is not a part of 
+                # the range.
+                if data[range_row][self._fields["type"]] != Waypoint_Type.WAIT:
+                    break
+
                 # If the second row has a different vehicle wait ID, then the 
                 # range ends before it.
                 if wait_id != self._get_wait_id(vehicle, data[range_row]):
@@ -334,9 +384,26 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         while row < len(data):
             locations = self._uncompress_waypoint(data, row)
             wait_id = self._get_wait_id(vehicle, data[row])
-            data[row:row+1] = [
-                [loc.north, loc.east, loc.down, wait_id, 1] for loc in locations
-            ]
+
+            waypoints = []
+            for loc in locations:
+                fields = {
+                    "north": loc.north,
+                    "east": loc.east,
+                    "alt": -loc.down,
+                    "wait_id": wait_id,
+                    "wait_count": 1
+                }
+                waypoint = []
+                for col, column in enumerate(self._columns):
+                    if column["field"] in fields:
+                        waypoint.append(fields[column["field"]])
+                    else:
+                        waypoint.append(data[row][col])
+
+                waypoints.append(waypoint)
+
+            data[row:row+1] = waypoints
             row += len(locations)
 
     def _export_waypoints(self, repeat=True, errors=True):
@@ -423,19 +490,12 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
             table.removeRows()
             for row, waypoint in enumerate(waypoints[vehicle]):
-                table.insertRow(row)
-                for col in range(len(self._column_labels)):
-                    if col >= len(waypoint):
-                        if self._column_defaults[col] is None:
-                            # Data is required for this column, but it is not 
-                            # provided.
-                            raise ValueError("Row #{} has missing information for column '{}'".format(row + 1, self._column_labels[col]))
+                # Backward compatibility for JSON files without a type field.
+                if from_json and len(waypoint) == len(self._columns) - 1:
+                    field = self._fields["type"]
+                    waypoint[field:field] = [self._columns[field]["default"]]
 
-                        break
-
-                    if waypoint[col] != self._column_defaults[col]:
-                        item = str(waypoint[col])
-                        table.setItem(row, col, QtGui.QTableWidgetItem(item))
+                table.insert_data_row(row, waypoint)
 
     def _import(self):
         """
@@ -580,6 +640,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         packet.set("latitude", waypoint[self._fields["north"]])
         packet.set("longitude", waypoint[self._fields["east"]])
         packet.set("altitude", waypoint[self._fields["alt"]])
+        packet.set("type", int(waypoint[self._fields["type"]]))
         packet.set("wait_id", int(waypoint[self._fields["wait_id"]]))
         packet.set("wait_count", int(waypoint[self._fields["wait_count"]]))
         packet.set("index", index)
