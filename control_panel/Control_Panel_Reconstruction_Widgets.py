@@ -151,8 +151,8 @@ class Grid(QtGui.QGraphicsView):
         points = []
 
         for position in [source, target]:
-            x = position[0] * self._cell_size
-            y = (self._height - position[1]) * self._cell_size
+            x = position[1] * self._cell_size
+            y = (self._height - position[0]) * self._cell_size
             points.append(x)
             points.append(y)
 
