@@ -25,6 +25,7 @@ class TestVehicleRobotVehicleArduinoFull(RobotVehicleTestCase):
             self.vehicle.activate()
             self.assertEqual(self._ttl_device.readline(), "START\n")
             self.assertEqual(self._ttl_device.readline(), "HOME 3 4 S\n")
+            self.assertEqual(self._ttl_device.readline(), "NETW 0 0 19 19\n")
             thread_mock.assert_any_call(self.vehicle._serial_loop, ())
 
     @patch("thread.start_new_thread")
@@ -32,6 +33,7 @@ class TestVehicleRobotVehicleArduinoFull(RobotVehicleTestCase):
         # Activate the vehicle and ignore the startup commands, since we test 
         # them in another test.
         self.vehicle.activate()
+        self._ttl_device.readline()
         self._ttl_device.readline()
         self._ttl_device.readline()
 
@@ -48,6 +50,7 @@ class TestVehicleRobotVehicleArduinoFull(RobotVehicleTestCase):
         self.vehicle.activate()
         self._ttl_device.readline()
         self._ttl_device.readline()
+        self._ttl_device.readline()
 
         self.vehicle.pause()
         # An immediate pause command is sent over the connection, and it is not 
@@ -62,6 +65,7 @@ class TestVehicleRobotVehicleArduinoFull(RobotVehicleTestCase):
         # Activate the vehicle and ignore the startup commands, since we test 
         # them in another test.
         self.vehicle.activate()
+        self._ttl_device.readline()
         self._ttl_device.readline()
         self._ttl_device.readline()
 

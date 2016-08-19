@@ -24,6 +24,7 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
         super(Robot_Vehicle_Arduino_Full, self).activate()
 
         self._update_home_location()
+        self._update_network_dimensions()
         thread.start_new_thread(self._serial_loop, ())
 
     def _reset(self):
@@ -50,6 +51,15 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
         home_east = int(self._home_location[1])
         home_direction = self._get_zumo_direction(self._direction)
         self._serial_connection.write("HOME {} {} {}\n".format(home_north, home_east, home_direction))
+
+    def _update_network_dimensions(self):
+        # Format a "home location" command
+        # Only use this when starting.
+        origin_east = int(self._network_origin[0])
+        origin_north = int(self._network_origin[1])
+        width = int(self._network_size[0])
+        height = int(self._network_size[1])
+        self._serial_connection.write("NETW {} {} {} {}\n".format(origin_east, origin_north, width, height))
 
     @property
     def home_location(self):

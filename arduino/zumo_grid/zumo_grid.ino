@@ -9,7 +9,7 @@
 
 // SENSOR_THRESHOLD is a value to compare reflectance sensor
 // readings to to decide if the sensor is over a black line
-#define SENSOR_THRESHOLD 350
+#define SENSOR_THRESHOLD 500
 
 // ABOVE_LINE is a helper macro that takes a reflectance sensor measurement
 // and returns 1 if the sensor is over the line and 0 if otherwise
@@ -49,7 +49,7 @@
 
 // Factor to determine how many units of line thickness we should advance.
 #define OVERSHOOT_FACTOR_WHITESPACE 1.25
-#define OVERSHOOT_FACTOR_INTERSECTION 2.0
+#define OVERSHOOT_FACTOR_INTERSECTION 2.75
 
 // Baud rate of the serial interface
 #define BAUD_RATE 9600
@@ -84,17 +84,30 @@ ZumoMotors motors;
 Pushbutton button(ZUMO_BUTTON);
 SoftwareSerial softSerial(RX_PIN, TX_PIN);
 
+struct Point {
+  int x;
+  int y;
+};
+
 // current row and column
 int cur_row, cur_col;
 char zumo_direction;
 int goto_row, goto_col;
+Point origin;
+int network_width, network_height;
 
 void setup() {
   // current position
   cur_row = 0;
   cur_col = 0;
+  // target position
   goto_row = -1;
   goto_col = -1;
+  // network dimensions
+  origin.x = 0;
+  origin.y = 0;
+  network_width = 0;
+  network_height = 0;
   // current direction
   zumo_direction = 'N';
 
@@ -267,6 +280,12 @@ void check_command(char command[COMMAND_LENGTH+1]) {
     int motor2 = read_int();
     motors.setSpeeds(motor1, motor2);
   }
+  else if (strcmp(command, "NETW") == 0) {
+    origin.x = read_int();
+    origin.y = read_int();
+    network_width = read_int();
+    network_height = read_int();
+  }
 }
 
 void loop() {
@@ -395,8 +414,20 @@ void zumo_goto(int row, int col) {
     col_dir = 'O';
   }
 
-  // First do row direction
-  if (turnsToFace(row_dir) < turnsToFace(col_dir)) {
+  // Determine which path to take to the destination point.
+  // Prefer paths that do not cross the network on their passing point.
+  // Otherwise just take the one with the least turns.
+  Point row_pass_point = { cur_row, col };
+  Point col_pass_point = { row, cur_col };
+  if (in_network(row_pass_point)) {
+    goto_dir(row_dir, abs(nRows));
+    goto_dir(col_dir, abs(nCols));
+  }
+  else if (in_network(col_pass_point)) {
+    goto_dir(col_dir, abs(nCols));
+    goto_dir(row_dir, abs(nRows));
+  }
+  else if (turnsToFace(row_dir) < turnsToFace(col_dir)) {
     goto_dir(row_dir, abs(nRows));
     goto_dir(col_dir, abs(nCols));
   }
@@ -415,6 +446,13 @@ void zumo_goto(int row, int col) {
   softSerial.print(" ");
   softSerial.print(zumo_direction);
   softSerial.print("\n");
+}
+
+bool in_network(Point point) {
+    return (point.x > origin.x &&
+            point.x < origin.x + network_width &&
+            point.y > origin.y &&
+            point.y < origin.y + network_height);
 }
 
 void advance(float factor) {
