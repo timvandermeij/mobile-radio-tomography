@@ -132,7 +132,7 @@ class Environment(Location_Proxy):
                 servo.set_current_pwm(servo_pwms[pin])
 
     def on_home_location(self, vehicle, attribute, home_location):
-        self._geometry.set_home_location(home_location)
+        self.geometry.set_home_location(home_location)
 
     def _setup_rf_sensor(self):
         rf_sensor_class = self.settings.get("rf_sensor_class")
@@ -147,9 +147,6 @@ class Environment(Location_Proxy):
 
     def get_vehicle(self):
         return self.vehicle
-
-    def get_geometry(self):
-        return self._geometry
 
     def get_arguments(self):
         return self.arguments
@@ -381,7 +378,7 @@ class Environment(Location_Proxy):
         the angle in radians.
         """
 
-        return self._geometry.bearing_to_angle(self.get_yaw())
+        return self.geometry.bearing_to_angle(self.get_yaw())
 
     def get_pitch(self):
         """

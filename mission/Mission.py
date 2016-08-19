@@ -19,7 +19,7 @@ class Mission(object):
         self.environment = environment
         self.vehicle = self.environment.get_vehicle()
 
-        self.geometry = self.environment.get_geometry()
+        self.geometry = self.environment.geometry
         self.settings = settings
         self.memory_map = None
 

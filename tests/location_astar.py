@@ -107,7 +107,7 @@ class TestLocationAStarGrid(EnvironmentTestCase):
         self.altitude = 4.0
         self.memory_map = Memory_Map(self.environment, self.size,
                                      self.resolution, self.altitude)
-        self.astar = AStar(self.environment.get_geometry(), self.memory_map,
+        self.astar = AStar(self.environment.geometry, self.memory_map,
                            allow_at_bounds=True, trend_strides=False,
                            use_indices=True)
 

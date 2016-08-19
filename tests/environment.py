@@ -176,15 +176,13 @@ class TestEnvironment(EnvironmentTestCase):
         self.assertTrue(self.environment.settings.get("infrared_sensor"))
 
     @covers([
-        "get_vehicle", "get_geometry", "get_arguments", "get_import_manager",
+        "get_vehicle", "get_arguments", "get_import_manager",
         "get_thread_manager", "get_usb_manager", "get_distance_sensors",
         "get_rf_sensor", "get_infrared_sensor", "get_servos"
     ])
     def test_interface(self):
         self.assertEqual(self.environment.get_vehicle(),
                          self.environment.vehicle)
-        self.assertEqual(self.environment.get_geometry(),
-                         self.environment.geometry)
         self.assertEqual(self.environment.get_arguments(),
                          self.environment.arguments)
 

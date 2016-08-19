@@ -26,9 +26,15 @@ class TestReconstructionWeightMatrix(SettingsTestCase):
         self.assertEqual(self.weight_matrix._distances.shape, (0, self.pixels))
         self.assertIsInstance(self.weight_matrix._matrix, np.ndarray)
         self.assertEqual(self.weight_matrix._matrix.shape, (0, self.pixels))
+
         self.assertEqual(self.weight_matrix._origin, self.origin)
         self.assertEqual(self.weight_matrix._width, self.size[0])
         self.assertEqual(self.weight_matrix._height, self.size[1])
+        self.assertEqual(self.weight_matrix._number_of_links, 0)
+
+        self.assertEqual(self.weight_matrix._link_count, 0)
+        self.assertEqual(self.weight_matrix._distance_count, 0)
+
         self.assertIsInstance(self.weight_matrix._snapper, Snap_To_Boundary)
         self.assertIsInstance(self.weight_matrix._grid_x, np.ndarray)
         self.assertIsInstance(self.weight_matrix._grid_y, np.ndarray)
@@ -83,7 +89,7 @@ class TestReconstructionWeightMatrix(SettingsTestCase):
         self.assertEqual(weight_matrix._matrix.shape, (2, self.pixels))
 
     def test_check(self):
-        # Matrices that constain non-zero columns must fail the test.
+        # Matrices that contain columns with only zeros must fail the test.
         self.weight_matrix._matrix = np.zeros((self.links, self.pixels))
         self.weight_matrix._matrix[:, 1] = 1
         self.assertEqual(self.weight_matrix.check(), False)

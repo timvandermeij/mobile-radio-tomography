@@ -36,13 +36,16 @@ class Weight_Matrix(object):
                                                relative_module="reconstruction")
         self._model = model_type(arguments)
 
-        # Create the snap to boundary object and initialize variables for the matrix.
+        # Initialize variables for the matrix.
         self._distances = None
         self._matrix = None
+
+        # Retrieve parameters.
         self._origin = origin
         self._width, self._height = size
-
         self._number_of_links = number_of_links
+
+        # Create the snap to boundary object.
         self._snapper = Snap_To_Boundary(self._origin, self._width,
                                          self._height, snap_inside=snap_inside)
 

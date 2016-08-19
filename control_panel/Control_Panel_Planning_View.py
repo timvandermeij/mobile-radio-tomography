@@ -251,13 +251,13 @@ class Control_Panel_Planning_View(Control_Panel_View):
             settings_group.setCheckable(True)
             settings_group.toggled.connect(partial(self._toggle_settings, settings_group, form))
             settings_group.setStyleSheet("""
-QGroupBox::indicator { width: 0; height: 0 }
-QGroupBox::title {
-    padding: 0 3px;
-    border: 1px outset #aaaaaa;
-    background: #f0f0f0;
-}
-""")
+                QGroupBox::indicator { width: 0; height: 0 }
+                QGroupBox::title {
+                    padding: 0 3px;
+                    border: 1px outset #aaaaaa;
+                    background: #f0f0f0;
+                }
+            """)
 
             form.setFixedWidth(width)
             form_layout = QtGui.QHBoxLayout()
