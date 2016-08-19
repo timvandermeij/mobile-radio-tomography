@@ -72,6 +72,10 @@ class Robot_Vehicle(Vehicle):
         # The delay of the robot vehicle state loop.
         self._loop_delay = self.settings.get("vehicle_delay")
 
+        # Dimensions of the network where the vehicle is not allowed to be in
+        self._network_origin = self.settings.get("vehicle_network_origin")
+        self._network_size = self.settings.get("vehicle_network_size")
+
         self._waypoints = []
         self._current_waypoint = -1
 

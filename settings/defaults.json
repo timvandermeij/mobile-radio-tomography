@@ -564,6 +564,20 @@
                 "type": "int",
                 "options": [0, 1, 2, 3],
                 "default": 0
+            },
+            "vehicle_network_origin": {
+                "help": "Origin of the area where the vehicle is not allowed to be inside, starting with eastward coordinate, then northward coordinate",
+                "type": "tuple",
+                "subtype": "float",
+                "length": 2,
+                "default": [0, 0]
+            },
+            "vehicle_network_size": {
+                "help": "Width and height of the area where the vehicle is not allowed to be inside",
+                "type": "tuple",
+                "subtype": "float",
+                "length": 2,
+                "default": [19, 19]
             }
         }
     },
