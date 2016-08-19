@@ -119,6 +119,7 @@ class Control_Panel_RF_Sensor_Sender(object):
         # function, which is called after a packet is being sent. Because we 
         # cannot update GUI parts when we receive the acknowledgement, we need 
         # to do this here.
+        self._update_labels()
         self._update_value()
         if all(self._is_done(v) for v in self._indexes):
             self._progress.accept()
@@ -140,6 +141,8 @@ class Control_Panel_RF_Sensor_Sender(object):
             # Maximum retry attempts reached, cancel the send action
             if self._indexes[vehicle] == -1:
                 send = "clearing {}s".format(self._name)
+            elif self._indexes[vehicle] >= len(self._data[vehicle]):
+                send = "sending done packet"
             else:
                 send = "{} #{}".format(self._name, self._indexes[vehicle])
             self._cancel("Vehicle {}: Maximum retry attempts for {} reached".format(vehicle, send))
@@ -150,6 +153,10 @@ class Control_Panel_RF_Sensor_Sender(object):
         self._update_value()
 
     def _update_labels(self):
+        # If the progress bar is already closed, then do not update the labels.
+        if self._progress is None:
+            return
+
         labels = []
         for vehicle in sorted(self._labels.iterkeys()):
             label = self._labels[vehicle]
