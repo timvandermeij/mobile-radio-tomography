@@ -631,7 +631,31 @@
         }
     },
     "planning": {
-        "name": "Base trajectory planning",
+        "name": "Planning problem",
+        "settings": {
+            "network_size": {
+                "help": "Dimensions of the total space wherein the network lies, in number of grid cells, including the padding. First dimension is north, second is east.",
+                "short": "Network size",
+                "type": "tuple",
+                "length": 2,
+                "subtype": "int",
+                "min": 1,
+                "default": [20, 20]
+            },
+            "network_padding": {
+                "help": "Number of full cells for each dimension and on every side where the vehicles are allowed to drive around the network. First dimension is north, second is east.",
+                "short": "Padding",
+                "type": "tuple",
+                "length": 2,
+                "subtype": "int",
+                "min": 0,
+                "default": [0, 0]
+            }
+        }
+    },
+    "planning_runner": {
+        "name": "Planning problem: supervisor",
+        "parent": "planning",
         "settings": {
             "algorithm_class": {
                 "help": "The evolutionary algorithm to use for the planning problem. It can be given with dashes instead of underscores and with lowercase letters.",
@@ -650,7 +674,7 @@
         }
     },
     "planning_algorithm": {
-        "name": "Evolutionary multiobjective optimization algorithm",
+        "name": "Planning problem: evolutionary multiobjective optimization",
         "settings": {
             "population_size": {
                 "help": "Number of individuals to use during optimization. Afterward, at most this number of nondominated solutions is presented.",
@@ -684,7 +708,8 @@
         }
     },
     "planning_problem": {
-        "name": "Reconstruction trajectory planning problem",
+        "name": "Planning problem: trajectory reconstruction specifications",
+        "parent": "planning",
         "settings": {
             "number_of_measurements": {
                 "help": "Maximum number of measurements to perform",
@@ -692,24 +717,6 @@
                 "type": "int",
                 "min": 1,
                 "default": 100
-            },
-            "network_size": {
-                "help": "Dimensions of the total space wherein the network lies, in number of grid cells",
-                "short": "Network size",
-                "type": "tuple",
-                "length": 2,
-                "subtype": "int",
-                "min": 1,
-                "default": [20, 20]
-            },
-            "network_padding": {
-                "help": "Number of full cells for each dimension and on every side where the vehicles are allowed to drive around the network",
-                "short": "Padding",
-                "type": "tuple",
-                "length": 2,
-                "subtype": "int",
-                "min": 0,
-                "default": [0, 0]
             },
             "unsnappable_rate": {
                 "help": "Ratio of the number of measurements that are allowed to be useless in the reconstruction problem and thus are discarded",
@@ -726,11 +733,17 @@
                 "min": 0.0,
                 "max": 1.0,
                 "default": 0.5
+            },
+            "mutation_operator": {
+                "help": "Whether to use a specialized mutation operator during the discrete problem",
+                "short": "Mutation operator",
+                "type": "bool",
+                "default": true
             }
         }
     },
     "planning_assignment": {
-        "name": "Planning waypoint assignment problem",
+        "name": "Planning problem: waypoint assignment",
         "settings": {
             "vehicle_home_locations": {
                 "help": "Home location coordinates for the vehicles",
@@ -742,6 +755,26 @@
                     "subtype": "int"
                 },
                 "default": [[0, 0], [0, 19]]
+            }
+        }
+    },
+    "planning_collision_avoidance": {
+        "name": "Planning problem: vehicle collision avoidance",
+        "parent": "planning",
+        "settings": {
+            "collision_avoidance": {
+                "help": "Whether to enable the collision avoidance algorithm",
+                "short": "Collision avoidance",
+                "type": "bool",
+                "default": true
+            },
+            "unsafe_path_cost": {
+                "help": "Additional distance compared to the norm distance when there is no safe path possible to a certain waypoint. This should account for lost distance due to halting and detours. If this is 'inf', then the solution is considered infeasible.",
+                "short": "Unsafe path cost",
+                "type": "float",
+                "inf": true,
+                "min": 0.0,
+                "default": Infinity
             }
         }
     },

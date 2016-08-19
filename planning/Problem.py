@@ -272,6 +272,7 @@ class Reconstruction_Plan(Problem):
 
         # Import the settings for the planning problem.
         self.arguments = arguments
+        self.arguments.get_settings("reconstruction").set("model_class", "Ellipse_Model")
         self.settings = self.arguments.get_settings("planning_problem")
         self.N = self.settings.get("number_of_measurements")
         self.network_size = self.settings.get("network_size")
@@ -321,7 +322,7 @@ class Reconstruction_Plan(Problem):
         """
 
         return Weight_Matrix(self.arguments, self.padding, self.size,
-                             snap_inside=True)
+                             snap_inside=True, number_of_links=self.N)
 
     def format_steps(self, steps):
         # Convert a list of step sizes that has the same number of elements as 
@@ -419,6 +420,8 @@ class Reconstruction_Plan(Problem):
             if self.delta_rate < 1.0:
                 distance = self.assigner.assign(positions)[1]
                 self.travel_distance = float(distance)
+                if self.travel_distance == np.inf:
+                    feasible = False
             else:
                 self.travel_distance = 0.0
 
@@ -517,6 +520,10 @@ class Reconstruction_Plan_Continuous(Reconstruction_Plan):
         return [[0, b], [self.network_size[0], a*self.network_size[0]+b]]
 
 class Reconstruction_Plan_Discrete(Reconstruction_Plan):
+    def __init__(self, arguments):
+        super(Reconstruction_Plan_Discrete, self).__init__(arguments)
+        self._use_mutation_operator = self.settings.get("mutation_operator")
+
     def get_domain(self):
         num_variables = self.N*4
         # Variables:
@@ -545,35 +552,36 @@ class Reconstruction_Plan_Discrete(Reconstruction_Plan):
         return super(Reconstruction_Plan_Discrete, self).format_steps(steps)
 
     def mutate(self, point, steps):
-        # Ensure we work on a copy of the original individual, so that it is 
-        # left untouched.
-        point = np.copy(point)
-        for i in range(self.N):
-            # Randomly choose an axis. If we do so, make one of the points of 
-            # a measurement snap toward the other side of the grid. This causes 
-            # the points to spread out more and make it more likely that the 
-            # measurement intersects with the network more.
-            axis = np.random.choice([-1, 0, 1])
-            if axis == -1:
-                continue
+        if self._use_mutation_operator:
+            # Ensure we work on a copy of the original individual, so that it 
+            # is left untouched.
+            point = np.copy(point)
+            for i in range(self.N):
+                # Randomly choose an axis. If we do so, make one of the points 
+                # of a measurement snap toward the other side of the grid. This 
+                # causes the points to spread out more and make it more likely 
+                # that the measurement intersects with the network more.
+                axis = np.random.choice([-1, 0, 1])
+                if axis == -1:
+                    continue
 
-            other_axis = (axis+1) % 2
-            diff = self.size[axis]
-            if point[i + axis*self.N] + diff > self.network_size[axis]:
-                diff = -diff
+                other_axis = (axis+1) % 2
+                diff = self.size[axis]
+                if point[i + axis*self.N] + diff > self.network_size[axis]:
+                    diff = -diff
 
-            s = steps[i+other_axis*self.N] * np.random.randn()
+                s = steps[i+other_axis*self.N] * np.random.randn()
 
-            # The variable for the other axis
-            other_point = point[i + other_axis*self.N]
-            other_padding = self.padding[other_axis]
-            other_start = other_padding + self.size[other_axis]
-            other_end = self.network_size[other_axis]
-            if 0 <= other_point < other_padding or other_start < other_point < other_end:
-                s = self.size[other_axis]/2 * s
+                # The variable for the other axis
+                other_point = point[i + other_axis*self.N]
+                other_padding = self.padding[other_axis]
+                other_start = other_padding + self.size[other_axis]
+                other_end = self.network_size[other_axis]
+                if 0 <= other_point < other_padding or other_start < other_point < other_end:
+                    s = self.size[other_axis]/2 * s
 
-            point[i + (axis+2)*self.N] = point[i + axis*self.N] + diff
-            point[i + (other_axis+2)*self.N] += s
+                point[i + (axis+2)*self.N] = point[i + axis*self.N] + diff
+                point[i + (other_axis+2)*self.N] += s
 
         return super(Reconstruction_Plan_Discrete, self).mutate(point, steps)
 

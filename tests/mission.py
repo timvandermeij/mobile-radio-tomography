@@ -54,7 +54,7 @@ class TestMission(EnvironmentTestCase):
         self.assertIsNone(self.mission.distance_to_current_waypoint())
 
     def test_distance_to_current_waypoint_spherical(self):
-        with patch.object(self.environment, "geometry", new=Geometry_Spherical()):
+        with patch.object(self.environment, "_geometry", new=Geometry_Spherical()):
             # 3 * 3 + 4 * 4 = 9 + 16 = 25 which is 5 squared.
             home_loc = LocationGlobal(0.0, 0.0, 0.0)
             loc = self.mission.geometry.get_location_meters(home_loc, 3.0, 4.0)

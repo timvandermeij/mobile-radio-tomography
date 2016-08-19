@@ -176,15 +176,13 @@ class TestEnvironment(EnvironmentTestCase):
         self.assertTrue(self.environment.settings.get("infrared_sensor"))
 
     @covers([
-        "get_vehicle", "get_geometry", "get_arguments", "get_import_manager",
+        "get_vehicle", "get_arguments", "get_import_manager",
         "get_thread_manager", "get_usb_manager", "get_distance_sensors",
         "get_rf_sensor", "get_infrared_sensor", "get_servos"
     ])
     def test_interface(self):
         self.assertEqual(self.environment.get_vehicle(),
                          self.environment.vehicle)
-        self.assertEqual(self.environment.get_geometry(),
-                         self.environment.geometry)
         self.assertEqual(self.environment.get_arguments(),
                          self.environment.arguments)
 
@@ -257,17 +255,20 @@ class TestEnvironment(EnvironmentTestCase):
 
     @covers(["get_location", "get_raw_location"])
     def test_location(self):
+        vehicle = self.environment.vehicle
+        self.assertEqual(self.environment.location, vehicle.location)
+
         location = self.environment.vehicle.location.global_relative_frame
         self.assertEqual(location, self.environment.get_location())
 
         # Raw location provides the correct return value corresponding to the 
-        # real location
+        # real location.
         raw_location, waypoint_index = self.environment.get_raw_location()
         self.assertEqual(raw_location, (location.lat, location.lon))
         self.assertEqual(waypoint_index, 0)
 
         loc = LocationLocal(1.2, 3.4, -5.6)
-        with patch.object(Environment, "get_location", return_value=loc):
+        with patch.object(vehicle, "_locations", new=loc):
             raw_location, waypoint_index = self.environment.get_raw_location()
             self.assertEqual(raw_location, (loc.north, loc.east))
             self.assertEqual(waypoint_index, 0)

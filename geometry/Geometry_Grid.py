@@ -7,10 +7,7 @@ class Geometry_Grid(Geometry):
     north, east, south or west in discrete steps.
     """
 
-    def get_distance_meters(self, location1, location2):
-        location1, location2 = self.equalize(location1, location2)
-        diff = self._diff_location(location1, location2)
-        return abs(diff.north) + abs(diff.east) + abs(diff.down)
+    _norm = lambda self, dx, dy, dz=0: abs(dx) + abs(dy) + abs(dz)
 
     def _get_range(self, start_coord, end_coord, count):
         R = super(Geometry_Grid, self)._get_range(start_coord, end_coord, count)

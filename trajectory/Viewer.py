@@ -65,7 +65,7 @@ class Viewer(object):
 
         self.settings = settings
 
-        self.geometry = self.environment.get_geometry()
+        self.geometry = self.environment.geometry
         self.initial_location = self.environment.get_location()
         self.win = None
 

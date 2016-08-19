@@ -21,6 +21,11 @@ class TestGeometryGrid(geometry.TestGeometry):
         self.assertAlmostEqual(self.geometry.get_distance_meters(loc, loc2),
                                7.0, delta=self.dist_delta)
 
+    def test_norm(self):
+        # 3 * 3 + 4 * 4 = 9 + 16 = 25 which is 5 squared.
+        self.assertEqual(self.geometry.norm(3.0, 4.0), 7.0)
+        self.assertEqual(self.geometry.norm(-1.0, 4.0, 1.5), 6.5)
+
     def test_get_neighbor_offsets(self):
         offsets = self.geometry.get_neighbor_offsets()
         self.assertEqual(offsets.shape, (4, 2))

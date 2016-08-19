@@ -1,6 +1,7 @@
 import itertools
 import numpy as np
 from ..waypoint.Waypoint import Waypoint_Type
+from Collision_Avoidance import Collision_Avoidance
 
 class Greedy_Assignment(object):
     """
@@ -28,6 +29,7 @@ class Greedy_Assignment(object):
         self._vehicle_pairs = list(
             itertools.permutations(range(1, self._number_of_vehicles + 1), r=2)
         )
+        self._collision_avoider = Collision_Avoidance(arguments, geometry)
 
     def _get_closest_pair(self, current_positions, positions):
         distances = np.array([
@@ -45,7 +47,8 @@ class Greedy_Assignment(object):
         indices = np.unravel_index(np.argmin(totals), totals.shape)
         return indices, totals[indices]
 
-    def _assign_pair(self, assignment, current_positions, positions, vehicle_pair, closest_pair):
+    def _assign_pair(self, assignment, current_positions, positions,
+                     vehicle_pair, closest_pair, distance):
         # Determine the synchronization (waits) between the two vehicles in the 
         # chosen vehicle pair. There are always two permutations here.
         syncs = itertools.permutations(self._vehicle_pairs[vehicle_pair])
@@ -63,6 +66,15 @@ class Greedy_Assignment(object):
             assignment[vehicle].append(waypoint)
             current_positions[vehicle-1] = new_position
 
+            self._collision_avoider.update(self._home_locations, assignment,
+                                           vehicle, other_vehicle, distance)
+            if self._collision_avoider.distance > distance:
+                distance = self._collision_avoider.distance
+                if distance == np.inf:
+                    return distance
+
+        return distance
+
     def assign(self, positions_pairs):
         """
         Assign the vehicles with current positions `home_positions` an ordering
@@ -76,6 +88,8 @@ class Greedy_Assignment(object):
         and the total distance needed for this assignment according to the
         algorithm.
         """
+
+        self._collision_avoider.reset()
 
         positions = np.array(positions_pairs)
         current_positions = list(self._home_locations)
@@ -92,8 +106,12 @@ class Greedy_Assignment(object):
             # The chosen vehicle pair and the chosen measurement positions pair
             vehicle_pair, closest_pair = idx
 
-            self._assign_pair(assignment, current_positions, positions,
-                              vehicle_pair, closest_pair)
+            distance = self._assign_pair(assignment, current_positions,
+                                         positions, vehicle_pair, closest_pair,
+                                         distance)
+
+            if distance == np.inf:
+                return {}, distance
 
             total_distance += distance
 

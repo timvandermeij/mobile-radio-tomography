@@ -144,3 +144,6 @@ class TestGeometrySpherical(geometry.TestGeometry):
     def test_make_location(self):
         loc = LocationGlobalRelative(1.0, 2.0, 3.0)
         self.assertEqual(self.geometry.make_location(1.0, 2.0, 3.0), loc)
+
+    def test_norm(self):
+        self.assertIsNone(self.geometry.norm)

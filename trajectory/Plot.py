@@ -78,9 +78,8 @@ class Plot(object):
             self.plt.show()
 
     def plot_lines(self, points):
-        geometry = self.environment.get_geometry()
         self.arrow_options["color"] = "white"
-        for edge in geometry.get_point_edges(points):
+        for edge in self.environment.geometry.get_point_edges(points):
             start_idx = self.memory_map.get_xy_index(edge[0])
             end_idx = self.memory_map.get_xy_index(edge[1])
             plt.annotate("", end_idx, start_idx, arrowprops=self.arrow_options)

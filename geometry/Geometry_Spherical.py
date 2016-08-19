@@ -176,6 +176,12 @@ class Geometry_Spherical(Geometry):
         d = math.sqrt((dlat*dlat) + (dlon*dlon)) * self.COORD_TO_METERS
         return math.sqrt((d*d) + (dalt*dalt))
 
+    @property
+    def norm(self):
+        # Spherical geometry does not supply a norm directly, since spherical 
+        # coordinates are more complex.
+        return None
+
     def _diff_location(self, location1, location2):
         # Only call this method with equalized location types.
         if isinstance(location1, LocationLocal):

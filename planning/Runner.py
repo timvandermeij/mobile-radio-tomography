@@ -23,7 +23,7 @@ class Planning_Runner(Threadable):
         super(Planning_Runner, self).__init__("planning_runner", thread_manager)
 
         self.arguments = arguments
-        self.settings = self.arguments.get_settings("planning")
+        self.settings = self.arguments.get_settings("planning_runner")
         self._iteration_callback = iteration_callback
 
         self.reset()
