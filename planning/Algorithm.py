@@ -249,7 +249,7 @@ class NSGA(Algorithm):
         return self.crowding_distance(Rk)
 
     def get_name(self):
-        return "NSGA"
+        return "NSGA-II"
 
 class SMS_EMOA(Algorithm):
     def hypervolume_contribution(self, Rk):
