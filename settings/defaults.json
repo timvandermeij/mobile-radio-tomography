@@ -769,6 +769,23 @@
                     "subtype": "int"
                 },
                 "default": [[0, 0], [0, 19]]
+            },
+            "vehicle_home_directions": {
+                "help": "Home directions for the vehicles. 0 is up, 1 is right, 2 is down and 3 is left.",
+                "short": "Home directions",
+                "type": "list",
+                "subtype": {
+                    "type": "int",
+                    "options": [0, 1, 2, 3]
+                },
+                "default": [0, 0]
+            },
+            "turning_cost": {
+                "help": "Additional distance compared to the norm distance for turning a vehicle",
+                "short": "Turning cost",
+                "type": "float",
+                "min": 0.0,
+                "default": 1.0
             }
         }
     },

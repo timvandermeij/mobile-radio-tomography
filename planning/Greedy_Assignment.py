@@ -1,5 +1,6 @@
 import itertools
 import numpy as np
+from ..location.Line_Follower import Line_Follower_Direction
 from ..waypoint.Waypoint import Waypoint_Type
 from Collision_Avoidance import Collision_Avoidance
 
@@ -24,6 +25,9 @@ class Greedy_Assignment(object):
         self._geometry = geometry
 
         self._home_locations = self._settings.get("vehicle_home_locations")
+        self._home_directions = self._settings.get("vehicle_home_directions")
+        self._turning_cost = self._settings.get("turning_cost")
+
         self._number_of_vehicles = len(self._home_locations)
 
         self._vehicle_pairs = list(
@@ -31,24 +35,79 @@ class Greedy_Assignment(object):
         )
         self._collision_avoider = Collision_Avoidance(arguments, geometry)
 
-    def _get_closest_pair(self, current_positions, positions):
+        self._assignment = None
+        self._positions = None
+        self._current_positions = None
+        self._current_directions = None
+
+    def _calculate_vehicle_distances(self):
+        V = np.full((self._number_of_vehicles, 2, len(self._positions)), np.nan)
+        for vehicle in range(self._number_of_vehicles):
+            for i in range(2):
+                # The traveling distance: Manhattan grid distance
+                D = self._positions[:, i, :] - self._current_positions[vehicle]
+                # Indications of whether we travel upward/downward/neutral and 
+                # leftward/rightward/neutral.
+                S = np.sign(D)
+
+                # Determine how many turns the vehicle needs to make to get to 
+                # the positions, so whether we need to turn left/right and then 
+                # optionally turn in the same direction again, or turn around 
+                # completely.
+                cur = self._current_directions[vehicle]
+                right = abs(S[:, (cur + 1) % 2])
+                straight = (2 - right) * (S[:, cur % 2] == 2 * (cur / 2) - 1)
+                T = straight + right
+
+                V[vehicle, i, :] = abs(D).sum(axis=1) + self._turning_cost * T
+
+        return V
+
+    def _get_new_direction(self, vehicle, new_position):
+        up = new_position[0] - self._current_positions[vehicle-1][0]
+        right = new_position[1] - self._current_positions[vehicle-1][1]
+
+        cur = [self._current_directions[vehicle-1] == d for d in range(4)]
+        if up == 0 or (up > 0 and cur[Line_Follower_Direction.UP]) or \
+                      (up < 0 and cur[Line_Follower_Direction.DOWN]):
+            if right > 0:
+                return Line_Follower_Direction.RIGHT
+            if right < 0:
+                return Line_Follower_Direction.LEFT
+
+            return self._current_directions[vehicle-1]
+
+        if right == 0 or (right > 0 and cur[Line_Follower_Direction.RIGHT]) or \
+                         (right < 0 and cur[Line_Follower_Direction.LEFT]):
+            if up > 0:
+                return Line_Follower_Direction.UP
+
+            return Line_Follower_Direction.DOWN
+
+        # up != 0, right != 0, and either up or right is in the wrong direction 
+        # compared to the current direction. thus the next direction is the 
+        # inverse of the current direction.
+        return (self._current_directions[vehicle-1] + 2) % 4
+
+    def _get_closest_pair(self):
+        V = self._calculate_vehicle_distances()
         distances = np.array([
             [
-                # Given that both vehicles operate at the same time and 
-                # synchronize at the next waypoint, the time needed depends on 
-                # the longest distance that either vehicle needs to move
-                abs(current_positions[vehicle-1] - positions[:, i, :]).max(axis=1)
-                for i, vehicle in enumerate(vehicle_pair)
-            ]
-            for vehicle_pair in self._vehicle_pairs
+                V[vehicle-1, i, :] for i, vehicle in enumerate(vehicle_pair)
+            ] for vehicle_pair in self._vehicle_pairs
         ])
 
-        totals = distances.sum(axis=1)
+        # Given that both vehicles operate at the same time and synchronize at 
+        # the next waypoint, the time needed depends on the longest distance 
+        # that either vehicle needs to move. Thus take the maximum.
+        totals = distances.max(axis=1)
+
+        # Determine the indices of the combination of vehicle and sensor pair 
+        # that minimize the distances.
         indices = np.unravel_index(np.argmin(totals), totals.shape)
         return indices, totals[indices]
 
-    def _assign_pair(self, assignment, current_positions, positions,
-                     vehicle_pair, closest_pair, distance):
+    def _assign_pair(self, vehicle_pair, closest_pair, distance):
         # Determine the synchronization (waits) between the two vehicles in the 
         # chosen vehicle pair. There are always two permutations here.
         syncs = itertools.permutations(self._vehicle_pairs[vehicle_pair])
@@ -56,18 +115,21 @@ class Greedy_Assignment(object):
             vehicle, other_vehicle = sync_pair
 
             # The coordinates of the next position for the given vehicle.
-            new_position = list(positions[closest_pair, i, :])
+            new_position = list(self._positions[closest_pair, i, :])
+            new_direction = self._get_new_direction(vehicle, new_position)
 
             # The assigned waypoint containing the full position and the other 
             # vehicle's wait ID.
             waypoint = new_position + [0, Waypoint_Type.WAIT, other_vehicle, 1]
 
             # Create the assignment and track the new position.
-            assignment[vehicle].append(waypoint)
-            current_positions[vehicle-1] = new_position
+            self._assignment[vehicle].append(waypoint)
+            self._current_positions[vehicle-1] = new_position
+            self._current_directions[vehicle-1] = new_direction
 
-            self._collision_avoider.update(self._home_locations, assignment,
-                                           vehicle, other_vehicle, distance)
+            self._collision_avoider.update(self._home_locations,
+                                           self._assignment, vehicle,
+                                           other_vehicle, distance)
             if self._collision_avoider.distance > distance:
                 distance = self._collision_avoider.distance
                 if distance == np.inf:
@@ -91,30 +153,29 @@ class Greedy_Assignment(object):
 
         self._collision_avoider.reset()
 
-        positions = np.array(positions_pairs, dtype=np.int)
-        current_positions = list(self._home_locations)
+        self._positions = np.array(positions_pairs, dtype=np.int)
+        self._current_positions = list(self._home_locations)
+        self._current_directions = list(self._home_directions)
 
-        assignment = dict([
+        self._assignment = dict([
             (i, []) for i in range(1, self._number_of_vehicles + 1)
         ])
         total_distance = 0
 
-        while len(positions) > 0:
+        while len(self._positions) > 0:
             # The index of the distances matrix and the distance value itself.
-            idx, distance = self._get_closest_pair(current_positions, positions)
+            idx, distance = self._get_closest_pair()
 
             # The chosen vehicle pair and the chosen measurement positions pair
             vehicle_pair, closest_pair = idx
 
-            distance = self._assign_pair(assignment, current_positions,
-                                         positions, vehicle_pair, closest_pair,
-                                         distance)
+            distance = self._assign_pair(vehicle_pair, closest_pair, distance)
 
             if distance == np.inf:
                 return {}, distance
 
             total_distance += distance
 
-            positions = np.delete(positions, closest_pair, axis=0)
+            self._positions = np.delete(self._positions, closest_pair, axis=0)
 
-        return assignment, total_distance
+        return self._assignment, total_distance

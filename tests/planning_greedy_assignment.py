@@ -1,5 +1,6 @@
 import numpy as np
 from ..geometry.Geometry_Grid import Geometry_Grid
+from ..location.Line_Follower import Line_Follower_Direction
 from ..planning.Greedy_Assignment import Greedy_Assignment
 from ..settings import Arguments
 from ..waypoint.Waypoint import Waypoint_Type
@@ -23,24 +24,27 @@ class TestPlanningGreedyAssignment(SettingsTestCase):
         positions = np.array([[[3, 0], [5, 16]],
                               [[2, 19], [0, 1]],
                               [[0, 0], [1, 16]],
+                              [[0, 2], [4, 19]],
                               [[4, 18], [19, 1]]])
 
         assignment, distance = self.assigner.assign(positions)
 
         # Input is left untouched.
-        self.assertEqual(positions.shape, (4, 2, 2))
+        self.assertEqual(positions.shape, (5, 2, 2))
 
         # We receive a good assignment.
         wait = Waypoint_Type.WAIT
         self.assertIsInstance(assignment, dict)
         self.assertEqual(len(assignment), 2)
         self.assertEqual(assignment[1], [
-            [0, 0, 0, wait, 2, 1], [0, 1, 0, wait, 2, 1],
-            [3, 0, 0, wait, 2, 1], [19, 1, 0, wait, 2, 1]
+            [0, 1, 0, wait, 2, 1], [0, 2, 0, wait, 2, 1],
+            [3, 0, 0, wait, 2, 1], [0, 0, 0, wait, 2, 1],
+            [19, 1, 0, wait, 2, 1]
         ])
         self.assertEqual(assignment[2], [
-            [1, 16, 0, wait, 1, 1], [2, 19, 0, wait, 1, 1],
-            [5, 16, 0, wait, 1, 1], [4, 18, 0, wait, 1, 1]
+            [2, 19, 0, wait, 1, 1], [4, 19, 0, wait, 1, 1],
+            [5, 16, 0, wait, 1, 1], [1, 16, 0, wait, 1, 1],
+            [4, 18, 0, wait, 1, 1]
         ])
 
         # The assignment is valid, i.e., the distance is not infinite due to 
@@ -53,3 +57,22 @@ class TestPlanningGreedyAssignment(SettingsTestCase):
         # The distance of a conflicting assignment is set to infinity.
         distance = self.assigner.assign(positions)[1]
         self.assertEqual(distance, np.inf)
+
+    def test_get_new_direction(self):
+        cases = [
+            # current direction, new north, new east, expected new direction
+            [Line_Follower_Direction.DOWN, 0, 0, Line_Follower_Direction.DOWN],
+            [Line_Follower_Direction.UP, 1, 0, Line_Follower_Direction.UP],
+            [Line_Follower_Direction.RIGHT, 1, 0, Line_Follower_Direction.UP],
+            [Line_Follower_Direction.UP, 0, 1, Line_Follower_Direction.RIGHT],
+            [Line_Follower_Direction.LEFT, 0, 1, Line_Follower_Direction.RIGHT],
+            [Line_Follower_Direction.UP, -1, 1, Line_Follower_Direction.DOWN]
+        ]
+
+        msg = "Direction {0} to ({1},{2}) results in new direction {3}"
+        self.assigner._current_positions = [(0, 0)]
+        for case in cases:
+            self.assigner._current_directions = [case[0]]
+            new_position = (case[1], case[2])
+            self.assertEqual(self.assigner._get_new_direction(0, new_position),
+                             case[3], msg=msg.format(*case))
