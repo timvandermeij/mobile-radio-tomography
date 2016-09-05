@@ -9,6 +9,7 @@ from PyQt4 import QtGui, QtCore
 
 # Package imports
 from Control_Panel_Settings_Widgets import SettingsTableWidget
+from ..reconstruction.Buffer import Buffer
 
 class Graph(object):
     def __init__(self, settings):
@@ -93,14 +94,22 @@ class Graph(object):
         self._graph_curves = []
 
 class Grid(QtGui.QGraphicsView):
-    def __init__(self, settings):
+    def __init__(self, settings=None, size=None):
         """
         Initialize the grid object.
         """
 
         super(Grid, self).__init__()
 
-        self._size = settings.get("reconstruction_grid_size")
+        if settings is not None and size is not None:
+            raise TypeError("Either one of `settings` and `size` must be given, not both")
+
+        if settings is not None:
+            self._size = settings.get("reconstruction_grid_size")
+        elif size is not None:
+            self._size = size
+        else:
+            raise TypeError("Either one of `settings` and `size` must be given")
 
         self._clear = False
         self._links = []
@@ -111,10 +120,19 @@ class Grid(QtGui.QGraphicsView):
 
     def setup(self, buffer):
         """
-        Setup the map grid the size from the `buffer`.
+        Setup the grid.
+
+        Retrieve the size from the `buffer`, which is either a `Buffer` object
+        or a tuple or list containing the network width and height.
         """
 
-        self._width, self._height = buffer.size
+        if isinstance(buffer, Buffer):
+            self._width, self._height = buffer.size
+        elif isinstance(buffer, (tuple, list)) and len(buffer) == 2:
+            self._width, self._height = buffer
+        else:
+            raise TypeError("`buffer` must be a `Buffer` object or tuple of length 2")
+
         self._cell_size = self._size / max(self._width, self._height)
 
         # Clear the scene for (re)drawing the grid.
@@ -141,11 +159,15 @@ class Grid(QtGui.QGraphicsView):
             self._scene.addLine(coordinate, 0, coordinate, vertical_extend,
                                 QtGui.QPen(QtCore.Qt.black))
 
-    def _add_link(self, source, target):
+    def add_link(self, source, target):
         """
         Add a link to the scene. The link consists of two tuples
         indicating the `source` and `target` sensor locations.
         """
+
+        # Remove existing links if necessary.
+        if self._clear:
+            self.clear()
 
         pen = QtGui.QPen(QtCore.Qt.blue, 2, QtCore.Qt.SolidLine)
         points = []
@@ -161,12 +183,10 @@ class Grid(QtGui.QGraphicsView):
 
     def update(self, packet):
         """
-        Update the grid with information in the `packet`.
+        Update the grid with information in the `packet`, which is a `Packet`
+        object containing information belonging to the `"rssi_ground_station"`
+        specification.
         """
-
-        # Remove existing links if necessary.
-        if self._clear:
-            self.clear()
 
         # Add the new link if the locations are valid.
         if not packet.get("from_valid") or not packet.get("to_valid"):
@@ -174,7 +194,7 @@ class Grid(QtGui.QGraphicsView):
 
         source = (packet.get("from_latitude"), packet.get("from_longitude"))
         target = (packet.get("to_latitude"), packet.get("to_longitude"))
-        self._add_link(source, target)
+        self.add_link(source, target)
 
     def toggle(self, state):
         """

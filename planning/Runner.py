@@ -74,16 +74,18 @@ class Planning_Runner(Threadable):
         # Nondominated layers of solution objectives
         self.R = []
 
+    def _save(self, P, Objectives, Feasible):
+        self.P = np.copy(P)
+        self.Objectives = np.copy(Objectives)
+        self.Feasible = np.copy(Feasible)
+        self.R = self.algorithm.sort_nondominated(self.Objectives)
+
     def _handle_algorithm_data(self, algorithm, data):
         # Pass through to the actual algorithm iteration callback, and track 
         # the current variables in the runner as well.
         if self._iteration_callback is not None:
             self.current_iteration = data["iteration"]
-            self.P = np.copy(data["population"])
-            self.Feasible = np.copy(data["feasible"])
-            self.Objectives = np.copy(data["objectives"])
-            self.R = self.algorithm.sort_nondominated(self.Objectives)
-
+            self._save(data["population"], data["objectives"], data["feasible"])
             self._iteration_callback(algorithm, data)
 
     def activate(self):
@@ -98,7 +100,9 @@ class Planning_Runner(Threadable):
 
     def deactivate(self):
         """
-        Stop the algorithm if it is currently running.
+        Halt the algorithm if it is currently running.
+
+        This throws away the results of the algorithm.
 
         This makes the iteration limit invalid, so any later runs must either
         reinstantiate the entire runner or set the iteration limit again.
@@ -106,7 +110,7 @@ class Planning_Runner(Threadable):
 
         super(Planning_Runner, self).deactivate()
 
-        self.set_iteration_limit(0)
+        self.stop()
         self._halt = True
 
     def start(self):
@@ -122,10 +126,7 @@ class Planning_Runner(Threadable):
                 return []
 
             self.current_iteration = self.get_iteration_current()
-            self.P = np.copy(P)
-            self.Objectives = np.copy(Objectives)
-            self.Feasible = np.copy(Feasible)
-            self.R = self.algorithm.sort_nondominated(self.Objectives)
+            self._save(P, Objectives, Feasible)
         except:
             if self._halt:
                 return []
@@ -136,6 +137,24 @@ class Planning_Runner(Threadable):
         self.done = True
 
         return self.get_indices()
+
+    def stop(self):
+        """
+        Stop the algorithm if it is currently running.
+
+        Compared to `deactivate`, this allows the run to finish at the current
+        iteration normally, making it possible to use its results.
+
+        This makes the iteration limit invalid, so any later runs must either
+        reinstantiate the entire runner or set the iteration limit again.
+        """
+
+        self.set_iteration_limit(0)
+
+    def finish(self):
+        """
+        Finalize the data from the run and mark it as finished.
+        """
 
     def get_indices(self, sort=0):
         """
