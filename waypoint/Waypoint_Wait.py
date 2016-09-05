@@ -22,6 +22,14 @@ class Waypoint_Wait(Waypoint):
     def name(self):
         return Waypoint_Type.WAIT
 
+    @property
+    def wait_id(self):
+        return self._wait_id
+
+    @property
+    def wait_count(self):
+        return self._wait_count
+
     def get_points(self):
         return self._geometry.get_location_range(self._previous_location,
                                                  self._location,

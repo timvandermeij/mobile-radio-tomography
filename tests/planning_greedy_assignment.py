@@ -1,9 +1,10 @@
 import numpy as np
+from ..core.Import_Manager import Import_Manager
 from ..geometry.Geometry_Grid import Geometry_Grid
 from ..location.Line_Follower import Line_Follower_Direction
 from ..planning.Greedy_Assignment import Greedy_Assignment
 from ..settings import Arguments
-from ..waypoint.Waypoint import Waypoint_Type
+from ..waypoint.Waypoint import Waypoint, Waypoint_Type
 from settings import SettingsTestCase
 
 class TestPlanningGreedyAssignment(SettingsTestCase):
@@ -12,10 +13,14 @@ class TestPlanningGreedyAssignment(SettingsTestCase):
             "--network-padding", "5", "5"
         ])
         self.geometry = Geometry_Grid()
-        self.assigner = Greedy_Assignment(self.arguments, self.geometry)
+        self.import_manager = Import_Manager()
+        self.assigner = Greedy_Assignment(self.arguments, self.geometry,
+                                          self.import_manager)
 
     def test_init(self):
         self.assertEqual(self.assigner._geometry, self.geometry)
+        self.assertEqual(self.assigner._import_manager, self.import_manager)
+
         self.assertEqual(self.assigner._number_of_vehicles, 2)
         self.assertEqual(self.assigner._home_locations, [[0, 0], [0, 19]])
         self.assertEqual(self.assigner._vehicle_pairs, [(1, 2), (2, 1)])
@@ -54,9 +59,40 @@ class TestPlanningGreedyAssignment(SettingsTestCase):
     def test_assign_conflict(self):
         positions = np.array([[[0, 0], [0, 0]]])
 
+        assignment, distance = self.assigner.assign(positions)
+
+        # A conflicting assignment results in an empty dictionary.
+        self.assertEqual(assignment, {})
+
         # The distance of a conflicting assignment is set to infinity.
-        distance = self.assigner.assign(positions)[1]
         self.assertEqual(distance, np.inf)
+
+    def test_assign_export(self):
+        positions = np.array([[[3, 4], [0, 18]]])
+        assignment = self.assigner.assign(positions, export=False)[0]
+
+        # We receive a good assignment.
+        self.assertIsInstance(assignment, dict)
+        self.assertEqual(len(assignment), 2)
+        self.assertEqual(len(assignment[1]), 1)
+        self.assertEqual(len(assignment[2]), 1)
+
+        first_waypoint = assignment[1][0]
+        self.assertIsInstance(first_waypoint, Waypoint)
+        self.assertEqual(first_waypoint.name, Waypoint_Type.WAIT)
+        self.assertEqual(first_waypoint.vehicle_id, 1)
+        self.assertEqual(first_waypoint.location.north, 3)
+        self.assertEqual(first_waypoint.location.east, 4)
+        self.assertEqual(first_waypoint.wait_id, 2)
+        self.assertEqual(first_waypoint.wait_count, 1)
+
+        second_waypoint = assignment[2][0]
+        self.assertEqual(second_waypoint.name, Waypoint_Type.WAIT)
+        self.assertEqual(second_waypoint.vehicle_id, 2)
+        self.assertEqual(second_waypoint.location.north, 0)
+        self.assertEqual(second_waypoint.location.east, 18)
+        self.assertEqual(second_waypoint.wait_id, 1)
+        self.assertEqual(second_waypoint.wait_count, 1)
 
     def test_get_new_direction(self):
         cases = [

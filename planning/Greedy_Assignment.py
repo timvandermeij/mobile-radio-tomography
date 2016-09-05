@@ -1,7 +1,7 @@
 import itertools
 import numpy as np
 from ..location.Line_Follower import Line_Follower_Direction
-from ..waypoint.Waypoint import Waypoint_Type
+from ..waypoint.Waypoint import Waypoint, Waypoint_Type
 from Collision_Avoidance import Collision_Avoidance
 
 class Greedy_Assignment(object):
@@ -20,9 +20,10 @@ class Greedy_Assignment(object):
     or use a different distance function.
     """
 
-    def __init__(self, arguments, geometry):
+    def __init__(self, arguments, geometry, import_manager):
         self._settings = arguments.get_settings("planning_assignment")
         self._geometry = geometry
+        self._import_manager = import_manager
 
         self._home_locations = self._settings.get("vehicle_home_locations")
         self._home_directions = self._settings.get("vehicle_home_directions")
@@ -35,10 +36,35 @@ class Greedy_Assignment(object):
         )
         self._collision_avoider = Collision_Avoidance(arguments, geometry)
 
+        self._export = True
+
         self._assignment = None
         self._positions = None
         self._current_positions = None
         self._current_directions = None
+
+    def _add_waypoint(self, vehicle, position, waypoint_type=Waypoint_Type.WAIT,
+                      wait_id=0, wait_count=1):
+        """
+        Create a waypoint based on the given coordinate tuple `position` and
+        additional type-specific data, and add it to the assignment.
+
+        The assignment can be altered to add different waypoint types using the
+        `waypoint_type` keyword argument, which expects a `Waypoint_Type` enum
+        value. For wait types, `wait_id` and `wait_count` integers are accepted.
+        """
+
+        if self._export:
+            waypoint = list(position) + [
+                0, waypoint_type, wait_id, wait_count
+            ]
+        else:
+            location = self._geometry.make_location(*position)
+            waypoint = Waypoint.create(self._import_manager, waypoint_type,
+                                       vehicle, self._geometry, location,
+                                       wait_id=wait_id, wait_count=wait_count)
+
+        self._assignment[vehicle].append(waypoint)
 
     def _calculate_vehicle_distances(self):
         V = np.full((self._number_of_vehicles, 2, len(self._positions)), np.nan)
@@ -114,30 +140,35 @@ class Greedy_Assignment(object):
         for i, sync_pair in enumerate(syncs):
             vehicle, other_vehicle = sync_pair
 
-            # The coordinates of the next position for the given vehicle.
+            # The coordinates of the next position for the given vehicle, and 
+            # the direction of the vehicle after moving to this position.
             new_position = list(self._positions[closest_pair, i, :])
             new_direction = self._get_new_direction(vehicle, new_position)
 
-            # The assigned waypoint containing the full position and the other 
-            # vehicle's wait ID.
-            waypoint = new_position + [0, Waypoint_Type.WAIT, other_vehicle, 1]
-
-            # Create the assignment and track the new position.
-            self._assignment[vehicle].append(waypoint)
+            # Track the new position and direction
             self._current_positions[vehicle-1] = new_position
             self._current_directions[vehicle-1] = new_direction
 
+            # Check whether the new position is problematic according to the 
+            # collision avoidance algorithm, i.e., it crosses other current 
+            # routes.
             self._collision_avoider.update(self._home_locations,
-                                           self._assignment, vehicle,
+                                           new_position, vehicle,
                                            other_vehicle, distance)
             if self._collision_avoider.distance > distance:
                 distance = self._collision_avoider.distance
                 if distance == np.inf:
                     return distance
 
+            # Assign the sensor waypoint, including the position and the other 
+            # vehicle's wait ID.
+            self._add_waypoint(vehicle, new_position,
+                               waypoint_type=Waypoint_Type.WAIT,
+                               wait_id=other_vehicle, wait_count=1)
+
         return distance
 
-    def assign(self, positions_pairs):
+    def assign(self, positions_pairs, export=True):
         """
         Assign the vehicles with current positions `home_positions` an ordering
         of the position pairs to be visited. `positions_pairs` must be a numpy
@@ -146,11 +177,13 @@ class Greedy_Assignment(object):
         respectively.
 
         The returned values are the assignment, which is a dictionary with
-        vehicle indexes and an ordered list of position coordinates to visit,
-        and the total distance needed for this assignment according to the
-        algorithm.
+        vehicle indexes and an ordered list of waypoints to visit, and the
+        total distance needed for this assignment according to the algorithm.
+        If `export` is `True`, then the waypoints are lists that can be exported
+        as JSON. Set `export` to `False` to receive `Waypoint` objects instead.
         """
 
+        self._export = export
         self._collision_avoider.reset()
 
         self._positions = np.array(positions_pairs, dtype=np.int)

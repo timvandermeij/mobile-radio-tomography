@@ -92,18 +92,17 @@ class Collision_Avoidance(Location_Proxy):
 
         return self._current_vehicle in self._vehicle_syncs[other_vehicle]
 
-    def update(self, home_locations, assignment, vehicle, other_vehicle,
+    def update(self, home_locations, new_position, vehicle, other_vehicle,
                norm_distance):
         """
         Update the collision avoidance and find a safe path to a new position.
 
         The vehicles are tracked by their indices in the `home_locations` list,
-        which are coordinate tuples. `assignment` is a dictionary indexed by
-        the vehicle IDs with the currently assigned waypoints. The goal location
-        for the current vehicle with ID `vehicle` is already added to the
-        assignment, and this waypoint synchronizes by waiting for the vehicle
-        with ID `other_vehicle`. The `norm_distance` is an indication of the
-        distance between the previous waypoint and the newly assigned waypoint.
+        which are coordinate tuples. `new_position` is a coordinate tuple of the
+        goal location for the current vehicle with ID `vehicle`. This waypoint
+        will synchronize by waiting for the vehicle with ID `other_vehicle`.
+        The `norm_distance` is an indication of the distance between the
+        previous waypoint and the new waypoint.
 
         The collision avoidance algorithm attempts to find a path from
         the previous waypoint to the current waypoint crosses any concurrent
@@ -146,7 +145,7 @@ class Collision_Avoidance(Location_Proxy):
 
         # Determine the conflict-free (and thus safe) path to the waypoint.
         start_index = self._vehicle_routes[self._current_vehicle][-1]
-        goal_index = assignment[vehicle][-1][:2]
+        goal_index = tuple(new_position)
         route, distance = self._astar.assign(start_index, goal_index, 1.0)
 
         # If we could not find a route, then there is no safe route. This is 

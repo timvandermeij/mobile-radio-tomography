@@ -256,7 +256,7 @@ class Problem(object):
         return constraints
 
 class Reconstruction_Plan(Problem):
-    def __init__(self, arguments):
+    def __init__(self, arguments, import_manager):
         """
         Initialize the reconstruction planning problem.
 
@@ -272,7 +272,15 @@ class Reconstruction_Plan(Problem):
 
         # Import the settings for the planning problem.
         self.arguments = arguments
-        self.arguments.get_settings("reconstruction").set("model_class", "Ellipse_Model")
+        self._import_manager = import_manager
+
+        # Always use the ellipse model for the reconstruction weight model. 
+        # This is a fast weight model, and it does not have a lot of modeling 
+        # of attenuation and log path loss weighting that would easily make all 
+        # pixels be intersected by lines at low weight.
+        reconstruction_settings = self.arguments.get_settings("reconstruction")
+        reconstruction_settings.set("model_class", "Ellipse_Model")
+
         self.settings = self.arguments.get_settings("planning_problem")
         self.N = self.settings.get("number_of_measurements")
         self.network_size = self.settings.get("network_size")
@@ -302,7 +310,8 @@ class Reconstruction_Plan(Problem):
         # make lines and points, if necessary.
         self.geometry = Geometry_Grid()
 
-        self.assigner = Greedy_Assignment(self.arguments, self.geometry)
+        self.assigner = Greedy_Assignment(self.arguments, self.geometry,
+                                          self._import_manager)
         self.delta_rate = self.settings.get("delta_rate")
 
         self.travel_distance = 0.0
@@ -520,8 +529,9 @@ class Reconstruction_Plan_Continuous(Reconstruction_Plan):
         return [[0, b], [self.network_size[0], a*self.network_size[0]+b]]
 
 class Reconstruction_Plan_Discrete(Reconstruction_Plan):
-    def __init__(self, arguments):
-        super(Reconstruction_Plan_Discrete, self).__init__(arguments)
+    def __init__(self, arguments, import_manager):
+        super(Reconstruction_Plan_Discrete, self).__init__(arguments,
+                                                           import_manager)
         self._use_mutation_operator = self.settings.get("mutation_operator")
 
     def get_domain(self):

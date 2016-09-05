@@ -19,20 +19,25 @@ class Planning_Runner(Threadable):
     output of the algorithm.
     """
 
-    def __init__(self, arguments, thread_manager, iteration_callback=None):
+    def __init__(self, arguments, thread_manager, import_manager,
+                 iteration_callback=None):
         super(Planning_Runner, self).__init__("planning_runner", thread_manager)
 
         self.arguments = arguments
         self.settings = self.arguments.get_settings("planning_runner")
+
+        self._import_manager = import_manager
         self._iteration_callback = iteration_callback
 
         self.reset()
 
     def _get_problem(self):
         if self.settings.get("discrete"):
-            return Reconstruction_Plan_Discrete(self.arguments)
+            problem_class = Reconstruction_Plan_Discrete
+        else:
+            problem_class = Reconstruction_Plan_Continuous
 
-        return Reconstruction_Plan_Continuous(self.arguments)
+        return problem_class(self.arguments, self._import_manager)
 
     def reset(self):
         """
@@ -299,21 +304,22 @@ class Planning_Runner(Threadable):
             o2 = [self.Objectives[i][1] for i in Rk if self.Feasible[i]]
             axes.plot(o1, o2, marker='o', picker=5)
 
-    def get_assignment(self, i):
+    def get_assignment(self, i, export=True):
         """
         Given an index `i` of an individual from a run of the algorithm, return
-        the dictionary of ordered waypoint assignments to vehicles.
+        the dictionary of ordered waypoint assignments to vehicles. If `export`
+        is `True`, then the waypoints are lists that can be exported as JSON.
+        Set `export` to `False` to receive `Waypoint` objects instead.
 
         If the algorithm does not yet have (intermediate) results or if the
-        solution is not feasible, then this method returns an empty dictionary
-        instead.
+        solution is not feasible, then this method returns an empty dictionary.
         """
         
         positions = self.get_positions(i)[0]
         if positions.size == 0:
             return {}
 
-        assignment = self.problem.assigner.assign(positions)[0]
+        assignment = self.problem.assigner.assign(positions, export=export)[0]
         return assignment
 
     def get_iteration_current(self):
