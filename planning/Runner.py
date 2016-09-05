@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
 # Package imports
-import Algorithm
 from Problem import Reconstruction_Plan_Continuous, Reconstruction_Plan_Discrete
 from ..core.Threadable import Threadable
 
@@ -47,11 +46,10 @@ class Planning_Runner(Threadable):
         self.problem = self._get_problem()
 
         algo = self.settings.get("algorithm_class")
+        algo_class = self._import_manager.load_class(algo, module="Algorithm",
+                                                     relative_module="planning")
 
-        if algo not in Algorithm.__dict__:
-            raise ValueError("Algorithm class '{}' does not exist".format(algo))
-
-        self.algorithm = Algorithm.__dict__[algo](self.problem, self.arguments)
+        self.algorithm = algo_class(self.problem, self.arguments)
         self.algorithm.set_iteration_callback(self._handle_algorithm_data)
 
         # Whether the algorithm is done running.

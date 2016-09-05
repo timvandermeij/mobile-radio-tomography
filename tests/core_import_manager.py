@@ -1,7 +1,7 @@
 import os
 import sys
 import unittest
-from mock import patch, MagicMock, Mock
+from mock import patch, Mock
 from ..core import Import_Manager
 
 class TestCoreImportManager(unittest.TestCase):
@@ -11,15 +11,29 @@ class TestCoreImportManager(unittest.TestCase):
         # Base package that the import manager uses. We expect it to be equal 
         # to the base directory name.
         path = os.path.dirname(os.path.dirname(__file__))
+
         self.package = os.path.basename(path)
-        self.mock_module = MagicMock(Mock_Class=Mock(), spec=True)
-        self.mock_relative_module = MagicMock(Relative=Mock(), spec=True)
-        self.mock_global_module = MagicMock()
+
+        self.module_name = self.package + ".mock_module"
+        self.sub_module_name = self.package + ".sub"
+        self.relative_module_name = self.package + ".sub.Relative"
+        self.global_module_name = "global_module"
+
+        self.mock_module = Mock(__name__=self.module_name, Mock_Class=Mock(),
+                                spec=True)
+
+        self.mock_sub_module = Mock(__name__=self.sub_module_name, spec=True)
+        self.mock_relative_module = Mock(__name__=self.relative_module_name,
+                                         Relative=Mock(), Second_Class=Mock(),
+                                         spec=True)
+        self.mock_global_module = Mock(__name__=self.global_module_name,
+                                       spec=True)
+
         modules = {
-            self.package + ".mock_module": self.mock_module,
-            self.package + ".sub": MagicMock(),
-            self.package + ".sub.Relative": self.mock_relative_module,
-            "global_module": self.mock_global_module
+            self.module_name: self.mock_module,
+            self.sub_module_name: self.mock_sub_module,
+            self.relative_module_name: self.mock_relative_module,
+            self.global_module_name: self.mock_global_module
         }
 
         self._import_patcher = patch.dict('sys.modules', modules)
@@ -45,30 +59,37 @@ class TestCoreImportManager(unittest.TestCase):
             self.import_manager.load("nonexistent_module", relative=True)
 
     def test_load_class(self):
+        # Load a class from a module.
         loaded_class = self.import_manager.load_class("Mock_Class",
                                                       module="mock_module")
         self.assertEqual(loaded_class, self.mock_module.Mock_Class)
+
+        # Load a class from a relative submodule.
         loaded_sub_class = self.import_manager.load_class("Relative",
                                                           relative_module="sub")
         self.assertEqual(loaded_sub_class, self.mock_relative_module.Relative)
 
-        # Passing both `module` and `relative_module` is not allowed.
-        with self.assertRaises(ValueError):
-            self.import_manager.load_class("ABC", module="mock_module",
-                                           relative_module="rel")
+        # Load a class from a relative submodule with a different name than the 
+        # module.
+        other_class = self.import_manager.load_class("Second_Class",
+                                                     module="Relative",
+                                                     relative_module="sub")
+        self.assertEqual(other_class, self.mock_relative_module.Second_Class)
 
         # Import errors are generated correctly.
         with self.assertRaises(ImportError):
             self.import_manager.load_class("sys", module="nonexistent_module")
-        with self.assertRaises(ImportError):
+
+        error_msg = ".*'Nonexistent' from module '{}'".format(self.module_name)
+        with self.assertRaisesRegexp(ImportError, error_msg):
             self.import_manager.load_class("Nonexistent", module="mock_module")
 
     def test_unload(self):
         self.import_manager.unload("mock_module", relative=True)
-        self.assertNotIn(self.package + ".mock_module", sys.modules)
+        self.assertNotIn(self.module_name, sys.modules)
 
         self.import_manager.unload("global_module", relative=False)
-        self.assertNotIn("global_module", sys.modules)
+        self.assertNotIn(self.global_module_name, sys.modules)
 
     def test_reload(self):
         # We can reload the Import_Manager module without breaking.
