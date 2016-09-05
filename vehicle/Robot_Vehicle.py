@@ -64,7 +64,8 @@ class Robot_Vehicle(Vehicle):
         self._location = self._home_location
         # The starting direction of the robot. The robot should be aligned with 
         # this direction to begin with.
-        self._direction = self.settings.get("home_direction")
+        direction = self.settings.get("home_direction")
+        self._direction = Line_Follower_Direction(direction)
 
         self._line_follower = None
         self._setup_line_follower(import_manager, thread_manager, usb_manager)
@@ -185,7 +186,7 @@ class Robot_Vehicle(Vehicle):
                     # direction, thus track whether we found a new line. Only 
                     # do so when we see the line from the side that we are 
                     # moving to, not when we rotate away from it again.
-                    direction = (self._state.current_direction + direction) % 4
+                    direction = self._state.current_direction.add(direction)
                     new_state = Robot_State_Rotate(self._state.rotate_direction,
                                                    self._state.target_direction,
                                                    direction)
@@ -424,7 +425,7 @@ class Robot_Vehicle(Vehicle):
         if relative:
             heading = self._get_yaw() + heading
 
-        target_direction = int(round(2*heading/math.pi)) % 4
+        target_direction = Line_Follower_Direction.from_yaw(heading)
 
         self._set_direction(target_direction, direction)
 
@@ -437,8 +438,7 @@ class Robot_Vehicle(Vehicle):
         `-1` if counterclockwise rotation is the quickest.
         """
 
-        steps = (target_direction - self._direction + 2) % 4 - 2
-        return int(math.copysign(1, steps))
+        return self._direction.get_rotate_direction(target_direction)
 
     def _set_direction(self, target_direction, rotate_direction=0):
         if target_direction == self._direction:

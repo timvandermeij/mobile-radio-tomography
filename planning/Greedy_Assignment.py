@@ -81,8 +81,8 @@ class Greedy_Assignment(object):
                 # optionally turn in the same direction again, or turn around 
                 # completely.
                 cur = self._current_directions[vehicle]
-                right = abs(S[:, (cur + 1) % 2])
-                straight = (2 - right) * (S[:, cur % 2] == 2 * (cur / 2) - 1)
+                right = abs(S[:, (cur.axis + 1) % 2])
+                straight = (2 - right) * (S[:, cur.axis] == cur.sign)
                 T = straight + right
 
                 V[vehicle, i, :] = abs(D).sum(axis=1) + self._turning_cost * T
@@ -113,7 +113,7 @@ class Greedy_Assignment(object):
         # up != 0, right != 0, and either up or right is in the wrong direction 
         # compared to the current direction. thus the next direction is the 
         # inverse of the current direction.
-        return (self._current_directions[vehicle-1] + 2) % 4
+        return self._current_directions[vehicle-1].invert()
 
     def _get_closest_pair(self):
         V = self._calculate_vehicle_distances()
@@ -188,7 +188,9 @@ class Greedy_Assignment(object):
 
         self._positions = np.array(positions_pairs, dtype=np.int)
         self._current_positions = list(self._home_locations)
-        self._current_directions = list(self._home_directions)
+        self._current_directions = [
+            Line_Follower_Direction(d) for d in self._home_directions
+        ]
 
         self._assignment = dict([
             (i, []) for i in range(1, self._number_of_vehicles + 1)

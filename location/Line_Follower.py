@@ -1,8 +1,10 @@
+import math
 import thread
 import time
+from enum import IntEnum
 from ..core.Threadable import Threadable
 
-class Line_Follower_Direction(object):
+class Line_Follower_Direction(IntEnum):
     """
     Enumeration of possible directions of the line follower.
 
@@ -14,11 +16,74 @@ class Line_Follower_Direction(object):
     DOWN = 2
     LEFT = 3
 
-class Line_Follower_State(object):
+    @classmethod
+    def from_yaw(cls, heading):
+        """
+        Convert a yaw `heading` into a line follower direction that matches the
+        yaw the closest. The `heading` is given in radians, where upward is
+        zero degrees and and increments clockwise.
+        """
+
+        return cls(round(2*heading/math.pi) % 4)
+
+    @property
+    def axis(self):
+        """
+        Provide the axis of reference for the current direction.
+
+        For up and down, the axis of reference is `0`, and for left and right
+        it is `1`. For coordinate tuples that use northward and eastward axes,
+        then this matches with the indexes used for such tuples.
+        """
+
+        return self % 2
+
+    @property
+    def sign(self):
+        """
+        Provide the sign of the current direction.
+
+        The sign is either `-1` or `1` and determines whether the direction
+        would lead to a lower coordinate value for the axis of direction.
+
+        Thus, up and right result in `1`, while down and left result in `-1`.
+        """
+
+        return 2 * (self / 2) - 1
+
+    def invert(self):
+        """
+        Retrieve the inverted value of the direction. This exchanges up and down
+        or right and left.
+        """
+
+        return Line_Follower_Direction((self + 2) % 4)
+
+    def add(self, direction):
+        """
+        Return the resulting direction if the current direction and the given
+        `direction` are added up to each other.
+        """
+
+        return Line_Follower_Direction((self + direction) % 4)
+
+    def get_rotate_direction(self, target_direction):
+        """
+        Determine the direction in which we can rotate to the given
+        `target_direction`, a `Line_Follower_Direction`, the quickest.
+
+        The returned value is `1` is clockwise rotation is the quickest, and
+        `-1` if counterclockwise rotation is the quickest.
+        """
+
+        steps = (target_direction - self + 2) % 4 - 2
+        return int(math.copysign(1, steps))
+
+class Line_Follower_State(IntEnum):
     AT_LINE = 1
     AT_INTERSECTION = 2
 
-class Line_Follower_Bit_Mask(object):
+class Line_Follower_Bit_Mask(IntEnum):
     LINE = 0b0110
     LINE_LEFT = 0b1000
     LINE_RIGHT = 0b0001
