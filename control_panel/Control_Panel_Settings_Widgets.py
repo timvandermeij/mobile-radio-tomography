@@ -15,7 +15,8 @@ class SettingsWidget(QtGui.QWidget):
             "file": "File name",
             "class": "Class name",
             "list": "List",
-            "tuple": "Tuple"
+            "tuple": "Tuple",
+            "enum": "Enumeration"
         }
         self._type_widgets = {
             "int": IntegerFormWidget,
@@ -210,7 +211,7 @@ class SettingsWidget(QtGui.QWidget):
         choices = self._arguments.get_choices(info)
         if choices is not None:
             widget = ChoicesFormWidget(self, key, info, settings, horizontal)
-            widget.add_choices(choices)
+            widget.add_choices(choices, self._arguments)
         else:
             widget_type = self._type_widgets[info["type"]]
             widget = widget_type(self, key, info, settings, horizontal)

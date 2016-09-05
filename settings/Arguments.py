@@ -4,6 +4,7 @@ import sys
 from argparse import ArgumentParser, HelpFormatter
 from copy import copy
 from functools import partial
+from enum import Enum
 from ..core.Import_Manager import Import_Manager
 from Settings import Settings
 
@@ -251,32 +252,49 @@ class Arguments(object):
             self._add_arguments(group, settings)
             self._fill_settings(settings)
 
-    def _get_keys(self, location, relative=True):
+    def load_choice_source(self, location, relative=True):
         """
-        Retrieve a list of option choices from a module or a (nested) attribute.
+        Load a module a (nested) attribute from a module.
 
         The `location` is a list with at least one element, where the first
         element is a module. The module is relative to the base package if
         `relative` is `True`, otherwise it is a global module. The remainder of
         that list, if provided, are variable names that, in order, exist in that
-        module, the variable previously in the list, and so on. The final
-        variable must be a dictionary, or if it was only a module, then it must
-        have an `__all__` variable or be enumerable with `dir`.
+        module, the variable previously in the list, and so on.
 
-        Returns the keys from the variable dictionary or the enumerated values
-        from the module's exportable contents.
+        Returns the eventual attribute.
+        """
+
+        data = self._import_manager.load(location[0], relative=relative)
+        for attr in location[1:]:
+            data = getattr(data, attr)
+
+        return data
+
+    def _get_choice_keys(self, location, relative=True):
+        """
+        Retrieve a list of option choices from a module or a (nested) attribute.
+
+        The `location` is a list of a module name, which is relative to the base
+        package if `relative` is `True` or a global module otherwise, and nested
+        attribute names that are loaded using `load_choice_source`. The final
+        variable must be an `Enum`, a dictionary, or if it was only a module,
+        then it must have an `__all__` variable or be enumerable with `dir`.
+
+        Returns a list containing the enum values, the keys from the variable
+        dictionary, or the symbol names from the module's exportable contents.
         """
 
         try:
-            data = self._import_manager.load(location[0], relative=relative)
+            data = self.load_choice_source(location, relative=relative)
         except ImportError:
             # Module is not installed. Instead of dieing, simply allow every 
             # value. If the module is of importance outside of the setting, 
             # then the error will be handled in a better way there.
             return None
 
-        for attr in location[1:]:
-            data = getattr(data, attr)
+        if isinstance(data, type) and issubclass(data, Enum):
+            return [item.value for item in iter(data)]
 
         if isinstance(data, dict):
             return data.keys()
@@ -313,9 +331,11 @@ class Arguments(object):
         if "options" in info:
             return copy(info["options"])
         if "keys" in info:
-            return copy(self._get_keys(info["keys"], relative=False))
+            return copy(self._get_choice_keys(info["keys"], relative=False))
         if "module" in info:
-            return copy(self._get_keys([info["module"]], relative=True))
+            return copy(self._get_choice_keys([info["module"]], relative=True))
+        if "enum" in info:
+            return copy(self._get_choice_keys(info["enum"], relative=True))
 
         return None
 
@@ -340,6 +360,37 @@ class Arguments(object):
         if "required" in info and not info["required"]:
             kw["required"] = required = info["required"]
 
+        if info["type"] in ("list", "tuple"):
+            kw["nargs"] = info["length"] if "length" in info else "*"
+            if "subtype" in info:
+                sub_info = info.copy()
+                del sub_info["subtype"]
+
+                if isinstance(info["subtype"], dict):
+                    sub_info.update(info["subtype"])
+                else:
+                    sub_info["type"] = info["subtype"]
+
+                kw.update(self._get_argument_type_options(sub_info, required))
+        else:
+            kw.update(self._get_argument_type_options(info, required))
+
+        return kw
+
+    def _get_argument_type_options(self, info, required=True):
+        """
+        Convert the registry information `info` for a given setting to action
+        arguments that are suitable for the argument parser. This depends on the
+        "type" of the setting and other related information. It is suitable for
+        elements from a list-like setting or for a normal setting, but it is
+        not complete. `required` indicates whether the setting must be given
+        a value.
+
+        Returns the partial options in a dictionary.
+        """
+
+        kw = {}
+
         choices = self.get_choices(info)
         if choices is not None:
             if not required:
@@ -347,26 +398,20 @@ class Arguments(object):
 
             kw["choices"] = choices
 
-        if info["type"] in ("list", "tuple"):
-            kw["nargs"] = info["length"] if "length" in info else "*"
-            if "subtype" in info:
-                subtype = info["subtype"]
-                if isinstance(subtype, dict):
-                    subtype = subtype["type"]
-
-                if subtype in self._type_names:
-                    kw["type"] = self._type_names[subtype]
-        elif "replace" in info:
+        if "replace" in info:
             # Create a translation table and bind a function that performs the 
             # translation on input to the type of the argument.
             # This ensures the translation is performed before other checks 
             # (such as allowed choices) are done.
             table = string.maketrans(*info["replace"])
-            kw["type"] = partial(lambda table, x: str(x).translate(table), table)
+            kw["type"] = partial(lambda table, x: str(x).translate(table),
+                                 table)
         elif info["type"] == "bool":
             # Create options for enabling the setting. The counterpart for 
             # disabling is handled in `_add_arguments`.
             kw["action"] = "store_true"
+        elif info["type"] == "enum":
+            kw["type"] = int
         elif info["type"] in self._type_names:
             kw["type"] = self._type_names[info["type"]]
 
@@ -407,9 +452,13 @@ class Arguments(object):
         argument.
         """
 
-        if value is not None and "type" in info and info["type"] in self._type_names:
-            typecast = self._type_names[info["type"]]
-            return typecast(value)
+        if value is not None and "type" in info:
+            if info["type"] == "enum":
+                enum_cast = self.load_choice_source(info["enum"])
+                return enum_cast(value)
+            elif info["type"] in self._type_names:
+                type_cast = self._type_names[info["type"]]
+                return type_cast(value)
 
         return value
 
