@@ -55,6 +55,10 @@ class Planning_Runner(Threadable):
         # Whether the algorithm is done running.
         self.done = False
 
+        # Whether the algorithm should halt immediately once it detects the 
+        # signal to deactivate.
+        self._halt = False
+
         # Iteration from which we received the data from the iteration callback
         self.current_iteration = 0
 
@@ -103,6 +107,7 @@ class Planning_Runner(Threadable):
         super(Planning_Runner, self).deactivate()
 
         self.set_iteration_limit(0)
+        self._halt = True
 
     def start(self):
         """
@@ -113,12 +118,18 @@ class Planning_Runner(Threadable):
 
         try:
             P, Objectives, Feasible = self.algorithm.evolve()
+            if self._halt:
+                return []
+
             self.current_iteration = self.get_iteration_current()
             self.P = np.copy(P)
             self.Objectives = np.copy(Objectives)
             self.Feasible = np.copy(Feasible)
             self.R = self.algorithm.sort_nondominated(self.Objectives)
         except:
+            if self._halt:
+                return []
+
             super(Planning_Runner, self).interrupt()
             return []
 
