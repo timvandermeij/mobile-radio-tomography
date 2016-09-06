@@ -322,9 +322,19 @@ class TestGeometry(LocationTestCase):
         self.assertEqual(offsets.shape, (8, 2))
 
         # pylint: disable=bad-continuation,bad-whitespace
-        self.assertTrue(np.array_equal(offsets, [(-1, -1), (-1, 0), (-1, 1),
+        self.assertTrue(np.array_equal(offsets, [ (1, -1),  (1, 0),  (1, 1),
                                                   (0, -1),           (0, 1),
-                                                  (1, -1),  (1, 0),  (1, 1)]))
+                                                 (-1, -1), (-1, 0), (-1, 1)]))
+
+    def test_get_neighbor_directions(self):
+        angles = self.geometry.get_neighbor_directions()
+        self.assertEqual(angles.shape, (8,))
+        eighth = math.pi/4
+
+        # pylint: disable=bad-continuation,bad-whitespace
+        self.assertTrue(np.array_equal(angles, [7*eighth,   0.0,   1*eighth,
+                                                6*eighth,          2*eighth,
+                                                5*eighth, math.pi, 3*eighth]))
 
     def test_ray_intersects_segment(self):
         cases = [

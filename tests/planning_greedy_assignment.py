@@ -1,7 +1,9 @@
 import numpy as np
+from mock import patch
 from ..core.Import_Manager import Import_Manager
 from ..geometry.Geometry_Grid import Geometry_Grid
 from ..location.Line_Follower import Line_Follower_Direction
+from ..planning.Collision_Avoidance import Collision_Avoidance
 from ..planning.Greedy_Assignment import Greedy_Assignment
 from ..settings import Arguments
 from ..waypoint.Waypoint import Waypoint, Waypoint_Type
@@ -67,17 +69,28 @@ class TestPlanningGreedyAssignment(SettingsTestCase):
         # The distance of a conflicting assignment is set to infinity.
         self.assertEqual(distance, np.inf)
 
-    def test_assign_export(self):
+    @patch.object(Collision_Avoidance, "update",
+                  side_effect=(([(3, 0)], 0.0), ([], 0.0)))
+    def test_assign_export(self, update_mock):
         positions = np.array([[[3, 4], [0, 18]]])
         assignment = self.assigner.assign(positions, export=False)[0]
+
+        self.assertEqual(update_mock.call_count, 2)
 
         # We receive a good assignment.
         self.assertIsInstance(assignment, dict)
         self.assertEqual(len(assignment), 2)
-        self.assertEqual(len(assignment[1]), 1)
+        self.assertEqual(len(assignment[1]), 2)
         self.assertEqual(len(assignment[2]), 1)
 
-        first_waypoint = assignment[1][0]
+        pass_waypoint = assignment[1][0]
+        self.assertIsInstance(pass_waypoint, Waypoint)
+        self.assertEqual(pass_waypoint.name, Waypoint_Type.PASS)
+        self.assertEqual(pass_waypoint.vehicle_id, 1)
+        self.assertEqual(pass_waypoint.location.north, 3)
+        self.assertEqual(pass_waypoint.location.east, 0)
+
+        first_waypoint = assignment[1][1]
         self.assertIsInstance(first_waypoint, Waypoint)
         self.assertEqual(first_waypoint.name, Waypoint_Type.WAIT)
         self.assertEqual(first_waypoint.vehicle_id, 1)

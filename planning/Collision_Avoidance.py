@@ -22,6 +22,7 @@ class Collision_Avoidance(Location_Proxy):
         self._network_size = self._settings.get("network_size")
         self._network_padding = self._settings.get("network_padding")
         self._unsafe_path_cost = self._settings.get("unsafe_path_cost")
+        self._assign_safe_path = self._settings.get("assign_safe_path")
 
         self._vehicles = set()
         self._vehicle_syncs = {}
@@ -33,8 +34,7 @@ class Collision_Avoidance(Location_Proxy):
         self._center = self._geometry.make_location(center, center)
         self._memory_map = Memory_Map(self, max(self._network_size) + 1)
         self._astar = AStar(self._geometry, self._memory_map,
-                            allow_at_bounds=True, trend_strides=False,
-                            use_indices=True)
+                            allow_at_bounds=True, use_indices=True)
         self.reset()
 
     def reset(self):
@@ -93,7 +93,7 @@ class Collision_Avoidance(Location_Proxy):
         return self._current_vehicle in self._vehicle_syncs[other_vehicle]
 
     def update(self, home_locations, new_position, vehicle, other_vehicle,
-               norm_distance):
+               norm_distance, direction=None, turning_cost=0.0):
         """
         Update the collision avoidance and find a safe path to a new position.
 
@@ -115,7 +115,7 @@ class Collision_Avoidance(Location_Proxy):
         """
 
         if not self._enabled:
-            return
+            return [], None
 
         if not self._vehicle_routes:
             number_of_vehicles = len(home_locations)
@@ -143,10 +143,14 @@ class Collision_Avoidance(Location_Proxy):
             if self._is_synchronized(v):
                 self._update_route(route, 0)
 
-        # Determine the conflict-free (and thus safe) path to the waypoint.
+        # Determine a conflict-free (and thus safe) path from the current 
+        # position to the new position, and unpack the results.
         start_index = self._vehicle_routes[self._current_vehicle][-1]
         goal_index = tuple(new_position)
-        route, distance = self._astar.assign(start_index, goal_index, 1.0)
+
+        route, trend, distance, new_direction = \
+            self._astar.assign(start_index, goal_index, 1.0,
+                               direction=direction, turning_cost=turning_cost)
 
         # If we could not find a route, then there is no safe route. This is 
         # made known through the distance, which becomes the cost of traveling 
@@ -184,3 +188,6 @@ class Collision_Avoidance(Location_Proxy):
                     # the current vehicle which could cross the path, or extend 
                     # the current vehicle's route with the new one.
                     self._update_route(route, Collision_Type.ROUTE)
+
+        path = trend[:-1] if self._assign_safe_path else []
+        return path, new_direction

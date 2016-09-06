@@ -115,4 +115,7 @@ class Mission_Pathfind(Mission_Browse, Mission_Square):
         closeness = min(self.sensor_dist - self.padding,
                         self.padding + self.closeness)
 
-        return self._astar.assign(start, goal, closeness)[0]
+        # Retrieve the relevant waypoints of the safe path between start and 
+        # goal, where we do not move close to the objects.
+        return self._astar.assign(start, goal, closeness,
+                                  direction=self.vehicle.attitude.yaw)[1]

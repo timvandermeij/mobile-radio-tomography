@@ -709,6 +709,14 @@ class Geometry(object):
         """
 
         # pylint: disable=bad-continuation,bad-whitespace
-        return np.array([(-1, -1), (-1, 0), (-1, 1),
+        return np.array([ (1, -1),  (1, 0),  (1, 1),
                           (0, -1),           (0, 1),
-                          (1, -1),  (1, 0),  (1, 1)])
+                         (-1, -1), (-1, 0), (-1, 1)])
+
+    def get_neighbor_directions(self):
+        """
+        Retrieve yaw angle directions for the offsets returned by
+        `get_neighbor_offsets`
+        """
+
+        return np.array([a*math.pi/4 for a in (7, 0, 1, 6, 2, 5, 4, 3)])

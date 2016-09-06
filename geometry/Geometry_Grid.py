@@ -1,3 +1,4 @@
+import math
 import numpy as np
 from Geometry import Geometry
 
@@ -17,6 +18,9 @@ class Geometry_Grid(Geometry):
 
     def get_neighbor_offsets(self):
         # pylint: disable=bad-continuation,bad-whitespace
-        return np.array([          (-1, 0),
-                          (0, -1),           (0, 1),
-                                    (1, 0)          ])
+        return np.array([          (1, 0),
+                         (0, -1),           (0, 1),
+                                  (-1, 0)          ])
+
+    def get_neighbor_directions(self):
+        return np.array([a*math.pi/2 for a in (0, 3, 1, 2)])

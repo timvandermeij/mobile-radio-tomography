@@ -1,4 +1,5 @@
 import itertools
+import math
 import numpy as np
 from ..location.Line_Follower import Line_Follower_Direction
 from ..waypoint.Waypoint import Waypoint, Waypoint_Type
@@ -43,8 +44,8 @@ class Greedy_Assignment(object):
         self._current_positions = None
         self._current_directions = None
 
-    def _add_waypoint(self, vehicle, position, waypoint_type=Waypoint_Type.WAIT,
-                      wait_id=0, wait_count=1):
+    def _add_waypoint(self, vehicle, position, waypoint_type, wait_id=0,
+                      wait_count=1):
         """
         Create a waypoint based on the given coordinate tuple `position` and
         additional type-specific data, and add it to the assignment.
@@ -145,25 +146,36 @@ class Greedy_Assignment(object):
             new_position = list(self._positions[closest_pair, i, :])
             new_direction = self._get_new_direction(vehicle, new_position)
 
-            # Track the new position and direction
-            self._current_positions[vehicle-1] = new_position
-            self._current_directions[vehicle-1] = new_direction
-
             # Check whether the new position is problematic according to the 
             # collision avoidance algorithm, i.e., it crosses other current 
             # routes.
-            self._collision_avoider.update(self._home_locations,
-                                           new_position, vehicle,
-                                           other_vehicle, distance)
+            yaw_direction = self._current_directions[vehicle-1].yaw
+            yaw_turning_cost = self._turning_cost / (math.pi/2)
+            route, direction = \
+                self._collision_avoider.update(self._home_locations,
+                                               new_position, vehicle,
+                                               other_vehicle, distance,
+                                               direction=yaw_direction,
+                                               turning_cost=yaw_turning_cost)
+
             if self._collision_avoider.distance > distance:
                 distance = self._collision_avoider.distance
                 if distance == np.inf:
                     return distance
 
+            for point in route:
+                self._add_waypoint(vehicle, point, Waypoint_Type.PASS)
+
+            if direction is not None:
+                new_direction = Line_Follower_Direction.from_yaw(direction)
+
+            # Track the new position and direction
+            self._current_positions[vehicle-1] = new_position
+            self._current_directions[vehicle-1] = new_direction
+
             # Assign the sensor waypoint, including the position and the other 
             # vehicle's wait ID.
-            self._add_waypoint(vehicle, new_position,
-                               waypoint_type=Waypoint_Type.WAIT,
+            self._add_waypoint(vehicle, new_position, Waypoint_Type.WAIT,
                                wait_id=other_vehicle, wait_count=1)
 
         return distance

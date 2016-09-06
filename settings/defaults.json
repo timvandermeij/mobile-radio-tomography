@@ -806,6 +806,12 @@
                 "inf": true,
                 "min": 0.0,
                 "default": Infinity
+            },
+            "assign_safe_path": {
+                "help": "Whether to use safe paths found by the collision avoidance algorithm in the assignment",
+                "short": "Assign safe paths",
+                "type": "bool",
+                "default": false
             }
         }
     },
