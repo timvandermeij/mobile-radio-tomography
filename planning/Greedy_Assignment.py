@@ -82,7 +82,7 @@ class Greedy_Assignment(object):
                 # completely.
                 cur = self._current_directions[vehicle]
                 right = abs(S[:, (cur.axis + 1) % 2])
-                straight = (2 - right) * (S[:, cur.axis] == cur.sign)
+                straight = (2 - right) * (S[:, cur.axis] == -cur.sign)
                 T = straight + right
 
                 V[vehicle, i, :] = abs(D).sum(axis=1) + self._turning_cost * T

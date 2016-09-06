@@ -1,5 +1,4 @@
 # Core imports
-import math
 import thread
 import time
 
@@ -186,10 +185,10 @@ class Robot_Vehicle(Vehicle):
                     # direction, thus track whether we found a new line. Only 
                     # do so when we see the line from the side that we are 
                     # moving to, not when we rotate away from it again.
-                    direction = self._state.current_direction.add(direction)
+                    new_direction = self._state.current_direction.add(direction)
                     new_state = Robot_State_Rotate(self._state.rotate_direction,
                                                    self._state.target_direction,
-                                                   direction)
+                                                   new_direction)
                     self._state = new_state
             elif self._is_waypoint(self._current_waypoint):
                 # We went off the line while moving (semi)automatically to 
@@ -389,6 +388,14 @@ class Robot_Vehicle(Vehicle):
             raise ValueError("At most one speed component can be nonzero for robot vehicle")
 
     def _get_current_direction(self):
+        """
+        Retrieve the line follower direction that the vehicle is currently
+        approximately facing. This updates during rotation.
+
+        The returned value should be a `Line_Follower_Direction`, but other
+        methods should still check for acceptable values.
+        """
+
         if isinstance(self._state, Robot_State_Rotate):
             return self._state.current_direction
 
@@ -396,19 +403,10 @@ class Robot_Vehicle(Vehicle):
 
     def _get_yaw(self):
         direction = self._get_current_direction()
+        if not isinstance(direction, Line_Follower_Direction):
+            raise ValueError("Direction must be a `Line_Follower_Direction`")
 
-        if direction == Line_Follower_Direction.UP:
-            yaw = 0.0
-        elif direction == Line_Follower_Direction.RIGHT:
-            yaw = 0.5 * math.pi
-        elif direction == Line_Follower_Direction.DOWN:
-            yaw = math.pi
-        elif direction == Line_Follower_Direction.LEFT:
-            yaw = 1.5 * math.pi
-        else:
-            raise ValueError("Invalid direction '{}'".format(direction))
-
-        return yaw
+        return direction.yaw
 
     @property
     def attitude(self):

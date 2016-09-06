@@ -27,6 +27,15 @@ class Line_Follower_Direction(IntEnum):
         return cls(round(2*heading/math.pi) % 4)
 
     @property
+    def yaw(self):
+        """
+        Provide the yaw heading of the current direction. The `heading` is given
+        in radians, where upward is zero degrees and and increments clockwise.
+        """
+
+        return self * math.pi/2
+
+    @property
     def axis(self):
         """
         Provide the axis of reference for the current direction.
@@ -49,7 +58,7 @@ class Line_Follower_Direction(IntEnum):
         Thus, up and right result in `1`, while down and left result in `-1`.
         """
 
-        return 2 * (self / 2) - 1
+        return -2 * (self / 2) + 1
 
     def invert(self):
         """
