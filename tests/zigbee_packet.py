@@ -21,11 +21,13 @@ class ZigBeePacketTestCase(unittest.TestCase):
         self.waypoint_add_packet.set("type", 1)
         self.waypoint_add_packet.set("wait_id", 3)
         self.waypoint_add_packet.set("wait_count", 6)
+        self.waypoint_add_packet.set("wait_waypoint", 9)
         self.waypoint_add_packet.set("index", 22)
         self.waypoint_add_packet.set("to_id", 2)
         self.waypoint_add_message = "\x06H\xe1zT4o\x9dA\xf6(\\E\xa5q\x9dA" + \
                                     "\xcd\xcc\xcc\xcc\xcc\xcc\x10@\x01\x03" + \
-                                    "\x06\x00\x00\x00\x16\x00\x00\x00\x02"
+                                    "\x06\x00\x00\x00\t\x00\x00\x00" + \
+                                    "\x16\x00\x00\x00\x02"
         self.setting_add_message = "\n\x00\x00\x00\x00\x03bar\x01i" + \
                                    "*\x00\x00\x00\x01"
         self.setting_add_list_message = "\n\x01\x00\x00\x00\x05items" + \
@@ -209,6 +211,7 @@ class TestZigBeePacket(ZigBeePacketTestCase):
             "type": 1,
             "wait_id": 3,
             "wait_count": 6,
+            "wait_waypoint": 9,
             "index": 22,
             "to_id": 2
         })

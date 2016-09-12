@@ -39,8 +39,8 @@ class WaypointTypeWidget(QtGui.QComboBox):
 
         row = self._table.row(self._item)
         col = self._table.column(self._item)
-        for i in range(1, 3):
-            item = self._table.get_item(row, col + i)
+        for state_column in range(col + 1, self._table.columnCount()):
+            item = self._table.get_item(row, state_column)
             item.setFlags(flagger(item.flags()))
             item.setBackground(color)
 
@@ -71,6 +71,8 @@ class WaypointsTableWidget(QtGui.QTableWidget):
     A table widget with specialized rows for supplying waypoint data.
     """
 
+    menuRequested = QtCore.pyqtSignal(list, QtCore.QPoint, name='menuRequested')
+
     def __init__(self, columns, *a, **kw):
         super(WaypointsTableWidget, self).__init__(*a, **kw)
 
@@ -85,11 +87,17 @@ class WaypointsTableWidget(QtGui.QTableWidget):
         self.insertRow(0)
 
         horizontalHeader = self.horizontalHeader()
-        for i in range(len(columns)):
-            horizontalHeader.setResizeMode(i, QtGui.QHeaderView.Stretch)
+        for i, column in enumerate(columns):
+            if column["default"] is None:
+                mode = QtGui.QHeaderView.Stretch
+            else:
+                mode = QtGui.QHeaderView.ResizeToContents
+
+            horizontalHeader.setResizeMode(i, mode)
 
         # Create the context menu for the rows in the table.
         verticalHeader = self.verticalHeader()
+        verticalHeader.setResizeMode(QtGui.QHeaderView.Fixed)
         verticalHeader.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         verticalHeader.customContextMenuRequested.connect(self._make_menu)
 
@@ -131,7 +139,10 @@ class WaypointsTableWidget(QtGui.QTableWidget):
         else:
             type_cast = float
 
-        return type_cast(text)
+        if "offset" in self._columns[col]:
+            return type_cast(text) - self._columns[col]["offset"]
+        else:
+            return type_cast(text)
 
     def get_row_data(self, row):
         """
@@ -139,7 +150,9 @@ class WaypointsTableWidget(QtGui.QTableWidget):
 
         The cell data is returned as a list, where each value is either `None`,
         indicating that the cell was not filled, a boolean for cells with
-        a check role, or the string value for other cells.
+        a check role, or the string value for other cells. The string value is
+        thus not yet cast or altered for internal offsets. Cells with widgets
+        in them may already have been adapted to the correct type and value.
 
         Additionally, a boolean is returned indicating whether the row was
         completely empty, i.e., not filled or altered.
@@ -189,6 +202,11 @@ class WaypointsTableWidget(QtGui.QTableWidget):
                 widget = self.cellWidget(row, col)
                 widget.set_value(data[col])
             elif data[col] != column["default"]:
+                # Alter the data in case there is an offset for this column, 
+                # but only do so when it is not the default "special" value.
+                if "offset" in column:
+                    data[col] = data[col] + column["offset"]
+
                 item = str(data[col])
                 self.setItem(row, col, QtGui.QTableWidgetItem(item))
 
@@ -297,15 +315,20 @@ class WaypointsTableWidget(QtGui.QTableWidget):
         Create a context menu for the vertical header (row labels).
         """
 
-        menu = QtGui.QMenu(self)
+        is_valid = self.indexAt(position).isValid()
 
         insert_row_action = QtGui.QAction("Insert row before", self)
         insert_row_action.triggered.connect(partial(self._insert_row, position))
         remove_rows_action = QtGui.QAction("Remove row(s)", self)
+        remove_rows_action.setEnabled(is_valid)
         remove_rows_action.triggered.connect(partial(self._remove_rows, position))
 
-        menu.addAction(insert_row_action)
-        menu.addAction(remove_rows_action)
+        actions = [insert_row_action, remove_rows_action]
+        self.menuRequested.emit(actions, position)
+
+        menu = QtGui.QMenu(self)
+        for action in actions:
+            menu.addAction(action)
 
         menu.exec_(self.verticalHeader().viewport().mapToGlobal(position))
 

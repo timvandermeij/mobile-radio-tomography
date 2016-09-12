@@ -11,7 +11,7 @@ class TestWaypointWait(LocationTestCase):
         self.geometry = Geometry()
         self.location = LocationLocal(0.0, 10.0, 0.0)
         self.waypoint = Waypoint_Wait(1, self.geometry, self.location,
-                                      wait_id=2, wait_count=5)
+                                      wait_id=2, wait_count=5, wait_waypoint=8)
 
     def test_name(self):
         self.assertEqual(self.waypoint.name, Waypoint_Type.WAIT)
@@ -21,6 +21,11 @@ class TestWaypointWait(LocationTestCase):
 
     def test_wait_count(self):
         self.assertEqual(self.waypoint.wait_count, 5)
+
+    def test_wait_waypoint(self):
+        self.assertEqual(self.waypoint.wait_waypoint, 8)
+        self.waypoint.wait_waypoint = 42
+        self.assertEqual(self.waypoint.wait_waypoint, 42)
 
     def test_get_points(self):
         points = self.waypoint.get_points()
