@@ -43,27 +43,31 @@ class Greedy_Assignment(object):
         self._positions = None
         self._current_positions = None
         self._current_directions = None
+        self._number_of_waits = None
 
     def _add_waypoint(self, vehicle, position, waypoint_type, wait_id=0,
-                      wait_count=1):
+                      wait_count=1, wait_waypoint=-1):
         """
-        Create a waypoint based on the given coordinate tuple `position` and
-        additional type-specific data, and add it to the assignment.
+        Create a waypoint for the vehicle with sensor ID `vehicle`, based on
+        the given coordinate tuple `position` and additional type-specific
+        data, and add it to the assignment.
 
         The assignment can be altered to add different waypoint types using the
         `waypoint_type` keyword argument, which expects a `Waypoint_Type` enum
-        value. For wait types, `wait_id` and `wait_count` integers are accepted.
+        value. For wait types, `wait_id`, `wait_count` and `wait_waypoint`
+        integers are accepted if they are known at this point.
         """
 
         if self._export:
             waypoint = list(position) + [
-                0, waypoint_type, wait_id, wait_count
+                0, waypoint_type, wait_id, wait_count, wait_waypoint
             ]
         else:
             location = self._geometry.make_location(*position)
             waypoint = Waypoint.create(self._import_manager, waypoint_type,
                                        vehicle, self._geometry, location,
-                                       wait_id=wait_id, wait_count=wait_count)
+                                       wait_id=wait_id, wait_count=wait_count,
+                                       wait_waypoint=wait_waypoint)
 
         self._assignment[vehicle].append(waypoint)
 
@@ -137,9 +141,13 @@ class Greedy_Assignment(object):
     def _assign_pair(self, vehicle_pair, closest_pair, distance):
         # Determine the synchronization (waits) between the two vehicles in the 
         # chosen vehicle pair. There are always two permutations here.
-        syncs = itertools.permutations(self._vehicle_pairs[vehicle_pair])
+        syncs = list(itertools.permutations(self._vehicle_pairs[vehicle_pair]))
+        waits = [
+            self._number_of_waits[other_vehicle-1] for _, other_vehicle in syncs
+        ]
         for i, sync_pair in enumerate(syncs):
             vehicle, other_vehicle = sync_pair
+            wait_waypoint = waits[i]
 
             # The coordinates of the next position for the given vehicle, and 
             # the direction of the vehicle after moving to this position.
@@ -172,11 +180,13 @@ class Greedy_Assignment(object):
             # Track the new position and direction
             self._current_positions[vehicle-1] = new_position
             self._current_directions[vehicle-1] = new_direction
+            self._number_of_waits[vehicle-1] += 1
 
             # Assign the sensor waypoint, including the position and the other 
             # vehicle's wait ID.
             self._add_waypoint(vehicle, new_position, Waypoint_Type.WAIT,
-                               wait_id=other_vehicle, wait_count=1)
+                               wait_id=other_vehicle, wait_count=1,
+                               wait_waypoint=wait_waypoint)
 
         return distance
 
@@ -203,6 +213,9 @@ class Greedy_Assignment(object):
         self._current_directions = [
             Line_Follower_Direction(d) for d in self._home_directions
         ]
+        self._number_of_waits = dict([
+            (i, 0) for i in range(self._number_of_vehicles)
+        ])
 
         self._assignment = dict([
             (i, []) for i in range(1, self._number_of_vehicles + 1)

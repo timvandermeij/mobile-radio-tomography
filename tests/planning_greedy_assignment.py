@@ -44,14 +44,14 @@ class TestPlanningGreedyAssignment(SettingsTestCase):
         self.assertIsInstance(assignment, dict)
         self.assertEqual(len(assignment), 2)
         self.assertEqual(assignment[1], [
-            [0, 1, 0, wait, 2, 1], [0, 2, 0, wait, 2, 1],
-            [3, 0, 0, wait, 2, 1], [0, 0, 0, wait, 2, 1],
-            [19, 1, 0, wait, 2, 1]
+            [0, 1, 0, wait, 2, 1, 0], [0, 2, 0, wait, 2, 1, 1],
+            [3, 0, 0, wait, 2, 1, 2], [0, 0, 0, wait, 2, 1, 3],
+            [19, 1, 0, wait, 2, 1, 4]
         ])
         self.assertEqual(assignment[2], [
-            [2, 19, 0, wait, 1, 1], [4, 19, 0, wait, 1, 1],
-            [5, 16, 0, wait, 1, 1], [1, 16, 0, wait, 1, 1],
-            [4, 18, 0, wait, 1, 1]
+            [2, 19, 0, wait, 1, 1, 0], [4, 19, 0, wait, 1, 1, 1],
+            [5, 16, 0, wait, 1, 1, 2], [1, 16, 0, wait, 1, 1, 3],
+            [4, 18, 0, wait, 1, 1, 4]
         ])
 
         # The assignment is valid, i.e., the distance is not infinite due to 
