@@ -719,15 +719,21 @@ class Control_Panel_Planning_View(Control_Panel_View):
             # so try those next time.
             return
 
+        # Determine the source coordinates from the waypoint.
         waypoint = points[0]
+        geometry = self._runner.problem.geometry
+        source = geometry.get_coordinates(waypoint.location)[:2]
+        grid = self._individual_grids[i]
+
         if waypoint.name != Waypoint_Type.WAIT:
-            # Ignore waypoints with other types like home or pass.
+            # Show waypoints with other types like home or pass as a new sensor 
+            # position, but ignore it otherwise.
+            grid.add_sensor(vehicle, source)
             del points[0]
             return
 
-        # Determine the source coordinates and the other vehicle's ID.
-        geometry = self._runner.problem.geometry
-        source = geometry.get_coordinates(waypoint.location)[:2]
+        # Determine the other vehicle's ID, and attempt to find the 
+        # corresponding waypoint.
         other_vehicle = waypoint.wait_id
 
         other_waypoint = waypoints[other_vehicle][0]
@@ -746,7 +752,9 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
         # Determine the target coordinates and show the link.
         target = geometry.get_coordinates(other_waypoint.location)[:2]
-        self._individual_grids[i].add_link(source, target)
+        grid.add_link(source, target)
+        grid.add_sensor(vehicle, source)
+        grid.add_sensor(other_vehicle, target)
 
         del points[0]
         del waypoints[other_vehicle][0]

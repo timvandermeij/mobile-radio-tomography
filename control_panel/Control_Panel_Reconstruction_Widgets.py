@@ -112,7 +112,11 @@ class Grid(QtGui.QGraphicsView):
             raise TypeError("Either one of `settings` and `size` must be given")
 
         self._clear = False
+
         self._links = []
+        self._sensors = {}
+
+        self._sensor_image = None
 
         # Create the scene.
         self._scene = QtGui.QGraphicsScene()
@@ -134,6 +138,9 @@ class Grid(QtGui.QGraphicsView):
             raise TypeError("`buffer` must be a `Buffer` object or tuple of length 2")
 
         self._cell_size = self._size / max(self._width, self._height)
+
+        sensor_image = QtGui.QPixmap("assets/network-wireless.png")
+        self._sensor_image = sensor_image.scaledToHeight(self._cell_size)
 
         # Clear the scene for (re)drawing the grid.
         self._scene.clear()
@@ -159,6 +166,13 @@ class Grid(QtGui.QGraphicsView):
             self._scene.addLine(coordinate, 0, coordinate, vertical_extend,
                                 QtGui.QPen(QtCore.Qt.black))
 
+    def _calculate_offset(self, position, center=False):
+        centering = 0.5 * self._cell_size if center else 0.0
+        x = position[1] * self._cell_size - centering
+        y = (self._height - position[0]) * self._cell_size - centering
+
+        return x, y
+
     def add_link(self, source, target):
         """
         Add a link to the scene. The link consists of two tuples
@@ -173,13 +187,17 @@ class Grid(QtGui.QGraphicsView):
         points = []
 
         for position in [source, target]:
-            x = position[1] * self._cell_size
-            y = (self._height - position[0]) * self._cell_size
-            points.append(x)
-            points.append(y)
+            points.extend(self._calculate_offset(position))
 
         line = self._scene.addLine(*points, pen=pen)
         self._links.append(line)
+
+    def add_sensor(self, sensor_id, position):
+        if sensor_id not in self._sensors:
+            self._sensors[sensor_id] = self._scene.addPixmap(self._sensor_image)
+
+        x, y = self._calculate_offset(position, center=True)
+        self._sensors[sensor_id].setOffset(x, y)
 
     def update(self, packet):
         """
@@ -188,12 +206,17 @@ class Grid(QtGui.QGraphicsView):
         specification.
         """
 
+        # Determine the position coordinates.
+        source = (packet.get("from_latitude"), packet.get("from_longitude"))
+        target = (packet.get("to_latitude"), packet.get("to_longitude"))
+
+        # Update the sensor location of the target sensor.
+        self.add_sensor(packet.get("sensor_id"), target)
+
         # Add the new link if the locations are valid.
         if not packet.get("from_valid") or not packet.get("to_valid"):
             return
 
-        source = (packet.get("from_latitude"), packet.get("from_longitude"))
-        target = (packet.get("to_latitude"), packet.get("to_longitude"))
         self.add_link(source, target)
 
     def toggle(self, state):
@@ -208,7 +231,8 @@ class Grid(QtGui.QGraphicsView):
 
     def clear(self):
         """
-        Clear the grid. We remove all links, but the grid lines remain.
+        Clear the grid. We remove all links, but the grid lines and the sensor
+        positions remain.
         """
 
         for link in self._links:
