@@ -118,7 +118,16 @@ class TestCoreThreadManager(ThreadableTestCase):
     def test_destroy_log(self, log_mock):
         # The `destroy` method does not call `log` outside an exception context.
         self.thread_manager.destroy()
-        self.assertEqual(log_mock.call_count, 0)
+        log_mock.assert_not_called()
+
+        # The `destroy` method does not call `log` when a test failure is 
+        # handled.
+        try:
+            raise AssertionError("Test failure must not be logged")
+        except:
+            self.thread_manager.destroy()
+
+        log_mock.assert_not_called()
 
         # If `destroy` is called in an exception handling block, `log` is called.
         try:
