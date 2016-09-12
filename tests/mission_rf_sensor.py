@@ -77,6 +77,7 @@ class TestMissionRFSensor(EnvironmentTestCase):
             "type": Waypoint_Type.WAIT,
             "wait_id": 0,
             "wait_count": 1,
+            "wait_waypoint": -1,
             "id_offset": 0
         }
         fields.update(kwargs)
@@ -90,6 +91,7 @@ class TestMissionRFSensor(EnvironmentTestCase):
         packet.set("type", int(fields["type"]))
         packet.set("wait_id", fields["wait_id"])
         packet.set("wait_count", fields["wait_count"])
+        packet.set("wait_waypoint", fields["wait_waypoint"])
         packet.set("to_id", self.rf_sensor.id + fields["id_offset"])
 
         with patch('sys.stdout'):
@@ -172,11 +174,12 @@ class TestMissionRFSensor(EnvironmentTestCase):
         self.assertEqual(self.mission._point, home_location)
         self.assertEqual(self.vehicle._waypoints, [])
 
-    def test_add_waypoint_wait_count(self):
+    def test_add_waypoint_wait_parameters(self):
         with patch('sys.stdout'):
             self.mission.setup()
 
-        self._send_waypoint_add(0, 0.0, 4.0, wait_count=4)
+        self._send_waypoint_add(0, 0.0, 4.0, wait_id=2, wait_count=4,
+                                wait_waypoint=8)
 
         self.assertEqual(self.enqueue_mock.call_count, 1)
         args, kwargs = self.enqueue_mock.call_args
@@ -193,6 +196,28 @@ class TestMissionRFSensor(EnvironmentTestCase):
         self.assertEqual(self.vehicle._waypoints, [
             (0, 1), None, (0, 2), None, (0, 3), None, (0, 4), None
         ])
+        self.assertEqual(self.mission._wait_waypoints, {
+            0: {
+                "sensors": [2],
+                "own_waypoint": 0,
+                "other_waypoint": 8
+            },
+            2: {
+                "sensors": [2],
+                "own_waypoint": 1,
+                "other_waypoint": 9
+            },
+            4: {
+                "sensors": [2],
+                "own_waypoint": 2,
+                "other_waypoint": 10
+            },
+            6: {
+                "sensors": [2],
+                "own_waypoint": 3,
+                "other_waypoint": 11
+            }
+        })
 
     def test_add_waypoint_wrong_index(self):
         with patch('sys.stdout'):
