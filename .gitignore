@@ -32,6 +32,9 @@ __pycache__/
 *.raw
 terrain/
 
+# Exported dump files
+mission_dump.json
+
 # Texas Instruments processed and compiled files
 *.asm
 *.hex

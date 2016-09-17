@@ -343,6 +343,11 @@
                 "help": "Whether to wait for measurements to be complete at waypoints",
                 "type": "bool",
                 "default": true
+            },
+            "mission_dump_file": {
+                "help": "File to store dumps of missions in",
+                "type": "file",
+                "default": "mission_dump.json"
             }
         }
     },
