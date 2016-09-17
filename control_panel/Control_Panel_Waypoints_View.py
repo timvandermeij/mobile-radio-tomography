@@ -6,7 +6,7 @@ from PyQt4 import QtGui
 from Control_Panel_RF_Sensor_Sender import Control_Panel_RF_Sensor_Sender
 from Control_Panel_Settings_Widgets import SettingsTableWidget
 from Control_Panel_View import Control_Panel_View
-from Control_Panel_Waypoints_Widgets import WaypointsTableWidget, WaypointTypeWidget
+from Control_Panel_Waypoints_Widgets import WaypointsTableWidget, WaypointTypeWidget, WaypointsTableValueError
 from ..geometry.Geometry import Geometry
 from ..planning.Greedy_Assignment import Greedy_Assignment
 from ..waypoint.Waypoint import Waypoint_Type
@@ -109,7 +109,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             self._listWidget.addItem("Waypoints for vehicle {}".format(vehicle))
 
             # Create the table for the vehicle.
-            table = WaypointsTableWidget(self._columns)
+            table = WaypointsTableWidget(self._columns, vehicle)
             table.menuRequested.connect(partial(self._fill_menu, vehicle))
 
             self._tables.append(table)
@@ -208,11 +208,14 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             return []
 
         if errors:
-            pair = zip(data, previous)
-            if any(val is None and prev is None for val, prev in pair):
+            pairs = zip(range(len(self._columns)), data, previous)
+            bad_columns = [
+                col for col, val, prev in pairs if val is None and prev is None
+            ]
+            if bad_columns:
                 # If a column has no data and no previous data either, then we 
                 # have missing information.
-                raise ValueError("Missing coordinates for vehicle {}, row #{} and no previous waypoint".format(vehicle, row + 1))
+                raise WaypointsTableValueError("Missing coordinates for vehicle {}, row #{} and no previous waypoint".format(vehicle, row + 1), vehicle, row, bad_columns)
 
         for i, column in enumerate(self._columns):
             if data[i] is None:
@@ -229,16 +232,16 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
                     data[i] = column["default"]
             else:
                 try:
-                    data[i] = table.cast_cell(i, data[i])
+                    data[i] = table.cast_cell(row, i, data[i])
                 except ValueError:
                     if errors:
-                        raise ValueError("Invalid value for vehicle {}, row #{}, column '{}': '{}'".format(vehicle, row + 1, column["label"], data[i]))
+                        raise WaypointsTableValueError("Invalid value for vehicle {}, row #{}, column '{}': '{}'".format(vehicle, row + 1, column["label"], data[i]), vehicle, row, i)
 
             if errors and "min" in column and data[i] < column["min"]:
-                raise ValueError("Invalid value for vehicle {}, row #{}, column '{}': {} must be at least {}".format(vehicle, row + 1, column["label"], data[i], column["min"]))
+                raise WaypointsTableValueError("Invalid value for vehicle {}, row #{}, column '{}': {} must be at least {}".format(vehicle, row + 1, column["label"], data[i], column["min"]), vehicle, row, i)
 
         if errors and row > 0 and data[self._fields["type"]] == Waypoint_Type.HOME:
-            raise ValueError("Waypoint type for vehicle {}, row #{} may not be 'home'.".format(vehicle, row + 1))
+            raise WaypointsTableValueError("Waypoint type for vehicle {}, row #{} may not be 'home'.".format(vehicle, row + 1), vehicle, row, self._fields["type"])
 
         return data
 
@@ -511,28 +514,31 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         type_col = self._fields["type"]
         wait_waypoint_col = self._fields["wait_waypoint"]
 
+        if wait_id not in waypoints:
+            raise WaypointsTableValueError("Waypoint for vehicle {}, row #{} references vehicle {} which has no waypoints".format(vehicle, row+1, wait_id), vehicle, row, self._fields["wait_id"])
+
         wait_waypoints = [
             data for data in waypoints[wait_id]
             if data[type_col] == Waypoint_Type.WAIT
         ]
         if wait_waypoint >= len(wait_waypoints):
-            raise ValueError("Waypoint for vehicle {}, row #{} references nonexistent wait waypoint {} from vehicle {}".format(vehicle, row+1, wait_waypoint, wait_id))
+            raise WaypointsTableValueError("Waypoint for vehicle {}, row #{} references nonexistent wait waypoint {} from vehicle {}".format(vehicle, row+1, wait_waypoint, wait_id), vehicle, row, wait_waypoint_col)
 
         other_id = self._get_wait_id(wait_id, wait_waypoints[wait_waypoint])
         if other_id != vehicle:
-            raise ValueError("Waypoint for vehicle {}, row #{} references wrong wait waypoint {} from vehicle {}; the latter has wait id {}".format(vehicle, row+1, wait_waypoint, wait_id, other_id))
+            raise WaypointsTableValueError("Waypoint for vehicle {}, row #{} references wrong wait waypoint {} from vehicle {}; the latter has wait id {}".format(vehicle, row+1, wait_waypoint, wait_id, other_id), vehicle, row, wait_waypoint_col)
 
         other_count = wait_waypoints[wait_waypoint][wait_waypoint_col]
         if other_count == -1:
             other_count = wait_waypoint
 
         if other_count != wait_count:
-            raise ValueError("Waypoint for vehicle {}, row #{} references wrong wait waypoint {} from vehicle {}; the latter points to wait waypoint {} instead of back to {}".format(vehicle, row+1, wait_waypoint, wait_id, other_count+1, wait_count+1))
+            raise WaypointsTableValueError("Waypoint for vehicle {}, row #{} references wrong wait waypoint {} from vehicle {}; the latter points to wait waypoint {} instead of back to {}".format(vehicle, row+1, wait_waypoint, wait_id, other_count+1, wait_count+1), vehicle, row, wait_waypoint_col)
 
         for data in wait_waypoints[:wait_waypoint]:
             other_id = self._get_wait_id(wait_id, data)
             if other_id == vehicle and data[wait_waypoint_col] > wait_count:
-                raise ValueError("Waypoint for vehicle {}, row #{} references wrong wait waypoint {} from vehicle {}; earlier wait waypoint references a later waypoint of this vehicle, leading to deadlocks".format(vehicle, row+1, wait_waypoint, wait_id))
+                raise WaypointsTableValueError("Waypoint for vehicle {}, row #{} references wrong wait waypoint {} from vehicle {}; earlier wait waypoint references a later waypoint of this vehicle, leading to deadlocks".format(vehicle, row+1, wait_waypoint, wait_id), vehicle, row, wait_waypoint_col)
 
     def _export_waypoints(self, repeat=True, errors=True):
         """
@@ -613,6 +619,33 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             raise ValueError("Waypoints must be a JSON list or array")
 
         return waypoints
+
+    def _show_waypoint_error(self, e):
+        """
+        Display an error message related to an invalid waypoint from the
+        `Exception` object `e`.
+
+        If `e` is a `WaypointsTableValueError`, then the relevant cell or cells
+        are marked invalid.
+        """
+
+        if isinstance(e, WaypointsTableValueError):
+            if e.vehicle is not None and e.row is not None:
+                if e.column is None:
+                    columns = range(len(self._columns))
+                elif isinstance(e.column, int):
+                    columns = [e.column]
+                else:
+                    columns = list(e.column)
+
+                self._listWidget.setCurrentRow(e.vehicle - 1)
+                self._tables[e.vehicle-1].setCurrentCell(e.row, columns[0])
+
+                for column in columns:
+                    self._tables[e.vehicle-1].set_valid(e.row, column, False)
+
+        QtGui.QMessageBox.critical(self._controller.central_widget,
+                                   "Waypoint incorrect", e.message)
 
     def _import_waypoints(self, waypoints, from_json=True):
         """
@@ -727,8 +760,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         try:
             self._import_waypoints(waypoints, from_json=not reassign)
         except ValueError as e:
-            QtGui.QMessageBox.critical(self._controller.central_widget,
-                                       "Waypoint incorrect", e.message)
+            self._show_waypoint_error(e)
 
     def _export(self):
         """
@@ -738,8 +770,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         try:
             waypoints = self._export_waypoints()[0]
         except ValueError as e:
-            QtGui.QMessageBox.critical(self._controller.central_widget,
-                                       "Waypoint incorrect", e.message)
+            self._show_waypoint_error(e)
             return
 
         fn = QtGui.QFileDialog.getSaveFileName(self._controller.central_widget,
@@ -764,8 +795,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         try:
             waypoints = self._export_waypoints()[0]
         except ValueError as e:
-            QtGui.QMessageBox.critical(self._controller.central_widget,
-                                       "Waypoint incorrect", e.message)
+            self._show_waypoint_error(e)
             return
 
         for vehicle, data in waypoints.iteritems():
@@ -774,8 +804,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         try:
             self._import_waypoints(waypoints, from_json=False)
         except ValueError as e:
-            QtGui.QMessageBox.critical(self._controller.central_widget,
-                                       "Waypoint incorrect", e.message)
+            self._show_waypoint_error(e)
 
     def _uncompress(self):
         """
@@ -785,8 +814,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         try:
             waypoints = self._export_waypoints()[0]
         except ValueError as e:
-            QtGui.QMessageBox.critical(self._controller.central_widget,
-                                       "Waypoint incorrect", e.message)
+            self._show_waypoint_error(e)
             return
 
         for vehicle, data in waypoints.iteritems():
@@ -795,8 +823,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         try:
             self._import_waypoints(waypoints, from_json=False)
         except ValueError as e:
-            QtGui.QMessageBox.critical(self._controller.central_widget,
-                                       "Waypoint incorrect", e.message)
+            self._show_waypoint_error(e)
 
     def _send(self):
         """
@@ -806,8 +833,7 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         try:
             waypoints, total = self._export_waypoints()
         except ValueError as e:
-            QtGui.QMessageBox.critical(self._controller.central_widget,
-                                       "Waypoint incorrect", e.message)
+            self._show_waypoint_error(e)
             return
 
         if total == 0:

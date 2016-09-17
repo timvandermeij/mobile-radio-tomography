@@ -2,6 +2,29 @@ from functools import partial
 from PyQt4 import QtCore, QtGui
 from ..waypoint.Waypoint import Waypoint_Type
 
+class WaypointsTableValueError(ValueError):
+    """
+    An exception caused by an invalid value in a cell of a waypoints table.
+    """
+
+    def __init__(self, message, vehicle=None, row=None, column=None):
+        super(WaypointsTableValueError, self).__init__(message)
+        self._vehicle = vehicle
+        self._row = row
+        self._column = column
+
+    @property
+    def vehicle(self):
+        return self._vehicle
+
+    @property
+    def row(self):
+        return self._row
+
+    @property
+    def column(self):
+        return self._column
+
 class WaypointTypeWidget(QtGui.QComboBox):
     """
     A table cell widget that makes it possible to select a certain waypoint type
@@ -73,7 +96,7 @@ class WaypointsTableWidget(QtGui.QTableWidget):
 
     menuRequested = QtCore.pyqtSignal(list, QtCore.QPoint, name='menuRequested')
 
-    def __init__(self, columns, *a, **kw):
+    def __init__(self, columns, vehicle, *a, **kw):
         super(WaypointsTableWidget, self).__init__(*a, **kw)
 
         # We assume that the defaults are `None` for columns without defaults 
@@ -81,6 +104,8 @@ class WaypointsTableWidget(QtGui.QTableWidget):
         # defaults must be the first columns in the table, otherwise the tab 
         # ordering does not match the characteristics of the columns.
         self._columns = columns
+
+        self._vehicle = vehicle
 
         self.setColumnCount(len(columns))
         self.setHorizontalHeaderLabels([column["label"] for column in columns])
@@ -108,30 +133,51 @@ class WaypointsTableWidget(QtGui.QTableWidget):
         Checks whether the given `item`, a `QTableWidgetItem`, is still valid.
         """
 
+        # Only change validity when the user was editing the item.
+        if self.state() != QtGui.QAbstractItemView.EditingState:
+            return
+
+        row = self.row(item)
         col = self.column(item)
         text = item.text()
         valid = True
 
         if text != "":
             try:
-                value = self.cast_cell(col, item.text())
+                value = self.cast_cell(row, col, text)
             except ValueError:
                 valid = False
 
             if valid and "min" in self._columns[col]:
                 valid = value >= self._columns[col]["min"]
 
+        self._set_item_valid(item, valid)
+
+    def _set_item_valid(self, item, valid):
+        """
+        Mark the cell item `item` as valid or invalid depending on `valid`.
+        """
+
         if not valid:
             item.setBackground(QtGui.QColor("#FA6969"))
         elif item.flags() & QtCore.Qt.ItemIsEnabled:
             item.setBackground(QtGui.QBrush())
 
-    def cast_cell(self, col, text):
+    def set_valid(self, row, column, valid):
         """
-        Change the value `text` from a cell in column `col` to correct type.
+        Mark the cell in the table row `row` and column `column` as valid or
+        invalid depending on `valid`.
+        """
 
-        Returns the casted value. Raises a `ValueError` if the text cannot be
-        casted to the appropriate value.
+        self._set_item_valid(self.get_item(row, column), valid)
+
+    def cast_cell(self, row, col, text):
+        """
+        Change the value `text` from a cell in row `row` and column `col` to
+        the correct type.
+
+        Returns the casted value. Raises a `WaypointsTableValueError` if the
+        text cannot be casted to the appropriate value.
         """
 
         if self._columns[col]["default"] is not None:
@@ -139,10 +185,15 @@ class WaypointsTableWidget(QtGui.QTableWidget):
         else:
             type_cast = float
 
+        try:
+            value = type_cast(text)
+        except ValueError as e:
+            raise WaypointsTableValueError(e.message, self._vehicle, row, col)
+
         if "offset" in self._columns[col]:
-            return type_cast(text) - self._columns[col]["offset"]
-        else:
-            return type_cast(text)
+            return value - self._columns[col]["offset"]
+
+        return value
 
     def get_row_data(self, row):
         """
