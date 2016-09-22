@@ -10,7 +10,6 @@ class Mission_RF_Sensor(Mission_Auto):
         super(Mission_RF_Sensor, self).setup()
 
         self._dump_file = self.settings.get("mission_dump_file")
-        self.reset()
 
         self.environment.add_packet_action("waypoint_clear",
                                            self._clear_waypoints)
@@ -22,6 +21,8 @@ class Mission_RF_Sensor(Mission_Auto):
         self._rf_sensor = self.environment.get_rf_sensor()
         if self._rf_sensor is None:
             raise ValueError("An RF sensor must be enabled for `Mission_RF_Sensor`")
+
+        self.reset()
 
     def reset(self):
         # Waypoint packets that comprise the mission (thus far). These can be 
@@ -162,6 +163,7 @@ class Mission_RF_Sensor(Mission_Auto):
 
         data = packet.get_all()
         self._add_waypoint(data)
+        self._send_ack()
 
     def _add_waypoint(self, data):
         self._waypoints.append(data)
@@ -209,4 +211,3 @@ class Mission_RF_Sensor(Mission_Auto):
 
         self._next_index += 1
         self._point = location
-        self._send_ack()
