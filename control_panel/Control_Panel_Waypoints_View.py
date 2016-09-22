@@ -604,7 +604,8 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             try:
                 if reassign:
                     assigner = Greedy_Assignment(self._controller.arguments,
-                                                 self._geometry)
+                                                 self._geometry,
+                                                 self._controller.import_manager)
                     waypoints, distance = assigner.assign(waypoints)
                     if distance == float('inf'):
                         raise ValueError("Given waypoints could not be reassigned because a collision was detected")
