@@ -91,7 +91,7 @@ class Greedy_Assignment(object):
 
         self._collision_avoider.reset()
 
-        positions = np.array(positions_pairs)
+        positions = np.array(positions_pairs, dtype=np.int)
         current_positions = list(self._home_locations)
 
         assignment = dict([
