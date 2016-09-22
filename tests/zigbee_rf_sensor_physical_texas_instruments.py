@@ -74,6 +74,18 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(ZigBeeRFSensorTestCase, USBMana
             self.assertEqual(packet.get("sensor_id"), to_id)
             self.assertEqual(to, to_id)
 
+        # Requiring only a specific set of one sensor causes a packet to be 
+        # sent to only that sensor.
+        send_tx_frame_mock.reset_mock()
+        self.rf_sensor.discover(MagicMock(), required_sensors=set([1]))
+
+        self.assertEqual(send_tx_frame_mock.call_count, 1)
+        packet, to = send_tx_frame_mock.call_args[0]
+        self.assertIsInstance(packet, Packet)
+        self.assertEqual(packet.get("specification"), "ping_pong")
+        self.assertEqual(packet.get("sensor_id"), 1)
+        self.assertEqual(to, 1)
+
     @patch.object(time, "sleep")
     def test_setup(self, sleep_mock):
         connection_mock = MagicMock()

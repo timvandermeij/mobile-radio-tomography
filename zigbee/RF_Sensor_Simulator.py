@@ -1,4 +1,5 @@
 # Core imports
+import errno
 import random
 import socket
 
@@ -50,19 +51,39 @@ class RF_Sensor_Simulator(RF_Sensor):
 
         return "rf_sensor_simulator"
 
-    def discover(self, callback):
+    def discover(self, callback, required_sensors=None):
         """
-        Discover all RF sensors in the network. The `callback` function is
-        called when an RF sensor reports its identity.
+        Discover RF sensors in the network. The `callback` callable function is
+        called when an RF sensor reports its identity. The `required_sensors`
+        set indicates which sensors should be discovered; if it is not
+        provided, then all RF sensors are discovered.
+
+        Simulated sensors are only discovered if their associated port is open.
         """
 
-        super(RF_Sensor_Simulator, self).discover(callback)
+        super(RF_Sensor_Simulator, self).discover(callback,
+                                                  required_sensors=required_sensors)
 
-        for vehicle_id in xrange(1, self._number_of_sensors + 1):
-            callback({
-                "id": vehicle_id,
-                "address": "{}:{}".format(self._ip, self._port + vehicle_id)
-            })
+        if required_sensors is None:
+            required_sensors = set(range(1, self._number_of_sensors + 1))
+
+        for vehicle_id in required_sensors:
+            address = (self._ip, self._port + vehicle_id)
+            discoverer = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            used = False
+            try:
+                discoverer.bind(address)
+            except socket.error as e:
+                if e.errno == errno.EADDRINUSE:
+                    used = True
+            finally:
+                discoverer.close()
+
+            if used:
+                callback({
+                    "id": vehicle_id,
+                    "address": "{}:{}".format(*address)
+                })
 
     def _setup(self):
         """

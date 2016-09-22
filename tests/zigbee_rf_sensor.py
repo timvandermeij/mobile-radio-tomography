@@ -215,8 +215,19 @@ class TestZigBeeRFSensor(ZigBeeRFSensorTestCase):
 
     def test_discover(self):
         # Providing an invalid callback raises an exception.
-        with self.assertRaises(TypeError):
+        with self.assertRaisesRegexp(TypeError, "callback is not callable"):
             self.rf_sensor.discover(None)
+
+        callback_mock = MagicMock()
+
+        # Providing invalid required sensors raises an exception.
+        with self.assertRaisesRegexp(TypeError, "must be a `set`"):
+            self.rf_sensor.discover(callback_mock, required_sensors=2)
+
+        # Providing an set of required sensors that cannot be discovered raises 
+        # an exception.
+        with self.assertRaisesRegexp(ValueError, "only contain vehicle sensors"):
+            self.rf_sensor.discover(callback_mock, required_sensors=set([0]))
 
     def test_setup(self):
         # Verify that the interface requires subclasses to implement

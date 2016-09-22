@@ -229,16 +229,25 @@ class RF_Sensor(Threadable):
                 "to": to
             })
 
-    def discover(self, callback):
+    def discover(self, callback, required_sensors=None):
         """
-        Discover all RF sensors in the network. The `callback` function is
-        called when an RF sensor reports its identity.
+        Discover RF sensors in the network. The `callback` callable function is
+        called when an RF sensor reports its identity. The `required_sensors`
+        set indicates which sensors should be discovered; if it is not
+        provided, then all RF sensors are discovered. Note that discovery may
+        fail due to interference or disabled sensors.
 
         Classes that inherit this base class must extend this method.
         """
 
         if not hasattr(callback, "__call__"):
             raise TypeError("Provided discovery callback is not callable")
+
+        if isinstance(required_sensors, set):
+            if not required_sensors.issubset(range(1, self._number_of_sensors + 1)):
+                raise ValueError("Provided required sensors may only contain vehicle sensors")
+        elif required_sensors is not None:
+            raise TypeError("Provided required sensors must be a `set`")
 
     def _setup(self):
         raise NotImplementedError("Subclasses must implement `_setup()`")

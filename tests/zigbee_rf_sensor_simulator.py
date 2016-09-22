@@ -1,4 +1,5 @@
 # Core imports
+import errno
 import socket
 
 # Library imports
@@ -35,20 +36,41 @@ class TestZigBeeRFSensorSimulator(ZigBeeRFSensorTestCase):
         # The `type` property must be implemented and correct.
         self.assertEqual(self.rf_sensor.type, "rf_sensor_simulator")
 
-    def test_discover(self):
+    @patch.object(socket.socket, "bind")
+    def test_discover(self, bind_mock):
+        bind_mock.configure_mock(side_effect=socket.error(errno.EADDRINUSE, "port in use"))
+
         callback_mock = MagicMock()
         self.rf_sensor.discover(callback_mock)
 
-        calls = callback_mock.call_args_list
+        bind_calls = bind_mock.call_args_list
+        callback_calls = callback_mock.call_args_list
 
-        # Each vehicle must report the identity of its RF sensor.
+        self.assertEqual(len(bind_calls), self.rf_sensor.number_of_sensors)
+        self.assertEqual(len(callback_calls), self.rf_sensor.number_of_sensors)
+
+        # Each vehicle must be checked whether its port is in use, and 
+        # successfully report the identity of its RF sensor in order.
         for vehicle_id in xrange(1, self.rf_sensor.number_of_sensors + 1):
-            response = calls.pop(0)[0][0]
+            expected_address = (self.rf_sensor._ip,
+                                self.rf_sensor._port + vehicle_id)
+
+            address = bind_calls.pop(0)[0][0]
+            self.assertEqual(address, expected_address)
+
+            response = callback_calls.pop(0)[0][0]
             self.assertEqual(response, {
                 "id": vehicle_id,
-                "address": "{}:{}".format(self.rf_sensor._ip,
-                                          self.rf_sensor._port + vehicle_id)
+                "address": "{}:{}".format(*expected_address)
             })
+
+        callback_mock.reset_mock()
+        bind_mock.reset_mock()
+        bind_mock.configure_mock(side_effect=None)
+        self.rf_sensor.discover(callback_mock, required_sensors=set([1]))
+
+        bind_mock.assert_called_once_with((self.rf_sensor._ip, self.rf_sensor._port + 1))
+        callback_mock.assert_not_called()
 
     def test_setup(self):
         # The socket connection must be opened.

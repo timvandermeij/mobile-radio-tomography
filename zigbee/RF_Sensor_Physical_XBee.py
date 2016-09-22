@@ -105,13 +105,15 @@ class RF_Sensor_Physical_XBee(RF_Sensor_Physical):
 
         self._packets = {}
 
-    def discover(self, callback):
+    def discover(self, callback, required_sensors=None):
         """
-        Discover all RF sensors in the network. The `callback` function is
-        called when an RF sensor reports its identity.
+        Discover RF sensors in the network. The `callback` callable function is
+        called when an RF sensor reports its identity. The other arguments are
+        ignored; all XBee devices are discovered if possible.
         """
 
-        super(RF_Sensor_Physical_XBee, self).discover(callback)
+        super(RF_Sensor_Physical_XBee, self).discover(callback,
+                                                      required_sensors=required_sensors)
 
         self._sensor.send("at", command="ND")
 
