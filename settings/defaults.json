@@ -199,7 +199,7 @@
                 "help": "Registered buttons",
                 "type": "list",
                 "subtype": "string",
-                "default": ["start", "pause", "stop", "up", "down", "left", "right"]
+                "default": ["start", "pause", "stop", "up", "down", "left", "right", "poweroff"]
             },
             "wait_delay": {
                 "help": "Delay in seconds for the infrared sensor thread",

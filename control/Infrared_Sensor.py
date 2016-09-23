@@ -122,6 +122,11 @@ class Infrared_Sensor(Threadable):
             super(Infrared_Sensor, self).interrupt()
 
     def _handle_lirc_code(self, data):
+        """
+        Handle incoming LIRC events by triggering a callback function
+        if a registered button is clicked.
+        """
+
         if data is not None:
             button = data[0]
             self._previous_button = button

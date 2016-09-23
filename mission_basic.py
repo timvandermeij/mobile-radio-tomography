@@ -5,6 +5,7 @@ Based on mission_basic.py in Dronekit, but supports other vehicle types as well.
 Documentation for the source is provided at http://python.dronekit.io/examples/mission_basic.html
 """
 
+import subprocess
 import sys
 import traceback
 
@@ -44,6 +45,7 @@ class Setup(object):
             infrared_sensor.register("start", self.enable)
             infrared_sensor.register("pause", self.monitor.pause)
             infrared_sensor.register("stop", self._infrared_disable)
+            infrared_sensor.register("poweroff", self._infrared_poweroff)
             infrared_sensor.activate()
         else:
             self.activated = True
@@ -114,6 +116,10 @@ class Setup(object):
 
     def _infrared_disable(self):
         self.environment.thread_manager.interrupt("infrared_sensor")
+
+    def _infrared_poweroff(self):
+        self.environment.thread_manager.interrupt("infrared_sensor")
+        subprocess.Popen(["poweroff"])
 
 def main(argv):
     arguments = Arguments("settings.json", argv)
