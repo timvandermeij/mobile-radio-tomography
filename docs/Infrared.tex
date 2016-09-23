@@ -64,6 +64,8 @@ to set them up correctly:
           This file and {\tt /boot/config.txt} give the {\tt lirc\_rpi} module 
           access to the ports and devices that it needs, otherwise the module 
           will halt the entire kernel.
+    \item Change {\tt devinput} to {\tt default} for the {\tt driver} entry in 
+          {\tt /etc/lirc/lirc\_options.conf}.
     \item Enable the LIRC daemon: {\tt systemctl enable lircd}
     \item Reboot the Raspberry Pi after checking that everything is in order.
     \item After the device has restarted, SSH to it again. Check the output of 
