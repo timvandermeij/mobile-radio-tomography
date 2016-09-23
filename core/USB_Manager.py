@@ -175,6 +175,11 @@ class USB_Manager(object):
                 device.path, device.baud_rate, rtscts=True, dsrdtr=True
             )
 
+        # If the device was closed before but is still loaded in the USB 
+        # manager, then reopen the connection.
+        if not device.serial_object.isOpen():
+            device.serial_object.open()
+
         return device.serial_object
 
     def clear(self):

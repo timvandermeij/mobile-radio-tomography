@@ -183,6 +183,12 @@ class TestCoreUSBManager(USBManagerTestCase):
         device = method(path)
         self.assertIsInstance(device, serial.Serial)
 
+        # Closing the device and retrieving it again reopens the connection.
+        device.close()
+        second_device = method(path)
+        self.assertEqual(device, second_device)
+        self.assertTrue(second_device.isOpen())
+
         # Overriding the path with an invalid one should result in an exception.
         with self.assertRaises(KeyError):
             device = method("/dev/tyUSB0")
