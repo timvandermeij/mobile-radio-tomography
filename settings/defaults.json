@@ -654,7 +654,7 @@
                 "length": 2,
                 "subtype": "int",
                 "min": 1,
-                "default": [20, 20]
+                "default": [19, 19]
             },
             "network_padding": {
                 "help": "Number of full cells for each dimension and on every side where the vehicles are allowed to drive around the network. First dimension is north, second is east.",
@@ -663,7 +663,7 @@
                 "length": 2,
                 "subtype": "int",
                 "min": 0,
-                "default": [0, 0]
+                "default": [1, 1]
             }
         }
     },
