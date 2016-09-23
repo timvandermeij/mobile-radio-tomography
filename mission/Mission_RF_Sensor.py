@@ -23,6 +23,7 @@ class Mission_RF_Sensor(Mission_Auto):
             raise ValueError("An RF sensor must be enabled for `Mission_RF_Sensor`")
 
         self.reset()
+        self._load_dump()
 
     def reset(self):
         # Waypoint packets that comprise the mission (thus far). These can be 
@@ -39,6 +40,7 @@ class Mission_RF_Sensor(Mission_Auto):
         # The `Location` object related to the previously added waypoint.
         self._point = None
 
+    def _load_dump(self):
         # Load the dump file if it exists, which immediately leads to 
         # a complete mission.
         try:

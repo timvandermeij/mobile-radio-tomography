@@ -66,13 +66,25 @@ class TestMissionRFSensor(EnvironmentTestCase):
         with patch('sys.stdout'):
             self.mission.setup()
 
-        # Resetting the mission with an existing dump causes it to be loaded.
+        self._send_waypoint_add(0, 4.0, 2.0)
+
+        # Resetting the mission clears the state variables again.
+        self.mission.reset()
+        self.assertFalse(self.mission.waypoints_complete)
+        self.assertEqual(self.mission.next_index, 0)
+        self.assertEqual(self.mission._waypoints, [])
+
+    def test_load_dump(self):
+        with patch('sys.stdout'):
+            self.mission.setup()
+
+        # An existing dump is loaded.
         packet = self._make_waypoint_add()
         json_data = json.dumps([packet.get_all()])
         funcs = {"read.return_value": json_data}
         self.open_mock.return_value.configure_mock(**funcs)
 
-        self.mission.reset()
+        self.mission._load_dump()
 
         self.open_mock.assert_any_call(self.mission._dump_file, "r")
         self.assertTrue(self.mission.waypoints_complete)
@@ -83,14 +95,10 @@ class TestMissionRFSensor(EnvironmentTestCase):
         funcs = {"read.return_value": ""}
         self.open_mock.return_value.configure_mock(**funcs)
 
-        self.mission.reset()
+        self.mission._load_dump()
 
         args = self.open_mock.mock_calls[-1][1]
         self.assertIsInstance(args[1], ValueError)
-
-        self.assertFalse(self.mission.waypoints_complete)
-        self.assertEqual(self.mission.next_index, 0)
-        self.assertEqual(self.mission._waypoints, [])
 
     def test_get_points(self):
         # An RF sensor mission has no predetermined AUTO points.
