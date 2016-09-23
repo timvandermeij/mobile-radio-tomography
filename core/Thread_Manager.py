@@ -38,8 +38,10 @@ class Thread_Manager(object):
         """
 
         # Log the destroy call only if it is being called from an except clause
-        # to prevent "None" spam in the logs.
-        if sys.exc_info() != (None, None, None):
+        # to prevent "None" spam in the logs. Also exclude assertion errors 
+        # from tests since those result in a test failure anyway.
+        exception = sys.exc_info()[0]
+        if exception is not None and not issubclass(exception, AssertionError):
             self.log("main thread")
 
         for threadable in self._threads.values():
