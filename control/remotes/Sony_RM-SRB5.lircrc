@@ -43,3 +43,9 @@ begin
     config = right
     repeat = 1
 end
+
+begin
+    button = sleep
+    prog = mobile-radio-tomography
+    config = poweroff
+end
