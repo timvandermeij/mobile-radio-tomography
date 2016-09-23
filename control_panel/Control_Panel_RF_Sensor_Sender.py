@@ -19,6 +19,8 @@ class Control_Panel_RF_Sensor_Sender(object):
         self._max_retries = configuration["max_retries"]
         self._retry_interval = configuration["retry_interval"]
 
+        self._vehicles = sorted(data.keys())
+
         self._labels = dict([(vehicle, "") for vehicle in data])
 
         self._retry_counts = dict([(vehicle, self._max_retries) for vehicle in data])
@@ -49,16 +51,24 @@ class Control_Panel_RF_Sensor_Sender(object):
         # Create a progress dialog and send the data to the vehicles.
         self._progress.open()
 
-        for vehicle in self._data:
-            timer = QtCore.QTimer()
-            timer.setInterval(self._retry_interval * 1000)
-            timer.setSingleShot(True)
-            # Bind timeout signal to retry for the current vehicle.
-            timer.timeout.connect(partial(self._retry, vehicle))
-            self._timers[vehicle] = timer
 
-        for vehicle in self._data:
-            self._send_clear(vehicle)
+        self._start_vehicle(0)
+
+    def _start_vehicle(self, index):
+        if len(self._vehicles) <= index:
+            self._progress.accept()
+            return
+
+        vehicle = self._vehicles[index]
+
+        timer = QtCore.QTimer()
+        timer.setInterval(self._retry_interval * 1000)
+        timer.setSingleShot(True)
+        # Bind timeout signal to retry for the current vehicle.
+        timer.timeout.connect(partial(self._retry, index, vehicle))
+        self._timers[vehicle] = timer
+
+        self._send_clear(vehicle)
 
     def _send_clear(self, vehicle):
         packet = Packet()
@@ -114,18 +124,16 @@ class Control_Panel_RF_Sensor_Sender(object):
         self._indexes[vehicle] = index
         self._retry_counts[vehicle] = self._max_retries + 1
 
-    def _retry(self, vehicle):
+    def _retry(self, index, vehicle):
         # Update the progress value and check if we are done in the retry 
         # function, which is called after a packet is being sent. Because we 
         # cannot update GUI parts when we receive the acknowledgement, we need 
         # to do this here.
-        self._update_labels()
+        self._update_label(vehicle)
         self._update_value()
-        if all(self._is_done(v) for v in self._indexes):
-            self._progress.accept()
-            return
 
         if self._is_done(vehicle):
+            self._start_vehicle(index + 1)
             return
 
         self._retry_counts[vehicle] -= 1
@@ -149,27 +157,31 @@ class Control_Panel_RF_Sensor_Sender(object):
 
     def _set_label(self, vehicle, text):
         self._labels[vehicle] = text
-        self._update_labels()
+        self._update_label(vehicle)
         self._update_value()
 
-    def _update_labels(self):
-        # If the progress bar is already closed, then do not update the labels.
+    def _update_label(self, vehicle):
+        if vehicle not in self._labels:
+            return
+
+        if self._retry_counts[vehicle] < self._max_retries:
+            retry = " ({} attempts remaining)".format(self._retry_counts[vehicle])
+        else:
+            retry = ""
+
+        label = "Vehicle {}: {}{}".format(vehicle, self._labels[vehicle], retry)
+
+        # If the progress bar is already closed, then do not update the label.
         if self._progress is None:
             return
 
-        labels = []
-        for vehicle in sorted(self._labels.iterkeys()):
-            label = self._labels[vehicle]
-            if self._retry_counts[vehicle] < self._max_retries:
-                retry = " ({} attempts remaining)".format(self._retry_counts[vehicle])
-            else:
-                retry = ""
-
-            labels.append("Vehicle {}: {}{}".format(vehicle, label, retry))
-
-        self._progress.setLabelText("\n".join(labels))
+        self._progress.setLabelText(label)
 
     def _update_value(self):
+        # If the progress bar is already closed, then do not update the value.
+        if self._progress is None:
+            return
+
         self._progress.setValue(max(0, min(self._total, sum(self._indexes.values()))))
 
     def _cancel(self, message=None):

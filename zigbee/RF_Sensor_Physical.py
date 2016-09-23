@@ -41,15 +41,18 @@ class RF_Sensor_Physical(RF_Sensor):
         self._ntp = NTP(self)
         self._ntp_delay = self._settings.get("ntp_delay")
 
-    def discover(self, callback):
+    def discover(self, callback, required_sensors=None):
         """
-        Discover all RF sensors in the network. The `callback` function is
-        called when an RF sensor reports its identity.
+        Discover RF sensors in the network. The `callback` callable function is
+        called when an RF sensor reports its identity. The `required_sensors`
+        set indicates which sensors should be discovered; if it is not
+        provided, then all RF sensors are discovered.
 
         Classes that inherit this base class must extend this method.
         """
 
-        super(RF_Sensor_Physical, self).discover(callback)
+        super(RF_Sensor_Physical, self).discover(callback,
+                                                 required_sensors=required_sensors)
 
         self._discovery_callback = callback
 

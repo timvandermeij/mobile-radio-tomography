@@ -122,21 +122,42 @@ class Control_Panel_Devices_View(Control_Panel_View):
         self._fill()
 
     def _check_discover(self):
+        """
+        Update the tree view with newly discovered device data.
+        """
+
         if self._updated:
             self._tree_view.clear()
             self._fill()
             self._updated = False
+
+            # Once all devices are discovered, then we do not need to wait for 
+            # any more data.
             if self._timer is not None and all(device.joined for device in self._devices):
                 self._timer.stop()
                 self._timer = None
 
     def _refresh_vehicles(self):
         """
-        Refresh the status of the vehicles.
+        Refresh the status of the vehicles. This discovers any newly visible sensors.
         """
 
-        self._controller.rf_sensor.discover(self._refresh_vehicle)
+        # Determine which sensors should be discovered, i.e., the end point 
+        # devices that have not joined yet.
+        required_sensors = set()
+        for device in self._devices:
+            if device.category == Device_Category.END_DEVICE and not device.joined:
+                required_sensors.add(device.id)
 
+        self._controller.rf_sensor.discover(self._refresh_vehicle,
+                                            required_sensors=required_sensors)
+
+        # Stop any existing timers that may linger from an early discovery.
+        if self._timer is not None:
+            self._timer.stop()
+
+        # Start a timer that updates the tree view when the discovery data 
+        # comes in.
         self._timer = QtCore.QTimer()
         self._timer.setInterval(self._discover_interval * 1000)
         self._timer.setSingleShot(False)
@@ -146,10 +167,15 @@ class Control_Panel_Devices_View(Control_Panel_View):
     def _refresh_vehicle(self, packet):
         """
         Refresh a single vehicle using information from a node discovery `packet`.
+
+        This method only updates the device data, not the tree view, because it
+        may be called on a non-GUI thread.
         """
 
         vehicle = self._devices[packet["id"]]
         vehicle.address = packet["address"]
         vehicle.joined = True
 
+        # Mark the data as updated so that the tree view can be refreshed on 
+        # a GUI thread.
         self._updated = True

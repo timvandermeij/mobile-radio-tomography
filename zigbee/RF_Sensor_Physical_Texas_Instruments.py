@@ -95,16 +95,24 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
 
         super(RF_Sensor_Physical_Texas_Instruments, self).start()
 
-    def discover(self, callback):
+    def discover(self, callback, required_sensors=None):
         """
-        Discover all RF sensors in the network. The `callback` function is
-        called when an RF sensor reports its identity.
+        Discover RF sensors in the network. The `callback` callable function is
+        called when an RF sensor reports its identity. The `required_sensors`
+        set indicates which sensors should be discovered; if it is not
+        provided, then all RF sensors are discovered.
+
+        CC2530 devices are discovered if they respond to packets.
         """
 
-        super(RF_Sensor_Physical_Texas_Instruments, self).discover(callback)
+        super(RF_Sensor_Physical_Texas_Instruments, self).discover(callback,
+                                                                   required_sensors=required_sensors)
 
-        # Send a ping/pong packet to all sensors in the network.
-        for index in xrange(1, self._number_of_sensors + 1):
+        if required_sensors is None:
+            required_sensors = set(range(1, self._number_of_sensors + 1))
+
+        # Send a ping/pong packet to the sensors in the network.
+        for index in required_sensors:
             packet = Packet()
             packet.set("specification", "ping_pong")
             packet.set("sensor_id", index)
