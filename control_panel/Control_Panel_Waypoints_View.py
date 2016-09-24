@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 from collections import OrderedDict
@@ -306,8 +307,10 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         """
 
         type_col = self._fields["type"]
+        wait_count_col = self._fields["wait_count"]
         return sum(
-            row[type_col] == Waypoint_Type.WAIT for row in waypoints[:index]
+            row[wait_count_col] for row in waypoints[:index]
+            if row[type_col] == Waypoint_Type.WAIT
         )
 
     def _make_location(self, waypoint):
@@ -447,22 +450,27 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
 
             row += 1
 
-    def _uncompress_waypoints(self, vehicle, data):
+    def _uncompress_waypoints(self, vehicle, data, max_wait_index=None):
         """
         Uncompress the given formatted list of waypoints `data` that was
         retrieved from the table for the given vehicle ID `vehicle`.
 
-        This replaces each waypoint that has a "wait_count" with the
+        If `max_wait_index` is provided, then only the waypoints up to and
+        including the one with a wait waypoint index of `max_wait_index` are
+        uncompressed.
+
+        This replaces each waypoint in `data` that has a "wait_count" with the
         corresponding range of locations from the previous waypoint to that
         waypoint. It also fills default "wait_id" fields if we only have two
-        sensor vehicles.
+        sensor vehicles and gives ascending values to "wait_waypoint".
         """
 
         row = 0
+        wait_index = 0
         while row < len(data):
             locations = self._uncompress_waypoint(data, row)
             wait_id = self._get_wait_id(vehicle, data[row])
-            wait_waypoint = self._get_wait_waypoint(row, data[row])
+            wait_waypoint = self._get_wait_waypoint(data, row)
 
             waypoints = []
             for i, loc in enumerate(locations):
@@ -484,7 +492,24 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
                 waypoints.append(waypoint)
 
             data[row:row+1] = waypoints
+
+            if data[row][self._fields["type"]] == Waypoint_Type.WAIT:
+                wait_index += len(locations)
+            if max_wait_index is not None and wait_index >= max_wait_index:
+                return
+
             row += len(locations)
+
+    def _get_wait_waypoints(self, waypoints, wait_id, wait_waypoint):
+        type_col = self._fields["type"]
+
+        data = copy.deepcopy(waypoints[wait_id])
+        self._uncompress_waypoints(wait_id, data, max_wait_index=wait_waypoint)
+        wait_waypoints = OrderedDict([
+            (index, row) for index, row in enumerate(data)
+            if row[type_col] == Waypoint_Type.WAIT
+        ])
+        return wait_waypoints
 
     def _validate_waypoints(self, waypoints):
         """
@@ -497,48 +522,79 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         """
 
         for vehicle, rows in waypoints.iteritems():
-            wait_count = 0
+            wait_index = 0
             for row, waypoint in enumerate(rows):
                 if waypoint[self._fields["type"]] == Waypoint_Type.WAIT:
                     wait_id = self._get_wait_id(vehicle, waypoint)
+                    wait_count = waypoint[self._fields["wait_count"]]
                     wait_waypoint = waypoint[self._fields["wait_waypoint"]]
                     if wait_id > 0 and wait_id != vehicle and wait_waypoint != -1:
                         self._validate_wait_waypoint(waypoints, vehicle, row,
-                                                     wait_count, wait_id,
-                                                     wait_waypoint)
+                                                     wait_index, wait_count,
+                                                     wait_id, wait_waypoint)
 
-                    wait_count += 1
+                    wait_index += wait_count
 
-    def _validate_wait_waypoint(self, waypoints, vehicle, row, wait_count,
-                                wait_id, wait_waypoint):
-        type_col = self._fields["type"]
+    def _validate_wait_waypoint(self, waypoints, vehicle, row, wait_index,
+                                wait_count, wait_id, wait_waypoint):
         wait_waypoint_col = self._fields["wait_waypoint"]
 
         if wait_id not in waypoints:
-            raise WaypointsTableValueError("Waypoint for vehicle {}, row #{} references vehicle {} which has no waypoints".format(vehicle, row+1, wait_id), vehicle, row, self._fields["wait_id"])
+            message = "vehicle {} which has no waypoints"
+            raise self._make_wait_waypoint_error(message, vehicle, row,
+                                                 self._fields["wait_id"])
 
-        wait_waypoints = [
-            data for data in waypoints[wait_id]
-            if data[type_col] == Waypoint_Type.WAIT
-        ]
+        # Part of error messages describing a wait waypoint of the other 
+        # vehicle referenced by the wait waypoint being currently validated.
+        other_msg = "wait waypoint {} of vehicle {}".format(wait_waypoint + 1,
+                                                            wait_id)
+
+        wait_data = self._get_wait_waypoints(waypoints, wait_id, wait_waypoint)
+        wait_waypoints = wait_data.values()
         if wait_waypoint >= len(wait_waypoints):
-            raise WaypointsTableValueError("Waypoint for vehicle {}, row #{} references nonexistent wait waypoint {} from vehicle {}".format(vehicle, row+1, wait_waypoint, wait_id), vehicle, row, wait_waypoint_col)
+            message = "nonexistent {}".format(other_msg)
+            raise self._make_wait_waypoint_error(message, vehicle, row,
+                                                 wait_waypoint_col)
 
         other_id = self._get_wait_id(wait_id, wait_waypoints[wait_waypoint])
         if other_id != vehicle:
-            raise WaypointsTableValueError("Waypoint for vehicle {}, row #{} references wrong wait waypoint {} from vehicle {}; the latter has wait id {}".format(vehicle, row+1, wait_waypoint, wait_id, other_id), vehicle, row, wait_waypoint_col)
+            msg = "wrong {}; the latter waits for vehicle {}"
+            message = msg.format(other_msg, other_id)
+            raise self._make_wait_waypoint_error(msg, vehicle, row,
+                                                 wait_waypoint_col)
 
-        other_count = wait_waypoints[wait_waypoint][wait_waypoint_col]
-        if other_count == -1:
-            other_count = wait_waypoint
+        other_index = wait_waypoints[wait_waypoint][wait_waypoint_col]
+        if other_index == -1:
+            other_index = wait_waypoint
 
-        if other_count != wait_count:
-            raise WaypointsTableValueError("Waypoint for vehicle {}, row #{} references wrong wait waypoint {} from vehicle {}; the latter points to wait waypoint {} instead of back to {}".format(vehicle, row+1, wait_waypoint, wait_id, other_count+1, wait_count+1), vehicle, row, wait_waypoint_col)
+        if not self._wait_index_in_range(other_index, wait_index, wait_count):
+            msg = "wrong {} which points to wait waypoint {} instead of {}"
+            message = msg.format(other_msg, wait_count + 1, wait_index + 1)
+            raise self._make_wait_waypoint_error(message, vehicle, row,
+                                                 wait_waypoint_col)
 
         for data in wait_waypoints[:wait_waypoint]:
             other_id = self._get_wait_id(wait_id, data)
-            if other_id == vehicle and data[wait_waypoint_col] > wait_count:
-                raise WaypointsTableValueError("Waypoint for vehicle {}, row #{} references wrong wait waypoint {} from vehicle {}; earlier wait waypoint references a later waypoint of this vehicle, leading to deadlocks".format(vehicle, row+1, wait_waypoint, wait_id), vehicle, row, wait_waypoint_col)
+            if other_id == vehicle and data[wait_waypoint_col] > wait_index:
+                msg = "wrong {}; earlier waypoint references a later waypoint of this vehicle, leading to deadlocks"
+                message = msg.format(other_msg, wait_waypoint, wait_id)
+                raise self._make_wait_waypoint_error(message, vehicle, row,
+                                                     wait_waypoint_col)
+
+    def _make_wait_waypoint_error(self, message, vehicle, row, column):
+        base_message = "Waypoint for vehicle {}, row #{} references {}"
+        real_message = base_message.format(vehicle, row + 1, message)
+
+        return WaypointsTableValueError(real_message, vehicle, row, column)
+
+    def _wait_index_in_range(self, wait_waypoint, wait_index, wait_count):
+        """
+        Check whether the given `wait_waypoint` ID is within the range of
+        the `wait_index`, provided that the former waypoint is in fact a range
+        of `wait_count` waypoints.
+        """
+
+        return wait_index <= wait_waypoint < wait_index + wait_count
 
     def _export_waypoints(self, repeat=True, errors=True):
         """
@@ -908,14 +964,23 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
             return
 
         type_col = self._fields["type"]
-        wait_waypoints = [
-            index for index, data in enumerate(waypoints[wait_id])
-            if data[type_col] == Waypoint_Type.WAIT
-        ]
+        wait_count_col = self._fields["wait_count"]
+        wait_index = 0
+        wait_row = -1
+        for index, row in enumerate(waypoints[wait_id]):
+            if row[type_col] != Waypoint_Type.WAIT:
+                continue
 
-        if wait_waypoint >= len(wait_waypoints):
+            wait_count = row[wait_count_col]
+            if self._wait_index_in_range(wait_waypoint, wait_index, wait_count):
+                wait_row = index
+                break
+
+            wait_index += wait_count
+
+        if wait_row == -1:
             return
 
         self._listWidget.setCurrentRow(wait_id - 1)
-        self._tables[wait_id-1].setCurrentCell(wait_waypoints[wait_waypoint],
+        self._tables[wait_id-1].setCurrentCell(wait_row,
                                                self._fields["wait_waypoint"])

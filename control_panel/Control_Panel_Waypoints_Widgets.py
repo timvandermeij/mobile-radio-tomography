@@ -256,9 +256,10 @@ class WaypointsTableWidget(QtGui.QTableWidget):
                 # Alter the data in case there is an offset for this column, 
                 # but only do so when it is not the default "special" value.
                 if "offset" in column:
-                    data[col] = data[col] + column["offset"]
+                    item = str(data[col] + column["offset"])
+                else:
+                    item = str(data[col])
 
-                item = str(data[col])
                 self.setItem(row, col, QtGui.QTableWidgetItem(item))
 
     def get_item(self, row, col):
