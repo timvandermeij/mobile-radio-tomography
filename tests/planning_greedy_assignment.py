@@ -44,11 +44,13 @@ class TestPlanningGreedyAssignment(SettingsTestCase):
         self.assertIsInstance(assignment, dict)
         self.assertEqual(len(assignment), 2)
         self.assertEqual(assignment[1], [
+            [0, 0, 0, Waypoint_Type.HOME, 0, 1, -1],
             [0, 1, 0, wait, 2, 1, 0], [0, 2, 0, wait, 2, 1, 1],
             [3, 0, 0, wait, 2, 1, 2], [0, 0, 0, wait, 2, 1, 3],
             [19, 1, 0, wait, 2, 1, 4]
         ])
         self.assertEqual(assignment[2], [
+            [0, 19, 0, Waypoint_Type.HOME, 0, 1, -1],
             [2, 19, 0, wait, 1, 1, 0], [4, 19, 0, wait, 1, 1, 1],
             [5, 16, 0, wait, 1, 1, 2], [1, 16, 0, wait, 1, 1, 3],
             [4, 18, 0, wait, 1, 1, 4]
@@ -80,17 +82,17 @@ class TestPlanningGreedyAssignment(SettingsTestCase):
         # We receive a good assignment.
         self.assertIsInstance(assignment, dict)
         self.assertEqual(len(assignment), 2)
-        self.assertEqual(len(assignment[1]), 2)
-        self.assertEqual(len(assignment[2]), 1)
+        self.assertEqual(len(assignment[1]), 3)
+        self.assertEqual(len(assignment[2]), 2)
 
-        pass_waypoint = assignment[1][0]
+        pass_waypoint = assignment[1][1]
         self.assertIsInstance(pass_waypoint, Waypoint)
         self.assertEqual(pass_waypoint.name, Waypoint_Type.PASS)
         self.assertEqual(pass_waypoint.vehicle_id, 1)
         self.assertEqual(pass_waypoint.location.north, 3)
         self.assertEqual(pass_waypoint.location.east, 0)
 
-        first_waypoint = assignment[1][1]
+        first_waypoint = assignment[1][2]
         self.assertIsInstance(first_waypoint, Waypoint)
         self.assertEqual(first_waypoint.name, Waypoint_Type.WAIT)
         self.assertEqual(first_waypoint.vehicle_id, 1)
@@ -99,7 +101,7 @@ class TestPlanningGreedyAssignment(SettingsTestCase):
         self.assertEqual(first_waypoint.wait_id, 2)
         self.assertEqual(first_waypoint.wait_count, 1)
 
-        second_waypoint = assignment[2][0]
+        second_waypoint = assignment[2][1]
         self.assertEqual(second_waypoint.name, Waypoint_Type.WAIT)
         self.assertEqual(second_waypoint.vehicle_id, 2)
         self.assertEqual(second_waypoint.location.north, 0)

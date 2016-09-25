@@ -220,6 +220,9 @@ class Greedy_Assignment(object):
         self._assignment = dict([
             (i, []) for i in range(1, self._number_of_vehicles + 1)
         ])
+        for vehicle, home_location in enumerate(self._current_positions):
+            self._add_waypoint(vehicle + 1, home_location, Waypoint_Type.HOME)
+
         total_distance = 0
 
         while len(self._positions) > 0:
