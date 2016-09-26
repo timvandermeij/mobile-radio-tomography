@@ -12,8 +12,12 @@ from settings import SettingsTestCase
 class TestPlanningGreedyAssignment(SettingsTestCase):
     def setUp(self):
         self.arguments = Arguments("settings.json", [
-            "--network-padding", "5", "5"
+            "--network-padding", "5", "5",
         ])
+        settings = self.arguments.get_settings("planning_assignment")
+        settings.set("vehicle_home_locations", [[0, 0], [0, 19]])
+        settings.set("vehicle_home_directions", [0, 0])
+
         self.geometry = Geometry_Grid()
         self.import_manager = Import_Manager()
         self.assigner = Greedy_Assignment(self.arguments, self.geometry,

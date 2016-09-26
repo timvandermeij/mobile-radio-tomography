@@ -10,7 +10,8 @@ class TestVehicleRobotVehicleArduinoFull(RobotVehicleTestCase):
         self.set_arguments([
             "--motor-speed-pwms", "0", "2000", "--motor-speeds", "-0.6", "0.6",
             "--home-location", "3", "4", "--home-direction", "2",
-            "--activate-delay", "0"
+            "--vehicle-network-origin", "1", "2",
+            "--vehicle-network-size", "19", "20", "--activate-delay", "0"
         ], vehicle_class="Robot_Vehicle_Arduino_Full")
         self.set_rpi_patch()
         super(TestVehicleRobotVehicleArduinoFull, self).setUp()
@@ -25,7 +26,7 @@ class TestVehicleRobotVehicleArduinoFull(RobotVehicleTestCase):
             self.vehicle.activate()
             self.assertEqual(self._ttl_device.readline(), "START\n")
             self.assertEqual(self._ttl_device.readline(), "HOME 3 4 S\n")
-            self.assertEqual(self._ttl_device.readline(), "NETW 0 0 19 19\n")
+            self.assertEqual(self._ttl_device.readline(), "NETW 1 2 19 20\n")
             thread_mock.assert_any_call(self.vehicle._serial_loop, ())
 
     @patch("thread.start_new_thread")
