@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
 # Package imports
-import Algorithm
 from Problem import Reconstruction_Plan_Continuous, Reconstruction_Plan_Discrete
 from ..core.Threadable import Threadable
 
@@ -19,20 +18,25 @@ class Planning_Runner(Threadable):
     output of the algorithm.
     """
 
-    def __init__(self, arguments, thread_manager, iteration_callback=None):
+    def __init__(self, arguments, thread_manager, import_manager,
+                 iteration_callback=None):
         super(Planning_Runner, self).__init__("planning_runner", thread_manager)
 
         self.arguments = arguments
         self.settings = self.arguments.get_settings("planning_runner")
+
+        self._import_manager = import_manager
         self._iteration_callback = iteration_callback
 
         self.reset()
 
     def _get_problem(self):
         if self.settings.get("discrete"):
-            return Reconstruction_Plan_Discrete(self.arguments)
+            problem_class = Reconstruction_Plan_Discrete
+        else:
+            problem_class = Reconstruction_Plan_Continuous
 
-        return Reconstruction_Plan_Continuous(self.arguments)
+        return problem_class(self.arguments, self._import_manager)
 
     def reset(self):
         """
@@ -42,15 +46,18 @@ class Planning_Runner(Threadable):
         self.problem = self._get_problem()
 
         algo = self.settings.get("algorithm_class")
+        algo_class = self._import_manager.load_class(algo, module="Algorithm",
+                                                     relative_module="planning")
 
-        if algo not in Algorithm.__dict__:
-            raise ValueError("Algorithm class '{}' does not exist".format(algo))
-
-        self.algorithm = Algorithm.__dict__[algo](self.problem, self.arguments)
+        self.algorithm = algo_class(self.problem, self.arguments)
         self.algorithm.set_iteration_callback(self._handle_algorithm_data)
 
         # Whether the algorithm is done running.
         self.done = False
+
+        # Whether the algorithm should halt immediately once it detects the 
+        # signal to deactivate.
+        self._halt = False
 
         # Iteration from which we received the data from the iteration callback
         self.current_iteration = 0
@@ -67,16 +74,18 @@ class Planning_Runner(Threadable):
         # Nondominated layers of solution objectives
         self.R = []
 
+    def _save(self, P, Objectives, Feasible):
+        self.P = np.copy(P)
+        self.Objectives = np.copy(Objectives)
+        self.Feasible = np.copy(Feasible)
+        self.R = self.algorithm.sort_nondominated(self.Objectives)
+
     def _handle_algorithm_data(self, algorithm, data):
         # Pass through to the actual algorithm iteration callback, and track 
         # the current variables in the runner as well.
         if self._iteration_callback is not None:
             self.current_iteration = data["iteration"]
-            self.P = np.copy(data["population"])
-            self.Feasible = np.copy(data["feasible"])
-            self.Objectives = np.copy(data["objectives"])
-            self.R = self.algorithm.sort_nondominated(self.Objectives)
-
+            self._save(data["population"], data["objectives"], data["feasible"])
             self._iteration_callback(algorithm, data)
 
     def activate(self):
@@ -91,7 +100,9 @@ class Planning_Runner(Threadable):
 
     def deactivate(self):
         """
-        Stop the algorithm if it is currently running.
+        Halt the algorithm if it is currently running.
+
+        This throws away the results of the algorithm.
 
         This makes the iteration limit invalid, so any later runs must either
         reinstantiate the entire runner or set the iteration limit again.
@@ -99,7 +110,8 @@ class Planning_Runner(Threadable):
 
         super(Planning_Runner, self).deactivate()
 
-        self.set_iteration_limit(0)
+        self.stop()
+        self._halt = True
 
     def start(self):
         """
@@ -110,18 +122,39 @@ class Planning_Runner(Threadable):
 
         try:
             P, Objectives, Feasible = self.algorithm.evolve()
+            if self._halt:
+                return []
+
             self.current_iteration = self.get_iteration_current()
-            self.P = np.copy(P)
-            self.Objectives = np.copy(Objectives)
-            self.Feasible = np.copy(Feasible)
-            self.R = self.algorithm.sort_nondominated(self.Objectives)
+            self._save(P, Objectives, Feasible)
         except:
+            if self._halt:
+                return []
+
             super(Planning_Runner, self).interrupt()
             return []
 
         self.done = True
 
         return self.get_indices()
+
+    def stop(self):
+        """
+        Stop the algorithm if it is currently running.
+
+        Compared to `deactivate`, this allows the run to finish at the current
+        iteration normally, making it possible to use its results.
+
+        This makes the iteration limit invalid, so any later runs must either
+        reinstantiate the entire runner or set the iteration limit again.
+        """
+
+        self.set_iteration_limit(0)
+
+    def finish(self):
+        """
+        Finalize the data from the run and mark it as finished.
+        """
 
     def get_indices(self, sort=0):
         """
@@ -299,21 +332,22 @@ class Planning_Runner(Threadable):
             o2 = [self.Objectives[i][1] for i in Rk if self.Feasible[i]]
             axes.plot(o1, o2, marker='o', picker=5)
 
-    def get_assignment(self, i):
+    def get_assignment(self, i, export=True):
         """
         Given an index `i` of an individual from a run of the algorithm, return
-        the dictionary of ordered waypoint assignments to vehicles.
+        the dictionary of ordered waypoint assignments to vehicles. If `export`
+        is `True`, then the waypoints are lists that can be exported as JSON.
+        Set `export` to `False` to receive `Waypoint` objects instead.
 
         If the algorithm does not yet have (intermediate) results or if the
-        solution is not feasible, then this method returns an empty dictionary
-        instead.
+        solution is not feasible, then this method returns an empty dictionary.
         """
         
         positions = self.get_positions(i)[0]
         if positions.size == 0:
             return {}
 
-        assignment = self.problem.assigner.assign(positions)[0]
+        assignment = self.problem.assigner.assign(positions, export=export)[0]
         return assignment
 
     def get_iteration_current(self):

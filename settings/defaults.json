@@ -343,6 +343,11 @@
                 "help": "Whether to wait for measurements to be complete at waypoints",
                 "type": "bool",
                 "default": true
+            },
+            "mission_dump_file": {
+                "help": "File to store dumps of missions in",
+                "type": "file",
+                "default": "mission_dump.json"
             }
         }
     },
@@ -561,8 +566,8 @@
             },
             "home_direction": {
                 "help": "The starting direction of the robot. The robot should be aligned with this direction to begin with. 0 is up, 1 is right, 2 is down and 3 is left.",
-                "type": "int",
-                "options": [0, 1, 2, 3],
+                "type": "enum",
+                "enum": ["location.Line_Follower", "Line_Follower_Direction"],
                 "default": 0
             },
             "vehicle_network_origin": {
@@ -570,7 +575,7 @@
                 "type": "tuple",
                 "subtype": "float",
                 "length": 2,
-                "default": [0, 0]
+                "default": [1, 1]
             },
             "vehicle_network_size": {
                 "help": "Width and height of the area where the vehicle is not allowed to be inside",
@@ -626,7 +631,7 @@
             "activate_delay": {
                 "help": "Number of seconds to wait for the Arduino to restart during activation",
                 "type": "float",
-                "default": 1.0
+                "default": 1.75
             },
             "motor_speed_pwms": {
                 "help": "PWM range for both motors (minimum and maximum values)",
@@ -677,7 +682,7 @@
                 "type": "class",
                 "module": "planning.Algorithm",
                 "replace": ["-", "_"],
-                "default": "SMS_EMOA"
+                "default": "NSGA"
             },
             "discrete": {
                 "help": "Whether to use discrete grid cells instead of allowing measurements to happen anywhere",
@@ -702,7 +707,7 @@
                 "short": "Iterations",
                 "type": "int",
                 "min": 0,
-                "default": 1000
+                "default": 2000
             },
             "iteration_callback": {
                 "help": "Number of iterations to show a progress report every so often",
@@ -730,7 +735,7 @@
                 "short": "Measurements",
                 "type": "int",
                 "min": 1,
-                "default": 100
+                "default": 350
             },
             "unsnappable_rate": {
                 "help": "Ratio of the number of measurements that are allowed to be useless in the reconstruction problem and thus are discarded",
@@ -738,7 +743,7 @@
                 "type": "float",
                 "min": 0.0,
                 "max": 1.0,
-                "default": 0.5
+                "default": 0.75
             },
             "delta_rate": {
                 "help": "Ratio between sensor distances and mission length. A higher value gives the sensor distances more weight in the objective, a lower value gives the travel distance more weight.",
@@ -746,13 +751,13 @@
                 "type": "float",
                 "min": 0.0,
                 "max": 1.0,
-                "default": 0.5
+                "default": 0.8
             },
             "mutation_operator": {
                 "help": "Whether to use a specialized mutation operator during the discrete problem",
                 "short": "Mutation operator",
                 "type": "bool",
-                "default": true
+                "default": false
             }
         }
     },
@@ -768,7 +773,24 @@
                     "length": 2,
                     "subtype": "int"
                 },
-                "default": [[0, 0], [0, 19]]
+                "default": [[0, 0], [0, 19], [19, 0], [19, 19]]
+            },
+            "vehicle_home_directions": {
+                "help": "Home directions for the vehicles. 0 is up, 1 is right, 2 is down and 3 is left.",
+                "short": "Home directions",
+                "type": "list",
+                "subtype": {
+                    "type": "enum",
+                    "enum": ["location.Line_Follower", "Line_Follower_Direction"]
+                },
+                "default": [0, 0, 2, 2]
+            },
+            "turning_cost": {
+                "help": "Additional distance compared to the norm distance for turning a vehicle",
+                "short": "Turning cost",
+                "type": "float",
+                "min": 0.0,
+                "default": 1.0
             }
         }
     },
@@ -780,7 +802,7 @@
                 "help": "Whether to enable the collision avoidance algorithm",
                 "short": "Collision avoidance",
                 "type": "bool",
-                "default": true
+                "default": false
             },
             "unsafe_path_cost": {
                 "help": "Additional distance compared to the norm distance when there is no safe path possible to a certain waypoint. This should account for lost distance due to halting and detours. If this is 'inf', then the solution is considered infeasible.",
@@ -789,6 +811,12 @@
                 "inf": true,
                 "min": 0.0,
                 "default": Infinity
+            },
+            "assign_safe_path": {
+                "help": "Whether to use safe paths found by the collision avoidance algorithm in the assignment",
+                "short": "Assign safe paths",
+                "type": "bool",
+                "default": false
             }
         }
     },
@@ -1038,7 +1066,7 @@
                 "help": "Number of vehicle sensors in the network, not counting the ground station",
                 "type": "int",
                 "min": 0,
-                "default": 2
+                "default": 4
             },
             "rf_sensor_id": {
                 "help": "Identifier for the current RF sensor (overridden by the physical sensor)",
@@ -1223,7 +1251,7 @@
                 "help": "Delay in seconds for each sweep",
                 "type": "float",
                 "min": 0.0,
-                "default": 0.3
+                "default": 1.0
             }
         }
     },

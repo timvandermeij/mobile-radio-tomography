@@ -48,27 +48,23 @@ class Import_Manager(object):
         Import the class with the given `class_name` from a certain module
         relative to the base package.
 
-        If `module` is not given, then the module is this module relative to
-        the base package. Otherwise, if `relative_module` is given, then the
-        module has the same name as the class name, but relative to this
-        submodule, which in turn is relative to the package. Otherwise,
-        the module is the class name relative to the package.
+        If `module` is not given, then the module has the same name as the class
+        name, relative to the base package. If `relative_module` is given, then
+        the module is actually relative to this submodule, which in turn is
+        relative to the package.
 
         If the module and class can be imported, then the class object is
-        returned. Otherwise, an `ImportError` is raised. Providing both
-        `module` and `relative_module` raises a `ValueError`.
+        returned. Otherwise, an `ImportError` is raised.
         """
 
         if module is None:
             module = class_name
-        elif relative_module is not None:
-            raise ValueError("At most one of `module` and `relative_module` can be provided")
 
         import_module = self.load(module, relative_module=relative_module)
         try:
             return import_module.__dict__[class_name]
         except KeyError:
-            raise ImportError("Cannot import class name '{}' from module '{}.{}'".format(class_name, self._package, module))
+            raise ImportError("Cannot import class name '{}' from module '{}'".format(class_name, import_module.__name__))
 
     def unload(self, module, relative=True, store=True):
         """

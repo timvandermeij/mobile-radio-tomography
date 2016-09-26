@@ -636,23 +636,38 @@ class ChoicesFormWidget(QtGui.QComboBox, FormWidget):
             "float": float
         }
 
+        self._choices = []
+        self._enum = None
+
         if "replace" in self.info:
             replace = self.info["replace"]
         else:
             replace = ["", ""]
 
-        self._value_table = string.maketrans(*replace)
         self._display_table = string.maketrans(*reversed(replace))
 
-    def add_choices(self, choices):
+    def _get_display_value(self, choice):
+        if self._enum is not None:
+            item = self._enum(choice)
+            name = item.name.lower().replace("_", " ")
+            return "{} ({})".format(item.value, name)
+
+        return str(choice).translate(self._display_table)
+
+    def add_choices(self, choices, arguments):
+        if "enum" in self.info:
+            self._enum = arguments.load_choice_source(self.info["enum"])
+
         if self.count() == 0:
             if "required" in self.info and not self.info["required"]:
                 choices[0:0] = [""]
 
         for i, choice in enumerate(choices):
-            self.addItem(str(choice).translate(self._display_table))
+            self.addItem(self._get_display_value(choice))
             if choice == self.info["value"]:
-                self.setCurrentIndex(i)
+                self.setCurrentIndex(len(self._choices) + i)
+
+        self._choices.extend(choices)
 
     def contextMenuEvent(self, event):
         menu = QtGui.QMenu(self)
@@ -663,13 +678,9 @@ class ChoicesFormWidget(QtGui.QComboBox, FormWidget):
         menu.clear()
 
     def get_value(self):
-        if self.info["type"] in self._types:
-            type_cast = self._types[self.info["type"]]
-        else:
-            type_cast = str
-
-        return type_cast(str(self.currentText()).translate(self._value_table))
+        index = self.currentIndex()
+        return self._choices[index]
 
     def set_value(self, value):
-        index = self.findText(str(value).translate(self._display_table))
+        index = self.findText(self._get_display_value(value))
         self.setCurrentIndex(index)

@@ -17,6 +17,7 @@ finally:
 
 # Package imports
 from __init__ import __package__
+from core.Import_Manager import Import_Manager
 from core.Thread_Manager import Thread_Manager
 from planning.Runner import Planning_Runner
 from settings import Arguments
@@ -81,9 +82,11 @@ def main(argv):
     stamp = int(time.time())
 
     thread_manager = Thread_Manager()
+    import_manager = Import_Manager()
     arguments = Arguments("settings.json", argv)
 
-    runner = Planning_Runner(arguments, thread_manager, iteration_callback)
+    runner = Planning_Runner(arguments, thread_manager, import_manager,
+                             iteration_callback)
 
     arguments.check_help()
 

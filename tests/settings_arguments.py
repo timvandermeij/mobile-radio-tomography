@@ -3,7 +3,8 @@ from StringIO import StringIO
 from argparse import Action, ArgumentParser
 
 # Library imports
-from mock import patch, MagicMock
+from enum import Enum
+from mock import patch, MagicMock, Mock
 
 # Package imports
 from ..bench.Method_Coverage import covers
@@ -13,6 +14,10 @@ from settings import SettingsTestCase
 class MockModule(object):
     def __dir__(self):
         return ['g', 'h', 'i', 'j']
+
+class MockEnum(Enum):
+    FOO = 1
+    BAR = 2
 
 class TestSettingsArguments(SettingsTestCase):
     def setUp(self):
@@ -290,10 +295,11 @@ class TestSettingsArguments(SettingsTestCase):
             mock_module.mock_member.keys.assert_called_once_with()
 
         # Retrieving choices from __all__ works as expected.
+        package = __package__.split('.')[0]
         expected = ['e', 'f']
         mock_module = MagicMock(__all__=expected)
         modules = {
-            __package__.split('.')[0] + ".mock_module": mock_module
+            package + ".mock_module": mock_module
         }
         with patch.dict('sys.modules', modules):
             info = {"module": "mock_module"}
@@ -306,12 +312,42 @@ class TestSettingsArguments(SettingsTestCase):
             self.assertNotIn('something', expected)
             self.assertNotEqual(actual, expected)
 
-        # Retrieving choices from dir() works as expected
+        # Retrieving choices from `dir()` works as expected.
         mock_module = MockModule()
         expected = dir(mock_module)
         modules = {
-            __package__.split('.')[0] + ".mock_module": mock_module
+            package + ".mock_module": mock_module
         }
         with patch.dict('sys.modules', modules):
             info = {"module": "mock_module"}
             self.assertEqual(arguments.get_choices(info), expected)
+
+        # Retrieving choices from an `Enum` works as expected.
+        mock_enum_module = MagicMock(MockEnum=MockEnum)
+        modules = {
+            package + ".enum_module": mock_enum_module
+        }
+        expected = [1, 2]
+        with patch.dict('sys.modules', modules):
+            info = {"enum": ["enum_module", "MockEnum"]}
+            self.assertEqual(arguments.get_choices(info), expected)
+
+    def test_load_choice_source(self):
+        arguments = Arguments("tests/settings/settings.json", [],
+                              defaults_file=self.defaults_file)
+
+        mock_module = MagicMock(props=Mock(items=["x", "y", "z"]))
+        mock_global_module = MagicMock(data=Mock(sub=["foo", "bar", "baz"]))
+        modules = {
+            __package__.split('.')[0] + ".mock_module": mock_module,
+            "global_module": mock_global_module
+        }
+
+        with patch.dict('sys.modules', modules):
+            location = ["mock_module", "props", "items"]
+            actual = arguments.load_choice_source(location, relative=True)
+            self.assertEqual(actual, ["x", "y", "z"])
+
+            location = ["global_module", "data", "sub"]
+            actual = arguments.load_choice_source(location, relative=False)
+            self.assertEqual(actual, ["foo", "bar", "baz"])

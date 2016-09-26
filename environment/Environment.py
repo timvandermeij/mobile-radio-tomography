@@ -105,23 +105,35 @@ class Environment(Location_Proxy):
             pwm = servo["pwm"] if "pwm" in servo else None
             self._servos.append(Servo(servo["pin"], servo["angles"], pwm))
 
+        # Set up the RF sensor and packet callback handler for distributing 
+        # ZigBee packets to certain receivers according to the specification.
         self._rf_sensor = None
         self._packet_callbacks = {}
         self._setup_rf_sensor()
 
+        self._settings_receiver = Settings_Receiver(self)
+
+        # Set up the measurement validation that keeps track of the current 
+        # location and wait waypoint IDs of the vehicles with sensors in the 
+        # network, ensuring that we wait for enough measurements between the 
+        # required sensors.
         self._valid_measurements = {}
         self._is_measurement_valid = False
         self._required_sensors = set()
+        self._own_waypoint_valid = False
+        self._own_waypoint_index = -1
+        self._wait_waypoint_index = -1
         self.invalidate_measurement()
 
-        self._settings_receiver = Settings_Receiver(self)
-
+        # Set up the infrared sensor for direct control of missions, etc.
         if self.settings.get("infrared_sensor"):
             from ..control.Infrared_Sensor import Infrared_Sensor
             self._infrared_sensor = Infrared_Sensor(arguments, thread_manager)
         else:
             self._infrared_sensor = None
 
+        # Set up vehicle attribute listeners to keep track of changes that 
+        # affect the environment.
         self.vehicle.add_attribute_listener('home_location', self.on_home_location)
         self.vehicle.add_attribute_listener('servos', self.on_servos)
 
@@ -263,8 +275,7 @@ class Environment(Location_Proxy):
         """
 
         coords = self.geometry.get_coordinates(self.vehicle.location)[:2]
-        waypoint_index = self.vehicle.get_next_waypoint()
-        return coords, waypoint_index
+        return coords, self._own_waypoint_index
 
     def location_valid(self, other_valid=None, other_id=None, other_index=None):
         """
@@ -279,31 +290,37 @@ class Environment(Location_Proxy):
         of a synchronized pair of vehicles, and whether the mission can move to
         another waypoint already.
 
-        The returned value indicates whether the vehicle's location is valid.
+        The returned value indicates whether the vehicle's location is valid,
+        namely whether it has reached the necessary waypoint index and that the
+        location is stable according to the vehicle.
         """
 
-        location_valid = self.vehicle.is_current_location_valid()
-        index = self.vehicle.get_next_waypoint()
+        own_index = self._own_waypoint_index
+        own_valid = self._own_waypoint_valid
+        if not self.vehicle.is_current_location_valid():
+            own_valid = False
 
         if other_id is None:
             # We are going to send an RSSI broadcast packet, so we update 
             # whether the current vehicle's location is valid.
-            if self._rf_sensor is not None and location_valid:
-                self._valid_measurements[self._rf_sensor.id] = index
+            if self._rf_sensor is not None and own_valid:
+                self._valid_measurements[self._rf_sensor.id] = own_index
         elif other_valid:
-            # We are going to send a ground station packet, so we update 
-            # whether the other vehicle's location is valid, and check whether 
-            # all measurements will now be valid.
-            self._valid_measurements[other_id] = other_index
-
-            if not self._is_valid(self._rf_sensor.id, index):
+            # We are going to send a ground station packet. This packet can 
+            # only be complete if we have had measurements from all required 
+            # sensors, but we also want to ensure we have sent enough valid 
+            # measurements to the other vehicles as well. Only then will we 
+            # consider the entire measurement to be valid.
+            if not self._is_valid(self._rf_sensor.id, own_index):
                 self._is_measurement_valid = False
             else:
+                self._valid_measurements[other_id] = other_index
                 self._is_measurement_valid = all(
-                    self._is_valid(id, index) for id in self._required_sensors
+                    self._is_valid(id, self._wait_waypoint_index)
+                    for id in self._required_sensors
                 )
 
-        return location_valid
+        return own_valid
 
     def _is_valid(self, rf_sensor_id, index):
         if rf_sensor_id not in self._valid_measurements:
@@ -321,20 +338,37 @@ class Environment(Location_Proxy):
 
         return self._is_measurement_valid
 
-    def invalidate_measurement(self, required_sensors=None):
+    def set_waypoint_valid(self, valid=True):
+        """
+        Change the validity of the wait waypoint for the current vehicle.
+
+        This enables
+        """
+
+        self._own_waypoint_valid = valid
+
+    def invalidate_measurement(self, required_sensors=None, own_waypoint=-1,
+                               wait_waypoint=-1):
         """
         Consider the current measurement to be invalid.
 
-        The measurement will only be valid again if the current location and
-        the locations of each vehicle given in by their sensor ID in
-        `required_sensors` become valid. If `required_sensors` is not given,
-        then it falls back to the list of vehicle sensors in the network.
-        Regardless of the list of required sensors, the location of the current
-        vehicle must always be valid for a measurement to be complete.
+        The measurement will only be valid again the locations and waypoints of
+        the current vehicle as well as each vehicle given in by their sensor ID
+        in `required_sensors` become valid. If `required_sensors` is not given,
+        then it falls back to the list of other vehicle sensors in the network.
+        Regardless of the list of required sensors, the location and waypoint of
+        the current vehicle must always be valid for a measurement to be
+        complete. `own_waypoint` specifies the waypoint ID that this vehicle
+        is attempting to reach, which is communicated to the other vehicles.
+        `wait_waypoint` is the waypoint ID that we expect the other vehicles
+        from `required_sensors` to reach.
         """
 
         self._valid_measurements = {}
         self._is_measurement_valid = False
+        self._own_waypoint_valid = False
+        self._own_waypoint_index = own_waypoint
+        self._wait_waypoint_index = wait_waypoint
 
         if self._rf_sensor is None:
             self._required_sensors = set()
@@ -344,6 +378,7 @@ class Environment(Location_Proxy):
             required_sensors = range(1, self._rf_sensor.number_of_sensors + 1)
 
         self._required_sensors = set(required_sensors)
+        self._required_sensors.discard(self._rf_sensor.id)
 
     def get_yaw(self):
         """

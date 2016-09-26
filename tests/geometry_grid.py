@@ -1,3 +1,4 @@
+import math
 import numpy as np
 from dronekit import LocationLocal
 from ..geometry.Geometry_Grid import Geometry_Grid
@@ -31,6 +32,16 @@ class TestGeometryGrid(geometry.TestGeometry):
         self.assertEqual(offsets.shape, (4, 2))
 
         # pylint: disable=bad-continuation,bad-whitespace
-        self.assertTrue(np.array_equal(offsets, [          (-1, 0),
-                                                  (0, -1),           (0, 1),
-                                                            (1, 0)         ]))
+        self.assertTrue(np.array_equal(offsets, [          (1, 0),
+                                                 (0, -1),           (0, 1),
+                                                          (-1, 0)         ]))
+
+    def test_get_neighbor_directions(self):
+        angles = self.geometry.get_neighbor_directions()
+        self.assertEqual(angles.shape, (4,))
+        quarter = math.pi/2
+
+        # pylint: disable=bad-continuation,bad-whitespace
+        self.assertTrue(np.array_equal(angles, [             0.0,
+                                                3*quarter,         quarter,
+                                                           math.pi        ]))

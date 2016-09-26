@@ -2,6 +2,29 @@ from functools import partial
 from PyQt4 import QtCore, QtGui
 from ..waypoint.Waypoint import Waypoint_Type
 
+class WaypointsTableValueError(ValueError):
+    """
+    An exception caused by an invalid value in a cell of a waypoints table.
+    """
+
+    def __init__(self, message, vehicle=None, row=None, column=None):
+        super(WaypointsTableValueError, self).__init__(message)
+        self._vehicle = vehicle
+        self._row = row
+        self._column = column
+
+    @property
+    def vehicle(self):
+        return self._vehicle
+
+    @property
+    def row(self):
+        return self._row
+
+    @property
+    def column(self):
+        return self._column
+
 class WaypointTypeWidget(QtGui.QComboBox):
     """
     A table cell widget that makes it possible to select a certain waypoint type
@@ -39,8 +62,8 @@ class WaypointTypeWidget(QtGui.QComboBox):
 
         row = self._table.row(self._item)
         col = self._table.column(self._item)
-        for i in range(1, 3):
-            item = self._table.get_item(row, col + i)
+        for state_column in range(col + 1, self._table.columnCount()):
+            item = self._table.get_item(row, state_column)
             item.setFlags(flagger(item.flags()))
             item.setBackground(color)
 
@@ -71,7 +94,9 @@ class WaypointsTableWidget(QtGui.QTableWidget):
     A table widget with specialized rows for supplying waypoint data.
     """
 
-    def __init__(self, columns, *a, **kw):
+    menuRequested = QtCore.pyqtSignal(list, QtCore.QPoint, name='menuRequested')
+
+    def __init__(self, columns, vehicle, *a, **kw):
         super(WaypointsTableWidget, self).__init__(*a, **kw)
 
         # We assume that the defaults are `None` for columns without defaults 
@@ -80,16 +105,24 @@ class WaypointsTableWidget(QtGui.QTableWidget):
         # ordering does not match the characteristics of the columns.
         self._columns = columns
 
+        self._vehicle = vehicle
+
         self.setColumnCount(len(columns))
         self.setHorizontalHeaderLabels([column["label"] for column in columns])
         self.insertRow(0)
 
         horizontalHeader = self.horizontalHeader()
-        for i in range(len(columns)):
-            horizontalHeader.setResizeMode(i, QtGui.QHeaderView.Stretch)
+        for i, column in enumerate(columns):
+            if column["default"] is None:
+                mode = QtGui.QHeaderView.Stretch
+            else:
+                mode = QtGui.QHeaderView.ResizeToContents
+
+            horizontalHeader.setResizeMode(i, mode)
 
         # Create the context menu for the rows in the table.
         verticalHeader = self.verticalHeader()
+        verticalHeader.setResizeMode(QtGui.QHeaderView.Fixed)
         verticalHeader.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         verticalHeader.customContextMenuRequested.connect(self._make_menu)
 
@@ -100,30 +133,51 @@ class WaypointsTableWidget(QtGui.QTableWidget):
         Checks whether the given `item`, a `QTableWidgetItem`, is still valid.
         """
 
+        # Only change validity when the user was editing the item.
+        if self.state() != QtGui.QAbstractItemView.EditingState:
+            return
+
+        row = self.row(item)
         col = self.column(item)
         text = item.text()
         valid = True
 
         if text != "":
             try:
-                value = self.cast_cell(col, item.text())
+                value = self.cast_cell(row, col, text)
             except ValueError:
                 valid = False
 
             if valid and "min" in self._columns[col]:
                 valid = value >= self._columns[col]["min"]
 
+        self._set_item_valid(item, valid)
+
+    def _set_item_valid(self, item, valid):
+        """
+        Mark the cell item `item` as valid or invalid depending on `valid`.
+        """
+
         if not valid:
             item.setBackground(QtGui.QColor("#FA6969"))
         elif item.flags() & QtCore.Qt.ItemIsEnabled:
             item.setBackground(QtGui.QBrush())
 
-    def cast_cell(self, col, text):
+    def set_valid(self, row, column, valid):
         """
-        Change the value `text` from a cell in column `col` to correct type.
+        Mark the cell in the table row `row` and column `column` as valid or
+        invalid depending on `valid`.
+        """
 
-        Returns the casted value. Raises a `ValueError` if the text cannot be
-        casted to the appropriate value.
+        self._set_item_valid(self.get_item(row, column), valid)
+
+    def cast_cell(self, row, col, text):
+        """
+        Change the value `text` from a cell in row `row` and column `col` to
+        the correct type.
+
+        Returns the casted value. Raises a `WaypointsTableValueError` if the
+        text cannot be casted to the appropriate value.
         """
 
         if self._columns[col]["default"] is not None:
@@ -131,7 +185,15 @@ class WaypointsTableWidget(QtGui.QTableWidget):
         else:
             type_cast = float
 
-        return type_cast(text)
+        try:
+            value = type_cast(text)
+        except ValueError as e:
+            raise WaypointsTableValueError(e.message, self._vehicle, row, col)
+
+        if "offset" in self._columns[col]:
+            return value - self._columns[col]["offset"]
+
+        return value
 
     def get_row_data(self, row):
         """
@@ -139,7 +201,9 @@ class WaypointsTableWidget(QtGui.QTableWidget):
 
         The cell data is returned as a list, where each value is either `None`,
         indicating that the cell was not filled, a boolean for cells with
-        a check role, or the string value for other cells.
+        a check role, or the string value for other cells. The string value is
+        thus not yet cast or altered for internal offsets. Cells with widgets
+        in them may already have been adapted to the correct type and value.
 
         Additionally, a boolean is returned indicating whether the row was
         completely empty, i.e., not filled or altered.
@@ -189,7 +253,13 @@ class WaypointsTableWidget(QtGui.QTableWidget):
                 widget = self.cellWidget(row, col)
                 widget.set_value(data[col])
             elif data[col] != column["default"]:
-                item = str(data[col])
+                # Alter the data in case there is an offset for this column, 
+                # but only do so when it is not the default "special" value.
+                if "offset" in column:
+                    item = str(data[col] + column["offset"])
+                else:
+                    item = str(data[col])
+
                 self.setItem(row, col, QtGui.QTableWidgetItem(item))
 
     def get_item(self, row, col):
@@ -297,15 +367,20 @@ class WaypointsTableWidget(QtGui.QTableWidget):
         Create a context menu for the vertical header (row labels).
         """
 
-        menu = QtGui.QMenu(self)
+        is_valid = self.indexAt(position).isValid()
 
         insert_row_action = QtGui.QAction("Insert row before", self)
         insert_row_action.triggered.connect(partial(self._insert_row, position))
         remove_rows_action = QtGui.QAction("Remove row(s)", self)
+        remove_rows_action.setEnabled(is_valid)
         remove_rows_action.triggered.connect(partial(self._remove_rows, position))
 
-        menu.addAction(insert_row_action)
-        menu.addAction(remove_rows_action)
+        actions = [insert_row_action, remove_rows_action]
+        self.menuRequested.emit(actions, position)
+
+        menu = QtGui.QMenu(self)
+        for action in actions:
+            menu.addAction(action)
 
         menu.exec_(self.verticalHeader().viewport().mapToGlobal(position))
 

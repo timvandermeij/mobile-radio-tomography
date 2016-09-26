@@ -1,3 +1,5 @@
+import math
+import unittest
 from mock import call, patch, MagicMock
 from ..bench.Method_Coverage import covers
 from ..core.Threadable import Threadable
@@ -239,3 +241,95 @@ class TestLocationLineFollower(ThreadableTestCase):
         # A valid direction must be set.
         self.line_follower.set_direction(Line_Follower_Direction.LEFT)
         self.assertEqual(self.line_follower._direction, Line_Follower_Direction.LEFT)
+
+@covers(Line_Follower_Direction)
+class TestLocationLineFollowerDirection(unittest.TestCase):
+    def setUp(self):
+        super(TestLocationLineFollowerDirection, self).setUp()
+        self.yaw_cases = [
+            (0.0, Line_Follower_Direction.UP),
+            (math.pi/2, Line_Follower_Direction.RIGHT),
+            (math.pi, Line_Follower_Direction.DOWN),
+            (3*math.pi/2, Line_Follower_Direction.LEFT),
+        ]
+
+    def test_from_yaw(self):
+        for yaw, direction in self.yaw_cases:
+            self.assertEqual(Line_Follower_Direction.from_yaw(yaw), direction)
+
+        self.assertEqual(Line_Follower_Direction.from_yaw(math.pi/3),
+                         Line_Follower_Direction.RIGHT)
+
+    def test_yaw(self):
+        for yaw, direction in self.yaw_cases:
+            self.assertEqual(direction.yaw, yaw)
+
+    def test_axis(self):
+        cases = [
+            (Line_Follower_Direction.UP, 0),
+            (Line_Follower_Direction.RIGHT, 1),
+            (Line_Follower_Direction.DOWN, 0),
+            (Line_Follower_Direction.LEFT, 1)
+        ]
+        for direction, axis in cases:
+            self.assertEqual(direction.axis, axis)
+
+    def test_sign(self):
+        cases = [
+            (Line_Follower_Direction.UP, 1),
+            (Line_Follower_Direction.RIGHT, 1),
+            (Line_Follower_Direction.DOWN, -1),
+            (Line_Follower_Direction.LEFT, -1)
+        ]
+        for direction, sign in cases:
+            self.assertEqual(direction.sign, sign)
+
+    def test_invert(self):
+        cases = [
+            (Line_Follower_Direction.UP, Line_Follower_Direction.DOWN),
+            (Line_Follower_Direction.RIGHT, Line_Follower_Direction.LEFT),
+            (Line_Follower_Direction.DOWN, Line_Follower_Direction.UP),
+            (Line_Follower_Direction.LEFT, Line_Follower_Direction.RIGHT)
+        ]
+        for direction, inverted_direction in cases:
+            self.assertEqual(direction.invert(), inverted_direction)
+
+    def test_add(self):
+        cases = [
+            # Adding a direction to "up" results in the same direction.
+            [Line_Follower_Direction.UP] + [Line_Follower_Direction.UP]*2,
+            [Line_Follower_Direction.UP] + [Line_Follower_Direction.RIGHT]*2,
+            [Line_Follower_Direction.UP] + [Line_Follower_Direction.DOWN]*2,
+            [Line_Follower_Direction.UP] + [Line_Follower_Direction.LEFT]*2,
+            [
+                Line_Follower_Direction.RIGHT, Line_Follower_Direction.RIGHT,
+                Line_Follower_Direction.DOWN
+            ],
+            [
+                Line_Follower_Direction.RIGHT, Line_Follower_Direction.DOWN,
+                Line_Follower_Direction.LEFT
+            ],
+            [
+                Line_Follower_Direction.RIGHT, Line_Follower_Direction.LEFT,
+                Line_Follower_Direction.UP
+            ],
+            [
+                Line_Follower_Direction.DOWN, Line_Follower_Direction.LEFT,
+                Line_Follower_Direction.RIGHT
+            ]
+        ]
+        for direction, add_direction, new_direction in cases:
+            self.assertEqual(direction.add(add_direction), new_direction)
+
+    def test_get_rotate_direction(self):
+        cases = [
+            (Line_Follower_Direction.UP, Line_Follower_Direction.LEFT, -1),
+            (Line_Follower_Direction.UP, Line_Follower_Direction.RIGHT, 1),
+            (Line_Follower_Direction.RIGHT, Line_Follower_Direction.UP, -1),
+            (Line_Follower_Direction.RIGHT, Line_Follower_Direction.DOWN, 1),
+            (Line_Follower_Direction.DOWN, Line_Follower_Direction.LEFT, 1),
+            (Line_Follower_Direction.LEFT, Line_Follower_Direction.UP, 1)
+        ]
+        for direction, target_direction, rotate_direction in cases:
+            self.assertEqual(direction.get_rotate_direction(target_direction),
+                             rotate_direction)

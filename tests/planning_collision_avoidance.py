@@ -13,7 +13,8 @@ class TestPlanningCollisionAvoidance(LocationTestCase, SettingsTestCase):
         super(TestPlanningCollisionAvoidance, self).setUp()
 
         self.arguments = Arguments("settings.json", [
-            "--network-size", "10", "10", "--network-padding", "1", "1"
+            "--network-size", "10", "10", "--network-padding", "1", "1",
+            "--collision-avoidance"
         ])
         self.geometry = Geometry_Grid()
         self.collision_avoidance = Collision_Avoidance(self.arguments,
@@ -28,11 +29,7 @@ class TestPlanningCollisionAvoidance(LocationTestCase, SettingsTestCase):
         self.padding = self.real_padding + 1
 
         self.home_locations = [(0, 0), (0, 10), (10, 10)]
-        self.assignment = {
-            1: [[5, 1, 0]],
-            2: [],
-            3: []
-        }
+        self.first_position = (5, 1)
 
     def test_initialization(self):
         self.assertEqual(self.collision_avoidance._geometry, self.geometry)
@@ -76,8 +73,8 @@ class TestPlanningCollisionAvoidance(LocationTestCase, SettingsTestCase):
         self.assertEqual(self.collision_avoidance.location, self.center)
 
         # Once we have a current vehicle, then we track its location.
-        self.collision_avoidance.update(self.home_locations, self.assignment,
-                                        1, 2, 6)
+        self.collision_avoidance.update(self.home_locations,
+                                        self.first_position, 1, 2, 6)
         self.assertEqual(self.collision_avoidance.location,
                          LocationLocal(5, 1, 0))
 
@@ -86,17 +83,15 @@ class TestPlanningCollisionAvoidance(LocationTestCase, SettingsTestCase):
         self.assertEqual(self.collision_avoidance.distance, 0.0)
 
         # Once we have a current vehicle, then we track its distance.
-        self.collision_avoidance.update(self.home_locations, self.assignment,
-                                        1, 2, 6)
+        self.collision_avoidance.update(self.home_locations,
+                                        self.first_position, 1, 2, 6)
         self.assertEqual(self.collision_avoidance.distance, 6)
 
     def test_update(self):
-        self.collision_avoidance.update(self.home_locations, self.assignment,
-                                        1, 2, 6)
+        self.collision_avoidance.update(self.home_locations,
+                                        self.first_position, 1, 2, 6)
 
-        self.assignment[2].append([5, 9, 0])
-        self.collision_avoidance.update(self.home_locations, self.assignment,
-                                        2, 1, 14)
+        self.collision_avoidance.update(self.home_locations, (5, 9), 2, 1, 14)
         self.assertEqual(self.collision_avoidance.location,
                          LocationLocal(5, 9, 0))
         self.assertEqual(self.collision_avoidance.distance, 6)
@@ -104,17 +99,15 @@ class TestPlanningCollisionAvoidance(LocationTestCase, SettingsTestCase):
         # Vehicles 1 and 2 are synchronized with each other, but vehicle 3 has 
         # not yet. Thus it can crooss either vehicle's paths, which can lead to 
         # a collision.
-        self.assignment[3].append([0, 5, 0])
-        self.collision_avoidance.update(self.home_locations, self.assignment,
-                                        3, 1, 5)
+        self.collision_avoidance.update(self.home_locations, (0, 5), 3, 1, 5)
         self.assertEqual(self.collision_avoidance.location,
                          LocationLocal(0, 5, 0))
         self.assertEqual(self.collision_avoidance.distance, np.inf)
 
     def test_update_disabled(self):
         self.collision_avoidance._enabled = False
-        self.collision_avoidance.update(self.home_locations, self.assignment,
-                                        1, 2, 6)
+        self.collision_avoidance.update(self.home_locations,
+                                        self.first_position, 1, 2, 6)
 
         # When the collision avoidance algorithm is disabled, then the location 
         # and distance do not update.

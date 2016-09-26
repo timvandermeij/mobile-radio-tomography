@@ -19,9 +19,11 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.lines import Line2D
 
 # Package imports
-from Control_Panel_View import Control_Panel_View, Control_Panel_View_Name
+from Control_Panel_Reconstruction_Widgets import Grid
 from Control_Panel_Settings_Widgets import SettingsTableWidget
+from Control_Panel_View import Control_Panel_View, Control_Panel_View_Name
 from ..planning.Runner import Planning_Runner
+from ..waypoint.Waypoint import Waypoint_Type
 
 class Planning_Sort_Order(object):
     NONE = -2
@@ -35,6 +37,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._running = False
         self._runner = Planning_Runner(self._controller.arguments,
                                        self._controller.thread_manager,
+                                       self._controller.import_manager,
                                        self.iteration_callback)
 
         self._updated = False
@@ -56,6 +59,8 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
         self._progress = None
         self._selectButton = None
+        self._grid_button = None
+
         self._listWidget = None
         self._stackedLayout = None
         self._sortSelector = None
@@ -65,7 +70,10 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._forms = {}
         self._settings_container = None
 
-        self._timer = None
+        self._update_timer = None
+        self._grid_timer = None
+        self._grid_next_vehicle = None
+
         self._graph_label = None
 
         self._init()
@@ -78,11 +86,15 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._progress.setMaximumWidth(self._plot_width)
 
         # Create a select button for selecting an individual feasible solution.
-        self._selectButton = QtGui.QPushButton()
-        self._selectButton.setText("Select")
+        self._selectButton = QtGui.QPushButton("Select")
         self._selectButton.setToolTip("Select current solution to use waypoints from")
         self._selectButton.setEnabled(False)
         self._selectButton.clicked.connect(self._select)
+
+        self._grid_button = QtGui.QPushButton(QtGui.QIcon("assets/start.png"), "Grid")
+        self._grid_button.setEnabled(False)
+        self._grid_button.clicked.connect(self._start_grid)
+        self._update_grid_button_state(running=False)
 
         # Create a list widget for selecting between different plots, namely 
         # the Pareto front plot, a graph with statistics and result plots of 
@@ -117,6 +129,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
         leftBox.addLayout(formLayout)
 
         topLayout = QtGui.QHBoxLayout()
+        topLayout.addWidget(self._grid_button)
         topLayout.addWidget(self._progress)
         topLayout.addWidget(self._selectButton)
 
@@ -134,6 +147,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
         # Initialize more state variables and setup plots for initial display.
         self._setup()
+        self._fill_forms()
 
         # Fill the tab widget.
         self._tabWidget.addTab(self._settings_container, "Settings")
@@ -151,6 +165,8 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._individual_labels = []
         self._individual_axes = []
         self._individual_canvases = []
+        self._individual_grids = []
+        self._individual_stacks = []
 
         self._graph = None
         self._graph_plots = {}
@@ -162,6 +178,8 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
     def _cleanup(self):
         cleaner = QtCore.QObjectCleanupHandler()
+
+        self._update_grid_button_state(running=False)
 
         # Remove old individual items from the list widget, then add the new 
         # individuals in the population.
@@ -186,6 +204,14 @@ class Control_Panel_Planning_View(Control_Panel_View):
             cleaner.add(self._front_canvas)
             self._front_canvas = None
 
+        if self._grid_timer is not None:
+            self._grid_timer.stop()
+            self._grid_timer = None
+
+        if self._update_timer is not None:
+            self._update_timer.stop()
+            self._update_timer = None
+
         cleaner.clear()
 
         self._init()
@@ -205,8 +231,6 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
         # Populate the sort selector with current problem's objectives.
         self._populate_sort_selector()
-
-        self._fill_forms()
 
     def _populate_sort_selector(self):
         # Keep the current index while repopulating.
@@ -307,6 +331,12 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
         return graph
 
+    def _create_grid(self):
+        grid = Grid(size=self._plot_width)
+        grid.setup(self._runner.problem.network_size)
+
+        return grid
+
     def _add_list_item(self, placeholder, canvas, draw=True):
         list_item = QtGui.QListWidgetItem(placeholder)
         font = QtGui.QFont()
@@ -367,13 +397,16 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
         sort, indices = self._get_sort_indices()
 
-        if item_index >= 0:
+        # Enable or disable the buttons related to individuals. These are only 
+        # active for feasible solutions at the end of the run.
+        if item_index >= 0 and self._runner.done:
             if sort == Planning_Sort_Order.NONE:
                 feasible = self._runner.is_feasible(item_index)
             else:
                 feasible = item_index < len(indices)
 
             self._selectButton.setEnabled(feasible)
+            self._grid_button.setEnabled(feasible)
 
         size = self._runner.get_population_size()
 
@@ -395,17 +428,28 @@ class Control_Panel_Planning_View(Control_Panel_View):
                 self._individual_labels[index].setText(text)
 
     def _redraw(self, item_index):
-        # Redraw a newly selected item index plot immediately.
+        """
+        Redraw a newly selected item index plot immediately.
+        """
+
+        if self._grid_timer is not None:
+            self._grid_timer.stop()
+            self._grid_timer = None
+            self._update_grid_button_state(running=False)
 
         if item_index < self._overview_items:
             # The overview plots are always redrawn when possible, so we do not 
-            # need to draw it here. Disable the select button.
+            # need to draw it here. Disable the buttons related to the 
+            # individuals.
             self._selectButton.setEnabled(False)
+            self._grid_button.setEnabled(False)
             return
 
         # The solution plots are indexed from 2 in the list widget, but from 
         # 0 in the algorithm population and plot object lists.
         item_index = item_index - self._overview_items
+
+        self._individual_stacks[item_index].setCurrentIndex(0)
 
         indices = self._get_sort_indices()[1]
         if item_index >= len(indices):
@@ -415,8 +459,12 @@ class Control_Panel_Planning_View(Control_Panel_View):
         i = indices[item_index]
         self._draw_individual_solution(i, item_index, indices)
 
+        # Enable or disable the buttons related to the individuals. These are 
+        # only active for feasible solutions at the end of the run.
         if self._runner.done:
-            self._selectButton.setEnabled(self._runner.is_feasible(i))
+            feasible = self._runner.is_feasible(i)
+            self._selectButton.setEnabled(feasible)
+            self._grid_button.setEnabled(feasible)
 
     def _resort(self, sort_index):
         if len(self._individual_labels) == 0:
@@ -481,19 +529,15 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._running = running
 
     def _start(self):
-        # Update the toggle button state
-        self._update_running(True)
-
         # Update the settings from the toolbox forms.
-        for component, form in self._forms.iteritems():
-            settings = self._controller.arguments.get_settings(component)
+        for form in self._forms.itervalues():
+            settings = form.get_settings()
             try:
                 values, disallowed = form.get_all_values()
                 form.check_disallowed(disallowed)
             except ValueError as e:
                 QtGui.QMessageBox.critical(self._controller.central_widget,
                                            "Invalid value", e.message)
-                self._update_running(False)
                 return
 
             for key, value in values.iteritems():
@@ -502,8 +546,10 @@ class Control_Panel_Planning_View(Control_Panel_View):
                 except ValueError as e:
                     QtGui.QMessageBox.critical(self._controller.central_widget,
                                                "Settings error", e.message)
-                    self._update_running(False)
                     return
+
+        # Update the toggle button state
+        self._update_running(True)
 
         # Set the running state for the planning runner, and stop the RF sensor from 
         # taking up cycles during the algorithm.
@@ -513,6 +559,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
         # Change the tab widget to show the runner state.
         self._tabWidget.setCurrentIndex(1)
         self._selectButton.setEnabled(False)
+        self._grid_button.setEnabled(False)
 
         # Update the progress bar to show the correct iteration completion.
         t_max = self._runner.get_iteration_limit()
@@ -536,27 +583,38 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
         # Create the plots and labels for the individual solutions.
         for i in range(1, size + 1):
-            axes, canvas = self._create_plot()
+            stack = QtGui.QStackedLayout()
+            item_widget = QtGui.QWidget()
+            item_widget.setLayout(stack)
 
-            label = self._add_list_item("Solution #{}".format(i), canvas)
+            label = self._add_list_item("Solution #{}".format(i), item_widget)
             label.setStyleSheet("border-top: 1px solid grey")
+
+            axes, canvas = self._create_plot()
+            grid = self._create_grid()
+
+            stack.addWidget(canvas)
+            stack.addWidget(grid)
 
             self._individual_labels.append(label)
 
             self._individual_axes.append(axes)
             self._individual_canvases.append(canvas)
 
+            self._individual_grids.append(grid)
+            self._individual_stacks.append(stack)
+
         # Start the timer for updating plots and labels.
-        self._timer = QtCore.QTimer()
-        self._timer.setInterval(self._update_interval * 1000)
-        self._timer.setSingleShot(False)
-        self._timer.timeout.connect(self._check)
-        self._timer.start()
+        self._update_timer = QtCore.QTimer()
+        self._update_timer.setInterval(self._update_interval * 1000)
+        self._update_timer.setSingleShot(False)
+        self._update_timer.timeout.connect(self._check)
+        self._update_timer.start()
 
     def _stop(self):
         # Set the planning runner state to stopped, and reactivate the RF sensor.
         self._update_running(False)
-        self._runner.deactivate()
+        self._runner.stop()
         self._controller.rf_sensor.activate()
 
     def _check(self):
@@ -568,7 +626,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
         # for updates and final data.
         if self._runner.done or not self._running:
             self._stop()
-            self._timer.stop()
+            self._update_timer.stop()
 
         if self._updated:
             # Update the graph with updated iteration statistics.
@@ -597,19 +655,114 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._updated = False
 
     def _select(self):
-        currentIndex = self._stackedLayout.currentIndex()
-        if currentIndex == 0:
+        i = self._stackedLayout.currentIndex() - self._overview_items
+        if i < 0 or not self._runner.is_feasible(i):
             return
 
-        i = currentIndex - self._overview_items
-        if not self._runner.is_feasible(i):
-            return
-
-        waypoints = self._runner.get_assignment(i)
+        waypoints = self._runner.get_assignment(i, export=True)
 
         self._controller.set_view_data(Control_Panel_View_Name.WAYPOINTS,
                                        "waypoints", waypoints)
         self._controller.show_view(Control_Panel_View_Name.WAYPOINTS)
+
+    def _start_grid(self):
+        i = self._stackedLayout.currentIndex() - self._overview_items
+        if i < 0 or not self._runner.is_feasible(i):
+            return
+
+        self._update_grid_button_state(running=self._grid_timer is None)
+        self._individual_grids[i].clear()
+        self._grid_next_vehicle = None
+
+        if self._grid_timer is not None:
+            self._grid_timer.stop()
+            self._grid_timer = None
+            self._individual_stacks[i].setCurrentIndex(0)
+            return
+
+        self._individual_stacks[i].setCurrentIndex(1)
+
+        waypoints = self._runner.get_assignment(i, export=False)
+
+        self._grid_timer = QtCore.QTimer()
+        self._grid_timer.setInterval(self._update_interval * 1000)
+        self._grid_timer.setSingleShot(False)
+        self._grid_timer.timeout.connect(partial(self._update_grid, waypoints))
+        self._grid_timer.start()
+
+    def _update_grid_button_state(self, running=False):
+        if running:
+            self._grid_button.setIcon(QtGui.QIcon("assets/stop.png"))
+            self._grid_button.setToolTip("Show full solution")
+        else:
+            self._grid_button.setIcon(QtGui.QIcon("assets/start.png"))
+            self._grid_button.setToolTip("Show order of links")
+
+    def _update_grid(self, waypoints):
+        i = self._stackedLayout.currentIndex() - self._overview_items
+        if i < 0:
+            self._grid_timer.stop()
+            self._grid_timer = None
+            return
+
+        if all(len(points) == 0 for points in waypoints.itervalues()):
+            # Stop the timer but do not remove it. It is removed when the user 
+            # switches the views again.
+            self._grid_timer.stop()
+            return
+
+        if self._grid_next_vehicle is not None:
+            vehicle = self._grid_next_vehicle
+            points = waypoints[vehicle]
+            self._grid_next_vehicle = None
+        else:
+            vehicle, points = max(waypoints.iteritems(),
+                                  key=lambda pair: len(pair[1]))
+
+        if len(points) == 0:
+            # There may be other vehicles than this one that still have points, 
+            # so try those next time.
+            return
+
+        # Determine the source coordinates from the waypoint.
+        waypoint = points[0]
+        geometry = self._runner.problem.geometry
+        source = geometry.get_coordinates(waypoint.location)[:2]
+        grid = self._individual_grids[i]
+
+        if waypoint.name != Waypoint_Type.WAIT:
+            # Show waypoints with other types like home or pass as a new sensor 
+            # position, but ignore it otherwise.
+            grid.add_sensor(vehicle, source)
+            del points[0]
+            return
+
+        # Determine the other vehicle's ID, and attempt to find the 
+        # corresponding waypoint.
+        other_vehicle = waypoint.wait_id
+
+        other_waypoint = waypoints[other_vehicle][0]
+        if other_waypoint.name != Waypoint_Type.WAIT:
+            # Ignore waypoints with other types like home or pass, but try this 
+            # same pair again next time.
+            del waypoints[other_vehicle][0]
+            self._grid_next_vehicle = vehicle
+            return
+
+        if other_waypoint.wait_id != vehicle:
+            # The other vehicle is waiting for yet another vehicle, so try to 
+            # resolve this synchronization next time.
+            self._grid_next_vehicle = other_vehicle
+            return
+
+        # Determine the target coordinates and show the link.
+        target = geometry.get_coordinates(other_waypoint.location)[:2]
+        grid.add_link(source, target)
+        grid.add_sensor(vehicle, source)
+        grid.add_sensor(other_vehicle, target)
+
+        del points[0]
+        del waypoints[other_vehicle][0]
 
     def _add_graph_data(self, name, value, iteration):
         if name not in self._graph_data:

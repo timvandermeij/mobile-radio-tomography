@@ -143,6 +143,10 @@
             "format": "i"
         },
         {
+            "name": "wait_waypoint",
+            "format": "i"
+        },
+        {
             "name": "index",
             "format": "i"
         },

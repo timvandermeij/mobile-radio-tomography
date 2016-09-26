@@ -1,3 +1,5 @@
+import json
+import os
 import time
 from Mission_Auto import Mission_Auto
 from ..waypoint.Waypoint import Waypoint, Waypoint_Type
@@ -7,17 +9,49 @@ class Mission_RF_Sensor(Mission_Auto):
     def setup(self):
         super(Mission_RF_Sensor, self).setup()
 
-        self.environment.add_packet_action("waypoint_clear", self._clear_waypoints)
-        self.environment.add_packet_action("waypoint_add", self._add_waypoint)
-        self.environment.add_packet_action("waypoint_done", self._complete_waypoints)
+        self._dump_file = self.settings.get("mission_dump_file")
 
-        self._waypoints_complete = False
-        self._next_index = 0
-        self._point = None
+        self.environment.add_packet_action("waypoint_clear",
+                                           self._clear_waypoints)
+        self.environment.add_packet_action("waypoint_add",
+                                           self._receive_waypoint)
+        self.environment.add_packet_action("waypoint_done",
+                                           self._complete_waypoints)
 
         self._rf_sensor = self.environment.get_rf_sensor()
         if self._rf_sensor is None:
             raise ValueError("An RF sensor must be enabled for `Mission_RF_Sensor`")
+
+        self.reset()
+        self._load_dump()
+
+    def reset(self):
+        # Waypoint packets that comprise the mission (thus far). These can be 
+        # exported to a file. The packets are dictionaries.
+        self._waypoints = []
+
+        # Whether the vehicle has received its "waypoint_done" packet.
+        self._waypoints_complete = False
+
+        # The index of the waypoint that should be sent after this one, or if 
+        # the "waypoint_done" packet is received, one more than the length.
+        self._next_index = 0
+
+        # The `Location` object related to the previously added waypoint.
+        self._point = None
+
+    def _load_dump(self):
+        # Load the dump file if it exists, which immediately leads to 
+        # a complete mission.
+        try:
+            with open(self._dump_file, "r") as dump_file:
+                for data in json.load(dump_file):
+                    self._add_waypoint(data)
+
+            self._waypoints_complete = True
+        except (IOError, ValueError):
+            # Ignore any errors from opening or reading the dump.
+            pass
 
     def arm_and_takeoff(self):
         self.check_mission()
@@ -42,6 +76,9 @@ class Mission_RF_Sensor(Mission_Auto):
         # this acknowledgement as totally done.
         self._next_index += 1
         self._send_ack()
+
+        with open(self._dump_file, "w") as dump_file:
+            json.dump(self._waypoints, dump_file)
 
     @property
     def waypoints_complete(self):
@@ -94,15 +131,19 @@ class Mission_RF_Sensor(Mission_Auto):
             # Ignore packets not meant for us.
             return
 
+        # Remove any dump file.
+        try:
+            os.remove(self._dump_file)
+        except OSError:
+            pass
+
         self.clear_mission()
         # Add a takeoff command for flying vehicles that use it.
         self.add_takeoff()
-        self._next_index = 0
-        self._waypoints_complete = False
-        self._point = None
+        self.reset()
         self._send_ack()
 
-    def _add_waypoint(self, packet):
+    def _receive_waypoint(self, packet):
         """
         Add a waypoint to the mission based on a "waypoint_add" packet.
 
@@ -122,12 +163,20 @@ class Mission_RF_Sensor(Mission_Auto):
             self._send_ack()
             return
 
-        latitude = packet.get("latitude")
-        longitude = packet.get("longitude")
-        altitude = packet.get("altitude")
-        waypoint_type = Waypoint_Type(packet.get("type"))
-        wait_id = packet.get("wait_id")
-        wait_count = packet.get("wait_count")
+        data = packet.get_all()
+        self._add_waypoint(data)
+        self._send_ack()
+
+    def _add_waypoint(self, data):
+        self._waypoints.append(data)
+
+        latitude = data["latitude"]
+        longitude = data["longitude"]
+        altitude = data["altitude"]
+        waypoint_type = Waypoint_Type(data["type"])
+        wait_id = data["wait_id"]
+        wait_count = data["wait_count"]
+        wait_waypoint = data["wait_waypoint"]
 
         # Create location waypoints based on the type and additional data. 
         # `add_waypoint` handles any further conversions of the provided 
@@ -137,7 +186,8 @@ class Mission_RF_Sensor(Mission_Auto):
                                    waypoint_type, self._rf_sensor.id,
                                    self.geometry, location,
                                    previous_location=self._point,
-                                   wait_id=wait_id, wait_count=wait_count)
+                                   wait_id=wait_id, wait_count=wait_count,
+                                   wait_waypoint=wait_waypoint)
 
         # Retrieve the required sensors. A return value `None` actually means 
         # we want to wait for all other sensors, while an exception means we do 
@@ -149,12 +199,17 @@ class Mission_RF_Sensor(Mission_Auto):
             wait = False
             required_sensors = None
 
-        for point in waypoint.get_points():
+        for i, point in enumerate(waypoint.get_points()):
+            if wait and wait_waypoint != -1:
+                other_waypoint_id = wait_waypoint + i
+            else:
+                other_waypoint_id = -1
+
             self.add_waypoint(point, wait=wait,
-                              required_sensors=required_sensors)
+                              required_sensors=required_sensors,
+                              wait_waypoint=other_waypoint_id)
 
         waypoint.update_vehicle(self.vehicle)
 
         self._next_index += 1
         self._point = location
-        self._send_ack()

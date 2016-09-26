@@ -9,6 +9,7 @@ from PyQt4 import QtGui, QtCore
 
 # Package imports
 from Control_Panel_Settings_Widgets import SettingsTableWidget
+from ..reconstruction.Buffer import Buffer
 
 class Graph(object):
     def __init__(self, settings):
@@ -93,17 +94,29 @@ class Graph(object):
         self._graph_curves = []
 
 class Grid(QtGui.QGraphicsView):
-    def __init__(self, settings):
+    def __init__(self, settings=None, size=None):
         """
         Initialize the grid object.
         """
 
         super(Grid, self).__init__()
 
-        self._size = settings.get("reconstruction_grid_size")
+        if settings is not None and size is not None:
+            raise TypeError("Either one of `settings` and `size` must be given, not both")
+
+        if settings is not None:
+            self._size = settings.get("reconstruction_grid_size")
+        elif size is not None:
+            self._size = size
+        else:
+            raise TypeError("Either one of `settings` and `size` must be given")
 
         self._clear = False
+
         self._links = []
+        self._sensors = {}
+
+        self._sensor_image = None
 
         # Create the scene.
         self._scene = QtGui.QGraphicsScene()
@@ -111,14 +124,27 @@ class Grid(QtGui.QGraphicsView):
 
     def setup(self, buffer):
         """
-        Setup the map grid the size from the `buffer`.
+        Setup the grid.
+
+        Retrieve the size from the `buffer`, which is either a `Buffer` object
+        or a tuple or list containing the network width and height.
         """
 
-        self._width, self._height = buffer.size
+        if isinstance(buffer, Buffer):
+            self._width, self._height = buffer.size
+        elif isinstance(buffer, (tuple, list)) and len(buffer) == 2:
+            self._width, self._height = buffer
+        else:
+            raise TypeError("`buffer` must be a `Buffer` object or tuple of length 2")
+
         self._cell_size = self._size / max(self._width, self._height)
 
-        # Clear the scene for (re)drawing the grid.
+        sensor_image = QtGui.QPixmap("assets/network-wireless.png")
+        self._sensor_image = sensor_image.scaledToHeight(self._cell_size)
+
+        # Clear the scene for (re)drawing the grid and clear the sensor images.
         self._scene.clear()
+        self._sensors = {}
 
         # Draw the grid.
         self._draw()
@@ -141,40 +167,59 @@ class Grid(QtGui.QGraphicsView):
             self._scene.addLine(coordinate, 0, coordinate, vertical_extend,
                                 QtGui.QPen(QtCore.Qt.black))
 
-    def _add_link(self, source, target):
+    def _calculate_offset(self, position, center=False):
+        centering = 0.5 * self._cell_size if center else 0.0
+        x = position[1] * self._cell_size - centering
+        y = (self._height - position[0]) * self._cell_size - centering
+
+        return x, y
+
+    def add_link(self, source, target):
         """
         Add a link to the scene. The link consists of two tuples
         indicating the `source` and `target` sensor locations.
-        """
-
-        pen = QtGui.QPen(QtCore.Qt.blue, 2, QtCore.Qt.SolidLine)
-        points = []
-
-        for position in [source, target]:
-            x = position[1] * self._cell_size
-            y = (self._height - position[0]) * self._cell_size
-            points.append(x)
-            points.append(y)
-
-        line = self._scene.addLine(*points, pen=pen)
-        self._links.append(line)
-
-    def update(self, packet):
-        """
-        Update the grid with information in the `packet`.
         """
 
         # Remove existing links if necessary.
         if self._clear:
             self.clear()
 
+        pen = QtGui.QPen(QtCore.Qt.blue, 2, QtCore.Qt.SolidLine)
+        points = []
+
+        for position in [source, target]:
+            points.extend(self._calculate_offset(position))
+
+        line = self._scene.addLine(*points, pen=pen)
+        self._links.append(line)
+
+    def add_sensor(self, sensor_id, position):
+        if sensor_id not in self._sensors:
+            self._sensors[sensor_id] = self._scene.addPixmap(self._sensor_image)
+            self._sensors[sensor_id].setZValue(1)
+
+        x, y = self._calculate_offset(position, center=True)
+        self._sensors[sensor_id].setOffset(x, y)
+
+    def update(self, packet):
+        """
+        Update the grid with information in the `packet`, which is a `Packet`
+        object containing information belonging to the `"rssi_ground_station"`
+        specification.
+        """
+
+        # Determine the position coordinates.
+        source = (packet.get("from_latitude"), packet.get("from_longitude"))
+        target = (packet.get("to_latitude"), packet.get("to_longitude"))
+
+        # Update the sensor location of the target sensor.
+        self.add_sensor(packet.get("sensor_id"), target)
+
         # Add the new link if the locations are valid.
         if not packet.get("from_valid") or not packet.get("to_valid"):
             return
 
-        source = (packet.get("from_latitude"), packet.get("from_longitude"))
-        target = (packet.get("to_latitude"), packet.get("to_longitude"))
-        self._add_link(source, target)
+        self.add_link(source, target)
 
     def toggle(self, state):
         """
@@ -188,7 +233,8 @@ class Grid(QtGui.QGraphicsView):
 
     def clear(self):
         """
-        Clear the grid. We remove all links, but the grid lines remain.
+        Clear the grid. We remove all links, but the grid lines and the sensor
+        positions remain.
         """
 
         for link in self._links:

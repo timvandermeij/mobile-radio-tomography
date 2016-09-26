@@ -123,6 +123,7 @@ class TestMissionFanStraight(EnvironmentTestCase):
         self.assertEqual(self.vehicle.get_waypoint(), None)
 
         other_id = self.rf_sensor.id + 1
+        self.environment.set_waypoint_valid()
         self.assertTrue(self.environment.location_valid())
         self.assertTrue(self.environment.location_valid(other_valid=True,
                                                         other_id=other_id,

@@ -7,7 +7,7 @@ class Waypoint_Wait(Waypoint):
     """
 
     def __init__(self, vehicle_id, geometry, location, previous_location=None,
-                 wait_id=0, wait_count=1, **kwargs):
+                 wait_id=0, wait_count=1, wait_waypoint=-1, **kwargs):
         super(Waypoint_Wait, self).__init__(vehicle_id, geometry, location)
 
         if previous_location is None:
@@ -17,10 +17,27 @@ class Waypoint_Wait(Waypoint):
 
         self._wait_id = wait_id
         self._wait_count = wait_count
+        self._wait_waypoint = wait_waypoint
 
     @property
     def name(self):
         return Waypoint_Type.WAIT
+
+    @property
+    def wait_id(self):
+        return self._wait_id
+
+    @property
+    def wait_count(self):
+        return self._wait_count
+
+    @property
+    def wait_waypoint(self):
+        return self._wait_waypoint
+
+    @wait_waypoint.setter
+    def wait_waypoint(self, index):
+        self._wait_waypoint = index
 
     def get_points(self):
         return self._geometry.get_location_range(self._previous_location,

@@ -1,3 +1,5 @@
+from collections import deque
+import math
 import numpy as np
 
 class AStar(object):
@@ -7,7 +9,7 @@ class AStar(object):
     """
 
     def __init__(self, geometry, memory_map, allow_at_bounds=False,
-                 trend_strides=True, use_indices=False):
+                 use_indices=False):
         """
         Initialize the A* search algorithm. The given `geometry` is a `Geometry`
         object for the space, and `memory_map` is a `Memory_Map` for the part of
@@ -18,11 +20,8 @@ class AStar(object):
         are skipped when creating a path to the location. Setting this to `True`
         is useful for robot vehicles that operate on a fixed-size grid.
 
-        `trend_strides` determines whether we should return a reconstructed path
-        where intermediate locations that follow the same trend as the one
-        before them, are skipped. This can be set to `False` to obtain the full
-        path every time. If `use_indices` is `True`, then memory map indices are
-        reconstructed instead of Location objects.
+        If `use_indices` is `True`, then memory map indices are reconstructed
+        instead of Location objects.
         """
 
         self._geometry = geometry
@@ -30,10 +29,10 @@ class AStar(object):
         self._memory_map = memory_map
 
         self._allow_at_bounds = allow_at_bounds
-        self._trend_strides = trend_strides
         self._use_indices = use_indices
 
         self._neighbors = self._geometry.get_neighbor_offsets()
+        self._neighbor_directions = self._geometry.get_neighbor_directions()
         self._resolution = float(self._memory_map.get_resolution())
         self._size = self._memory_map.get_size()
 
@@ -53,7 +52,26 @@ class AStar(object):
             (i, self._size) for i in range(-1, self._size + 1)
         ])
 
+        # State variables used during the search algorithm.
+        self._close = None
+        self._evaluated = None
+        self._open_nodes = None
+        self._came_from = None
+
+        self._d = None
+        self._f = None
+        self._g = None
+
     def _get_close_map(self, closeness):
+        """
+        Calculate a numpy array containing the areas of influence as binary
+        pixel values.
+
+        The areas of influence have a radius of at most `closeness` meters.
+        If `closeness` is `1` and the memory map resolution is as well, then
+        this is equal to the detected objects in the memory map.
+        """
+
         if closeness == 1 and self._resolution == 1:
             # If the closeness and resolution are both `1`, then this means 
             # each object's region of influence is the (detected) object 
@@ -80,27 +98,46 @@ class AStar(object):
         return close
 
     def _get_location(self, idx):
+        """
+        Retrieve the location for the memory map index `idx`.
+
+        Uses a cache if the location was used before, or the memory map
+        otherwise.
+        """
+
         if idx not in self._locations:
             self._locations[idx] = self._memory_map.get_location(*idx)
 
         return self._locations[idx]
 
-    def assign(self, start, goal, closeness):
+    def assign(self, start, goal, closeness, direction=None, turning_cost=0.0):
         """
         Perform the A* search algorithm to create a list of waypoints that bring
         the vehicle from the position `start` to the position `goal` while not
-        going through objects or getting closer than `closeness` meters to them.
+        going through objects or getting closer than `closeness` meters (or grid
+        units) to them. `direction` specifies the initial direction and
+        `turning_cost` is the additional cost added to distances between points
+        if the vehicle needs to turn to travel between them.
 
         If `use_indices` is enabled, then `start` and `goal` are memory map
         indexes, otherwise they are `Location` objects.
 
+        The `direction` is the initial yaw angle that the vehicle has at this
+        point; this can be used to find a more optimal path by reducing the
+        turns needed, at least if `turning_cost` is set to a nonzero value that
+        provides a scale between the a turn's radians and the distance that
+        a vehicle could travel in the same time as such a turn.
+
         When a safe and fast path is found, then it returns a tuple. The first
         value is the list of `Location` objects or memory map indexes, depending
         on `use_indices`, that describe path waypoints. The second value is the
-        distance cost.
+        same list except with only those waypoints that matter in the traversal
+        of the vehicle, i.e., removing points that follow the same trend.
+        The third value is the distance cost, and the fourth value is the
+        direction yaw angle of the vehicle at the goal point.
 
-        If no such assignment can be found, then an empty list and infinity is
-        returned.
+        If no such assignment can be found, then an empty list, infinity and
+        the original `direction` are returned.
         """
 
         if self._use_indices:
@@ -110,59 +147,83 @@ class AStar(object):
             start_idx = self._memory_map.get_index(start)
             goal_idx = self._memory_map.get_index(goal)
 
-        close = self._get_close_map(closeness)
+        self._close = self._get_close_map(closeness)
 
         if start_idx == goal_idx:
             # Already at the requested location, simply return it as the 
             # waypoint even if this location is unsafe (since stoppping is 
             # considered a safe action). Note that `goal == goal_idx` when 
             # `use_indices` is enabled.
-            return [goal], 0.0
+            return [goal], [goal], 0.0, direction
 
-        if not self._memory_map.index_in_bounds(*goal_idx) or close[goal_idx]:
+        if not self._memory_map.index_in_bounds(*goal_idx):
+            # No safe path to the location since the location is outside of the 
+            # memory map.
+            return [], [], np.inf, direction
+
+        if self._close[goal_idx]:
             # No safe path to the location since the location is unsafe, due to 
-            # it being outside of the memory map or too close to an object.
-            return [], np.inf
+            # being too close to an object.
+            return [], [], np.inf, direction
 
         # If we are allowed to move on the bounds of the memory map, but not 
         # outside it, then we can speed up the out of bounds check by 
         # considering these indices as evaluated. Thus they are skipped without 
         # having a memory map call overhead.
-        evaluated = set()
+        self._evaluated = set()
         if self._allow_at_bounds:
-            evaluated.update(self._out_of_bounds)
+            self._evaluated.update(self._out_of_bounds)
 
-        open_nodes = set([start_idx])
-        came_from = {}
+        self._open_nodes = set([start_idx])
+        self._came_from = {}
 
-        # Cost along best known path
-        g = np.full((self._size, self._size), np.inf)
-        g[start_idx] = 0.0
+        # Direction of the vehicle along best known path
+        self._d = np.full((self._size, self._size), np.nan)
+        self._d[start_idx] = direction
 
         # Estimated total cost from start to goal when passing through 
-        # a specific index.
-        f = np.full((self._size, self._size), np.inf)
-        f[start_idx] = self._get_cost(start_idx, goal_idx)
+        # a specific index whose best known path is already known.
+        self._f = np.full((self._size, self._size), np.inf)
+        self._f[start_idx] = self._get_cost(start_idx, goal_idx, turning_cost)
 
-        while open_nodes:
+        # Cost along best known path
+        self._g = np.full((self._size, self._size), np.inf)
+        self._g[start_idx] = 0.0
+
+        return self._search(start_idx, goal_idx, closeness, turning_cost)
+
+    def _search(self, start_idx, goal_idx, closeness, turning_cost):
+        """
+        Perform the actual search algorithm after initial setup.
+
+        The `start_idx` and `goal_idx` are memory map indexes of the start and
+        goal locations, respectively. The other arguments as well as the return
+        value are the same as the `assign` method.
+        """
+
+        while self._open_nodes:
             # Get the node in open_nodes with the lowest f score
-            open_indices = zip(*open_nodes)
-            min_idx = np.argmin(f[open_indices])
+            open_indices = zip(*self._open_nodes)
+            min_idx = np.argmin(self._f[open_indices])
             current_idx = (open_indices[0][min_idx], open_indices[1][min_idx])
 
             # If we reached the goal index, then we have found the fastest 
             # safest path to it, thus reconstruct this path.
             if current_idx == goal_idx:
-                return self._reconstruct(came_from, goal_idx), g[goal_idx]
+                path, trending_path = self._reconstruct(goal_idx)
+                return path, trending_path, self._g[goal_idx], self._d[goal_idx]
 
             # Evaluate the new node
-            open_nodes.remove(current_idx)
-            evaluated.add(current_idx)
-            for neighbor_coord in current_idx + self._neighbors:
+            self._open_nodes.remove(current_idx)
+            self._evaluated.add(current_idx)
+
+            neighborhood = zip(current_idx + self._neighbors,
+                               self._neighbor_directions)
+            for neighbor_coord, neighbor_direction in neighborhood:
                 # Create the neighbor index and check whether we have evaluated 
                 # it before.
                 neighbor_idx = tuple(neighbor_coord)
-                if neighbor_idx in evaluated:
+                if neighbor_idx in self._evaluated:
                     continue
 
                 # Check whether the neighbor index is still in bounds. We can 
@@ -180,67 +241,140 @@ class AStar(object):
                 # influence of any other object. Only do so when we are not 
                 # leaving a region of influence around the start location, 
                 # since we should be able to leave this region if it exists.
-                if close[neighbor_idx] and (not close[start_idx] or g[current_idx] >= closeness):
-                    continue
+                if self._close[neighbor_idx]:
+                    if self._left_start_area(start_idx, current_idx, closeness):
+                        continue
 
                 # Calculate the new tentative distances to the point
-                tentative_g = g[current_idx] + self._get_cost(current_idx, neighbor_idx)
-                if tentative_g >= g[neighbor_idx]:
+                cost = self._get_cost(current_idx, neighbor_idx, turning_cost,
+                                      direction=neighbor_direction)
+                tentative_g = self._g[current_idx] + cost
+                if tentative_g >= self._g[neighbor_idx]:
                     # Not a better path, thus we do not need to update anything 
                     # for this neighbor which has a different, faster path.
                     continue
 
-                open_nodes.add(neighbor_idx)
-                came_from[neighbor_idx] = current_idx
-                g[neighbor_idx] = tentative_g
-                f[neighbor_idx] = tentative_g + self._get_cost(neighbor_idx, goal_idx)
+                self._open_nodes.add(neighbor_idx)
+                self._came_from[neighbor_idx] = current_idx
+                self._g[neighbor_idx] = tentative_g
 
-        return [], np.inf
+                predicted_cost = self._get_cost(neighbor_idx, goal_idx,
+                                                turning_cost)
+                self._f[neighbor_idx] = tentative_g + predicted_cost
+                self._d[neighbor_idx] = neighbor_direction
 
-    def _reconstruct(self, came_from, current):
+        direction = None if np.isnan(self._d[start_idx]) else self._d[start_idx]
+        return [], [], np.inf, direction
+
+    def _left_start_area(self, start_idx, current_idx, closeness):
+        """
+        Check whether the memory map index `current_idx` is outside of the
+        area of influence that the starting location of `start_idx` is also in.
+
+        The area of influence is at most `closeness` meters in radius. If there
+        is no such area of influence, then we have always left the area.
+        """
+
+        return not self._close[start_idx] or self._g[current_idx] >= closeness
+
+    def _reconstruct(self, current):
+        """
+        Reconstruct the path from the starting location to `current`, a memory
+        map index of the goal location. This only works once the optimal path
+        to the goal has been found in `_search`.
+
+        The resulting lists contain either memory map index tuples or `Location`
+        objects, depending on the `use_indices` constructor argument. The first
+        list contains all intermediate memory map points, while the second
+        contains only those that matter in the vehicle's trajectory.
+        """
+
         # The path from goal point `current` to the start (in reversed form) 
         # containing waypoints that should be followed to get to the goal point
-        total_path = []
+        full_path = deque()
+        trending_path = deque()
+
+        # The previous point, initially the goal point.
         previous = current
+
+        # Whether we are adding the first point to the path.
         first = True
+
+        # The new trend of the differences between the coordinates of the 
+        # current and previous positions.
         d = tuple()
 
-        # The current trend of the differences between the points
+        # The trend of the differences between the coordinates of the previous 
+        # poisition and the one before that.
         trend = (0, 0)
-        while current in came_from:
-            current = came_from.pop(current)
+        while current in self._came_from:
+            current = self._came_from.pop(current)
 
             # Track the current trend of the point differences. If it is the 
             # same kind of difference, then we may be able to skip this point 
             # in our list of waypoints.
-            if self._trend_strides:
-                d = tuple(np.sign(current[i] - previous[i]) for i in [0, 1])
-                alt_trend = (trend[i] != 0 and d[i] != trend[i] for i in [0, 1])
-                trending = any(alt_trend)
-            else:
-                trending = True
+            d = tuple(np.sign(current[i] - previous[i]) for i in [0, 1])
+            alt_trend = (trend[i] != 0 and d[i] != trend[i] for i in [0, 1])
+            trending = any(alt_trend)
 
+            if self._use_indices:
+                location = previous
+            else:
+                location = self._get_location(previous)
+
+            full_path.appendleft(location)
             if first or trending:
-                if self._use_indices:
-                    total_path.append(previous)
-                else:
-                    total_path.append(self._get_location(previous))
+                trending_path.appendleft(location)
 
             trend = d
             previous = current
             first = False
 
-        return list(reversed(total_path))
+        return list(full_path), list(trending_path)
 
-    def _get_cost(self, start_idx, goal_idx):
-        # For geometry that support it, speed up by using the norm calculation 
-        # directly for the memory map indices that directly map to evenly 
-        # spread out coordinates. This saves some Location object overhead, as 
-        # well as some geometry internal call overhead.
+    def _get_cost(self, start_idx, goal_idx, turning_cost, direction=None):
+        """
+        Calculate the cost from traveling from a location with memory map index
+        `start_idx` to a location with memory map index `goal_idx`. This
+        is the bird's-eye distance between the two locations, which should be
+        the "real" traveling distance for directly connected indices, plus any
+        cost from turning into the correct direction, where `turning_cost` is
+        a factor to scale the radians of the turns to the distance that
+        a vehicle could otherwise travel in that time. Set `turning_cost` to `0`
+        to remove it from the cost. `direction` is the target direction that
+        the vehicle has after traveling. It is calculated from the locations if
+        it is not provided.
+        """
+
+        # For geometries that support it, speed up by using the norm 
+        # calculation directly for the memory map indices that directly map to 
+        # evenly spread out coordinates. This saves some Location object 
+        # overhead, as well as some geometry internal call overhead.
         if self._norm:
-            return self._norm((start_idx[0] - goal_idx[0]) / self._resolution,
-                              (start_idx[1] - goal_idx[1]) / self._resolution)
+            dNorth = (goal_idx[0] - start_idx[0]) / self._resolution
+            dEast = (goal_idx[1] - start_idx[1]) / self._resolution
+            if turning_cost == 0.0 or np.isnan(self._d[start_idx]):
+                turn = 0.0
+            else:
+                if direction is None:
+                    direction = math.atan2(dEast, dNorth)
+
+                turn = abs(self._geometry.diff_angle(self._d[start_idx],
+                                                     direction))
+
+            return self._norm(dNorth, dEast) + turning_cost * turn
 
         start = self._get_location(start_idx)
         goal = self._get_location(goal_idx)
-        return self._geometry.get_distance_meters(start, goal)
+        distance = self._geometry.get_distance_meters(start, goal)
+
+        if turning_cost == 0.0 or np.isnan(self._d[start_idx]):
+            turn = 0.0
+        else:
+            if direction is None:
+                angle = self._geometry.get_angle(start, goal)
+                direction = self._geometry.angle_to_bearing(angle)
+
+            turn = abs(self._geometry.diff_angle(self._d[start_idx], direction))
+
+        return distance + turning_cost * turn
