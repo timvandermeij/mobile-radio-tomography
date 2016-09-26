@@ -98,7 +98,7 @@
                 "help": "Frequency in seconds to retry sending a setting packet to a vehicle",
                 "type": "float",
                 "min": 0.0,
-                "default": 0.1
+                "default": 0.15
             }
         }
     },
@@ -115,7 +115,7 @@
                 "help": "Frequency in seconds to retry sending a waypoint packet to a vehicle",
                 "type": "float",
                 "min": 0.0,
-                "default": 0.1
+                "default": 0.15
             }
         }
     },

@@ -13,6 +13,7 @@ class Settings_Receiver(object):
         self._rf_sensor = self._environment.get_rf_sensor()
         self._thread_manager = self._environment.thread_manager
         self._new_settings = {}
+        self._next_index = 0
 
         self._environment.add_packet_action("setting_clear", self._clear)
         self._environment.add_packet_action("setting_add", self._add)
@@ -22,11 +23,12 @@ class Settings_Receiver(object):
         Settings.settings_files = {}
         self._arguments.groups = {}
         self._new_settings = {}
+        self._next_index = 0
 
-    def _send_ack(self, index=-1):
+    def _send_ack(self):
         packet = Packet()
         packet.set("specification", "setting_ack")
-        packet.set("next_index", index + 1)
+        packet.set("next_index", self._next_index)
         packet.set("sensor_id", self._rf_sensor.id)
 
         self._rf_sensor.enqueue(packet, to=0)
@@ -50,7 +52,8 @@ class Settings_Receiver(object):
 
         self._new_settings[key] = value
 
-        self._send_ack(index)
+        self._next_index = index + 1
+        self._send_ack()
 
     def _done(self, packet):
         # Ignore packets that are not meant for us.
@@ -59,6 +62,9 @@ class Settings_Receiver(object):
 
         with open(self._arguments.settings_file, 'w') as settings_file:
             json.dump(self._new_settings, settings_file, indent=4, sort_keys=True)
+
+        self._next_index += 1
+        self._send_ack()
 
         # Clean up cached settings and stop the program so that we can restart 
         # it with the new settings.

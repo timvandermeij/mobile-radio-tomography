@@ -22,6 +22,7 @@ class TestZigBeeSettingsReceiver(EnvironmentTestCase):
         self.assertEqual(self.settings_receiver._arguments, self.arguments)
         self.assertEqual(self.settings_receiver._rf_sensor, self.rf_sensor)
         self.assertEqual(self.settings_receiver._thread_manager, self.environment.thread_manager)
+        self.assertEqual(self.settings_receiver._next_index, 0)
         self.assertEqual(self.settings_receiver._new_settings, {})
         self.assertIn("setting_clear", self.environment._packet_callbacks.keys())
         self.assertIn("setting_add", self.environment._packet_callbacks.keys())
@@ -58,6 +59,7 @@ class TestZigBeeSettingsReceiver(EnvironmentTestCase):
 
         self.assertEqual(Settings.settings_files, {})
         self.assertEqual(self.arguments.groups, {})
+        self.assertEqual(self.settings_receiver._next_index, 0)
 
     @patch.object(RF_Sensor, "enqueue")
     def test_add(self, enqueue_mock):
@@ -92,9 +94,11 @@ class TestZigBeeSettingsReceiver(EnvironmentTestCase):
         self.assertEqual(self.settings_receiver._new_settings, {
             "home_location": (1, 2)
         })
+        self.assertEqual(self.settings_receiver._next_index, 1)
 
+    @patch.object(RF_Sensor, "enqueue")
     @patch.object(Thread_Manager, "interrupt")
-    def test_done(self, interrupt_mock):
+    def test_done(self, interrupt_mock, enqueue_mock):
         new_settings = {
             "home_location": (1, 2),
             "closeness": 0.0,
@@ -102,6 +106,7 @@ class TestZigBeeSettingsReceiver(EnvironmentTestCase):
         }
         pretty_json = json.dumps(new_settings, indent=4, sort_keys=True)
         self.settings_receiver._new_settings = new_settings
+        self.settings_receiver._next_index = 3
 
         # Packets not meant for the current RF sensor are ignored.
         packet = Packet()
@@ -130,6 +135,17 @@ class TestZigBeeSettingsReceiver(EnvironmentTestCase):
 
         open_mock.assert_called_once_with(self.arguments.settings_file, 'w')
         self.assertEqual(output.getvalue(), pretty_json)
+
+        self.assertEqual(enqueue_mock.call_count, 1)
+        args, kwargs = enqueue_mock.call_args
+        self.assertEqual(len(args), 1)
+        self.assertIsInstance(args[0], Packet)
+        self.assertEqual(args[0].get_all(), {
+            "specification": "setting_ack",
+            "next_index": 4,
+            "sensor_id": self.rf_sensor.id
+        })
+        self.assertEqual(kwargs, {"to": 0})
 
         self.assertEqual(Settings.settings_files, {})
         self.assertEqual(self.arguments.groups, {})
