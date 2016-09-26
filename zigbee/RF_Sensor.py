@@ -333,6 +333,10 @@ class RF_Sensor(Threadable):
         if to is None:
             raise TypeError("Invalid destination '{}' has been provided".format(to))
 
+        # Introduce a short delay to give the hardware more time to send
+        # packets when this method is called many times in a row.
+        time.sleep(self._loop_delay)
+
     def _receive(self, packet=None):
         raise NotImplementedError("Subclasses must implement `_receive(packet=None)`")
 
