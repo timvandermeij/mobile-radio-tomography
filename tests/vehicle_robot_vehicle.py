@@ -207,7 +207,7 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
         self.vehicle._check_state()
         self.assertEqual(self.vehicle._current_waypoint, -1)
         self.assertEqual(self.vehicle._waypoints, [])
-        self.assertFalse(self.vehicle.is_current_location_valid())
+        self.assertTrue(self.vehicle.is_current_location_valid())
         self.assertEqual(self.vehicle.attitude.yaw, 0.0)
 
     @patch.object(Robot_Vehicle, 'set_speeds')
@@ -284,7 +284,7 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
         set_speeds_mock.assert_called_once_with(0.2, 0.2,
                                                 left_forward=True,
                                                 right_forward=False)
-        self.assertFalse(self.vehicle.is_current_location_valid())
+        self.assertTrue(self.vehicle.is_current_location_valid())
         self.assertEqual(self.vehicle.attitude.yaw, 0.0)
 
         # Finish turning at an intersection. When the line follower detects 
@@ -311,6 +311,7 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
         self.assertEqual(self.vehicle.get_waypoint(), new_waypoint)
         self.assertEqual(self.vehicle._state.name, "move")
         set_speeds_mock.assert_called_once_with(0.3, 0.3)
+        self.assertFalse(self.vehicle.is_current_location_valid())
 
     @patch('thread.start_new_thread')
     def test_armed(self, thread_mock):

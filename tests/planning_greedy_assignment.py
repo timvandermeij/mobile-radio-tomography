@@ -12,7 +12,7 @@ from settings import SettingsTestCase
 class TestPlanningGreedyAssignment(SettingsTestCase):
     def setUp(self):
         self.arguments = Arguments("settings.json", [
-            "--network-padding", "5", "5",
+            "--network-padding", "5", "5", "--collision-avoidance"
         ])
         settings = self.arguments.get_settings("planning_assignment")
         settings.set("vehicle_home_locations", [[0, 0], [0, 19]])

@@ -142,8 +142,9 @@ class Grid(QtGui.QGraphicsView):
         sensor_image = QtGui.QPixmap("assets/network-wireless.png")
         self._sensor_image = sensor_image.scaledToHeight(self._cell_size)
 
-        # Clear the scene for (re)drawing the grid.
+        # Clear the scene for (re)drawing the grid and clear the sensor images.
         self._scene.clear()
+        self._sensors = {}
 
         # Draw the grid.
         self._draw()
@@ -195,6 +196,7 @@ class Grid(QtGui.QGraphicsView):
     def add_sensor(self, sensor_id, position):
         if sensor_id not in self._sensors:
             self._sensors[sensor_id] = self._scene.addPixmap(self._sensor_image)
+            self._sensors[sensor_id].setZValue(1)
 
         x, y = self._calculate_offset(position, center=True)
         self._sensors[sensor_id].setOffset(x, y)

@@ -35,11 +35,20 @@ class TestMissionAuto(EnvironmentTestCase):
         self.assertEqual(self.mission._wait_waypoints, {})
 
     @patch.object(Mission_Auto, "get_points")
-    def test_arm_and_takeoff(self, get_points_mock):
+    @patch.object(Environment, "invalidate_measurement")
+    def test_arm_and_takeoff(self, invalidate_measurement_mock, get_points_mock):
+        loc = LocationLocal(1.2, 3.4, 5.6)
+        self.mission.add_waypoint(loc, required_sensors=[2])
+
         with patch("sys.stdout"):
             self.mission.arm_and_takeoff()
-            get_points_mock.assert_called_once_with()
-            self.assertTrue(self.vehicle.armed)
+
+        get_points_mock.assert_called_once_with()
+        self.assertTrue(self.vehicle.armed)
+
+        invalidate_measurement_mock.assert_called_once_with(required_sensors=[2],
+                                                            own_waypoint=0,
+                                                            wait_waypoint=0)
 
     @patch.object(Mission_Auto, "add_commands", side_effect=RuntimeError)
     def test_arm_and_takeoff_raises(self, add_commands_mock):
@@ -166,7 +175,9 @@ class TestMissionAuto(EnvironmentTestCase):
 
     @patch.object(Environment, "is_measurement_valid")
     @patch.object(Environment, "invalidate_measurement")
-    def test_check_wait(self, invalidate_measurement_mock, measurement_valid_mock):
+    @patch.object(Environment, "set_waypoint_valid")
+    def test_check_wait(self, waypoint_valid_mock, invalidate_measurement_mock,
+                        measurement_valid_mock):
         # When there are no commands yet, then `check_wait` does not have to do 
         # anything, but the caller may want to handle the (absence of) the 
         # waypoint.
@@ -189,6 +200,7 @@ class TestMissionAuto(EnvironmentTestCase):
         self.assertTrue(self.mission.check_wait())
         measurement_valid_mock.assert_called_once_with()
         invalidate_measurement_mock.assert_not_called()
+        waypoint_valid_mock.assert_not_called()
 
         # Make the measurements valid. `check_wait` handles the "wait" waypoint 
         # and instructs the vehicle to go to the next waypoint. This waypoint 
@@ -201,6 +213,7 @@ class TestMissionAuto(EnvironmentTestCase):
         invalidate_measurement_mock.assert_called_once_with(required_sensors=None,
                                                             own_waypoint=2,
                                                             wait_waypoint=2)
+        waypoint_valid_mock.assert_called_once_with()
 
         # When RF sensor synchronization is disabled, then `check_wait` does 
         # nothing with the "wait" waypoint. The waypoint need not be handled by 

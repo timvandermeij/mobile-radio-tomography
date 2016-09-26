@@ -334,7 +334,8 @@ class Robot_Vehicle(Vehicle):
 
         # If we are not at the waypoint and not waiting there based on 
         # a command, then the location is not yet valid.
-        if not self._at_current_waypoint() and not self.is_wait():
+        is_valid = self._is_waypoint(self._current_waypoint)
+        if is_valid and not self._at_current_waypoint() and not self.is_wait():
             return False
 
         return super(Robot_Vehicle, self).is_current_location_valid()

@@ -38,6 +38,8 @@ class Mission_Auto(Mission):
         except RuntimeError:
             pass
 
+        self._set_measurement_validation(0)
+
         super(Mission_Auto, self).arm_and_takeoff()
 
     def get_waypoints(self):
@@ -174,21 +176,29 @@ class Mission_Auto(Mission):
         print("Measurements are valid, continuing to next waypoint")
         self.vehicle.set_next_waypoint()
         index = self.vehicle.get_next_waypoint()
+        self._set_measurement_validation(index)
+
+        return True
+
+    def _set_measurement_validation(self, index):
         if index in self._wait_waypoints:
             sensors = self._wait_waypoints[index]["sensors"]
             own_waypoint = self._wait_waypoints[index]["own_waypoint"]
             wait_waypoint = self._wait_waypoints[index]["other_waypoint"]
+            immediately_valid = False
         else:
             print("No more wait waypoints registered for this mission, falling back to default wait waypoints")
             sensors = None
             own_waypoint = index
             wait_waypoint = index
+            immediately_valid = True
 
         self.environment.invalidate_measurement(required_sensors=sensors,
                                                 own_waypoint=own_waypoint,
                                                 wait_waypoint=wait_waypoint)
 
-        return True
+        if immediately_valid:
+            self.environment.set_waypoint_valid()
 
     def check_wait(self):
         """

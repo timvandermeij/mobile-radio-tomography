@@ -147,6 +147,7 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
         # Initialize more state variables and setup plots for initial display.
         self._setup()
+        self._fill_forms()
 
         # Fill the tab widget.
         self._tabWidget.addTab(self._settings_container, "Settings")
@@ -203,6 +204,14 @@ class Control_Panel_Planning_View(Control_Panel_View):
             cleaner.add(self._front_canvas)
             self._front_canvas = None
 
+        if self._grid_timer is not None:
+            self._grid_timer.stop()
+            self._grid_timer = None
+
+        if self._update_timer is not None:
+            self._update_timer.stop()
+            self._update_timer = None
+
         cleaner.clear()
 
         self._init()
@@ -222,8 +231,6 @@ class Control_Panel_Planning_View(Control_Panel_View):
 
         # Populate the sort selector with current problem's objectives.
         self._populate_sort_selector()
-
-        self._fill_forms()
 
     def _populate_sort_selector(self):
         # Keep the current index while repopulating.
@@ -522,19 +529,15 @@ class Control_Panel_Planning_View(Control_Panel_View):
         self._running = running
 
     def _start(self):
-        # Update the toggle button state
-        self._update_running(True)
-
         # Update the settings from the toolbox forms.
-        for component, form in self._forms.iteritems():
-            settings = self._controller.arguments.get_settings(component)
+        for form in self._forms.itervalues():
+            settings = form.get_settings()
             try:
                 values, disallowed = form.get_all_values()
                 form.check_disallowed(disallowed)
             except ValueError as e:
                 QtGui.QMessageBox.critical(self._controller.central_widget,
                                            "Invalid value", e.message)
-                self._update_running(False)
                 return
 
             for key, value in values.iteritems():
@@ -543,8 +546,10 @@ class Control_Panel_Planning_View(Control_Panel_View):
                 except ValueError as e:
                     QtGui.QMessageBox.critical(self._controller.central_widget,
                                                "Settings error", e.message)
-                    self._update_running(False)
                     return
+
+        # Update the toggle button state
+        self._update_running(True)
 
         # Set the running state for the planning runner, and stop the RF sensor from 
         # taking up cycles during the algorithm.

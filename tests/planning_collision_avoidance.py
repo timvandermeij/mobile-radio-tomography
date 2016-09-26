@@ -13,7 +13,8 @@ class TestPlanningCollisionAvoidance(LocationTestCase, SettingsTestCase):
         super(TestPlanningCollisionAvoidance, self).setUp()
 
         self.arguments = Arguments("settings.json", [
-            "--network-size", "10", "10", "--network-padding", "1", "1"
+            "--network-size", "10", "10", "--network-padding", "1", "1",
+            "--collision-avoidance"
         ])
         self.geometry = Geometry_Grid()
         self.collision_avoidance = Collision_Avoidance(self.arguments,

@@ -802,7 +802,7 @@
                 "help": "Whether to enable the collision avoidance algorithm",
                 "short": "Collision avoidance",
                 "type": "bool",
-                "default": true
+                "default": false
             },
             "unsafe_path_cost": {
                 "help": "Additional distance compared to the norm distance when there is no safe path possible to a certain waypoint. This should account for lost distance due to halting and detours. If this is 'inf', then the solution is considered infeasible.",
@@ -1251,7 +1251,7 @@
                 "help": "Delay in seconds for each sweep",
                 "type": "float",
                 "min": 0.0,
-                "default": 0.3
+                "default": 1.0
             }
         }
     },
