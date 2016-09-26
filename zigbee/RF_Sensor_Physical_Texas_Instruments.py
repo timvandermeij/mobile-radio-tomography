@@ -1,5 +1,6 @@
 # Core imports
 import random
+import socket
 import struct
 import time
 
@@ -44,7 +45,9 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
                                                                    valid_callback,
                                                                    usb_manager=usb_manager)
 
+        self._identify()
         self._address = str(self._id)
+
         self._joined = True
         self._polling_time = 0.0
 
@@ -65,6 +68,22 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
             "cts_pin": self._settings.get("cts_pin"),
             "reset_pin": self._settings.get("reset_pin")
         }
+
+    def _identify(self):
+        """
+        Update the identifier of the sensor.
+
+        If the sensor ID is unchanged from the default, then the host name of
+        the current device is used to determine the ID. The host name should
+        end with a dash an a numerical identifier, which matches the actual ID.
+        """
+
+        if self._id == 0:
+            try:
+                self._id = int(socket.gethostname().split("-")[-1])
+                self._scheduler.id = self._id
+            except ValueError:
+                pass
 
     @property
     def type(self):
