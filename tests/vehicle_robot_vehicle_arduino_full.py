@@ -1,3 +1,4 @@
+import math
 import serial
 from dronekit import LocationLocal
 from mock import patch
@@ -81,9 +82,19 @@ class TestVehicleRobotVehicleArduinoFull(RobotVehicleTestCase):
     def test_home_location(self):
         loc = LocationLocal(5.0, 6.0, 0.0)
         self.vehicle.home_location = loc
-        # We send a "set home location" message to the Arduino.
+        # We send a "set home location" command to the Arduino.
         self.assertEqual(self._ttl_device.readline(), "HOME 5 6 S\n")
         self.assertEqual(self.vehicle.home_location, loc)
+
+    def test_set_home_state(self):
+        loc = LocationLocal(7.0, 8.0, 0.0)
+        self.vehicle.set_home_state(loc, yaw=0.5*math.pi)
+        # We send a "set home location" command with the new location and 
+        # direction to the Arduino.
+        self.assertEqual(self._ttl_device.readline(), "HOME 7 8 E\n")
+        self.assertEqual(self.vehicle.home_location, loc)
+        self.assertEqual(self.vehicle._home_direction,
+                         Line_Follower_Direction.RIGHT)
 
     def test_get_direction(self):
         cases = [

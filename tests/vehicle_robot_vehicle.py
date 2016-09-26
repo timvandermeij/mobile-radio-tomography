@@ -39,6 +39,8 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
     def test_initialization(self):
         self.assertEqual(self.vehicle.arguments, self.arguments)
         self.assertEqual(self.vehicle._home_location, (0, 0))
+        self.assertEqual(self.vehicle._home_direction,
+                         Line_Follower_Direction.UP)
         self.assertEqual(self.vehicle._direction, Line_Follower_Direction.UP)
         self.assertIsInstance(self.vehicle._state, Robot_State)
         self.assertEqual(self.vehicle._state.name, "intersection")
@@ -69,6 +71,14 @@ class TestVehicleRobotVehicle(RobotVehicleTestCase):
 
             self.vehicle.add_waypoint(LocationGlobal(4.0, 8.0, 6.4))
             self.assertEqual(self.vehicle._waypoints, [(4, 8)])
+
+    def test_set_home_state(self):
+        self.vehicle.set_home_state(LocationLocal(1.0, 2.0, 4.0), yaw=math.pi)
+        self.assertEqual(self.vehicle._home_location, (1, 2))
+        self.assertEqual(self.vehicle.home_location,
+                         LocationLocal(1.0, 2.0, 0.0))
+        self.assertEqual(self.vehicle._home_direction,
+                         Line_Follower_Direction.DOWN)
 
     def test_setup(self):
         self.vehicle.setup()

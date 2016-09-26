@@ -16,7 +16,7 @@ class TestPlanningGreedyAssignment(SettingsTestCase):
         ])
         settings = self.arguments.get_settings("planning_assignment")
         settings.set("vehicle_home_locations", [[0, 0], [0, 19]])
-        settings.set("vehicle_home_directions", [0, 0])
+        settings.set("vehicle_home_directions", [0, 3])
 
         self.geometry = Geometry_Grid()
         self.import_manager = Import_Manager()
@@ -54,7 +54,7 @@ class TestPlanningGreedyAssignment(SettingsTestCase):
             [19, 1, 0, wait, 2, 1, 4]
         ])
         self.assertEqual(assignment[2], [
-            [0, 19, 0, Waypoint_Type.HOME, 0, 1, -1],
+            [0, 19, 0, Waypoint_Type.HOME, 3, 1, -1],
             [2, 19, 0, wait, 1, 1, 0], [4, 19, 0, wait, 1, 1, 1],
             [5, 16, 0, wait, 1, 1, 2], [1, 16, 0, wait, 1, 1, 3],
             [4, 18, 0, wait, 1, 1, 4]

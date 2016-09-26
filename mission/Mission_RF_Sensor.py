@@ -178,16 +178,18 @@ class Mission_RF_Sensor(Mission_Auto):
         wait_count = data["wait_count"]
         wait_waypoint = data["wait_waypoint"]
 
-        # Create location waypoints based on the type and additional data. 
-        # `add_waypoint` handles any further conversions of the provided 
-        # waypoints from the `Waypoint` object.
+        # Create the waypoint based on the type, location and additional data, 
+        # such as wait for vehicle ID, wait count, and wait waypoint for wait 
+        # type waypoints, and home direction (sent in "union" of wait ID) for 
+        # the home waypoint.
         location = self.geometry.make_location(latitude, longitude, altitude)
         waypoint = Waypoint.create(self.environment.get_import_manager(),
                                    waypoint_type, self._rf_sensor.id,
                                    self.geometry, location,
                                    previous_location=self._point,
                                    wait_id=wait_id, wait_count=wait_count,
-                                   wait_waypoint=wait_waypoint)
+                                   wait_waypoint=wait_waypoint,
+                                   home_direction=wait_id)
 
         # Retrieve the required sensors. A return value `None` actually means 
         # we want to wait for all other sensors, while an exception means we do 
@@ -205,6 +207,8 @@ class Mission_RF_Sensor(Mission_Auto):
             else:
                 other_waypoint_id = -1
 
+            # `add_waypoint` handles any further conversions of the provided 
+            # waypoints from the `Waypoint` object.
             self.add_waypoint(point, wait=wait,
                               required_sensors=required_sensors,
                               wait_waypoint=other_waypoint_id)

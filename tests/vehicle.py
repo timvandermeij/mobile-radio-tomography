@@ -1,3 +1,4 @@
+import math
 from mock import patch, MagicMock, PropertyMock
 from dronekit import LocationLocal, LocationGlobal, LocationGlobalRelative, VehicleMode
 from ..bench.Method_Coverage import covers
@@ -132,6 +133,11 @@ class TestVehicle(VehicleTestCase):
     def test_home_location(self):
         new_location = LocationGlobal(1.0, 2.0, 3.0)
         self.vehicle.home_location = new_location
+        self.assertEqual(self.vehicle._home_location, new_location)
+
+    def test_set_home_state(self):
+        new_location = LocationGlobal(1.0, 2.0, 3.0)
+        self.vehicle.set_home_state(new_location, yaw=math.pi)
         self.assertEqual(self.vehicle._home_location, new_location)
 
     def test_add_attribute_listener(self):

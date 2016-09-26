@@ -64,7 +64,8 @@ class Robot_Vehicle(Vehicle):
         # The starting direction of the robot. The robot should be aligned with 
         # this direction to begin with.
         direction = self.settings.get("home_direction")
-        self._direction = Line_Follower_Direction(direction)
+        self._home_direction = Line_Follower_Direction(direction)
+        self._direction = self._home_direction
 
         self._line_follower = None
         self._setup_line_follower(import_manager, thread_manager, usb_manager)
@@ -217,6 +218,10 @@ class Robot_Vehicle(Vehicle):
     def home_location(self, value):
         self._home_location = self._geometry.get_coordinates(value)[:2]
         self.notify_attribute_listeners("home_location", self.home_location)
+
+    def set_home_state(self, position, yaw=0.0):
+        self._home_direction = Line_Follower_Direction.from_yaw(yaw)
+        self.home_location = position
 
     @property
     def mode(self):

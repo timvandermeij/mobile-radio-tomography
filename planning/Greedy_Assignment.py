@@ -46,7 +46,7 @@ class Greedy_Assignment(object):
         self._number_of_waits = None
 
     def _add_waypoint(self, vehicle, position, waypoint_type, wait_id=0,
-                      wait_count=1, wait_waypoint=-1):
+                      wait_count=1, wait_waypoint=-1, home_direction=0):
         """
         Create a waypoint for the vehicle with sensor ID `vehicle`, based on
         the given coordinate tuple `position` and additional type-specific
@@ -55,10 +55,16 @@ class Greedy_Assignment(object):
         The assignment can be altered to add different waypoint types using the
         `waypoint_type` keyword argument, which expects a `Waypoint_Type` enum
         value. For wait types, `wait_id`, `wait_count` and `wait_waypoint`
-        integers are accepted if they are known at this point.
+        integers are allowed, and for the home waypoint type, `home_direction`
+        is allowed.
         """
 
         if self._export:
+            # The wait ID and home direction share a "union" in a the exported 
+            # waypoints lists.
+            if waypoint_type == Waypoint_Type.HOME:
+                wait_id = home_direction
+
             waypoint = list(position) + [
                 0, waypoint_type, wait_id, wait_count, wait_waypoint
             ]
@@ -67,7 +73,8 @@ class Greedy_Assignment(object):
             waypoint = Waypoint.create(self._import_manager, waypoint_type,
                                        vehicle, self._geometry, location,
                                        wait_id=wait_id, wait_count=wait_count,
-                                       wait_waypoint=wait_waypoint)
+                                       wait_waypoint=wait_waypoint,
+                                       home_direction=home_direction)
 
         self._assignment[vehicle].append(waypoint)
 
@@ -221,7 +228,8 @@ class Greedy_Assignment(object):
             (i, []) for i in range(1, self._number_of_vehicles + 1)
         ])
         for vehicle, home_location in enumerate(self._current_positions):
-            self._add_waypoint(vehicle + 1, home_location, Waypoint_Type.HOME)
+            self._add_waypoint(vehicle + 1, home_location, Waypoint_Type.HOME,
+                               home_direction=self._current_directions[vehicle])
 
         total_distance = 0
 
