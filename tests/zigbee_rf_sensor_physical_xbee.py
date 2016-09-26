@@ -4,11 +4,12 @@ import time
 
 # Library imports
 import serial
-from mock import patch, MagicMock
+from mock import patch, MagicMock, PropertyMock
 
 # Package imports
 from ..core.Threadable import Threadable
 from ..zigbee.Packet import Packet
+from ..zigbee.TDMA_Scheduler import TDMA_Scheduler
 from core_usb_manager import USBManagerTestCase
 from zigbee_rf_sensor import ZigBeeRFSensorTestCase
 
@@ -176,38 +177,50 @@ class TestZigBeeRFSensorPhysicalXBee(ZigBeeRFSensorTestCase, USBManagerTestCase)
         second_packet = self.rf_sensor._create_rssi_broadcast_packet()
         self.rf_sensor._packets[1] = second_packet
 
+        # If the current time is inside an allocated slot, then packets
+        # may be sent.
         with patch.object(self.rf_sensor, "_send_tx_frame") as send_tx_frame_mock:
-            self.rf_sensor._send()
+            in_slot_mock = PropertyMock(return_value=True)
+            with patch.object(TDMA_Scheduler, "in_slot", new_callable=in_slot_mock):
+                self.rf_sensor._send()
 
-            calls = send_tx_frame_mock.call_args_list
+                calls = send_tx_frame_mock.call_args_list
 
-            # RSSI broadcast packets must be sent to all sensors in the network
-            # (excluding ourself). Note that we do not inspect the packet contents
-            # other than the specification because that is covered in the test
-            # for the `_create_rssi_broadcast_packet` method.
-            for to_id in xrange(1, self.rf_sensor.number_of_sensors + 1):
-                if to_id == self.rf_sensor.id:
-                    continue
+                # RSSI broadcast packets must be sent to all sensors in the network
+                # (excluding ourself). Note that we do not inspect the packet contents
+                # other than the specification because that is covered in the test
+                # for the `_create_rssi_broadcast_packet` method.
+                for to_id in xrange(1, self.rf_sensor.number_of_sensors + 1):
+                    if to_id == self.rf_sensor.id:
+                        continue
 
+                    packet, to = calls.pop(0)[0]
+                    self.assertIsInstance(packet, Packet)
+                    self.assertEqual(packet.get("specification"), "rssi_broadcast")
+                    self.assertEqual(to, to_id)
+
+                # RSSI ground station packets that have an associated RSSI value must
+                # be sent to the ground station. If the RSSI value is missing, then the
+                # packet must remain in the packet dictionary. We added two packets
+                # to the dictionary at the start of this test, so only the first one
+                # may be sent.
                 packet, to = calls.pop(0)[0]
                 self.assertIsInstance(packet, Packet)
                 self.assertEqual(packet.get("specification"), "rssi_broadcast")
-                self.assertEqual(to, to_id)
+                self.assertEqual(packet.get("rssi"), 42)
+                self.assertEqual(to, 0)
 
-            # RSSI ground station packets that have an associated RSSI value must
-            # be sent to the ground station. If the RSSI value is missing, then the
-            # packet must remain in the packet dictionary. We added two packets
-            # to the dictionary at the start of this test, so only the first one
-            # may be sent.
-            packet, to = calls.pop(0)[0]
-            self.assertIsInstance(packet, Packet)
-            self.assertEqual(packet.get("specification"), "rssi_broadcast")
-            self.assertEqual(packet.get("rssi"), 42)
-            self.assertEqual(to, 0)
+                self.assertEqual(self.rf_sensor._packets, {
+                    1: second_packet
+                })
 
-            self.assertEqual(self.rf_sensor._packets, {
-                1: second_packet
-            })
+        # If the current time is not inside an allocated slot, then no
+        # packets may be sent.
+        with patch.object(self.rf_sensor, "_send_tx_frame") as send_tx_frame_mock:
+            in_slot_mock = PropertyMock(return_value=False)
+            with patch.object(TDMA_Scheduler, "in_slot", new_callable=in_slot_mock):
+                self.rf_sensor._send()
+                send_tx_frame_mock.assert_not_called()
 
     def test_send_tx_frame(self):
         self.packet.set("specification", "waypoint_clear")

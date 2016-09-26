@@ -57,6 +57,19 @@ class TDMA_Scheduler(object):
 
         self._timestamp = value
 
+    @property
+    def in_slot(self):
+        """
+        Determine if the sensor may send packets, i.e., if the current time
+        is inside a slot allocated for the sensor.
+        """
+
+        current_time = time.time()
+        slot_start_time = self._timestamp
+        slot_end_time = self._timestamp + self._slot_time
+
+        return slot_start_time <= current_time <= slot_end_time
+
     def update(self):
         """
         Update the timestamp for sending packets.

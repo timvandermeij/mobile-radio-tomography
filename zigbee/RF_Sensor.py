@@ -280,7 +280,7 @@ class RF_Sensor(Threadable):
         # start performing signal strength measurements.
         if not self._started:
             self._send_custom_packets()
-        elif self._id > 0 and time.time() >= self._scheduler.timestamp:
+        elif self._id > 0 and self._scheduler.in_slot:
             self._send()
             self._scheduler.update()
 
@@ -297,16 +297,21 @@ class RF_Sensor(Threadable):
         # Create and send the RSSI broadcast packets.
         packet = self._create_rssi_broadcast_packet()
         for to_id in xrange(1, self._number_of_sensors + 1):
+            if not self._scheduler.in_slot:
+                return
+
             if to_id == self._id:
                 continue
 
             self._send_tx_frame(packet, to_id)
 
         # Send collected packets to the ground station.
-        for packet in self._packets:
-            self._send_tx_frame(packet, 0)
+        for packet in list(self._packets):
+            if not self._scheduler.in_slot:
+                return
 
-        self._packets = []
+            self._send_tx_frame(packet, 0)
+            self._packets.remove(packet)
 
     def _send_custom_packets(self):
         """

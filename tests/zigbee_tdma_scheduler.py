@@ -48,6 +48,16 @@ class TestZigBeeTDMAScheduler(SettingsTestCase):
         self.scheduler.timestamp = 12345678.90
         self.assertEqual(self.scheduler.timestamp, 12345678.90)
 
+    def test_in_slot(self):
+        # The scheduler must correctly report if the sensor is allowed to send
+        # packets, i.e., if the current time is inside an allocated slot.
+        self.scheduler._timestamp = time.time()
+        self.scheduler._slot_time = 5
+        self.assertTrue(self.scheduler.in_slot)
+
+        self.scheduler._slot_time = -5
+        self.assertFalse(self.scheduler.in_slot)
+
     def test_update(self):
         # The first time the method is called, the timestamp is based on the
         # current time `c`. If the total sweep takes `t` seconds, then the

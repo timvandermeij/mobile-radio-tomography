@@ -186,15 +186,20 @@ class RF_Sensor_Physical_XBee(RF_Sensor_Physical):
         # Create and send the RSSI broadcast packets.
         packet = self._create_rssi_broadcast_packet()
         for to_id in xrange(1, self._number_of_sensors + 1):
+            if not self._scheduler.in_slot:
+                return
+
             if to_id == self._id:
                 continue
 
             self._send_tx_frame(packet, to_id)
 
         # Send collected packets to the ground station. Only send completed 
-        # packets, and remove them after sending. We have to iterate over 
-        # a copy to avoid changing the dictionary during iteration.
+        # packets and remove them after sending. 
         for frame_id in self._packets.copy():
+            if not self._scheduler.in_slot:
+                return
+
             packet = self._packets[frame_id]
             if packet.get("rssi") is None:
                 continue
