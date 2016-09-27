@@ -2,6 +2,7 @@
 import random
 import struct
 import time
+from collections import OrderedDict
 
 # Library import
 from xbee import ZigBee
@@ -27,7 +28,7 @@ class RF_Sensor_Physical_XBee(RF_Sensor_Physical):
                                                       valid_callback,
                                                       usb_manager=usb_manager)
 
-        self._packets = {}
+        self._packets = OrderedDict()
 
         self._sensor = None
         self._port = self._settings.get("port")
@@ -103,7 +104,7 @@ class RF_Sensor_Physical_XBee(RF_Sensor_Physical):
 
         super(RF_Sensor_Physical_XBee, self).start()
 
-        self._packets = {}
+        self._packets = OrderedDict()
 
     def discover(self, callback, required_sensors=None):
         """
@@ -186,16 +187,23 @@ class RF_Sensor_Physical_XBee(RF_Sensor_Physical):
         # Create and send the RSSI broadcast packets.
         packet = self._create_rssi_broadcast_packet()
         for to_id in xrange(1, self._number_of_sensors + 1):
+            if not self._scheduler.in_slot:
+                return
+
             if to_id == self._id:
                 continue
 
             self._send_tx_frame(packet, to_id)
 
         # Send collected packets to the ground station. Only send completed 
-        # packets, and remove them after sending. We have to iterate over 
-        # a copy to avoid changing the dictionary during iteration.
-        for frame_id in self._packets.copy():
-            packet = self._packets[frame_id]
+        # packets and remove them after sending. 
+        iterator = self._packets.iteritems()
+        while self._scheduler.in_slot:
+            try:
+                frame_id, packet = next(iterator)
+            except StopIteration:
+                break
+
             if packet.get("rssi") is None:
                 continue
 

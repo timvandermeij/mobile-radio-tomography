@@ -75,8 +75,8 @@ class RF_Sensor(Threadable):
         self._connection = None
         self._buffer = None
         self._scheduler = TDMA_Scheduler(self._id, arguments)
-        self._packets = []
-        self._queue = Queue.Queue()
+        self._packets = Queue.Queue()
+        self._custom_packets = Queue.Queue()
 
         self._joined = False
         self._activated = False
@@ -187,7 +187,7 @@ class RF_Sensor(Threadable):
         """
 
         self._scheduler.update()
-        self._packets = []
+        self._packets = Queue.Queue()
         self._started = True
 
     def stop(self):
@@ -219,12 +219,12 @@ class RF_Sensor(Threadable):
                 if to_id == self._id:
                     continue
 
-                self._queue.put({
+                self._custom_packets.put({
                     "packet": copy.deepcopy(packet),
                     "to": to_id
                 })
         else:
-            self._queue.put({
+            self._custom_packets.put({
                 "packet": packet,
                 "to": to
             })
@@ -280,7 +280,7 @@ class RF_Sensor(Threadable):
         # start performing signal strength measurements.
         if not self._started:
             self._send_custom_packets()
-        elif self._id > 0 and time.time() >= self._scheduler.timestamp:
+        elif self._id > 0 and self._scheduler.in_slot:
             self._send()
             self._scheduler.update()
 
@@ -297,24 +297,26 @@ class RF_Sensor(Threadable):
         # Create and send the RSSI broadcast packets.
         packet = self._create_rssi_broadcast_packet()
         for to_id in xrange(1, self._number_of_sensors + 1):
+            if not self._scheduler.in_slot:
+                return
+
             if to_id == self._id:
                 continue
 
             self._send_tx_frame(packet, to_id)
 
         # Send collected packets to the ground station.
-        for packet in self._packets:
+        while not self._packets.empty() and self._scheduler.in_slot:
+            packet = self._packets.get()
             self._send_tx_frame(packet, 0)
-
-        self._packets = []
 
     def _send_custom_packets(self):
         """
         Send custom packets to their destinations.
         """
 
-        while not self._queue.empty():
-            item = self._queue.get()
+        while not self._custom_packets.empty():
+            item = self._custom_packets.get()
             self._send_tx_frame(item["packet"], item["to"])
 
     def _send_tx_frame(self, packet, to=None):
@@ -332,6 +334,10 @@ class RF_Sensor(Threadable):
 
         if to is None:
             raise TypeError("Invalid destination '{}' has been provided".format(to))
+
+        # Introduce a short delay to give the hardware more time to send
+        # packets when this method is called many times in a row.
+        time.sleep(self._loop_delay)
 
     def _receive(self, packet=None):
         raise NotImplementedError("Subclasses must implement `_receive(packet=None)`")

@@ -77,9 +77,10 @@ class TestZigBeeRFSensor(ZigBeeRFSensorTestCase):
         self.assertEqual(self.rf_sensor._connection, None)
         self.assertEqual(self.rf_sensor._buffer, None)
         self.assertIsInstance(self.rf_sensor._scheduler, TDMA_Scheduler)
-        self.assertEqual(self.rf_sensor._packets, [])
-        self.assertIsInstance(self.rf_sensor._queue, Queue.Queue)
-        self.assertEqual(self.rf_sensor._queue.qsize(), 0)
+        self.assertIsInstance(self.rf_sensor._packets, Queue.Queue)
+        self.assertEqual(self.rf_sensor._packets.qsize(), 0)
+        self.assertIsInstance(self.rf_sensor._custom_packets, Queue.Queue)
+        self.assertEqual(self.rf_sensor._custom_packets.qsize(), 0)
 
         self.assertEqual(self.rf_sensor._joined, False)
         self.assertEqual(self.rf_sensor._activated, False)
@@ -154,7 +155,7 @@ class TestZigBeeRFSensor(ZigBeeRFSensorTestCase):
         # when the measurements start.
         self.rf_sensor.start()
         self.assertTrue(self.rf_sensor._started)
-        self.assertEqual(self.rf_sensor._packets, [])
+        self.assertEqual(self.rf_sensor._packets.qsize(), 0)
         self.assertNotEqual(self.rf_sensor._scheduler.timestamp, 0.0)
 
     def test_stop(self):
@@ -187,13 +188,13 @@ class TestZigBeeRFSensor(ZigBeeRFSensorTestCase):
         self.packet.set("to_id", 2)
         self.rf_sensor.enqueue(self.packet)
 
-        self.assertEqual(self.rf_sensor._queue.qsize(),
+        self.assertEqual(self.rf_sensor._custom_packets.qsize(),
                          self.rf_sensor.number_of_sensors - 1)
         for to_id in xrange(1, self.rf_sensor.number_of_sensors + 1):
             if to_id == self.rf_sensor.id:
                 continue
 
-            item = self.rf_sensor._queue.get()
+            item = self.rf_sensor._custom_packets.get()
             self.assertIsInstance(item["packet"], Packet)
             self.assertEqual(item["packet"].get_all(), {
                 "specification": "waypoint_clear",
@@ -201,17 +202,17 @@ class TestZigBeeRFSensor(ZigBeeRFSensorTestCase):
             })
             self.assertEqual(item["to"], to_id)
 
-        self.assertEqual(self.rf_sensor._queue.qsize(), 0)
+        self.assertEqual(self.rf_sensor._custom_packets.qsize(), 0)
 
         # Packets that do contain a destination must be enqueued directly.
         self.rf_sensor.enqueue(self.packet, to=2)
 
-        self.assertEqual(self.rf_sensor._queue.qsize(), 1)
-        self.assertEqual(self.rf_sensor._queue.get(), {
+        self.assertEqual(self.rf_sensor._custom_packets.qsize(), 1)
+        self.assertEqual(self.rf_sensor._custom_packets.get(), {
             "packet": self.packet,
             "to": 2
         })
-        self.assertEqual(self.rf_sensor._queue.qsize(), 0)
+        self.assertEqual(self.rf_sensor._custom_packets.qsize(), 0)
 
     def test_discover(self):
         # Providing an invalid callback raises an exception.
@@ -263,21 +264,44 @@ class TestZigBeeRFSensor(ZigBeeRFSensorTestCase):
             self.rf_sensor._loop_body()
             send_custom_packets_mock.assert_called_once_with()
 
-        with patch.object(TDMA_Scheduler, "update") as update_mock:
-            with patch.object(RF_Sensor, "_send") as send_mock:
-                self.rf_sensor._started = True
+        # If the current time is inside an allocated slot, then packets
+        # may be sent.
+        in_slot_mock = PropertyMock(return_value=True)
+        with patch.object(TDMA_Scheduler, "in_slot", new_callable=in_slot_mock):
+            with patch.object(TDMA_Scheduler, "update") as update_mock:
+                with patch.object(RF_Sensor, "_send") as send_mock:
+                    self.rf_sensor._started = True
 
-                # Send RSSI broadcast/ground station packets when the sensor
-                # has been activated and started.
-                self.rf_sensor._loop_body()
+                    # Send RSSI broadcast/ground station packets when the sensor
+                    # has been activated and started.
+                    self.rf_sensor._loop_body()
 
-                update_mock.assert_called_once_with()
-                send_mock.assert_called_once_with()
+                    update_mock.assert_called_once_with()
+                    send_mock.assert_called_once_with()
 
-    def test_send(self):
-        self.rf_sensor._packets.append(self.rf_sensor._create_rssi_broadcast_packet())
+        # If the current time is not inside an allocated slot, then no
+        # packets may be sent.
+        in_slot_mock = PropertyMock(return_value=False)
+        with patch.object(TDMA_Scheduler, "in_slot", new_callable=in_slot_mock):
+            with patch.object(TDMA_Scheduler, "update") as update_mock:
+                with patch.object(RF_Sensor, "_send") as send_mock:
+                    self.rf_sensor._started = True
 
-        with patch.object(RF_Sensor, "_send_tx_frame") as send_tx_frame_mock:
+                    # Send RSSI broadcast/ground station packets when the sensor
+                    # has been activated and started.
+                    self.rf_sensor._loop_body()
+
+                    update_mock.assert_not_called()
+                    send_mock.assert_not_called()
+
+    @patch.object(RF_Sensor, "_send_tx_frame")
+    def test_send(self, send_tx_frame_mock):
+        self.rf_sensor._packets.put(self.rf_sensor._create_rssi_broadcast_packet())
+
+        # If the current time is inside an allocated slot, then packets
+        # may be sent.
+        in_slot_mock = PropertyMock(return_value=True)
+        with patch.object(TDMA_Scheduler, "in_slot", new_callable=in_slot_mock):
             self.rf_sensor._send()
 
             calls = send_tx_frame_mock.call_args_list
@@ -303,7 +327,16 @@ class TestZigBeeRFSensor(ZigBeeRFSensorTestCase):
             self.assertEqual(packet.get("specification"), "rssi_broadcast")
             self.assertEqual(to, 0)
 
-            self.assertEqual(self.rf_sensor._packets, [])
+            self.assertEqual(self.rf_sensor._packets.qsize(), 0)
+
+        send_tx_frame_mock.reset_mock()
+
+        # If the current time is not inside an allocated slot, then no
+        # packets may be sent.
+        in_slot_mock = PropertyMock(return_value=False)
+        with patch.object(TDMA_Scheduler, "in_slot", new_callable=in_slot_mock):
+            self.rf_sensor._send()
+            send_tx_frame_mock.assert_not_called()
 
     def test_send_custom_packets(self):
         self.packet.set("specification", "waypoint_clear")
@@ -320,7 +353,7 @@ class TestZigBeeRFSensor(ZigBeeRFSensorTestCase):
             self.assertEqual(packet.get("to_id"), 2)
             self.assertEqual(to, 2)
 
-            self.assertEqual(self.rf_sensor._queue.qsize(), 0)
+            self.assertEqual(self.rf_sensor._custom_packets.qsize(), 0)
 
     def test_send_tx_frame(self):
         # Having a closed connection raises an exception.

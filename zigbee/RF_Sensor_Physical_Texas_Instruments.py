@@ -257,4 +257,4 @@ class RF_Sensor_Physical_Texas_Instruments(RF_Sensor_Physical):
         packet = super(RF_Sensor_Physical_Texas_Instruments, self)._process_rssi_broadcast_packet(packet,
                                                                                                   rssi=rssi)
         packet.set("rssi", rssi)
-        self._packets.append(packet)
+        self._packets.put(packet)
