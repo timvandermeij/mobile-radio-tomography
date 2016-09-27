@@ -2,6 +2,7 @@ import json
 from mock import mock_open, patch
 from dronekit import LocationLocal
 from ..environment.Environment import Environment
+from ..location.Line_Follower import Line_Follower_Direction
 from ..mission.Mission_RF_Sensor import Mission_RF_Sensor
 from ..vehicle.Robot_Vehicle import Robot_State
 from ..waypoint.Waypoint import Waypoint_Type
@@ -235,11 +236,13 @@ class TestMissionRFSensor(EnvironmentTestCase):
         with patch('sys.stdout'):
             self.mission.setup()
 
-        home_location = LocationLocal(5.0, 15.0, 0.0)
+        home_location = LocationLocal(5.0, 1.0, 0.0)
         self.enqueue_mock.reset_mock()
-        self._send_waypoint_add(0, 5.0, 15.0, type=Waypoint_Type.HOME)
+        self._send_waypoint_add(0, 5.0, 1.0, type=Waypoint_Type.HOME, wait_id=2)
         self.assertEqual(self.mission.next_index, 1)
         self.assertEqual(self.vehicle.home_location, home_location)
+        self.assertEqual(self.vehicle._home_direction,
+                         Line_Follower_Direction.DOWN)
         self.assertEqual(self.mission._point, home_location)
         self.assertEqual(self.vehicle._waypoints, [])
 

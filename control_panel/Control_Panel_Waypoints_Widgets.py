@@ -1,5 +1,6 @@
 from functools import partial
 from PyQt4 import QtCore, QtGui
+from ..location.Line_Follower import Line_Follower_Direction
 from ..waypoint.Waypoint import Waypoint_Type
 
 class WaypointsTableValueError(ValueError):
@@ -25,22 +26,88 @@ class WaypointsTableValueError(ValueError):
     def column(self):
         return self._column
 
-class WaypointTypeWidget(QtGui.QComboBox):
+class WaypointEnumWidget(QtGui.QComboBox):
+    def __init__(self, table, item, enum, default, label="{} ({})", *a, **kw):
+        super(WaypointEnumWidget, self).__init__(*a, **kw)
+
+        self._table = table
+        self._item = item
+
+        # Retrieve the existing members of the enum class. Use their name and 
+        # value to populate the combo box options.
+        self.addItems([
+            label.format(member.value, member.name.lower())
+            for member in iter(enum)
+        ])
+
+        self.setCurrentIndex(default - 1)
+
+    def get_value(self):
+        """
+        Retrieve the current waypoint type value.
+
+        The value is returned as an integer, assuming the enum class has values
+        starting from zero, without gaps.
+        """
+
+        return self.currentIndex()
+
+    def set_value(self, index):
+        """
+        Alter the current waypoint type.
+
+        The given `index` is an `IntEnum` of the correct enum class, or
+        a comparable integer. The combo box is updated to select the
+        appropriate option, assuming the enum class has values starting from
+        zero, without gaps.
+        """
+
+        self.setCurrentIndex(int(index))
+
+class WaypointDirectionWidget(WaypointEnumWidget):
+    """
+    A table cell widget that makes it possible to select a certain line follower
+    direction for the home type waypoint data associated with that row.
+    """
+
+    def __init__(self, table, item, default=0, *a, **kw):
+        label = "home direction: {} ({})"
+        super(WaypointDirectionWidget, self).__init__(table, item,
+                                                      Line_Follower_Direction,
+                                                      default, label=label,
+                                                      *a, **kw)
+
+    def sizeHint(self):
+        # Disable the size hint of the widget because it is always placed in 
+        # a spanned column that is large enough to hold the combo box.
+        return QtCore.QSize(0, 0)
+
+class WaypointTypeWidget(WaypointEnumWidget):
     """
     A table cell widget that makes it possible to select a certain waypoint type
     for the waypoint data associated with that row.
     """
 
     def __init__(self, table, item, default, *a, **kw):
-        super(WaypointTypeWidget, self).__init__(*a, **kw)
+        super(WaypointTypeWidget, self).__init__(table, item, Waypoint_Type,
+                                                 default, label="{1}", *a, **kw)
 
-        self._table = table
-        self._item = item
+        # Lambda functions to change a bitmask flag of the cell item to enable 
+        # or disable editing and selection.
+        self._enabler = lambda f: (f | QtCore.Qt.ItemIsEditable |
+                                   QtCore.Qt.ItemIsSelectable |
+                                   QtCore.Qt.ItemIsEnabled)
+        self._disabler = lambda f: (f & ~QtCore.Qt.ItemIsEditable &
+                                    ~QtCore.Qt.ItemIsSelectable &
+                                    ~QtCore.Qt.ItemIsEnabled)
 
-        self.addItems([type.name.lower() for type in iter(Waypoint_Type)])
+        # Background colors to signify the enabled or disabled state of a cell.
+        self._enabled_color = QtGui.QBrush()
+        self._disabled_color = QtGui.QColor("#e8e8e8")
+
+        self._home_direction_value = 0
 
         self.currentIndexChanged[int].connect(self._update_row_type)
-        self.setCurrentIndex(default - 1)
 
     def _update_row_type(self, index):
         """
@@ -49,23 +116,54 @@ class WaypointTypeWidget(QtGui.QComboBox):
 
         The `index` is the index associated with the selected combo box item,
         starting from `0`. The two cells next to this cell widget, which are
-        in the "wait ID" and "wait count" columns, are enabled or disabled
-        based on whether the `index` belongs to the wait type waypoint.
+        in the "wait ID", "wait count" and "wait waypoint" columns, are enabled
+        or disabled based on whether the `index` belongs to the wait type
+        waypoint. For home type waypoints, another `WaypointEnumWidget` cell
+        widget is added to allow inserting a home direction.
         """
 
-        if index + 1 != Waypoint_Type.WAIT:
-            flagger = lambda f: f & ~QtCore.Qt.ItemIsEditable & ~QtCore.Qt.ItemIsSelectable & ~QtCore.Qt.ItemIsEnabled
-            color = QtGui.QColor("#e8e8e8")
-        else:
-            flagger = lambda f: f | QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled
-            color = QtGui.QBrush()
-
+        # Determine the row and column of the item (these may have changed 
+        # since the cell widget was created) and deduce the range and span of 
+        # the columns that are related to the wait type waypoint.
         row = self._table.row(self._item)
         col = self._table.column(self._item)
-        for state_column in range(col + 1, self._table.columnCount()):
+        column_count = self._table.columnCount()
+        span = column_count - col - 1
+
+        home_direction_widget = None
+        old_home_widget = self._table.cellWidget(row, col + 1)
+        if isinstance(old_home_widget, WaypointEnumWidget):
+            self._home_direction_value = old_home_widget.get_value()
+
+        # Determine which columns to enable/disable.
+        if index + 1 == Waypoint_Type.HOME:
+            disable = lambda column: False if column == col + 1 else True
+
+            item = self._table.get_item(row, col + 1)
+            home_direction_widget = WaypointDirectionWidget(self._table, item)
+            home_direction_widget.set_value(self._home_direction_value)
+        elif index + 1 == Waypoint_Type.WAIT:
+            disable = lambda column: False
+            span = 1
+        else:
+            disable = lambda column: True
+
+        # Change the span of the next column. Prevent log spam by only changing 
+        # it if the current or new span is more than 1.
+        if span > 1 or self._table.columnSpan(row, col + 1) > 1:
+            self._table.setSpan(row, col + 1, 1, span)
+
+        self._table.setCellWidget(row, col + 1, home_direction_widget)
+
+        # Change the state of the columns related to wait type waitpoints.
+        for state_column in range(col + 1, column_count):
             item = self._table.get_item(row, state_column)
-            item.setFlags(flagger(item.flags()))
-            item.setBackground(color)
+            if disable(state_column):
+                item.setFlags(self._disabler(item.flags()))
+                item.setBackground(self._disabled_color)
+            else:
+                item.setFlags(self._enabler(item.flags()))
+                item.setBackground(self._enabled_color)
 
     def get_value(self):
         """
@@ -211,9 +309,9 @@ class WaypointsTableWidget(QtGui.QTableWidget):
 
         empty = True
         data = []
-        for col, column in enumerate(self._columns):
-            if "widget" in column:
-                widget = self.cellWidget(row, col)
+        for col in range(len(self._columns)):
+            widget = self.cellWidget(row, col)
+            if isinstance(widget, WaypointEnumWidget):
                 data.append(widget.get_value())
                 continue
 
@@ -249,8 +347,8 @@ class WaypointsTableWidget(QtGui.QTableWidget):
 
                 break
 
-            if "widget" in column:
-                widget = self.cellWidget(row, col)
+            widget = self.cellWidget(row, col)
+            if isinstance(widget, WaypointEnumWidget):
                 widget.set_value(data[col])
             elif data[col] != column["default"]:
                 # Alter the data in case there is an offset for this column, 

@@ -95,6 +95,19 @@ class Vehicle(Threadable):
         self._home_location = copy.copy(position)
         self.notify_attribute_listeners('home_location', self._home_location)
 
+    def set_home_state(self, position, yaw=0.0):
+        """
+        Change the home location to another `Location` object `position` and
+        the expected yaw attitude to another `yaw`.
+
+        For vehicles that make use of a home attitude, either to know their
+        initial orientation compared to the geometry or to know how to orient
+        themselves upon returning to its home location, this method allows one
+        to keep track of both the home location and the yaw.
+        """
+
+        self.home_location = position
+
     @property
     def mode(self):
         """

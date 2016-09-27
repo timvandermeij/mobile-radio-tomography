@@ -49,7 +49,7 @@ class Robot_Vehicle_Arduino_Full(Robot_Vehicle_Arduino):
         # Only use this when starting.
         home_north = int(self._home_location[0])
         home_east = int(self._home_location[1])
-        home_direction = self._get_zumo_direction(self._direction)
+        home_direction = self._get_zumo_direction(self._home_direction)
         self._serial_connection.write("HOME {} {} {}\n".format(home_north, home_east, home_direction))
 
     def _update_network_dimensions(self):

@@ -45,6 +45,23 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(ZigBeeRFSensorTestCase, USBMana
         self.assertEqual(self.rf_sensor._pins["cts_pin"], self.settings.get("cts_pin"))
         self.assertEqual(self.rf_sensor._pins["reset_pin"], self.settings.get("reset_pin"))
 
+    @patch("socket.gethostname")
+    def test_identify(self, host_name_mock):
+        # Ignore any changes to settings, assuming we left it default.
+        self.rf_sensor._id = 0
+
+        # A host name that does not match the pattern keeps the default 
+        # identity, without raising any exceptions.
+        host_name_mock.configure_mock(return_value="researcher-laptop")
+        self.rf_sensor._identify()
+        self.assertEqual(self.rf_sensor.id, 0)
+
+        # A host name that matches the pattern sets the ID correspondingly.
+        host_name_mock.configure_mock(return_value="raspberry-pi-4")
+        self.rf_sensor._identify()
+        self.assertEqual(self.rf_sensor.id, 4)
+        self.assertEqual(self.rf_sensor._scheduler.id, 4)
+
     def test_type(self):
         # The `type` property must be implemented and correct.
         self.assertEqual(self.rf_sensor.type, "rf_sensor_physical_texas_instruments")
