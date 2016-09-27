@@ -78,8 +78,8 @@ class TestZigBeeRFSensor(ZigBeeRFSensorTestCase):
         self.assertEqual(self.rf_sensor._buffer, None)
         self.assertIsInstance(self.rf_sensor._scheduler, TDMA_Scheduler)
         self.assertEqual(self.rf_sensor._packets, [])
-        self.assertIsInstance(self.rf_sensor._queue, Queue.Queue)
-        self.assertEqual(self.rf_sensor._queue.qsize(), 0)
+        self.assertIsInstance(self.rf_sensor._custom_packets, Queue.Queue)
+        self.assertEqual(self.rf_sensor._custom_packets.qsize(), 0)
 
         self.assertEqual(self.rf_sensor._joined, False)
         self.assertEqual(self.rf_sensor._activated, False)
@@ -187,13 +187,13 @@ class TestZigBeeRFSensor(ZigBeeRFSensorTestCase):
         self.packet.set("to_id", 2)
         self.rf_sensor.enqueue(self.packet)
 
-        self.assertEqual(self.rf_sensor._queue.qsize(),
+        self.assertEqual(self.rf_sensor._custom_packets.qsize(),
                          self.rf_sensor.number_of_sensors - 1)
         for to_id in xrange(1, self.rf_sensor.number_of_sensors + 1):
             if to_id == self.rf_sensor.id:
                 continue
 
-            item = self.rf_sensor._queue.get()
+            item = self.rf_sensor._custom_packets.get()
             self.assertIsInstance(item["packet"], Packet)
             self.assertEqual(item["packet"].get_all(), {
                 "specification": "waypoint_clear",
@@ -201,17 +201,17 @@ class TestZigBeeRFSensor(ZigBeeRFSensorTestCase):
             })
             self.assertEqual(item["to"], to_id)
 
-        self.assertEqual(self.rf_sensor._queue.qsize(), 0)
+        self.assertEqual(self.rf_sensor._custom_packets.qsize(), 0)
 
         # Packets that do contain a destination must be enqueued directly.
         self.rf_sensor.enqueue(self.packet, to=2)
 
-        self.assertEqual(self.rf_sensor._queue.qsize(), 1)
-        self.assertEqual(self.rf_sensor._queue.get(), {
+        self.assertEqual(self.rf_sensor._custom_packets.qsize(), 1)
+        self.assertEqual(self.rf_sensor._custom_packets.get(), {
             "packet": self.packet,
             "to": 2
         })
-        self.assertEqual(self.rf_sensor._queue.qsize(), 0)
+        self.assertEqual(self.rf_sensor._custom_packets.qsize(), 0)
 
     def test_discover(self):
         # Providing an invalid callback raises an exception.
@@ -352,7 +352,7 @@ class TestZigBeeRFSensor(ZigBeeRFSensorTestCase):
             self.assertEqual(packet.get("to_id"), 2)
             self.assertEqual(to, 2)
 
-            self.assertEqual(self.rf_sensor._queue.qsize(), 0)
+            self.assertEqual(self.rf_sensor._custom_packets.qsize(), 0)
 
     def test_send_tx_frame(self):
         # Having a closed connection raises an exception.
