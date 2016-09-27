@@ -1239,7 +1239,7 @@
                 "help": "Maximum number of seconds to shift the schedule",
                 "type": "float",
                 "min": 0.0,
-                "default": 0.3
+                "default": 0.9
             }
         }
     },
@@ -1251,7 +1251,7 @@
                 "help": "Delay in seconds for each sweep",
                 "type": "float",
                 "min": 0.0,
-                "default": 1.0
+                "default": 0.9
             }
         }
     },
