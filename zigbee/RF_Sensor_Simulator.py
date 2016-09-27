@@ -145,6 +145,6 @@ class RF_Sensor_Simulator(RF_Sensor):
             # Create and complete the packet for the ground station.
             ground_station_packet = self._create_rssi_ground_station_packet(packet)
             ground_station_packet.set("rssi", -random.randint(30, 70))
-            self._packets.append(ground_station_packet)
+            self._packets.put(ground_station_packet)
         elif self._buffer is not None:
             self._buffer.put(packet)

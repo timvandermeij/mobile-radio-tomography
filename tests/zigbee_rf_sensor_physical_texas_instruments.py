@@ -267,7 +267,8 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(ZigBeeRFSensorTestCase, USBMana
         self.rf_sensor._process_rssi_broadcast_packet(packet, rssi=42)
 
         # A ground station packet must be put in the packet list.
-        self.assertEqual(len(self.rf_sensor._packets), 1)
-        self.assertEqual(self.rf_sensor._packets[0].get("specification"),
-                         "rssi_ground_station")
-        self.assertEqual(self.rf_sensor._packets[0].get("rssi"), 42)
+        self.assertEqual(self.rf_sensor._packets.qsize(), 1)
+
+        packet = self.rf_sensor._packets.get()
+        self.assertEqual(packet.get("specification"), "rssi_ground_station")
+        self.assertEqual(packet.get("rssi"), 42)

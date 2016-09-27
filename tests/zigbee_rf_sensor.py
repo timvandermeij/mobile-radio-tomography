@@ -77,7 +77,8 @@ class TestZigBeeRFSensor(ZigBeeRFSensorTestCase):
         self.assertEqual(self.rf_sensor._connection, None)
         self.assertEqual(self.rf_sensor._buffer, None)
         self.assertIsInstance(self.rf_sensor._scheduler, TDMA_Scheduler)
-        self.assertEqual(self.rf_sensor._packets, [])
+        self.assertIsInstance(self.rf_sensor._packets, Queue.Queue)
+        self.assertEqual(self.rf_sensor._packets.qsize(), 0)
         self.assertIsInstance(self.rf_sensor._custom_packets, Queue.Queue)
         self.assertEqual(self.rf_sensor._custom_packets.qsize(), 0)
 
@@ -154,7 +155,7 @@ class TestZigBeeRFSensor(ZigBeeRFSensorTestCase):
         # when the measurements start.
         self.rf_sensor.start()
         self.assertTrue(self.rf_sensor._started)
-        self.assertEqual(self.rf_sensor._packets, [])
+        self.assertEqual(self.rf_sensor._packets.qsize(), 0)
         self.assertNotEqual(self.rf_sensor._scheduler.timestamp, 0.0)
 
     def test_stop(self):
@@ -295,7 +296,7 @@ class TestZigBeeRFSensor(ZigBeeRFSensorTestCase):
 
     @patch.object(RF_Sensor, "_send_tx_frame")
     def test_send(self, send_tx_frame_mock):
-        self.rf_sensor._packets.append(self.rf_sensor._create_rssi_broadcast_packet())
+        self.rf_sensor._packets.put(self.rf_sensor._create_rssi_broadcast_packet())
 
         # If the current time is inside an allocated slot, then packets
         # may be sent.
@@ -326,7 +327,7 @@ class TestZigBeeRFSensor(ZigBeeRFSensorTestCase):
             self.assertEqual(packet.get("specification"), "rssi_broadcast")
             self.assertEqual(to, 0)
 
-            self.assertEqual(self.rf_sensor._packets, [])
+            self.assertEqual(self.rf_sensor._packets.qsize(), 0)
 
         send_tx_frame_mock.reset_mock()
 

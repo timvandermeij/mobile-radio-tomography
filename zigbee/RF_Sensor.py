@@ -75,7 +75,7 @@ class RF_Sensor(Threadable):
         self._connection = None
         self._buffer = None
         self._scheduler = TDMA_Scheduler(self._id, arguments)
-        self._packets = []
+        self._packets = Queue.Queue()
         self._custom_packets = Queue.Queue()
 
         self._joined = False
@@ -187,7 +187,7 @@ class RF_Sensor(Threadable):
         """
 
         self._scheduler.update()
-        self._packets = []
+        self._packets = Queue.Queue()
         self._started = True
 
     def stop(self):
@@ -306,12 +306,9 @@ class RF_Sensor(Threadable):
             self._send_tx_frame(packet, to_id)
 
         # Send collected packets to the ground station.
-        for packet in list(self._packets):
-            if not self._scheduler.in_slot:
-                return
-
+        while not self._packets.empty() and self._scheduler.in_slot:
+            packet = self._packets.get()
             self._send_tx_frame(packet, 0)
-            self._packets.remove(packet)
 
     def _send_custom_packets(self):
         """

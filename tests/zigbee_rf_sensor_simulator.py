@@ -145,10 +145,11 @@ class TestZigBeeRFSensorSimulator(ZigBeeRFSensorTestCase):
         self.assertNotEqual(timestamp, self.rf_sensor._scheduler.timestamp)
 
         # A ground station packet must be put in the packet list.
-        self.assertEqual(len(self.rf_sensor._packets), 1)
-        self.assertEqual(self.rf_sensor._packets[0].get("specification"),
-                         "rssi_ground_station")
-        self.assertIsInstance(self.rf_sensor._packets[0].get("rssi"), int)
+        self.assertEqual(self.rf_sensor._packets.qsize(), 1)
+
+        packet = self.rf_sensor._packets.get()
+        self.assertEqual(packet.get("specification"), "rssi_ground_station")
+        self.assertIsInstance(packet.get("rssi"), int)
 
         # If the sensor is the ground station, the packet must be put
         # into the buffer if it is available.
