@@ -933,7 +933,7 @@
                 "length": 2,
                 "subtype": "int",
                 "min": 1,
-                "default": [19, 19]
+                "default": [17, 17]
             },
             "stream_network_origin": {
                 "help": "The distance of the network from the origin",
@@ -941,7 +941,7 @@
                 "type": "tuple",
                 "length": 2,
                 "subtype": "int",
-                "default": [0, 0]
+                "default": [1, 1]
             },
             "stream_record": {
                 "help": "Whether to record the received packets for saving afterward",
