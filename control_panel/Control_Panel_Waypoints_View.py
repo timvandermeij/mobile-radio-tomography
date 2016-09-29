@@ -468,6 +468,10 @@ class Control_Panel_Waypoints_View(Control_Panel_View):
         row = 0
         wait_index = 0
         while row < len(data):
+            if data[row][self._fields["type"]] == Waypoint_Type.HOME:
+                row += 1
+                continue
+
             locations = self._uncompress_waypoint(data, row)
             wait_id = self._get_wait_id(vehicle, data[row])
             wait_waypoint = self._get_wait_waypoint(data, row)
