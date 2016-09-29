@@ -311,14 +311,16 @@ class Environment(Location_Proxy):
             # sensors, but we also want to ensure we have sent enough valid 
             # measurements to the other vehicles as well. Only then will we 
             # consider the entire measurement to be valid.
-            if not self._is_valid(self._rf_sensor.id, own_index):
-                self._is_measurement_valid = False
-            else:
+            if self._is_valid(self._rf_sensor.id, own_index):
                 self._valid_measurements[other_id] = other_index
-                self._is_measurement_valid = all(
-                    self._is_valid(id, self._wait_waypoint_index)
-                    for id in self._required_sensors
-                )
+
+        if not self._is_valid(self._rf_sensor.id, own_index):
+            self._is_measurement_valid = False
+        else:
+            self._is_measurement_valid = all(
+                self._is_valid(id, self._wait_waypoint_index)
+                for id in self._required_sensors
+            )
 
         return own_valid
 
