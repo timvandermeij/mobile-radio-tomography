@@ -37,6 +37,7 @@ class Control_Panel_RF_Sensor_Sender(object):
         self._progress.setWindowModality(QtCore.Qt.WindowModal)
         self._progress.setMinimumDuration(0)
         self._progress.setCancelButtonText("Cancel")
+        self._progress.accepted.connect(self._cleanup)
         self._progress.canceled.connect(self._cancel)
         self._progress.setWindowTitle("Sending {}s".format(self._name))
         self._progress.setLabelText("Initializing...")
@@ -185,6 +186,13 @@ class Control_Panel_RF_Sensor_Sender(object):
         self._progress.setValue(max(0, min(self._total, sum(self._indexes.values()))))
 
     def _cancel(self, message=None):
+        self._cleanup()
+
+        if message is not None:
+            QtGui.QMessageBox.critical(self._controller.central_widget,
+                                       "Sending failed", message)
+
+    def _cleanup(self):
         self._controller.remove_packet_callback(self._ack_message)
 
         for timer in self._timers.values():
@@ -197,7 +205,3 @@ class Control_Panel_RF_Sensor_Sender(object):
             self._progress.deleteLater()
 
         self._progress = None
-
-        if message is not None:
-            QtGui.QMessageBox.critical(self._controller.central_widget,
-                                       "Sending failed", message)
