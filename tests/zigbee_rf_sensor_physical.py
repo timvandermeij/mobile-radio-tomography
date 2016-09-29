@@ -105,7 +105,7 @@ class TestZigBeeRFSensorPhysical(ZigBeeRFSensorTestCase):
 
         timestamp = self.rf_sensor._scheduler.timestamp
 
-        packet = self.rf_sensor._create_rssi_broadcast_packet()
+        packet = self.rf_sensor._create_rssi_broadcast_packet(2)
         ground_station_packet = self.rf_sensor._process_rssi_broadcast_packet(packet)
 
         # The scheduler's timestamp must be updated.

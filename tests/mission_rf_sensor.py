@@ -389,10 +389,10 @@ class TestMissionRFSensor(EnvironmentTestCase):
         self.assertTrue(self.vehicle.is_wait())
 
         other_id = self.rf_sensor.id + 1
-        self.assertTrue(self.environment.location_valid())
-        self.assertTrue(self.environment.location_valid(other_valid=True,
-                                                        other_id=other_id,
-                                                        other_index=1))
+        self.assertTrue(self.location_valid(False, other_id=other_id,
+                                            other_index=1, other_valid=True,
+                                            other_valid_pair=True))
+        self.assertTrue(self.location_valid(True, other_id=other_id))
         with patch('sys.stdout'):
             self.assertTrue(self.mission.check_waypoint())
 
@@ -415,8 +415,9 @@ class TestMissionRFSensor(EnvironmentTestCase):
         self.assertTrue(self.vehicle.is_wait())
 
         other_id = self.rf_sensor.id + 1
-        self.assertTrue(self.environment.location_valid(other_valid=True,
-                                                        other_id=other_id,
-                                                        other_index=3))
+        self.assertTrue(self.location_valid(True, other_id=other_id,
+                                            other_index=3, other_valid=True,
+                                            other_valid_pair=True))
+        self.assertTrue(self.location_valid(False, other_id=other_id))
         with patch('sys.stdout'):
             self.assertTrue(self.mission.check_waypoint())

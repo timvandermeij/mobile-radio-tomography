@@ -279,7 +279,7 @@ class TestZigBeeRFSensorPhysicalTexasInstruments(ZigBeeRFSensorTestCase, USBMana
         with self.assertRaises(TypeError):
             self.rf_sensor._process_rssi_broadcast_packet(Packet())
 
-        packet = self.rf_sensor._create_rssi_broadcast_packet()
+        packet = self.rf_sensor._create_rssi_broadcast_packet(2)
 
         self.rf_sensor._process_rssi_broadcast_packet(packet, rssi=42)
 

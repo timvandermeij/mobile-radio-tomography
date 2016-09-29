@@ -13,7 +13,7 @@ from ..settings import Arguments
 from ..trajectory.Servo import Servo
 from ..vehicle.Mock_Vehicle import Mock_Vehicle, MockAttitude
 from ..zigbee.Packet import Packet
-from ..zigbee.RF_Sensor import RF_Sensor
+from ..zigbee.RF_Sensor import RF_Sensor, RSSI_Validity_Request
 from geometry import LocationTestCase
 from settings import SettingsTestCase
 from core_thread_manager import ThreadableTestCase
@@ -84,6 +84,15 @@ class EnvironmentTestCase(LocationTestCase, SettingsTestCase,
         # Make the environment thread manager available to the tearDown method 
         # of the ThreadableTestCase.
         self.thread_manager = self.environment.thread_manager
+
+    def location_valid(self, is_broadcast, **kw):
+        if is_broadcast:
+            specification = "rssi_broadcast"
+        else:
+            specification = "rssi_ground_station"
+
+        request = RSSI_Validity_Request(specification, **kw)
+        return self.environment.location_valid(request)[0]
 
     def tearDown(self):
         super(EnvironmentTestCase, self).tearDown()
@@ -279,8 +288,7 @@ class TestEnvironment(EnvironmentTestCase):
         "location_valid", "is_measurement_valid", "set_waypoint_valid",
         "invalidate_measurement"
     ])
-    @patch.object(Mock_Vehicle, "is_current_location_valid")
-    def test_valid(self, current_location_valid_mock):
+    def test_valid_initialization(self):
         rf_sensor = self.environment.get_rf_sensor()
         other_id = rf_sensor.id + 1
 
@@ -288,94 +296,126 @@ class TestEnvironment(EnvironmentTestCase):
         required_sensors.remove(rf_sensor.id)
 
         # Check the initial state of internal member variables.
-        self.assertEqual(self.environment._valid_measurements, {})
+        self.assertEqual(self.environment._valid_waypoints, {})
+        self.assertEqual(self.environment._valid_pairs, {
+            rf_sensor.id: True,
+            other_id: False,
+            other_id + 1: False
+        })
         self.assertEqual(self.environment._required_sensors, required_sensors)
 
         # Initially, the location and measurement is invalid; the former 
         # because the waypoint is not yet reached and the second because the 
         # required sensors have not yet triggered a location valid callback.
-        self.assertFalse(self.environment.location_valid())
+        self.assertFalse(self.location_valid(True, other_id=other_id))
         self.assertFalse(self.environment.is_measurement_valid())
+
+    @covers([
+        "location_valid", "is_measurement_valid", "set_waypoint_valid",
+        "invalidate_measurement"
+    ])
+    @patch.object(Mock_Vehicle, "is_current_location_valid")
+    def test_valid_state(self, current_location_valid_mock):
+        rf_sensor = self.environment.get_rf_sensor()
+        other_id = rf_sensor.id + 1
 
         # By default, we require all sensors to become valid once.
         current_location_valid_mock.configure_mock(return_value=False)
         self.environment.set_waypoint_valid()
-        self.assertFalse(self.environment.location_valid())
+        self.assertFalse(self.location_valid(True, other_id=other_id))
 
         current_location_valid_mock.configure_mock(return_value=True)
-        self.assertTrue(self.environment.location_valid())
+        self.assertTrue(self.location_valid(True, other_id=other_id))
         self.assertFalse(self.environment.is_measurement_valid())
-        self.assertEqual(self.environment._valid_measurements,
-                         {rf_sensor.id: -1})
+        self.assertEqual(self.environment._valid_waypoints, {rf_sensor.id: -1})
 
-        self.assertTrue(self.environment.location_valid(other_valid=True,
-                                                        other_id=other_id,
-                                                        other_index=0))
+        self.assertTrue(self.location_valid(False, other_id=other_id,
+                                            other_index=0, other_valid=True,
+                                            other_valid_pair=False))
         self.assertFalse(self.environment.is_measurement_valid())
-        self.assertEqual(self.environment._valid_measurements,
+        self.assertEqual(self.environment._valid_waypoints,
                          {rf_sensor.id: -1, other_id: 0})
+        self.assertEqual(self.environment._valid_pairs, {
+            rf_sensor.id: True,
+            other_id: False,
+            other_id + 1: False
+        })
 
-        self.assertTrue(self.environment.location_valid(other_valid=True,
-                                                        other_id=other_id + 1,
-                                                        other_index=0))
+        self.assertTrue(self.location_valid(False, other_id=other_id,
+                                            other_index=0, other_valid=True,
+                                            other_valid_pair=True))
+        self.assertFalse(self.environment.is_measurement_valid())
+        self.assertEqual(self.environment._valid_pairs, {
+            rf_sensor.id: True,
+            other_id: True,
+            other_id + 1: False
+        })
+        
+        self.assertTrue(self.location_valid(False, other_id=other_id + 1,
+                                            other_index=0, other_valid=True,
+                                            other_valid_pair=True))
+        self.assertFalse(self.environment.is_measurement_valid())
+        self.assertTrue(self.location_valid(True, other_id=other_id))
         self.assertTrue(self.environment.is_measurement_valid())
 
-        # If another sensor becomes invalid again, then this does not 
-        # invalidate the measurement.
-        self.assertTrue(self.environment.location_valid(other_valid=False,
-                                                        other_id=other_id + 1,
-                                                        other_index=0))
+        # If another sensor's location becomes invalid again, then this does 
+        # not invalidate the measurement.
+        self.assertTrue(self.location_valid(False, other_id=other_id + 1,
+                                            other_index=0, other_valid=False,
+                                            other_valid_pair=True))
         self.assertTrue(self.environment.is_measurement_valid())
 
-        # Invalidate the measurement, and require a specific set of sensors and
-        # wait waypoint IDs.
+        # Invalidate the measurement, and require a specific set of sensors 
+        # and wait waypoint IDs.
         self.environment.invalidate_measurement(required_sensors=[other_id],
                                                 own_waypoint=1, wait_waypoint=2)
-        self.assertFalse(self.environment.location_valid())
+        self.assertFalse(self.location_valid(True, other_id=other_id))
         self.assertFalse(self.environment.is_measurement_valid())
 
         self.environment.set_waypoint_valid()
-        self.assertTrue(self.environment.location_valid())
-        self.assertEqual(self.environment._valid_measurements,
-                         {rf_sensor.id: 1})
+        self.assertTrue(self.location_valid(True, other_id=other_id))
+        self.assertEqual(self.environment._valid_waypoints, {rf_sensor.id: 1})
 
-        self.assertTrue(self.environment.location_valid(other_valid=True,
-                                                        other_id=other_id,
-                                                        other_index=1))
+        self.assertTrue(self.location_valid(False, other_id=other_id,
+                                            other_index=1, other_valid=True,
+                                            other_valid_pair=True))
+        self.assertTrue(self.location_valid(True, other_id=other_id))
         self.assertFalse(self.environment.is_measurement_valid())
 
-        self.assertTrue(self.environment.location_valid(other_valid=True,
-                                                        other_id=other_id,
-                                                        other_index=2))
+        self.assertTrue(self.location_valid(False, other_id=other_id,
+                                            other_index=2, other_valid=True,
+                                            other_valid_pair=True))
+        self.assertTrue(self.location_valid(True, other_id=other_id))
         self.assertTrue(self.environment.is_measurement_valid())
 
         # Check that receiving valid measurements in another order works as 
         # expected, i.e., it waits a full sweep. The other sensors need to 
         # receive at least one measurement from the current vehicle, 
         self.environment.invalidate_measurement(wait_waypoint=3)
-        self.assertFalse(self.environment.location_valid(other_valid=True,
-                                                         other_id=other_id,
-                                                         other_index=3))
-        self.assertFalse(self.environment.location_valid(other_valid=True,
-                                                         other_id=other_id + 1,
-                                                         other_index=3))
+        self.assertFalse(self.location_valid(False, other_id=other_id,
+                                             other_index=3, other_valid=True,
+                                             other_valid_pair=False))
+        self.assertFalse(self.location_valid(False, other_id=other_id + 1,
+                                             other_index=3, other_valid=True,
+                                             other_valid_pair=False))
 
         self.assertFalse(self.environment.is_measurement_valid())
-        self.assertFalse(self.environment.location_valid())
+        self.assertFalse(self.location_valid(True, other_id=other_id))
 
         self.environment.set_waypoint_valid()
-        self.assertTrue(self.environment.location_valid())
+        self.assertTrue(self.location_valid(True, other_id=other_id))
 
         self.assertFalse(self.environment.is_measurement_valid())
 
-        self.assertTrue(self.environment.location_valid(other_valid=True,
-                                                        other_id=other_id,
-                                                        other_index=3))
+        self.assertTrue(self.location_valid(False, other_id=other_id,
+                                            other_index=3, other_valid=True,
+                                            other_valid_pair=True))
         self.assertFalse(self.environment.is_measurement_valid())
 
-        self.assertTrue(self.environment.location_valid(other_valid=True,
-                                                        other_id=other_id + 1,
-                                                        other_index=3))
+        self.assertTrue(self.location_valid(False, other_id=other_id + 1,
+                                            other_index=3, other_valid=True,
+                                            other_valid_pair=True))
+        self.assertTrue(self.location_valid(True, other_id=other_id))
         self.assertTrue(self.environment.is_measurement_valid())
 
     def test_get_distance(self):

@@ -31,7 +31,7 @@ class ZigBeeRFSensorTestCase(SettingsTestCase, ZigBeePacketTestCase):
         self.thread_manager = Thread_Manager()
         self.location_callback = MagicMock(return_value=((0, 0), 0))
         self.receive_callback = MagicMock()
-        self.valid_callback = MagicMock(return_value=True)
+        self.valid_callback = MagicMock(return_value=(True, True))
 
     def _create_sensor(self, sensor_type, **kwargs):
         """
@@ -296,7 +296,7 @@ class TestZigBeeRFSensor(ZigBeeRFSensorTestCase):
 
     @patch.object(RF_Sensor, "_send_tx_frame")
     def test_send(self, send_tx_frame_mock):
-        self.rf_sensor._packets.put(self.rf_sensor._create_rssi_broadcast_packet())
+        self.rf_sensor._packets.put(self.rf_sensor._create_rssi_broadcast_packet(2))
 
         # If the current time is inside an allocated slot, then packets
         # may be sent.
@@ -376,7 +376,7 @@ class TestZigBeeRFSensor(ZigBeeRFSensorTestCase):
             self.rf_sensor._receive(packet=self.packet)
 
     def test_create_rssi_broadcast_packet(self):
-        packet = self.rf_sensor._create_rssi_broadcast_packet()
+        packet = self.rf_sensor._create_rssi_broadcast_packet(2)
 
         self.assertIsInstance(packet, Packet)
         self.assertEqual(packet.get("specification"), "rssi_broadcast")
@@ -388,7 +388,7 @@ class TestZigBeeRFSensor(ZigBeeRFSensorTestCase):
         self.assertAlmostEqual(packet.get("timestamp"), time.time(), delta=0.1)
 
     def test_create_rssi_ground_station_packet(self):
-        rssi_broadcast_packet = self.rf_sensor._create_rssi_broadcast_packet()
+        rssi_broadcast_packet = self.rf_sensor._create_rssi_broadcast_packet(2)
         packet = self.rf_sensor._create_rssi_ground_station_packet(rssi_broadcast_packet)
 
         self.assertIsInstance(packet, Packet)

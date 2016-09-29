@@ -135,7 +135,7 @@ class TestZigBeeRFSensorSimulator(ZigBeeRFSensorTestCase):
 
         timestamp = self.rf_sensor._scheduler.timestamp
 
-        packet = self.rf_sensor._create_rssi_broadcast_packet()
+        packet = self.rf_sensor._create_rssi_broadcast_packet(2)
         self.rf_sensor._receive(packet=packet)
 
         # The receive callback must be called with the packet.

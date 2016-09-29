@@ -17,6 +17,62 @@ __all__ = [
     "RF_Sensor_Physical_Texas_Instruments"
 ]
 
+class RSSI_Validity_Request(object):
+    """
+    A request to the valid location callback, containing properties that the
+    valid location callback can use to track the measurement validity.
+    """
+
+    def __init__(self, specification, other_id=None, other_valid=None,
+                 other_valid_pair=None, other_index=None):
+        self._is_broadcast = specification == "rssi_broadcast"
+        self._other_valid = other_valid
+        self._other_id = other_id
+        self._other_index = other_index
+        self._other_valid_pair = other_valid_pair
+
+    @property
+    def is_broadcast(self):
+        """
+        Whether the RSSI packet is a measurement broadcast packet, or that it
+        is sent to the ground station.
+        """
+
+        return self._is_broadcast
+
+    @property
+    def other_id(self):
+        """
+        RF sensor ID of the other sensor.
+        """
+
+        return self._other_id
+
+    @property
+    def other_valid(self):
+        """
+        Whether the location of the other sensor is valid.
+        """
+
+        return self._other_valid
+
+    @property
+    def other_valid_pair(self):
+        """
+        Whether the other sensor has received a valid measurement from the
+        current sensor.
+        """
+
+        return self._other_valid_pair
+
+    @property
+    def other_index(self):
+        """
+        The waypoint index of the other sensor.
+        """
+
+        return self._other_index
+
 class DisabledException(Exception):
     """
     Special exception indicating that the RF sensor was disabled during
@@ -295,7 +351,6 @@ class RF_Sensor(Threadable):
         """
 
         # Create and send the RSSI broadcast packets.
-        packet = self._create_rssi_broadcast_packet()
         for to_id in xrange(1, self._number_of_sensors + 1):
             if not self._scheduler.in_slot:
                 return
@@ -303,6 +358,7 @@ class RF_Sensor(Threadable):
             if to_id == self._id:
                 continue
 
+            packet = self._create_rssi_broadcast_packet(to_id)
             self._send_tx_frame(packet, to_id)
 
         # Send collected packets to the ground station.
@@ -342,19 +398,22 @@ class RF_Sensor(Threadable):
     def _receive(self, packet=None):
         raise NotImplementedError("Subclasses must implement `_receive(packet=None)`")
 
-    def _create_rssi_broadcast_packet(self):
+    def _create_rssi_broadcast_packet(self, to_id):
         """
         Create a `Packet` object according to the "rssi_broadcast" specification.
         The resulting packet is complete.
         """
 
         location, waypoint_index = self._location_callback()
+        request = RSSI_Validity_Request("rssi_broadcast", other_id=to_id)
+        valid, valid_pair = self._valid_callback(request)
 
         packet = Packet()
         packet.set("specification", "rssi_broadcast")
         packet.set("latitude", location[0])
         packet.set("longitude", location[1])
-        packet.set("valid", self._valid_callback())
+        packet.set("valid", valid)
+        packet.set("valid_pair", valid_pair)
         packet.set("waypoint_index", waypoint_index)
         packet.set("sensor_id", self._id)
         packet.set("timestamp", time.time())
@@ -378,11 +437,14 @@ class RF_Sensor(Threadable):
         from_valid = rssi_broadcast_packet.get("valid")
         from_id = rssi_broadcast_packet.get("sensor_id")
         from_waypoint_index = rssi_broadcast_packet.get("waypoint_index")
+        from_valid_pair = rssi_broadcast_packet.get("valid_pair")
 
         location = self._location_callback()[0]
-        location_valid = self._valid_callback(other_valid=from_valid,
-                                              other_id=from_id,
-                                              other_index=from_waypoint_index)
+        request = RSSI_Validity_Request("rssi_ground_station", other_id=from_id,
+                                        other_valid=from_valid,
+                                        other_valid_pair=from_valid_pair,
+                                        other_index=from_waypoint_index)
+        to_valid = self._valid_callback(request)[0]
 
         packet = Packet()
         packet.set("specification", "rssi_ground_station")
@@ -392,6 +454,6 @@ class RF_Sensor(Threadable):
         packet.set("from_valid", from_valid)
         packet.set("to_latitude", location[0])
         packet.set("to_longitude", location[1])
-        packet.set("to_valid", location_valid)
+        packet.set("to_valid", to_valid)
 
         return packet
