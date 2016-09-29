@@ -170,11 +170,11 @@ class TestZigBeeRFSensorPhysicalXBee(ZigBeeRFSensorTestCase, USBManagerTestCase)
     def test_send(self):
         # Create two dummy packets, one of them having an associated RSSI 
         # value.
-        first_packet = self.rf_sensor._create_rssi_broadcast_packet()
+        first_packet = self.rf_sensor._create_rssi_broadcast_packet(2)
         first_packet.set("rssi", 42)
         self.rf_sensor._packets[0] = first_packet
 
-        second_packet = self.rf_sensor._create_rssi_broadcast_packet()
+        second_packet = self.rf_sensor._create_rssi_broadcast_packet(2)
         self.rf_sensor._packets[1] = second_packet
 
         # If the current time is inside an allocated slot, then packets
@@ -263,6 +263,7 @@ class TestZigBeeRFSensorPhysicalXBee(ZigBeeRFSensorTestCase, USBManagerTestCase)
         self.packet.set("latitude", 123456789.12)
         self.packet.set("longitude", 123459678.34)
         self.packet.set("valid", True)
+        self.packet.set("valid_pair", True)
         self.packet.set("waypoint_index", 1)
         self.packet.set("sensor_id", 2)
         self.packet.set("timestamp", time.time())
@@ -296,7 +297,7 @@ class TestZigBeeRFSensorPhysicalXBee(ZigBeeRFSensorTestCase, USBManagerTestCase)
         # AT response DB packets should be processed. The parsed RSSI value
         # should be placed in the original packet in the data object.
         self.rf_sensor._packets = {
-            1: self.rf_sensor._create_rssi_broadcast_packet()
+            1: self.rf_sensor._create_rssi_broadcast_packet(2)
         }
         raw_packet = {
             "id": "at_response",

@@ -14,8 +14,8 @@ def get_location():
 def receive_packet(packet):
     print("Received packet: {}".format(packet.get_all()))
 
-def location_valid(other_valid=None, other_id=None, other_index=None):
-    return True
+def location_valid(request):
+    return True, True
 
 def main(argv):
     import_manager = Import_Manager()

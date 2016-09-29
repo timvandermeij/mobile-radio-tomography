@@ -19,6 +19,10 @@
             "format": "?"
         },
         {
+            "name": "valid_pair",
+            "format": "B"
+        },
+        {
             "name": "waypoint_index",
             "format": "i"
         },

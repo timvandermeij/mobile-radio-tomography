@@ -124,10 +124,11 @@ class TestMissionFanStraight(EnvironmentTestCase):
 
         other_id = self.rf_sensor.id + 1
         self.environment.set_waypoint_valid()
-        self.assertTrue(self.environment.location_valid())
-        self.assertTrue(self.environment.location_valid(other_valid=True,
-                                                        other_id=other_id,
-                                                        other_index=1))
+        self.assertTrue(self.location_valid(True, other_id=other_id))
+        self.assertTrue(self.location_valid(False, other_id=other_id,
+                                            other_index=1, other_valid=True,
+                                            other_valid_pair=True))
+        self.assertTrue(self.location_valid(True, other_id=other_id))
 
         with patch('sys.stdout'):
             self.mission.check_waypoint()
