@@ -147,7 +147,6 @@ class TestMission(EnvironmentTestCase):
                     # A flying vehicle that takes off has the correct calls.
                     self.mission.arm_and_takeoff()
                     self.assertEqual(global_relative_frame_mock.call_count, 5)
-                    self.assertEqual(sleep_mock.call_count, 2)
 
     def test_start(self):
         # Verify that the interface requires subclasses to implement
