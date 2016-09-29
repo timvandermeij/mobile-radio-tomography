@@ -113,6 +113,11 @@ class Grid(QtGui.QGraphicsView):
 
         self._clear = False
 
+        self._width = 0
+        self._height = 0
+        self._origin_x = 0
+        self._origin_y = 0
+
         self._links = []
         self._sensors = {}
 
@@ -132,6 +137,7 @@ class Grid(QtGui.QGraphicsView):
 
         if isinstance(buffer, Buffer):
             self._width, self._height = buffer.size
+            self._origin_x, self._origin_y = buffer.origin
         elif isinstance(buffer, (tuple, list)) and len(buffer) == 2:
             self._width, self._height = buffer
         else:
@@ -169,8 +175,10 @@ class Grid(QtGui.QGraphicsView):
 
     def _calculate_offset(self, position, center=False):
         centering = 0.5 * self._cell_size if center else 0.0
-        x = position[1] * self._cell_size - centering
-        y = (self._height - position[0]) * self._cell_size - centering
+        point_x = (position[1] - self._origin_x)
+        point_y = (position[0] - self._origin_y)
+        x = point_x * self._cell_size - centering
+        y = (self._height - point_y) * self._cell_size - centering
 
         return x, y
 
