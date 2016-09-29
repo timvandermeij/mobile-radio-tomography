@@ -143,7 +143,7 @@ class TestMission(EnvironmentTestCase):
                 armed_mock = PropertyMock(side_effect=[False, True])
                 type(vehicle_mock).armed = armed_mock
 
-                with patch.object(time, "sleep") as sleep_mock:
+                with patch.object(time, "sleep"):
                     # A flying vehicle that takes off has the correct calls.
                     self.mission.arm_and_takeoff()
                     self.assertEqual(global_relative_frame_mock.call_count, 5)
