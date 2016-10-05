@@ -8,6 +8,7 @@
 \usepackage{parskip}
 \usepackage[hyphens]{url}
 \usepackage{hyperref}
+\usepackage{booktabs}
 
 \hypersetup{colorlinks, citecolor=red, filecolor=red, linkcolor=black, urlcolor=blue}
 
@@ -113,32 +114,171 @@ Shield and Arduino Uno:
         One should use a timeout of e.g. 2000 microseconds and consider all 
         pulse lengths above a certain threshold (e.g. 300 microseconds) to be 
         black.
-\end{itemize}  
+\end{itemize}
+
+\section{Connecting to Raspberry Pi}
+
+This section describes our setup for communicating between the Raspberry Pi and 
+the Arduino mounted on the Zumo robot, as well as mounting everything on top of 
+each other. Additionally, there are some notes and warnings about the use of 
+the whole package to keep it safe and sound.
+
+Before connecting anything, ensure that the Arduino has the most recent 
+grid-following Arduino code uploaded to it. If it does not, then we need to 
+upload the code to the device. Ensure no power or other serial devices (such as 
+the USB-TTL programmer) are connected to it, connect a type B USB cable between 
+it and a laptop, start the Arduino IDE, open the {\tt zumo\_grid.ino} file and 
+upload it. After waiting for the upload to finish (indicated by flashing RX/TX 
+LEDs) and verifying that the program uploaded correctly (indicated by the 
+status LED and a buzzer sound), disconnect the cable again.
+
+To assemble the robot, we need to use the exterior pins of the Zumo shield for 
+connecting a USB-TTL programmer for serial communication. Thus, if the Zumo is 
+assembled, we need to disassemble in order to solder additional pins. Follow 
+these steps to disassemble it safely, and after soldering the necessary 
+exterior pins, reverse the order to assemble it again: remove the caterpillar 
+tracks around the wheels, remove the battery cover and any batteries in the 
+bottom of the chassis, remove the screws holding the front plow and the back of 
+the shield, squeeze the spring of the battery holder that is closest to the 
+{\tt -} sign and push it through a small hole (but larger than the other holes 
+above the battery pack), remove the insulation plates between the shield and 
+the chassis as well as the chassis itself, and finally bend the motors away 
+without breaking the motor leads to allow access to the pin soldering points.
+
+We assume that we have a battery case that can be laser-cut from a model 
+provided in the {\tt casing} directory. The individual plates of the case can 
+be connected using superglue; it is useful to keep the top cover of the case 
+loose such that it can be removed as if it were a lid, in order to replace 
+batteries. First put spacers and/or screws between the holes of the Arduino Uno 
+R3 and the bottom plate of the casing.
+
+Next, connect some cables to the following exterior pins of the Zumo so that 
+we do not need to connect them when they are not as reachable anymore. Keep 
+track of their names or colors to tell them apart. The RX and TX pins may 
+differ due to the use of software serial; the {\tt zumo\_grid.ino} program 
+contains the correct pins to use. Table~\ref{tab:serial} shows an example 
+connection scheme. Do not connect the VCC or CTR pins of the USB-TTL; you can 
+shield them with a loose cable if this is safer.
+
+\begin{table}[h!]
+  \centering
+  \begin{tabular}{rcrl}
+    \toprule
+    USB-TTL pin & Example wire color & Arduino pin & Arduino pin function \\
+    \midrule
+    DTR & Green & RST & Reset \\
+    TXD & Yellow & A5 & softSerial RX \\
+    RXD & Blue & A1 & softSerial TX \\
+    GND & Black & any GND & Ground \\
+    \bottomrule
+  \end{tabular}
+  \caption{Connection setup for the USB-TTL programmer and Arduino.}
+  \label{tab:serial}
+\end{table}
+
+Put the battery pack in the casing, and attach the BattBorg to the vertical 
+plate with two holes; one for the power cables and one for a spacer/screw. 
+Ensure that they cannot short circuit or make current flow to circuits that are 
+already powered by another power source. Then securely mount the Arduino on the 
+Zumo so that all the pins align with the middle rows of the Zumo pins. Note 
+that the size of the case as well as the Zumo caterpillar tracks may make it 
+difficult to reach the exterior pins, so one may have to dismount the Arduino 
+entirely if one would need to disconnect these for reprogramming.
+
+Fix the (bare) Raspberry Pi on the top cover of the casing using screws. ThePi 
+case excluding the bottom cover can be put on top of the Pi. Connect the 
+infrared sensor as explained in the documentation for that component; use GPIO 
+pin 9 instead of 6 to be able to connect the Battborg. Other peripherals should 
+be connect as well. Connect the three-pin M/F cable to the Pi, with the black 
+cable on pin 6. Do not connect this cable to the BattBorg just yet.
+
+Insert the Arduino USB-TTL programmer into the bottom right USB port (if not 
+using XBees, any port can be used subject to cable length). Connect any other 
+peripherals such as the XBee (in the top right USB port), and recheck whether 
+everything is connected correctly.
+
+Finally, ensure the Zumo has batteries and turn it on. Then connect the 
+BattBorg cable to the BattBorg, with the black cable closest to the black/red 
+battery cable connectors in the outermost triple of the female connector block. 
+Always perform this action in this order for reasons described below.
+
+Note that the Arduino {\tt zumo\_grid} code, when it is connected to the Zumo 
+and the DTR line is not resetting the Arduino, plays a startup buzzer sound, 
+and then waits for the serial connection to be set up completely. Thus, the 
+robot waits for the Raspberry Pi to start and set up before it performs the 
+calibration, plays a success sound, and waits for other movement commands. Once 
+the Pi is booted, it enables the USB interfaces. This by defaults sends a high 
+signal to the DTR line, causing the Arduino, but not the Zumo, to turn off 
+(indicated by the LED going off on pin 13, but not the power LEDs). Only once 
+the vehicle is set up within the mission script will it send a low DTR signal, 
+turning the Arduino on again. Depending on the mission, the Arduino will then 
+immediately calibrate, moving around. This differs between missions, and for 
+the RF sensor mission, it depends on whether a mission dump file exists on the 
+Pi. Otherwise, this mission waits until all control panel waypoints have been 
+sent before arming. Either way, there should be enough time after powering to 
+place the robot at its starting location. Of course, the mission itself only 
+starts when the infrared sensor receives a start button press.
+
+Another fair warning is that the DTR/RST line might exhibit weird behavior. 
+When the Zumo power is turned off while the Pi sends a low DTR signal, the LED 
+on pin 13 sometimes still receives enough current via RST to be on. When you 
+turn on the Pi before the Zumo (in contrast to the precautions in these steps) 
+then the current on the RST causes the brown-out detection of the Arduino to 
+kick in continuously, causing the LED to flash and the Zumo to make a clicking 
+sound. Depending on the Arduino, this may happen in different intervals. Both 
+scenarios should not harm the devices any more than connecting the DTR/RST in 
+the first place, but it is preferable to avoid these cases. Another good rule 
+here is to always power off the Raspberry Pi first before one turns off the 
+Zumo. In case of emergency, turning off the Zumo motors may be necessary and 
+fine, but the infrared sensor's stop button, which resets the Arduino, was 
+tested to work just as well.
+
+On that note, the stop button (or some other exception in the Python code) 
+resets the Arduino by stopping the Raspberry Pi service and restarting it. In 
+between the restart, the Arduino plays the startup sound because it is no 
+longer receiving a signal to the DTR/RST line. However, it will not yet 
+calibrate, since this only happens after creating the serial connection and 
+resetting one more time. Thus, you have enough time to reposition the Zumo 
+before it wants to calibrate (for missions that do not delay the arming step).
+
+Some settings overrides on the Raspberry Pi are hardcoded in {\tt 
+raspberry-pi-start.sh}. Other settings can be altered via the settings view in 
+the control panel. To update code, we use the Ethernet connection to SSH to the 
+Pi and use {\tt git pull} or other Git commands, make local changes to 
+settings, etc. This can be done while everything is connected, but make sure 
+the Zumo does not start to calibrate during this by either keeping a mission 
+that awaits a start button press before running, letting it stay at an ended 
+mission, or halting the service using {\tt make stop} (disallowing it to 
+restart as well). As stated at the start of this section, for Arduino code 
+updates, all the cables must be disconnected and the Zumo must be powered off 
+before connecting the USB type B cable.
 
 \section{References}
 
 \begin{itemize}
-  \item
-    Zumo pin numbering: \url{https://www.pololu.com/docs/0J57/5}
+  \item Zumo pin numbering: \url{https://www.pololu.com/docs/0J57/5}
   \item Arduino Uno pinout diagram: \url{http://i.stack.imgur.com/EsQpm.png}
-  \item Arduino internal numbering details:
-    \url{https://github.com/arduino/Arduino/blob/master/hardware/arduino/avr/variants/standard/pins_arduino.h#L50}:
-  \item \url{https://www.pololu.com/picture/view/0J5572} labeled image of the 
-        Zumo shield pins.
-  \item \url{https://www.pololu.com/docs/0J57/3.c} explains how to solder the 
-        battery level monitor jumper and how to read the battery voltage.
-  \item Reflectance sensor array pin numbering:
-    \url{https://github.com/pololu/zumo-shield/blob/master/ZumoReflectanceSensorArray/ZumoReflectanceSensorArray.h#L152}
-  \item
-    Documentation of the reflectance sensor array: 
-    \url{https://www.pololu.com/docs/0J57/2.c}
-  \item
-    \url{https://github.com/pololu/zumo-shield/blob/master/QTRSensors/QTRSensors.cpp}
-  \item Zumo schematic:
-    \url{https://www.pololu.com/file/download/zumo-shield-v1_2-schematic.pdf?file_id=0J779}
-  \item Arduino Uno schematic:
-    \url{https://www.arduino.cc/en/uploads/Main/Arduino_Uno_Rev3-schematic.pdf}
+  \item Arduino internal numbering details: 
+        \url{https://github.com/arduino/Arduino/blob/master/hardware/arduino/avr/variants/standard/pins_arduino.h#L50}:
+  \item Labeled image of the Zumo shield pins: 
+        \url{https://www.pololu.com/picture/view/0J5572}
+  \item How to solder the battery level monitor jumper and how to read the 
+        battery voltage of the Zumo: 
+        \url{https://www.pololu.com/docs/0J57/3.c}
+  \item Reflectance sensor array pin numbering: 
+        \url{https://github.com/pololu/zumo-shield/blob/master/ZumoReflectanceSensorArray/ZumoReflectanceSensorArray.h#L152}
+  \item Documentation of the reflectance sensor array: 
+        \url{https://www.pololu.com/docs/0J57/2.c}
+  \item Internal reflectance sensor implementation: 
+        \url{https://github.com/pololu/zumo-shield/blob/master/QTRSensors/QTRSensors.cpp}
+  \item Zumo schematic: 
+        \url{https://www.pololu.com/file/download/zumo-shield-v1_2-schematic.pdf?file_id=0J779}
+  \item Arduino Uno schematic: 
+        \url{https://www.arduino.cc/en/uploads/Main/Arduino_Uno_Rev3-schematic.pdf}
   \item Arduino Uno: \url{https://www.arduino.cc/en/Main/ArduinoBoardUno}
+  \item Assembling the Zumo Shield and chassis: 
+        \url{https://www.pololu.com/docs/0J57/2.b}
+  \item Connecting the BattBorg: \url{https://www.piborg.org/battborg/install}
 \end{itemize}
 
 \end{document}

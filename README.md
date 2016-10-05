@@ -332,8 +332,9 @@ During development, you can enable lint checks in your editor to receive code
 style help for the currently edited file on the go. For Vim, you can enable 
 [Syntastic](https://github.com/scrooloose/syntastic) or use an older [pylint 
 compiler script](http://www.vim.org/scripts/script.php?script_id=891). See the 
-[pylint integration documentation](https://docs.pylint.org/ide-integration) for 
-other editors.
+[pylint integration 
+documentation](https://pylint.readthedocs.io/en/latest/user_guide/ide-integration.html) 
+for other editors.
 
 License
 =======
